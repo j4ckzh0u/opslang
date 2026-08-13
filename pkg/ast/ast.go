@@ -341,6 +341,24 @@ func (e *InterpolatedStringExpr) nodeMarker() {}
 func (e *InterpolatedStringExpr) exprMarker() {}
 func (e *InterpolatedStringExpr) Pos() Position { return e.Position }
 
+// BreakStmt break 语句
+type BreakStmt struct {
+	Position Position
+}
+
+func (s *BreakStmt) nodeMarker() {}
+func (s *BreakStmt) stmtMarker() {}
+func (s *BreakStmt) Pos() Position { return s.Position }
+
+// ContinueStmt continue 语句
+type ContinueStmt struct {
+	Position Position
+}
+
+func (s *ContinueStmt) nodeMarker() {}
+func (s *ContinueStmt) stmtMarker() {}
+func (s *ContinueStmt) Pos() Position { return s.Position }
+
 // ShExpr Shell 命令执行 sh("ls -la")
 type ShExpr struct {
 	Command  Expression

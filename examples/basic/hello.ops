@@ -1,44 +1,32 @@
-// hello.ops - OpsLang 示例：Hello World
+// hello.ops - OpsLang 入门示例
 
-// 1. 基础输出
-print("Hello, OpsLang!")
+// 变量和输出
+name = "OpsLang"
+print("Hello, {name}!")
 
-// 2. 变量和字符串插值
-name = "运维工程师"
-print("你好，{name}！")
-
-// 3. 数字运算
-cpu_count = 8
-memory_gb = 32
-print("服务器配置: {cpu_count}核 {memory_gb}GB")
-
-// 4. 数组和循环
+// 数组和循环
 hosts = ["web01", "web02", "web03"]
-print("共有 {len(hosts)} 台服务器:")
-for host in hosts {
+print("服务器列表:")
+for host in hosts
     print("  - {host}")
-}
 
-// 5. 条件判断
-for host in hosts {
-    if host == "web01" {
-        print("{host} 是主服务器")
-    } else {
-        print("{host} 是从服务器")
-    }
-}
-
-// 6. 函数定义
-fn check_disk(host, threshold = 80) {
-    // 模拟检查磁盘使用率
-    usage = 75  // 实际应该是: ssh.run(host, "df -h /")
-    if usage > threshold {
+// 函数定义
+fn check_disk(host, threshold)
+    // 模拟磁盘检查
+    usage = 75
+    if usage > threshold
         print("警告: {host} 磁盘使用率 {usage}%")
-    } else {
+    else
         print("正常: {host} 磁盘使用率 {usage}%")
-    }
-}
 
-for host in hosts {
-    check_disk(host)
-}
+for host in hosts
+    check_disk(host, 80)
+
+// 条件判断
+count = 5
+if count > 3
+    print("服务器数量充足")
+else
+    print("服务器数量不足")
+
+print("示例运行完成!")
