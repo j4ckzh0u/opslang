@@ -1,0 +1,144 @@
+{
+    "Function": {
+        "prefix": "fn",
+        "body": [
+            "fn ${1:name}(${2:args})",
+            "\t${0}",
+            ""
+        ],
+        "description": "定义函数"
+    },
+    "Lambda": {
+        "prefix": "lambda",
+        "body": "fn(${1:x}) => ${0}",
+        "description": "Lambda 表达式"
+    },
+    "For Loop": {
+        "prefix": "for",
+        "body": [
+            "for ${1:item} in ${2:items}",
+            "\t${0}",
+            ""
+        ],
+        "description": "For 循环"
+    },
+    "While Loop": {
+        "prefix": "while",
+        "body": [
+            "while ${1:condition}",
+            "\t${0}",
+            ""
+        ],
+        "description": "While 循环"
+    },
+    "If Else": {
+        "prefix": "if",
+        "body": [
+            "if ${1:condition}",
+            "\t${2}",
+            "else",
+            "\t${0}",
+            ""
+        ],
+        "description": "If/Else 条件"
+    },
+    "Try Catch": {
+        "prefix": "try",
+        "body": [
+            "try",
+            "\t${1}",
+            "catch ${2:e}",
+            "\t${0}",
+            ""
+        ],
+        "description": "Try/Catch 错误处理"
+    },
+    "SSH Run": {
+        "prefix": "ssh",
+        "body": "ssh.run(${1:host}, ${2:cmd})",
+        "description": "SSH 远程执行"
+    },
+    "Fleet Parallel": {
+        "prefix": "fleet",
+        "body": [
+            "results = fleet.parallel(${1:hosts}, fn(${2:h})",
+            "\t${0}",
+            ")"
+        ],
+        "description": "批量并行执行"
+    },
+    "Fleet Serial": {
+        "prefix": "fleet-serial",
+        "body": [
+            "results = fleet.serial(${1:hosts}, fn(${2:h})",
+            "\t${0}",
+            ")"
+        ],
+        "description": "批量串行执行"
+    },
+    "Ensure File": {
+        "prefix": "ensure-file",
+        "body": "ensure.file(${1:path}, ${2:content})",
+        "description": "确保文件内容"
+    },
+    "Ensure Service": {
+        "prefix": "ensure-service",
+        "body": "ensure.service(${1:name}, ${2:state}, ${3:enabled})",
+        "description": "确保服务状态"
+    },
+    "YAML Parse": {
+        "prefix": "yaml",
+        "body": [
+            "${1:data} = yaml.parse(${2:str})",
+            ""
+        ],
+        "description": "解析 YAML"
+    },
+    "JSON Parse": {
+        "prefix": "json",
+        "body": [
+            "${1:data} = json.parse(${2:str})",
+            ""
+        ],
+        "description": "解析 JSON"
+    },
+    "Triple Quote String": {
+        "prefix": "\"\"\"",
+        "body": [
+            "\"\"\"",
+            "${0}",
+            "\"\"\""
+        ],
+        "description": "三引号多行字符串"
+    },
+    "Shebang": {
+        "prefix": "shebang",
+        "body": "#!/usr/bin/env ops run",
+        "description": "Shebang 行"
+    },
+    "Print": {
+        "prefix": "print",
+        "body": "print(${0})",
+        "description": "打印输出"
+    },
+    "Inventory Load": {
+        "prefix": "inv",
+        "body": "inv = inventory.load(${1:path})",
+        "description": "加载主机清单"
+    },
+    "Process Shell": {
+        "prefix": "shell",
+        "body": "result = process.shell(${1:cmd})",
+        "description": "执行 Shell 命令"
+    },
+    "File Read": {
+        "prefix": "file-read",
+        "body": "content = file.read(${1:path})",
+        "description": "读取文件"
+    },
+    "File Write": {
+        "prefix": "file-write",
+        "body": "file.write(${1:path}, ${2:content})",
+        "description": "写入文件"
+    }
+}

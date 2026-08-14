@@ -1,0 +1,27 @@
+{
+    "name": "opslang",
+    "displayName": "OpsLang",
+    "description": "OpsLang language support for VS Code",
+    "version": "0.1.0",
+    "engines": {
+        "vscode": "^1.75.0"
+    },
+    "categories": ["Programming Languages", "Snippets"],
+    "contributes": {
+        "languages": [{
+            "id": "opslang",
+            "aliases": ["OpsLang", "opslang", "ops"],
+            "extensions": [".ops"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "opslang",
+            "scopeName": "source.opslang",
+            "path": "./syntaxes/opslang.tmLanguage.json"
+        }],
+        "snippets": [{
+            "language": "opslang",
+            "path": "./snippets/opslang.json"
+        }]
+    }
+}

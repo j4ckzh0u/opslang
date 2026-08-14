@@ -2,236 +2,199 @@
 
 **为运维而生的编程语言** — 类 Python 语法，Shell 般交互，单二进制部署。
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/opslang/opslang)](https://goreportcard.com/report/github.com/opslang/opslang)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+```
+  __  ____  ____  _____
+ /  |/  \ \/ / / / ___/
+/ /|/ / /\  / / __\ \
+/_/ |_/ / / /_/ /___/
+     Ops Automation Language
+```
 
----
-
-## 为什么需要 OpsLang？
+## 为什么选择 OpsLang？
 
 | 痛点 | Shell | Python | **OpsLang** |
 |------|-------|--------|-------------|
 | 静默失败 | ✗ | ○ | ★ 默认严格 |
-| 类型系统 | ✗ 全字符串 | ○ 动态 | ★ 渐进类型 |
 | 部署方式 | 复制文件 | 装运行时 | ★ **单二进制** |
 | Shell 互操作 | ★ | ✗ 笨拙 | ★ **原生管道** |
 | SSH 批量执行 | 手写循环 | 自己拼 | ★ **内置引擎** |
-| 数据格式 | 手工解析 | 需装库 | ★ **原生 JSON/YAML** |
+| 数据格式 | 手工解析 | 需装库 | ★ **原生 JSON/YAML/TOML** |
 | 声明式管理 | ✗ | ✗ | ★ **ensure 语句** |
-
----
+| 学习门槛 | 引号地狱 | 面向对象 | ★ **10 分钟上手** |
 
 ## 快速开始
 
 ### 安装
 
 ```bash
-# 从源码编译
 git clone https://github.com/opslang/opslang.git
-cd opslang
-make build
-
-# 复制到 PATH
+cd opslang && make build
 cp bin/ops /usr/local/bin/
 ```
 
-### 第一个脚本
+### Hello World
 
 ```ops
-// hello.ops - 你好，运维
+// hello.ops
+name = "运维工程师"
 hosts = ["web01", "web02", "web03"]
 
-for host in hosts {
-    result = ssh.run(host, "uptime")
-    print("{host}: {result.stdout}")
-}
+for host in hosts
+    print("检查: {host}")
 ```
 
 ```bash
 $ ops run hello.ops
-web01: 10:30:01 up 30 days, 2:15, 1 user, load average: 0.01, 0.05, 0.01
-web02: 10:30:01 up 15 days, 5:30, 0 users, load average: 0.12, 0.08, 0.03
-web03: 10:30:02 up 45 days, 0:45, 2 users, load average: 0.50, 0.35, 0.20
+检查: web01
+检查: web02
+检查: web03
 ```
 
-### 批量检查与修复
+### 编译为单二进制
+
+```bash
+$ ops build hello.ops hello
+✅ 编译成功: hello (2.4 MB)
+
+$ ./hello        # 无需任何运行时依赖
+检查: web01
+检查: web02
+检查: web03
+```
+
+### 批量运维
 
 ```ops
-// nginx_check.ops - 批量检查 Nginx 配置合规性
+// batch_check.ops
+hosts = ["web01", "web02", "web03"]
 
-nginx_compliance = {
-    worker_processes: "auto",
-    keepalive_timeout: 65,
-    server_tokens: "off",
-}
+results = fleet.parallel(hosts, fn(h) => ssh.run(h, "uptime"))
 
-report = fleet.check_and_fix(
-    hosts = inventory.group("web_servers"),
-    parallel = 20,
-    target = "nginx",
-    compliance = nginx_compliance,
+for r in results
+    print("{r.host}: ok={r.ok}")
+
+summary = fleet.summary(results)
+print("总计: {summary.total}, 成功: {summary.ok}")
+```
+
+### 声明式管理
+
+```ops
+// 确保文件、服务、包的状态
+ensure.file("/etc/motd", "Welcome to {hostname}")
+ensure.service("nginx", "running", true)
+ensure.package("curl", "present")
+```
+
+## 功能特性
+
+### 语言核心
+
+- **缩进语法** — Python 风格，清晰可读
+- **字符串插值** — `"Hello {name}"` 原生支持
+- **三引号字符串** — `"""..."""` 嵌入 YAML/JSON/配置
+- **链式方法** — `"hello".upper().trim()`
+- **闭包 & Lambda** — `fn(x) => x * 2`
+- **错误处理** — `try/catch`
+- **REPL** — 交互式探索
+
+### 标准库（10 模块）
+
+| 模块 | 功能 |
+|------|------|
+| `file` | 读写、目录、路径操作 |
+| `process` | Shell 执行、环境变量 |
+| `ssh` | 远程执行、SCP 传输 |
+| `fleet` | **批量并行引擎** |
+| `json` | 解析、序列化、文件操作 |
+| `yaml` | 解析、序列化、文件操作 |
+| `toml` | 解析、文件操作 |
+| `strings` | 分割、连接、查找、替换 |
+| `math` | abs、min、max |
+| `ensure` | **声明式资源管理** |
+| `inventory` | 主机清单加载与分组 |
+
+### 运维专用
+
+- **SSH 远程执行** — 零配置密钥认证
+- **Fleet 批量引擎** — 并发控制、结果汇总
+- **Inventory 清单** — Ansible 式主机分组
+- **Ensure 声明式** — 幂等资源状态保证
+- **编译器** — 2.4MB 单二进制，交叉编译
+
+## 文档
+
+- [快速入门](docs/quickstart.md) — 5 分钟上手
+- [语言参考](docs/language-reference.md) — 完整语法和 API
+- [示例代码](examples/) — 实战脚本
+- [设计文档](docs/design/) — 架构与决策
+
+## 命令行
+
+```bash
+ops run <file>          # 运行脚本
+ops build <file> [out]  # 编译为单二进制
+ops repl                # 交互式 REPL
+ops check <file>        # 语法检查
+ops version             # 版本信息
+```
+
+## 实战演示
+
+```ops
+#!/usr/bin/env ops run
+// deploy.ops — 完整运维工作流
+
+// 1. 加载配置
+config = yaml.load_file("app.yaml")
+version = config["app"]["version"]
+
+// 2. 加载清单
+inv = inventory.load("hosts.ini")
+webs = inventory.group(inv, "web_servers")
+
+// 3. 批量部署
+results = fleet.parallel(webs, fn(h) =>
+    ssh.run(h, "deploy.sh " + str(version))
 )
 
-report.summary()
-report.notify(channels=["wechat:ops-group"])
+// 4. 验证
+for r in results
+    if r.ok
+        print("✓ {r.host}")
+    else
+        print("✗ {r.host}")
+
+// 5. 报告
+summary = fleet.summary(results)
+print("部署完成: {summary.ok}/{summary.total}")
 ```
-
-### 声明式资源管理
-
-```ops
-// ensure_server.ops - 确保服务器状态
-
-ensure.file("/etc/motd", content="Welcome to {hostname}")
-ensure.service("nginx", state="running", enabled=true)
-ensure.package("curl", state="present")
-ensure.user("deploy", shell="/bin/bash", groups=["sudo", "docker"])
-```
-
----
-
-## 语言特性
-
-### 语法设计
-
-- **Python 风格**：缩进分块、简洁可读
-- **Shell 互操作**：原生管道、重定向、后台执行
-- **渐进类型**：脚本模式动态类型，生产模式静态类型
-- **字符串插值**：`"Hello {name}"` 原生支持
-- **模式匹配**：强大的模式匹配（规划中）
-
-### 运维原生
-
-- **SSH 内置**：无需额外库，直接远程执行
-- **数据格式**：JSON、YAML、TOML、INI 原生支持
-- **批量引擎**：`fleet` 模块并行执行、滚动更新
-- **声明式**：`ensure` 语句管理资源状态
-- **幂等执行**：重复运行不产生副作用
-
-### 部署友好
-
-- **单二进制**：编译后一个文件，零依赖
-- **跨平台**：macOS/Linux/Windows，交叉编译
-- **体积小**：目标 < 20MB
-- **启动快**：< 5ms 解释执行，0ms 编译执行
-
----
 
 ## 项目结构
 
 ```
 opslang/
-├── cmd/                 # 命令行入口
-│   └── ops/             # ops 主命令
-├── pkg/                 # 核心库（可被外部引用）
-│   ├── lexer/           # 词法分析器
-│   ├── parser/          # 语法分析器
-│   ├── ast/             # 抽象语法树
-│   ├── compiler/        # 编译器
-│   ├── vm/              # 字节码虚拟机
-│   └── builtins/        # 内置函数
-├── stdlib/              # 标准库
-│   ├── os/              # 操作系统
-│   ├── net/             # 网络 (SSH/HTTP)
-│   ├── storage/         # 存储
-│   ├── db/              # 数据库
-│   ├── middleware/       # 中间件
-│   ├── container/       # 容器 (Docker/K8s)
-│   ├── fleet/           # 批量执行引擎
-│   ├── ensure/          # 声明式资源管理
-│   └── data/            # 数据格式
-├── internal/            # 内部工具
-├── docs/                # 文档
-├── examples/            # 示例代码
-└── test/                # 测试
+├── cmd/ops/          # CLI 入口
+├── pkg/
+│   ├── lexer/        # 词法分析器
+│   ├── parser/       # 语法分析器
+│   ├── ast/          # 抽象语法树
+│   ├── vm/           # 执行引擎
+│   ├── compiler/     # 编译器
+│   └── repl/         # REPL
+├── stdlib/           # 标准库骨架
+├── docs/             # 文档
+├── examples/         # 示例
+└── test/             # 测试
 ```
 
----
-
-## 开发指南
-
-### 环境要求
-
-- Go 1.21+
-- Make
-
-### 构建
+## 开发
 
 ```bash
 make build        # 编译
-make test         # 测试
-make lint         # 代码检查
-make fmt          # 格式化
+make test         # 运行测试
+make fmt          # 格式化代码
 ```
-
-### REPL 模式
-
-```bash
-$ ops repl
-OpsLang 0.1.0
->>> print("Hello, Ops!")
-Hello, Ops!
->>> 1 + 2 * 3
-7
->>> hosts = ["web01", "web02"]
->>> for h in hosts { print(h) }
-web01
-web02
-```
-
----
-
-## 路线图
-
-### Phase 1: MVP (3-6 个月)
-
-- [x] 项目结构
-- [ ] 词法分析器
-- [ ] 语法分析器
-- [ ] 字节码 VM
-- [ ] 基础语法（变量/函数/循环/条件）
-- [ ] 标准库 MVP（process/fs/ssh/json）
-- [ ] `ops run` 解释执行
-- [ ] 基础 REPL
-
-### Phase 2: 编译器 (3-6 个月)
-
-- [ ] OpsLang → Go 转译器
-- [ ] `ops build` 编译到单二进制
-- [ ] 跨平台编译
-- [ ] 标准库完善（yaml/toml/http）
-
-### Phase 3: 运维特性 (6-12 个月)
-
-- [ ] `fleet` 批量并行执行引擎
-- [ ] `ensure` 声明式资源管理
-- [ ] Inventory 管理系统
-- [ ] 模板引擎
-- [ ] Dry-run 模式
-- [ ] 审计日志
-
-### Phase 4: 生态 (12-18 个月)
-
-- [ ] 包管理器 `ops install`
-- [ ] LSP 支持
-- [ ] IDE 插件（VS Code）
-- [ ] 完整文档和教程
-- [ ] 社区建设
-
----
-
-## 设计哲学
-
-1. **简单胜于强大**：运维人员需要的是简单，不是图灵完备
-2. **显式胜于隐式**：错误不应该被静默吞掉
-3. **内置胜于第三方**：SSH/YAML/JSON 应该是语言的一部分
-4. **单二进制胜于运行时**：复制一个文件就能跑
-5. **渐进式学习**：10 分钟上手，不需要知道 class/decorator/generator
-
----
-
-## 贡献
-
-欢迎贡献！请先阅读 [贡献指南](CONTRIBUTING.md)。
 
 ## 许可证
 
@@ -240,5 +203,5 @@ MIT License
 ---
 
 <p align="center">
-  <strong>Shell 太弱，Python 太重，运维值得拥有一把趁手的武器。</strong>
+  <b>Shell 太弱，Python 太重，运维值得拥有一把趁手的武器。</b>
 </p>

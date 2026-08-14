@@ -150,6 +150,11 @@ func (l *Lexer) Tokenize() []Token {
 		l.line = i + 1
 		l.column = 1
 
+		// 跳过 shebang 行 (#!/...)
+		if i == 0 && strings.HasPrefix(line, "#!") {
+			continue
+		}
+
 		// 处理三引号字符串内部
 		if inTripleQuote {
 			// 检查是否包含结束标记 """
