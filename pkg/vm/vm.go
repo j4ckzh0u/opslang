@@ -11,6 +11,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/BurntSushi/toml"
+	"gopkg.in/yaml.v3"
+
 	"github.com/opslang/opslang/pkg/ast"
 )
 
@@ -405,6 +408,20 @@ func (v *VM) evalExpr(expr ast.Expression, env map[string]Value) (Value, error) 
 				return val, nil
 			}
 			return Value{Type: TypeNil, Nil: true}, nil
+		}
+		// 字符串方法
+		if obj.Type == TypeString {
+			if fn, ok := v.getStringMethod(obj.Str, e.Member); ok {
+				return fn, nil
+			}
+			return Value{}, &RuntimeError{Message: fmt.Sprintf("字符串没有方法: %s", e.Member)}
+		}
+		// 数组方法
+		if obj.Type == TypeArray {
+			if fn, ok := v.getArrayMethod(obj, e.Member); ok {
+				return fn, nil
+			}
+			return Value{}, &RuntimeError{Message: fmt.Sprintf("数组没有方法: %s", e.Member)}
 		}
 		return Value{}, &RuntimeError{Message: fmt.Sprintf("不支持成员访问: %s", v.typeName(obj))}
 
@@ -1645,6 +1662,435 @@ func (v *VM) registerBuiltins() {
 		},
 	}
 
+
+
+
+	// inventory 模块（主机清单管理）
+	v.globals["inventory"] = Value{
+		Type: TypeMap,
+		Map: map[string]Value{
+			"load": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "inventory.load", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "inventory.load(path) 需要文件路径"}
+					}
+					data, err := os.ReadFile(args[0].Str)
+					if err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("读取清单文件失败: %v", err)}
+					}
+					return parseInventory(string(data)), nil
+				},
+			}},
+			"from_list": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "inventory.from_list", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 1 || args[0].Type != TypeArray {
+						return Value{}, &RuntimeError{Message: "inventory.from_list(hosts) 需要数组"}
+					}
+					hosts := make([]string, len(args[0].Arr))
+					for i, h := range args[0].Arr {
+						hosts[i] = v.toString(h)
+					}
+					groups := map[string]Value{
+						"all": {Type: TypeArray, Arr: args[0].Arr},
+					}
+					return Value{Type: TypeMap, Map: map[string]Value{
+						"hosts":  {Type: TypeArray, Arr: args[0].Arr},
+						"groups": {Type: TypeMap, Map: groups},
+					}}, nil
+				},
+			}},
+			"group": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "inventory.group", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 2 || args[0].Type != TypeMap || args[1].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "inventory.group(inv, name) 需要清单和组名"}
+					}
+					inv := args[0]
+					groupName := args[1].Str
+					if groups, ok := inv.Map["groups"]; ok {
+						if g, ok := groups.Map[groupName]; ok {
+							return g, nil
+						}
+					}
+					return Value{Type: TypeArray, Arr: []Value{}}, nil
+				},
+			}},
+			"all": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "inventory.all", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 1 || args[0].Type != TypeMap {
+						return Value{}, &RuntimeError{Message: "inventory.all(inv) 需要清单"}
+					}
+					if hosts, ok := args[0].Map["hosts"]; ok {
+						return hosts, nil
+					}
+					return Value{Type: TypeArray, Arr: []Value{}}, nil
+				},
+			}},
+		},
+	}
+	// ensure 模块（声明式资源管理）
+	v.globals["ensure"] = Value{
+		Type: TypeMap,
+		Map: map[string]Value{
+			"file": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "ensure.file", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "ensure.file(path, [content], [mode]) 需要路径参数"}
+					}
+					path := args[0].Str
+					changed := false
+
+					// 检查 content
+					if len(args) >= 2 && args[1].Type == TypeString {
+						content := args[1].Str
+						existing, err := os.ReadFile(path)
+						if err != nil || string(existing) != content {
+							// 获取目录
+							dir := filepath.Dir(path)
+							os.MkdirAll(dir, 0755)
+							mode := os.FileMode(0644)
+							if len(args) >= 3 && args[2].Type == TypeInt {
+								mode = os.FileMode(args[2].Int)
+							}
+							if err := os.WriteFile(path, []byte(content), mode); err != nil {
+								return Value{}, &RuntimeError{Message: fmt.Sprintf("写入文件失败: %v", err)}
+							}
+							changed = true
+						}
+					} else {
+						// 只确保文件存在
+						if _, err := os.Stat(path); os.IsNotExist(err) {
+							dir := filepath.Dir(path)
+							os.MkdirAll(dir, 0755)
+							if err := os.WriteFile(path, []byte{}, 0644); err != nil {
+								return Value{}, &RuntimeError{Message: fmt.Sprintf("创建文件失败: %v", err)}
+							}
+							changed = true
+						}
+					}
+					return Value{Type: TypeMap, Map: map[string]Value{
+						"path":    {Type: TypeString, Str: path},
+						"changed": {Type: TypeBool, Bool: changed},
+						"ok":      {Type: TypeBool, Bool: true},
+					}}, nil
+				},
+			}},
+			"dir": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "ensure.dir", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "ensure.dir(path, [mode]) 需要路径参数"}
+					}
+					path := args[0].Str
+					mode := os.FileMode(0755)
+					if len(args) >= 2 && args[1].Type == TypeInt {
+						mode = os.FileMode(args[1].Int)
+					}
+					changed := false
+					if _, err := os.Stat(path); os.IsNotExist(err) {
+						if err := os.MkdirAll(path, mode); err != nil {
+							return Value{}, &RuntimeError{Message: fmt.Sprintf("创建目录失败: %v", err)}
+						}
+						changed = true
+					}
+					return Value{Type: TypeMap, Map: map[string]Value{
+						"path":    {Type: TypeString, Str: path},
+						"changed": {Type: TypeBool, Bool: changed},
+						"ok":      {Type: TypeBool, Bool: true},
+					}}, nil
+				},
+			}},
+			"line": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "ensure.line", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 2 || args[0].Type != TypeString || args[1].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "ensure.line(path, line) 需要路径和内容参数"}
+					}
+					path := args[0].Str
+					line := args[1].Str
+					changed := false
+
+					content := ""
+					if data, err := os.ReadFile(path); err == nil {
+						content = string(data)
+					}
+
+					if !strings.Contains(content, line) {
+						if !strings.HasSuffix(content, "\n") && content != "" {
+							content += "\n"
+						}
+						content += line + "\n"
+						if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+							return Value{}, &RuntimeError{Message: fmt.Sprintf("写入文件失败: %v", err)}
+						}
+						changed = true
+					}
+
+					return Value{Type: TypeMap, Map: map[string]Value{
+						"path":    {Type: TypeString, Str: path},
+						"line":    {Type: TypeString, Str: line},
+						"changed": {Type: TypeBool, Bool: changed},
+						"ok":      {Type: TypeBool, Bool: true},
+					}}, nil
+				},
+			}},
+			"service": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "ensure.service", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "ensure.service(name, [state], [enabled]) 需要服务名"}
+					}
+					name := args[0].Str
+					state := "running"
+					enabled := true
+					if len(args) >= 2 && args[1].Type == TypeString {
+						state = args[1].Str
+					}
+					if len(args) >= 3 && args[2].Type == TypeBool {
+						enabled = args[2].Bool
+					}
+
+					changed := false
+					// 检查服务状态
+					checkCmd := exec.Command("systemctl", "is-active", name)
+					checkOut, _ := checkCmd.Output()
+					isActive := strings.TrimSpace(string(checkOut)) == "active"
+
+					// 启动/停止
+					if state == "running" && !isActive {
+						cmd := exec.Command("systemctl", "start", name)
+						if err := cmd.Run(); err != nil {
+							return Value{Type: TypeMap, Map: map[string]Value{
+								"name":    {Type: TypeString, Str: name},
+								"changed": {Type: TypeBool, Bool: false},
+								"ok":      {Type: TypeBool, Bool: false},
+								"error":   {Type: TypeString, Str: fmt.Sprintf("启动服务失败: %v", err)},
+							}}, nil
+						}
+						changed = true
+					} else if state == "stopped" && isActive {
+						cmd := exec.Command("systemctl", "stop", name)
+						cmd.Run()
+						changed = true
+					}
+
+					// 启用/禁用
+					enCmd := exec.Command("systemctl", "is-enabled", name)
+					enOut, _ := enCmd.Output()
+					isEnabled := strings.TrimSpace(string(enOut)) == "enabled"
+
+					if enabled && !isEnabled {
+						cmd := exec.Command("systemctl", "enable", name)
+						cmd.Run()
+						changed = true
+					} else if !enabled && isEnabled {
+						cmd := exec.Command("systemctl", "disable", name)
+						cmd.Run()
+						changed = true
+					}
+
+					return Value{Type: TypeMap, Map: map[string]Value{
+						"name":    {Type: TypeString, Str: name},
+						"state":   {Type: TypeString, Str: state},
+						"changed": {Type: TypeBool, Bool: changed},
+						"ok":      {Type: TypeBool, Bool: true},
+					}}, nil
+				},
+			}},
+			"package": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "ensure.package", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "ensure.package(name, [state]) 需要包名"}
+					}
+					name := args[0].Str
+					state := "present"
+					if len(args) >= 2 && args[1].Type == TypeString {
+						state = args[1].Str
+					}
+
+					// 检查包是否已安装
+					checkCmd := exec.Command("sh", "-c", fmt.Sprintf("which %s 2>/dev/null || dpkg -l %s 2>/dev/null || rpm -q %s 2>/dev/null", name, name, name))
+					checkErr := checkCmd.Run()
+					isInstalled := checkErr == nil
+
+					changed := false
+					if state == "present" && !isInstalled {
+						// 尝试安装
+						installCmd := exec.Command("sh", "-c",
+							fmt.Sprintf("apt-get install -y %s 2>/dev/null || yum install -y %s 2>/dev/null || brew install %s 2>/dev/null", name, name, name))
+						if err := installCmd.Run(); err != nil {
+							return Value{Type: TypeMap, Map: map[string]Value{
+								"name":    {Type: TypeString, Str: name},
+								"changed": {Type: TypeBool, Bool: false},
+								"ok":      {Type: TypeBool, Bool: false},
+								"error":   {Type: TypeString, Str: fmt.Sprintf("安装失败: %v", err)},
+							}}, nil
+						}
+						changed = true
+					} else if state == "absent" && isInstalled {
+						removeCmd := exec.Command("sh", "-c",
+							fmt.Sprintf("apt-get remove -y %s 2>/dev/null || yum remove -y %s 2>/dev/null", name, name))
+						removeCmd.Run()
+						changed = true
+					}
+
+					return Value{Type: TypeMap, Map: map[string]Value{
+						"name":    {Type: TypeString, Str: name},
+						"state":   {Type: TypeString, Str: state},
+						"changed": {Type: TypeBool, Bool: changed},
+						"ok":      {Type: TypeBool, Bool: true},
+					}}, nil
+				},
+			}},
+			"user": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "ensure.user", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "ensure.user(name, [shell], [groups]) 需要用户名"}
+					}
+					name := args[0].Str
+					shell := "/bin/bash"
+					if len(args) >= 2 && args[1].Type == TypeString {
+						shell = args[1].Str
+					}
+
+					// 检查用户是否存在
+					checkCmd := exec.Command("id", name)
+					isExist := checkCmd.Run() == nil
+
+					changed := false
+					if !isExist {
+						cmdArgs := []string{"-m", "-s", shell}
+						if len(args) >= 3 && args[2].Type == TypeString {
+							cmdArgs = append(cmdArgs, "-G", args[2].Str)
+						}
+						cmdArgs = append(cmdArgs, name)
+						cmd := exec.Command("useradd", cmdArgs...)
+						if err := cmd.Run(); err != nil {
+							return Value{Type: TypeMap, Map: map[string]Value{
+								"name":    {Type: TypeString, Str: name},
+								"changed": {Type: TypeBool, Bool: false},
+								"ok":      {Type: TypeBool, Bool: false},
+								"error":   {Type: TypeString, Str: fmt.Sprintf("创建用户失败: %v", err)},
+							}}, nil
+						}
+						changed = true
+					}
+
+					return Value{Type: TypeMap, Map: map[string]Value{
+						"name":    {Type: TypeString, Str: name},
+						"changed": {Type: TypeBool, Bool: changed},
+						"ok":      {Type: TypeBool, Bool: true},
+					}}, nil
+				},
+			}},
+		},
+	}
+	// yaml 模块
+	v.globals["yaml"] = Value{
+		Type: TypeMap,
+		Map: map[string]Value{
+			"parse": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "yaml.parse", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "yaml.parse(str) 需要 1 个字符串参数"}
+					}
+					var raw interface{}
+					if err := yaml.Unmarshal([]byte(args[0].Str), &raw); err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("YAML 解析失败: %v", err)}
+					}
+					return yamlToValue(raw), nil
+				},
+			}},
+			"dump": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "yaml.dump", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 {
+						return Value{}, &RuntimeError{Message: "yaml.dump(value) 需要 1 个参数"}
+					}
+					raw := valueToYaml(args[0])
+					data, err := yaml.Marshal(raw)
+					if err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("YAML 序列化失败: %v", err)}
+					}
+					return Value{Type: TypeString, Str: string(data)}, nil
+				},
+			}},
+			"load_file": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "yaml.load_file", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "yaml.load_file(path) 需要 1 个字符串参数"}
+					}
+					data, err := os.ReadFile(args[0].Str)
+					if err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("读取文件失败: %v", err)}
+					}
+					var raw interface{}
+					if err := yaml.Unmarshal(data, &raw); err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("YAML 解析失败: %v", err)}
+					}
+					return yamlToValue(raw), nil
+				},
+			}},
+			"save_file": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "yaml.save_file", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 2 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "yaml.save_file(path, value) 需要 2 个参数"}
+					}
+					raw := valueToYaml(args[1])
+					data, err := yaml.Marshal(raw)
+					if err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("YAML 序列化失败: %v", err)}
+					}
+					if err := os.WriteFile(args[0].Str, data, 0644); err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("写入文件失败: %v", err)}
+					}
+					return Value{Type: TypeNil, Nil: true}, nil
+				},
+			}},
+		},
+	}
+
+	// toml 模块
+	v.globals["toml"] = Value{
+		Type: TypeMap,
+		Map: map[string]Value{
+			"parse": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "toml.parse", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "toml.parse(str) 需要 1 个字符串参数"}
+					}
+					var raw map[string]interface{}
+					if err := toml.Unmarshal([]byte(args[0].Str), &raw); err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("TOML 解析失败: %v", err)}
+					}
+					return tomlToValue(raw), nil
+				},
+			}},
+			"load_file": {Type: TypeFunction, Fn: &FuncValue{
+				Name: "toml.load_file", IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "toml.load_file(path) 需要 1 个字符串参数"}
+					}
+					var raw map[string]interface{}
+					if _, err := toml.DecodeFile(args[0].Str, &raw); err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("TOML 文件解析失败: %v", err)}
+					}
+					return tomlToValue(raw), nil
+				},
+			}},
+		},
+	}
 	// 将内置函数注册到全局环境（不覆盖已有模块）
 	for name, fn := range v.builtins {
 		if _, exists := v.globals[name]; !exists {
@@ -1722,4 +2168,304 @@ func valueToJson(val Value) interface{} {
 	default:
 		return nil
 	}
+}
+
+// === YAML/TOML 转换辅助 ===
+
+func yamlToValue(raw interface{}) Value {
+	switch v := raw.(type) {
+	case nil:
+		return Value{Type: TypeNil, Nil: true}
+	case bool:
+		return Value{Type: TypeBool, Bool: v}
+	case int:
+		return Value{Type: TypeInt, Int: int64(v)}
+	case int64:
+		return Value{Type: TypeInt, Int: v}
+	case float64:
+		if v == float64(int64(v)) {
+			return Value{Type: TypeInt, Int: int64(v)}
+		}
+		return Value{Type: TypeFloat, Float: v}
+	case string:
+		return Value{Type: TypeString, Str: v}
+	case []interface{}:
+		arr := make([]Value, len(v))
+		for i, item := range v {
+			arr[i] = yamlToValue(item)
+		}
+		return Value{Type: TypeArray, Arr: arr}
+	case map[string]interface{}:
+		m := make(map[string]Value)
+		for k, val := range v {
+			m[k] = yamlToValue(val)
+		}
+		return Value{Type: TypeMap, Map: m}
+	case map[interface{}]interface{}:
+		m := make(map[string]Value)
+		for k, val := range v {
+			m[fmt.Sprintf("%v", k)] = yamlToValue(val)
+		}
+		return Value{Type: TypeMap, Map: m}
+	default:
+		return Value{Type: TypeString, Str: fmt.Sprintf("%v", v)}
+	}
+}
+
+func valueToYaml(val Value) interface{} {
+	switch val.Type {
+	case TypeNil:
+		return nil
+	case TypeBool:
+		return val.Bool
+	case TypeInt:
+		return val.Int
+	case TypeFloat:
+		return val.Float
+	case TypeString:
+		return val.Str
+	case TypeArray:
+		arr := make([]interface{}, len(val.Arr))
+		for i, item := range val.Arr {
+			arr[i] = valueToYaml(item)
+		}
+		return arr
+	case TypeMap:
+		m := make(map[string]interface{})
+		for k, v := range val.Map {
+			m[k] = valueToYaml(v)
+		}
+		return m
+	default:
+		return nil
+	}
+}
+
+func tomlToValue(raw map[string]interface{}) Value {
+	m := make(map[string]Value)
+	for k, v := range raw {
+		m[k] = yamlToValue(v) // reuse yamlToValue since TOML types are similar
+	}
+	return Value{Type: TypeMap, Map: m}
+}
+
+// === 字符串方法 ===
+
+func (v *VM) getStringMethod(s string, method string) (Value, bool) {
+	switch method {
+	case "upper":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "upper", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				return Value{Type: TypeString, Str: strings.ToUpper(s)}, nil
+			},
+		}}, true
+	case "lower":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "lower", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				return Value{Type: TypeString, Str: strings.ToLower(s)}, nil
+			},
+		}}, true
+	case "trim":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "trim", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				return Value{Type: TypeString, Str: strings.TrimSpace(s)}, nil
+			},
+		}}, true
+	case "split":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "split", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				sep := " "
+				if len(args) > 0 && args[0].Type == TypeString {
+					sep = args[0].Str
+				}
+				parts := strings.Split(s, sep)
+				arr := make([]Value, len(parts))
+				for i, p := range parts {
+					arr[i] = Value{Type: TypeString, Str: p}
+				}
+				return Value{Type: TypeArray, Arr: arr}, nil
+			},
+		}}, true
+	case "contains":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "contains", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				if len(args) != 1 || args[0].Type != TypeString {
+					return Value{}, &RuntimeError{Message: "contains() 需要 1 个字符串参数"}
+				}
+				return Value{Type: TypeBool, Bool: strings.Contains(s, args[0].Str)}, nil
+			},
+		}}, true
+	case "replace":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "replace", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				if len(args) != 2 || args[0].Type != TypeString || args[1].Type != TypeString {
+					return Value{}, &RuntimeError{Message: "replace(old, new) 需要 2 个字符串参数"}
+				}
+				return Value{Type: TypeString, Str: strings.ReplaceAll(s, args[0].Str, args[1].Str)}, nil
+			},
+		}}, true
+	case "starts_with":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "starts_with", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				if len(args) != 1 || args[0].Type != TypeString {
+					return Value{}, &RuntimeError{Message: "starts_with() 需要 1 个字符串参数"}
+				}
+				return Value{Type: TypeBool, Bool: strings.HasPrefix(s, args[0].Str)}, nil
+			},
+		}}, true
+	case "ends_with":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "ends_with", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				if len(args) != 1 || args[0].Type != TypeString {
+					return Value{}, &RuntimeError{Message: "ends_with() 需要 1 个字符串参数"}
+				}
+				return Value{Type: TypeBool, Bool: strings.HasSuffix(s, args[0].Str)}, nil
+			},
+		}}, true
+	case "len":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "len", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				return Value{Type: TypeInt, Int: int64(len(s))}, nil
+			},
+		}}, true
+	case "to_int":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "to_int", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				var n int64
+				fmt.Sscanf(s, "%d", &n)
+				return Value{Type: TypeInt, Int: n}, nil
+			},
+		}}, true
+	}
+	return Value{}, false
+}
+
+// === 数组方法 ===
+
+func (v *VM) getArrayMethod(arr Value, method string) (Value, bool) {
+	switch method {
+	case "len":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "len", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				return Value{Type: TypeInt, Int: int64(len(arr.Arr))}, nil
+			},
+		}}, true
+	case "append":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "append", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				newArr := make([]Value, len(arr.Arr))
+				copy(newArr, arr.Arr)
+				if len(args) > 0 {
+					newArr = append(newArr, args[0])
+				}
+				return Value{Type: TypeArray, Arr: newArr}, nil
+			},
+		}}, true
+	case "join":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "join", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				sep := ""
+				if len(args) > 0 && args[0].Type == TypeString {
+					sep = args[0].Str
+				}
+				parts := make([]string, len(arr.Arr))
+				for i, item := range arr.Arr {
+					parts[i] = v.toString(item)
+				}
+				return Value{Type: TypeString, Str: strings.Join(parts, sep)}, nil
+			},
+		}}, true
+	case "reverse":
+		return Value{Type: TypeFunction, Fn: &FuncValue{
+			Name: "reverse", IsBuiltin: true,
+			Builtin: func(args []Value) (Value, error) {
+				n := len(arr.Arr)
+				newArr := make([]Value, n)
+				for i := 0; i < n; i++ {
+					newArr[i] = arr.Arr[n-1-i]
+				}
+				return Value{Type: TypeArray, Arr: newArr}, nil
+			},
+		}}, true
+	}
+	return Value{}, false
+}
+
+// === Inventory 解析 ===
+
+// parseInventory 解析 INI 格式的主机清单文件
+// 格式：
+// [group_name]
+// host1 ansible_host=10.0.0.1
+// host2 ansible_host=10.0.0.2
+func parseInventory(content string) Value {
+	groups := make(map[string]Value)
+	allHosts := make([]Value, 0)
+	currentGroup := "all"
+	groupHosts := make(map[string][]Value)
+	groupHosts["all"] = make([]Value, 0)
+
+	for _, line := range strings.Split(content, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, ";") {
+			continue
+		}
+
+		// 组头 [group_name]
+		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+			currentGroup = strings.TrimSpace(line[1 : len(line)-1])
+			if _, ok := groupHosts[currentGroup]; !ok {
+				groupHosts[currentGroup] = make([]Value, 0)
+			}
+			continue
+		}
+
+		// 主机行: hostname [key=value ...]
+		parts := strings.Fields(line)
+		if len(parts) == 0 {
+			continue
+		}
+		hostname := parts[0]
+		hostVars := make(map[string]Value)
+		hostVars["name"] = Value{Type: TypeString, Str: hostname}
+
+		// 解析变量
+		for _, p := range parts[1:] {
+			if idx := strings.Index(p, "="); idx > 0 {
+				key := p[:idx]
+				val := p[idx+1:]
+				hostVars[key] = Value{Type: TypeString, Str: val}
+			}
+		}
+
+		hostVal := Value{Type: TypeMap, Map: hostVars}
+		allHosts = append(allHosts, hostVal)
+		groupHosts["all"] = append(groupHosts["all"], hostVal)
+		if currentGroup != "all" {
+			groupHosts[currentGroup] = append(groupHosts[currentGroup], hostVal)
+		}
+	}
+
+	// 构建 groups map
+	for groupName, hosts := range groupHosts {
+		groups[groupName] = Value{Type: TypeArray, Arr: hosts}
+	}
+
+	return Value{Type: TypeMap, Map: map[string]Value{
+		"hosts":  {Type: TypeArray, Arr: allHosts},
+		"groups": {Type: TypeMap, Map: groups},
+	}}
 }
