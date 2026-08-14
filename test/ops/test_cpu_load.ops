@@ -1,0 +1,32 @@
+// test_cpu_load.ops — CPU 负载检查
+// 检查所有主机的 CPU 负载和核心数
+
+config = json.parse(file.read("test/env/hosts.json"))
+hosts = config["hosts"]
+
+print("=== CPU 负载检查 ===")
+print()
+
+for h in hosts
+    ip = h["ip"]
+    user = h["user"]
+    password = h["password"]
+    name = h["name"]
+
+    // 获取负载和核心数
+    cmd = "uptime && nproc"
+    result = ssh.run(ip, cmd, user, password)
+    if result["ok"]
+        lines = strings.split(strings.trim(result["stdout"]), "\n")
+        uptime_line = ""
+        cores = ""
+        if lines.len() >= 2
+            uptime_line = strings.trim(lines[0])
+            cores = strings.trim(lines[1])
+        print("  [" + name + "] " + ip)
+        print("    " + uptime_line)
+        print("    核心: " + cores)
+        print()
+    else
+        print("  [" + name + "] ✗ 检查失败 (exit=" + result["exitCode"] + ")")
+        print()

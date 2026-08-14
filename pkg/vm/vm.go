@@ -1169,7 +1169,69 @@ func (v *VM) registerBuiltins() {
 		},
 	}
 
-	// ssh 模块（通过 ssh 命令实现）
+	// ssh 模块（通过 ssh/sshpass 命令实现，支持密钥和密码认证）
+	// sshExec 内部辅助：构建 SSH 命令并执行
+	sshExec := func(host, command, user, password string) ([]byte, int64, error) {
+		target := user + "@" + host
+		var cmd *exec.Cmd
+		if password != "" {
+			cmd = exec.Command("sshpass", "-p", password, "ssh",
+				"-o", "StrictHostKeyChecking=no",
+				"-o", "ConnectTimeout=10",
+				target, command)
+		} else {
+			cmd = exec.Command("ssh",
+				"-o", "StrictHostKeyChecking=no",
+				"-o", "ConnectTimeout=10",
+				"-o", "BatchMode=yes",
+				target, command)
+		}
+		output, err := cmd.CombinedOutput()
+		exitCode := int64(0)
+		if err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				exitCode = int64(exitErr.ExitCode())
+			} else {
+				return output, 255, err
+			}
+		}
+		return output, exitCode, nil
+	}
+	// scpExec 内部辅助：构建 SCP 命令并执行
+	scpExec := func(local, host, remote, user, password string) ([]byte, int64, error) {
+		target := user + "@" + host + ":" + remote
+		var cmd *exec.Cmd
+		if password != "" {
+			cmd = exec.Command("sshpass", "-p", password, "scp",
+				"-o", "StrictHostKeyChecking=no",
+				"-o", "ConnectTimeout=10",
+				local, target)
+		} else {
+			cmd = exec.Command("scp",
+				"-o", "StrictHostKeyChecking=no",
+				"-o", "ConnectTimeout=10",
+				"-o", "BatchMode=yes",
+				local, target)
+		}
+		output, err := cmd.CombinedOutput()
+		exitCode := int64(0)
+		if err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				exitCode = int64(exitErr.ExitCode())
+			} else {
+				return output, 255, err
+			}
+		}
+		return output, exitCode, nil
+	}
+	// getStrArg 安全获取字符串参数
+	getStrArg := func(args []Value, idx int, def string) string {
+		if idx < len(args) && args[idx].Type == TypeString {
+			return args[idx].Str
+		}
+		return def
+	}
+
 	v.globals["ssh"] = Value{
 		Type: TypeMap,
 		Map: map[string]Value{
@@ -1178,32 +1240,20 @@ func (v *VM) registerBuiltins() {
 				IsBuiltin: true,
 				Builtin: func(args []Value) (Value, error) {
 					if len(args) < 2 || args[0].Type != TypeString || args[1].Type != TypeString {
-						return Value{}, &RuntimeError{Message: "ssh.run(host, cmd, [user]) 需要至少 2 个参数"}
+						return Value{}, &RuntimeError{Message: "ssh.run(host, cmd, [user], [password]) 需要至少 2 个参数"}
 					}
 					host := args[0].Str
 					command := args[1].Str
-					user := "root"
-					if len(args) >= 3 && args[2].Type == TypeString {
-						user = args[2].Str
-					}
-					target := user + "@" + host
-					cmd := exec.Command("ssh", "-o", "StrictHostKeyChecking=no",
-						"-o", "ConnectTimeout=10",
-						"-o", "BatchMode=yes",
-						target, command)
-					output, err := cmd.CombinedOutput()
-					exitCode := int64(0)
-					if err != nil {
-						if exitErr, ok := err.(*exec.ExitError); ok {
-							exitCode = int64(exitErr.ExitCode())
-						} else {
-							return Value{Type: TypeMap, Map: map[string]Value{
-								"stdout":   {Type: TypeString, Str: fmt.Sprintf("SSH 连接失败: %v", err)},
-								"exitCode": {Type: TypeInt, Int: 255},
-								"ok":       {Type: TypeBool, Bool: false},
-								"host":     {Type: TypeString, Str: host},
-							}}, nil
-						}
+					user := getStrArg(args, 2, "root")
+					password := getStrArg(args, 3, "")
+					output, exitCode, connErr := sshExec(host, command, user, password)
+					if connErr != nil && exitCode == 255 {
+						return Value{Type: TypeMap, Map: map[string]Value{
+							"stdout":   {Type: TypeString, Str: fmt.Sprintf("SSH 连接失败: %v", connErr)},
+							"exitCode": {Type: TypeInt, Int: 255},
+							"ok":       {Type: TypeBool, Bool: false},
+							"host":     {Type: TypeString, Str: host},
+						}}, nil
 					}
 					return Value{Type: TypeMap, Map: map[string]Value{
 						"stdout":   {Type: TypeString, Str: string(output)},
@@ -1218,28 +1268,16 @@ func (v *VM) registerBuiltins() {
 				IsBuiltin: true,
 				Builtin: func(args []Value) (Value, error) {
 					if len(args) < 3 {
-						return Value{}, &RuntimeError{Message: "ssh.copy(local, host, remote, [user]) 需要至少 3 个参数"}
+						return Value{}, &RuntimeError{Message: "ssh.copy(local, host, remote, [user], [password]) 需要至少 3 个参数"}
 					}
 					local := args[0].Str
 					host := args[1].Str
 					remote := args[2].Str
-					user := "root"
-					if len(args) >= 4 && args[3].Type == TypeString {
-						user = args[3].Str
-					}
-					target := user + "@" + host + ":" + remote
-					cmd := exec.Command("scp", "-o", "StrictHostKeyChecking=no",
-						"-o", "ConnectTimeout=10",
-						"-o", "BatchMode=yes",
-						local, target)
-					output, err := cmd.CombinedOutput()
-					exitCode := int64(0)
-					if err != nil {
-						if exitErr, ok := err.(*exec.ExitError); ok {
-							exitCode = int64(exitErr.ExitCode())
-						} else {
-							return Value{}, &RuntimeError{Message: fmt.Sprintf("SCP 失败: %v", err)}
-						}
+					user := getStrArg(args, 3, "root")
+					password := getStrArg(args, 4, "")
+					output, exitCode, connErr := scpExec(local, host, remote, user, password)
+					if connErr != nil && exitCode == 255 {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("SCP 失败: %v", connErr)}
 					}
 					return Value{Type: TypeMap, Map: map[string]Value{
 						"stdout":   {Type: TypeString, Str: string(output)},
@@ -1253,15 +1291,13 @@ func (v *VM) registerBuiltins() {
 				IsBuiltin: true,
 				Builtin: func(args []Value) (Value, error) {
 					if len(args) < 1 || args[0].Type != TypeString {
-						return Value{}, &RuntimeError{Message: "ssh.ping(host) 需要 1 个参数"}
+						return Value{}, &RuntimeError{Message: "ssh.ping(host, [user], [password]) 需要至少 1 个参数"}
 					}
 					host := args[0].Str
-					cmd := exec.Command("ssh", "-o", "StrictHostKeyChecking=no",
-						"-o", "ConnectTimeout=5",
-						"-o", "BatchMode=yes",
-						host, "echo ok")
-					err := cmd.Run()
-					return Value{Type: TypeBool, Bool: err == nil}, nil
+					user := getStrArg(args, 1, "root")
+					password := getStrArg(args, 2, "")
+					_, exitCode, _ := sshExec(host, "echo ok", user, password)
+					return Value{Type: TypeBool, Bool: exitCode == 0}, nil
 				},
 			}},
 		},
@@ -1461,14 +1497,12 @@ func (v *VM) registerBuiltins() {
 				IsBuiltin: true,
 				Builtin: func(args []Value) (Value, error) {
 					if len(args) < 2 || args[0].Type != TypeArray || args[1].Type != TypeString {
-						return Value{}, &RuntimeError{Message: "fleet.exec(hosts, cmd, [user]) 需要至少 2 个参数"}
+						return Value{}, &RuntimeError{Message: "fleet.exec(hosts, cmd, [user], [password]) 需要至少 2 个参数"}
 					}
 					hosts := args[0].Arr
 					command := args[1].Str
-					user := "root"
-					if len(args) >= 3 && args[2].Type == TypeString {
-						user = args[2].Str
-					}
+					user := getStrArg(args, 2, "root")
+					password := getStrArg(args, 3, "")
 
 					// 使用 SSH 并行执行
 					type result struct {
@@ -1484,20 +1518,7 @@ func (v *VM) registerBuiltins() {
 						go func(idx int, host Value) {
 							defer wg.Done()
 							hostStr := v.toString(host)
-							target := user + "@" + hostStr
-							cmd := exec.Command("ssh", "-o", "StrictHostKeyChecking=no",
-								"-o", "ConnectTimeout=10",
-								"-o", "BatchMode=yes",
-								target, command)
-							output, err := cmd.CombinedOutput()
-							exitCode := int64(0)
-							if err != nil {
-								if exitErr, ok := err.(*exec.ExitError); ok {
-									exitCode = int64(exitErr.ExitCode())
-								} else {
-									exitCode = 255
-								}
-							}
+							output, exitCode, _ := sshExec(hostStr, command, user, password)
 							results[idx] = result{host: hostStr, out: string(output), code: exitCode}
 						}(i, h)
 					}

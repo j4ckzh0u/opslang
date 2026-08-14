@@ -1,0 +1,71 @@
+// test_batch_exec.ops — 批量 SSH 执行测试
+// 使用 fleet.exec 和逐主机循环测试批量操作
+
+config = json.parse(file.read("test/env/hosts.json"))
+hosts = config["hosts"]
+
+print("=== 批量 SSH 执行测试 ===")
+print("  目标: " + hosts.len() + " 台主机")
+print()
+
+// 测试 1: fleet.exec — 同凭据批量执行（用 host1 的凭据）
+h1 = hosts[0]
+ips_all = []
+for h in hosts
+    ips_all = append(ips_all, h["ip"])
+
+print("[1] fleet.exec — 并行获取主机名 (host1 凭据)")
+results = fleet.exec(ips_all, "hostname && uname -s", h1["user"], h1["password"])
+for r in results
+    if r["ok"]
+        output = strings.trim(r["stdout"])
+        print("  ✓ " + r["host"] + " → " + output)
+    else
+        print("  ✗ " + r["host"] + " → 失败 (exit=" + r["exitCode"] + ")")
+
+summary = fleet.summary(results)
+print("  汇总: 总 " + summary["total"] + ", 成功 " + summary["ok"] + ", 失败 " + summary["fail"])
+print()
+
+// 测试 2: 逐主机 SSH — 不同凭据
+print("[2] 逐主机 SSH — 各自凭据执行系统信息")
+for h in hosts
+    cmd = "hostname && uname -s && uptime"
+    result = ssh.run(h["ip"], cmd, h["user"], h["password"])
+    if result["ok"]
+        output = strings.trim(result["stdout"])
+        lines = strings.split(output, "\n")
+        print("  ✓ " + h["name"] + " (" + h["ip"] + "):")
+        for line in lines
+            print("    " + strings.trim(line))
+    else
+        print("  ✗ " + h["name"] + " 失败")
+print()
+
+// 测试 3: fleet.exec — root 用户批量执行
+print("[3] fleet.exec — root 用户批量执行")
+root_ips = []
+root_pass = ""
+for h in hosts
+    if h["user"] == "root"
+        root_ips = append(root_ips, h["ip"])
+        root_pass = h["password"]
+
+if root_ips.len() > 0
+    results2 = fleet.exec(root_ips, "cat /etc/hostname && uptime", "root", root_pass)
+    for r in results2
+        if r["ok"]
+            output = strings.trim(r["stdout"])
+            print("  ✓ " + r["host"] + ":")
+            lines = strings.split(output, "\n")
+            for line in lines
+                print("    " + line)
+        else
+            print("  ✗ " + r["host"])
+    summary2 = fleet.summary(results2)
+    print("  汇总: 总 " + summary2["total"] + ", 成功 " + summary2["ok"] + ", 失败 " + summary2["fail"])
+else
+    print("  (无 root 用户主机)")
+print()
+
+print("=== 批量执行测试完成 ===")

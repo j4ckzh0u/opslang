@@ -37,3 +37,6 @@ debug
 *.prof
 
 dist/
+.env
+*.env
+test/env/

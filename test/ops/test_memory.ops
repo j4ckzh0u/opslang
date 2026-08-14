@@ -1,0 +1,26 @@
+// test_memory.ops — 内存使用检查
+// 检查所有主机的内存使用情况
+
+config = json.parse(file.read("test/env/hosts.json"))
+hosts = config["hosts"]
+
+print("=== 内存使用检查 ===")
+print()
+
+for h in hosts
+    ip = h["ip"]
+    user = h["user"]
+    password = h["password"]
+    name = h["name"]
+
+    cmd = "free -h | head -2"
+    result = ssh.run(ip, cmd, user, password)
+    if result["ok"]
+        lines = strings.split(strings.trim(result["stdout"]), "\n")
+        print("  [" + name + "] " + ip)
+        for line in lines
+            print("    " + line)
+        print()
+    else
+        print("  [" + name + "] ✗ 检查失败")
+        print()

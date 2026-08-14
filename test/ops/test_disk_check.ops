@@ -1,0 +1,28 @@
+// test_disk_check.ops — 磁盘使用率检查
+// 检查所有主机的磁盘使用情况
+
+config = json.parse(file.read("test/env/hosts.json"))
+hosts = config["hosts"]
+
+print("=== 磁盘使用率检查 ===")
+print("  告警阈值: 80%")
+print()
+
+for h in hosts
+    ip = h["ip"]
+    user = h["user"]
+    password = h["password"]
+    name = h["name"]
+
+    print("  [" + name + "] " + ip)
+    cmd = "df -h --output=source,size,used,avail,pcent,target -x tmpfs -x devtmpfs -x squashfs 2>/dev/null || df -h"
+    result = ssh.run(ip, cmd, user, password)
+    if result["ok"]
+        lines = strings.split(strings.trim(result["stdout"]), "\n")
+        for line in lines
+            if line.len() > 0
+                print("    " + line)
+        print()
+    else
+        print("    ✗ 检查失败")
+        print()

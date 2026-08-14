@@ -1,0 +1,65 @@
+// test_fleet_parallel.ops — fleet.parallel 并行执行测试
+// 测试 fleet.parallel 配合 SSH 的并行执行能力
+
+config = json.parse(file.read("test/env/hosts.json"))
+hosts = config["hosts"]
+
+print("=== fleet.parallel 并行执行测试 ===")
+print()
+
+// fleet.parallel 的闭包目前无法直接访问外部 SSH 凭据
+// 这里用 fleet.exec 测试多用户场景
+
+// 测试 1: 逐主机执行（不同凭据）
+print("[1] 逐主机 SSH 执行（不同用户/密码）")
+for h in hosts
+    result = ssh.run(h["ip"], "whoami && id", h["user"], h["password"])
+    if result["ok"]
+        output = strings.trim(result["stdout"])
+        lines = strings.split(output, "\n")
+        print("  " + h["name"] + ": user=" + lines[0] + " | " + lines[1])
+    else
+        print("  ✗ " + h["name"] + " 失败")
+print()
+
+// 测试 2: fleet.parallel — 使用闭包
+print("[2] fleet.parallel — 闭包并行执行")
+// 创建一个简单的并行测试
+host_names = []
+for h in hosts
+    host_names = append(host_names, h["name"])
+
+results = fleet.parallel(host_names, fn(name) => "hello from " + name)
+for r in results
+    if r["ok"]
+        print("  ✓ " + r["host"] + " → " + r["result"])
+    else
+        print("  ✗ " + r["host"])
+print()
+
+// 测试 3: fleet.exec — 同用户批量执行
+print("[3] fleet.exec — root 用户批量执行")
+// host2 是 root 用户
+root_hosts = []
+root_pass = ""
+for h in hosts
+    if h["user"] == "root"
+        root_hosts = append(root_hosts, h["ip"])
+        root_pass = h["password"]
+
+if root_hosts.len() > 0
+    results = fleet.exec(root_hosts, "cat /etc/hostname && uptime", "root", root_pass)
+    for r in results
+        if r["ok"]
+            output = strings.trim(r["stdout"])
+            print("  " + r["host"] + ":")
+            lines = strings.split(output, "\n")
+            for line in lines
+                print("    " + line)
+        else
+            print("  ✗ " + r["host"])
+else
+    print("  (无 root 用户主机)")
+print()
+
+print("=== fleet 测试完成 ===")
