@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/opslang/opslang/pkg/ast"
 )
@@ -1111,6 +1112,104 @@ func (v *VM) registerBuiltins() {
 		},
 	}
 
+	// ssh 模块（通过 ssh 命令实现）
+	v.globals["ssh"] = Value{
+		Type: TypeMap,
+		Map: map[string]Value{
+			"run": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "ssh.run",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 2 || args[0].Type != TypeString || args[1].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "ssh.run(host, cmd, [user]) 需要至少 2 个参数"}
+					}
+					host := args[0].Str
+					command := args[1].Str
+					user := "root"
+					if len(args) >= 3 && args[2].Type == TypeString {
+						user = args[2].Str
+					}
+					target := user + "@" + host
+					cmd := exec.Command("ssh", "-o", "StrictHostKeyChecking=no",
+						"-o", "ConnectTimeout=10",
+						"-o", "BatchMode=yes",
+						target, command)
+					output, err := cmd.CombinedOutput()
+					exitCode := int64(0)
+					if err != nil {
+						if exitErr, ok := err.(*exec.ExitError); ok {
+							exitCode = int64(exitErr.ExitCode())
+						} else {
+							return Value{Type: TypeMap, Map: map[string]Value{
+								"stdout":   {Type: TypeString, Str: fmt.Sprintf("SSH 连接失败: %v", err)},
+								"exitCode": {Type: TypeInt, Int: 255},
+								"ok":       {Type: TypeBool, Bool: false},
+								"host":     {Type: TypeString, Str: host},
+							}}, nil
+						}
+					}
+					return Value{Type: TypeMap, Map: map[string]Value{
+						"stdout":   {Type: TypeString, Str: string(output)},
+						"exitCode": {Type: TypeInt, Int: exitCode},
+						"ok":       {Type: TypeBool, Bool: exitCode == 0},
+						"host":     {Type: TypeString, Str: host},
+					}}, nil
+				},
+			}},
+			"copy": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "ssh.copy",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 3 {
+						return Value{}, &RuntimeError{Message: "ssh.copy(local, host, remote, [user]) 需要至少 3 个参数"}
+					}
+					local := args[0].Str
+					host := args[1].Str
+					remote := args[2].Str
+					user := "root"
+					if len(args) >= 4 && args[3].Type == TypeString {
+						user = args[3].Str
+					}
+					target := user + "@" + host + ":" + remote
+					cmd := exec.Command("scp", "-o", "StrictHostKeyChecking=no",
+						"-o", "ConnectTimeout=10",
+						"-o", "BatchMode=yes",
+						local, target)
+					output, err := cmd.CombinedOutput()
+					exitCode := int64(0)
+					if err != nil {
+						if exitErr, ok := err.(*exec.ExitError); ok {
+							exitCode = int64(exitErr.ExitCode())
+						} else {
+							return Value{}, &RuntimeError{Message: fmt.Sprintf("SCP 失败: %v", err)}
+						}
+					}
+					return Value{Type: TypeMap, Map: map[string]Value{
+						"stdout":   {Type: TypeString, Str: string(output)},
+						"exitCode": {Type: TypeInt, Int: exitCode},
+						"ok":       {Type: TypeBool, Bool: exitCode == 0},
+					}}, nil
+				},
+			}},
+			"ping": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "ssh.ping",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "ssh.ping(host) 需要 1 个参数"}
+					}
+					host := args[0].Str
+					cmd := exec.Command("ssh", "-o", "StrictHostKeyChecking=no",
+						"-o", "ConnectTimeout=5",
+						"-o", "BatchMode=yes",
+						host, "echo ok")
+					err := cmd.Run()
+					return Value{Type: TypeBool, Bool: err == nil}, nil
+				},
+			}},
+		},
+	}
+
 	// json 模块
 	v.globals["json"] = Value{
 		Type: TypeMap,
@@ -1157,6 +1256,232 @@ func (v *VM) registerBuiltins() {
 						return Value{}, &RuntimeError{Message: fmt.Sprintf("JSON 格式化失败: %v", err)}
 					}
 					return Value{Type: TypeString, Str: string(data)}, nil
+				},
+			}},
+		},
+	}
+
+	// fleet 模块（批量执行引擎）
+	v.globals["fleet"] = Value{
+		Type: TypeMap,
+		Map: map[string]Value{
+			"parallel": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "fleet.parallel",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 2 || args[0].Type != TypeArray {
+						return Value{}, &RuntimeError{Message: "fleet.parallel(hosts, fn, [max_concurrent]) 需要至少 2 个参数"}
+					}
+					hosts := args[0].Arr
+					fn := args[1].Fn
+					maxConcurrent := int64(10)
+					if len(args) >= 3 && args[2].Type == TypeInt {
+						maxConcurrent = args[2].Int
+					}
+					if maxConcurrent <= 0 {
+						maxConcurrent = int64(len(hosts))
+					}
+
+					// 并发执行
+					type result struct {
+						host string
+						val  Value
+						err  error
+					}
+					results := make([]result, len(hosts))
+					sem := make(chan struct{}, maxConcurrent)
+
+					var wg sync.WaitGroup
+					for i, h := range hosts {
+						wg.Add(1)
+						go func(idx int, host Value) {
+							defer wg.Done()
+							sem <- struct{}{}
+							defer func() { <-sem }()
+
+							hostStr := v.toString(host)
+							fnEnv := make(map[string]Value)
+							if len(fn.Params) > 0 {
+								fnEnv[fn.Params[0].Name] = host
+							}
+							// 复制闭包变量
+							if fn.Closure != nil {
+								for k, val := range fn.Closure {
+									fnEnv[k] = val
+								}
+							}
+
+							var retVal Value
+							var retErr error
+							for _, stmt := range fn.Body {
+								signal, val, err := v.execStmt(stmt, fnEnv)
+								if err != nil {
+									retErr = err
+									break
+								}
+								if signal == SignalReturn {
+									retVal = val
+									break
+								}
+							}
+							results[idx] = result{host: hostStr, val: retVal, err: retErr}
+						}(i, h)
+					}
+					wg.Wait()
+
+					// 收集结果
+					arr := make([]Value, len(results))
+					for i, r := range results {
+						m := map[string]Value{
+							"host": {Type: TypeString, Str: r.host},
+						}
+						if r.err != nil {
+							m["error"] = Value{Type: TypeString, Str: r.err.Error()}
+							m["ok"] = Value{Type: TypeBool, Bool: false}
+						} else {
+							m["result"] = r.val
+							m["ok"] = Value{Type: TypeBool, Bool: true}
+						}
+						arr[i] = Value{Type: TypeMap, Map: m}
+					}
+					return Value{Type: TypeArray, Arr: arr}, nil
+				},
+			}},
+			"serial": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "fleet.serial",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 2 || args[0].Type != TypeArray {
+						return Value{}, &RuntimeError{Message: "fleet.serial(hosts, fn) 需要至少 2 个参数"}
+					}
+					hosts := args[0].Arr
+					fn := args[1].Fn
+
+					arr := make([]Value, len(hosts))
+					for i, h := range hosts {
+						hostStr := v.toString(h)
+						fnEnv := make(map[string]Value)
+						if len(fn.Params) > 0 {
+							fnEnv[fn.Params[0].Name] = h
+						}
+						if fn.Closure != nil {
+							for k, val := range fn.Closure {
+								fnEnv[k] = val
+							}
+						}
+
+						var retVal Value
+						var retErr error
+						for _, stmt := range fn.Body {
+							signal, val, err := v.execStmt(stmt, fnEnv)
+							if err != nil {
+								retErr = err
+								break
+							}
+							if signal == SignalReturn {
+								retVal = val
+								break
+							}
+						}
+
+						m := map[string]Value{
+							"host": {Type: TypeString, Str: hostStr},
+						}
+						if retErr != nil {
+							m["error"] = Value{Type: TypeString, Str: retErr.Error()}
+							m["ok"] = Value{Type: TypeBool, Bool: false}
+						} else {
+							m["result"] = retVal
+							m["ok"] = Value{Type: TypeBool, Bool: true}
+						}
+						arr[i] = Value{Type: TypeMap, Map: m}
+					}
+					return Value{Type: TypeArray, Arr: arr}, nil
+				},
+			}},
+			"exec": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "fleet.exec",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 2 || args[0].Type != TypeArray || args[1].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "fleet.exec(hosts, cmd, [user]) 需要至少 2 个参数"}
+					}
+					hosts := args[0].Arr
+					command := args[1].Str
+					user := "root"
+					if len(args) >= 3 && args[2].Type == TypeString {
+						user = args[2].Str
+					}
+
+					// 使用 SSH 并行执行
+					type result struct {
+						host string
+						out  string
+						code int64
+					}
+					results := make([]result, len(hosts))
+					var wg sync.WaitGroup
+
+					for i, h := range hosts {
+						wg.Add(1)
+						go func(idx int, host Value) {
+							defer wg.Done()
+							hostStr := v.toString(host)
+							target := user + "@" + hostStr
+							cmd := exec.Command("ssh", "-o", "StrictHostKeyChecking=no",
+								"-o", "ConnectTimeout=10",
+								"-o", "BatchMode=yes",
+								target, command)
+							output, err := cmd.CombinedOutput()
+							exitCode := int64(0)
+							if err != nil {
+								if exitErr, ok := err.(*exec.ExitError); ok {
+									exitCode = int64(exitErr.ExitCode())
+								} else {
+									exitCode = 255
+								}
+							}
+							results[idx] = result{host: hostStr, out: string(output), code: exitCode}
+						}(i, h)
+					}
+					wg.Wait()
+
+					arr := make([]Value, len(results))
+					for i, r := range results {
+						arr[i] = Value{Type: TypeMap, Map: map[string]Value{
+							"host":     {Type: TypeString, Str: r.host},
+							"stdout":   {Type: TypeString, Str: r.out},
+							"exitCode": {Type: TypeInt, Int: r.code},
+							"ok":       {Type: TypeBool, Bool: r.code == 0},
+						}}
+					}
+					return Value{Type: TypeArray, Arr: arr}, nil
+				},
+			}},
+			"summary": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "fleet.summary",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeArray {
+						return Value{}, &RuntimeError{Message: "fleet.summary(results) 需要 1 个数组参数"}
+					}
+					total := int64(len(args[0].Arr))
+					ok := int64(0)
+					fail := int64(0)
+					for _, item := range args[0].Arr {
+						if item.Type == TypeMap {
+							if okVal, exists := item.Map["ok"]; exists && okVal.Bool {
+								ok++
+							} else {
+								fail++
+							}
+						}
+					}
+					return Value{Type: TypeMap, Map: map[string]Value{
+						"total": {Type: TypeInt, Int: total},
+						"ok":    {Type: TypeInt, Int: ok},
+						"fail":  {Type: TypeInt, Int: fail},
+					}}, nil
 				},
 			}},
 		},

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/opslang/opslang/pkg/compiler"
 	"github.com/opslang/opslang/pkg/lexer"
 	"github.com/opslang/opslang/pkg/parser"
 	"github.com/opslang/opslang/pkg/repl"
@@ -26,6 +27,16 @@ func main() {
 			os.Exit(1)
 		}
 		runFile(os.Args[2])
+	case "build":
+		if len(os.Args) < 3 {
+			fmt.Fprintln(os.Stderr, "用法: ops build <file.ops> [output]")
+			os.Exit(1)
+		}
+		output := ""
+		if len(os.Args) >= 4 {
+			output = os.Args[3]
+		}
+		buildFile(os.Args[2], output)
 	case "repl":
 		repl.Start()
 	case "check":
@@ -49,11 +60,12 @@ func printUsage() {
 	fmt.Println(`OpsLang - 为运维而生的编程语言
 
 用法:
-  ops run <file>     运行 OpsLang 脚本
-  ops repl           启动交互式 REPL
-  ops check <file>   语法检查（不执行）
-  ops version        显示版本信息
-  ops help           显示帮助`)
+  ops run <file>          运行 OpsLang 脚本
+  ops build <file> [out]  编译为单二进制
+  ops repl                启动交互式 REPL
+  ops check <file>        语法检查（不执行）
+  ops version             显示版本信息
+  ops help                显示帮助`)
 }
 
 func runFile(filename string) {
@@ -101,4 +113,11 @@ func checkFile(filename string) {
 	}
 
 	fmt.Printf("✅ %s 语法正确\n", filename)
+}
+
+func buildFile(filename, output string) {
+	if err := compiler.Compile(filename, output); err != nil {
+		fmt.Fprintf(os.Stderr, "编译失败: %v\n", err)
+		os.Exit(1)
+	}
 }

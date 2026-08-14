@@ -110,9 +110,6 @@ var keywords = map[string]TokenType{
 	"true":     TOKEN_TRUE,
 	"false":    TOKEN_FALSE,
 	"nil":      TOKEN_NIL,
-	"ensure":   TOKEN_ENSURE,
-	"fleet":    TOKEN_FLEET,
-	"on":       TOKEN_ON,
 }
 
 // Lexer 词法分析器
