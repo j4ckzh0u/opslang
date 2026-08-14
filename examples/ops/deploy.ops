@@ -1,0 +1,159 @@
+// deploy.ops — OpsLang 完整运维工作流演示
+// 场景：从清单加载 → 环境检查 → 配置生成 → 批量部署 → 验证 → 报告
+
+// ============================================
+// 1. 加载清单和配置
+// ============================================
+print("======================================")
+print("  OpsLang 运维自动化演示")
+print("======================================")
+print("")
+
+// 清单数据（实际项目用 inventory.load 从文件加载）
+inv = inventory.from_list(["web01", "web02", "web03", "db01", "cache01"])
+
+// 配置（用三引号嵌入 YAML）
+appConfig = """
+app:
+  name: MyService
+  version: 2.1.0
+  port: 8080
+  health_check: /health
+database:
+  host: db01
+  port: 5432
+  name: production
+"""
+
+config = yaml.parse(appConfig.trim())
+appName = config["app"]["name"]
+appVersion = config["app"]["version"]
+appPort = config["app"]["port"]
+print("应用: {appName} v{appVersion}")
+print("端口: {appPort}")
+print("")
+
+// ============================================
+// 2. 环境预检
+// ============================================
+print("--- 环境预检 ---")
+allHosts = inventory.all(inv)
+
+checkResults = fleet.serial(allHosts, fn(h) => h)
+
+for r in checkResults
+    host = r["host"]
+    ok = r["ok"]
+    print("  {host}: ok={ok}")
+
+summary = fleet.summary(checkResults)
+total = summary["total"]
+okCount = summary["ok"]
+failCount = summary["fail"]
+print("预检结果: {total} 台, {okCount} 通过, {failCount} 失败")
+print("")
+
+// ============================================
+// 3. 配置生成
+// ============================================
+print("--- 配置生成 ---")
+
+// 用三引号模板生成 Nginx 配置
+nginxConf = """
+upstream backend {
+    server web01:8080;
+    server web02:8080;
+    server web03:8080;
+}
+server {
+    listen 80;
+    server_name api.example.com;
+    location / {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+    }
+    location /health {
+        return 200 'OK';
+    }
+}
+"""
+print("Nginx 配置生成: {nginxConf.trim().len()} 字符")
+
+// 生成环境变量 JSON
+envJson = json.prettify(config["app"])
+print("环境变量:")
+print(envJson)
+print("")
+
+// ============================================
+// 4. 批量部署（模拟）
+// ============================================
+print("--- 批量部署 ---")
+
+deployResults = fleet.parallel(allHosts, fn(h) => h)
+
+for r in deployResults
+    host = r["host"]
+    ok = r["ok"]
+    if ok
+        print("  ✓ {host} 部署成功")
+    else
+        print("  ✗ {host} 部署失败")
+
+deploySummary = fleet.summary(deployResults)
+print("部署结果: {deploySummary}")
+print("")
+
+// ============================================
+// 5. 验证
+// ============================================
+print("--- 部署验证 ---")
+
+// 字符串处理验证
+url = "http://api.example.com/health"
+print("健康检查 URL: {url}")
+
+// JSON 验证
+statusJson = """{"status": "healthy", "uptime": 86400, "version": "2.1.0"}"""
+status = json.parse(statusJson)
+healthy = status["status"]
+uptime = status["uptime"]
+print("服务状态: {healthy}, 运行时间: {uptime}s")
+print("")
+
+// ============================================
+// 6. 报告生成
+// ============================================
+print("--- 部署报告 ---")
+
+print("===================================")
+print("  部署报告")
+print("===================================")
+print("  应用:   " + str(appName))
+print("  版本:   " + str(appVersion))
+print("  主机:   " + str(len(allHosts)) + " 台")
+print("  状态:   SUCCESS")
+print("  时间:   2026-08-14 10:30:00")
+print("===================================")
+print("")
+
+// ============================================
+// 7. 错误处理演示
+// ============================================
+print("--- 错误处理 ---")
+
+try
+    result = file.read("/nonexistent/config.yaml")
+catch e
+    print("预期错误: 文件不存在（已捕获）")
+
+// 确保幂等
+ensure.file("/tmp/opslang_deploy_marker", "deployed: " + str(appVersion))
+marker = ensure.file("/tmp/opslang_deploy_marker", "deployed: " + str(appVersion))
+changed = marker["changed"]
+print("幂等标记: changed={changed}")
+
+print("")
+print("======================================")
+print("  演示完成！所有功能正常运行。")
+print("======================================")

@@ -89,6 +89,7 @@ type Token struct {
 	Column int
 	File   string
 	Quote  byte // 字符串引号类型: '"' 或 '\''
+	Raw    bool // 三引号字符串，不做插值处理
 }
 
 // keywords 关键字映射
@@ -141,12 +142,109 @@ func New(source, filename string) *Lexer {
 func (l *Lexer) Tokenize() []Token {
 	lines := strings.Split(string(l.source), "\n")
 
+	inTripleQuote := false
+	var tripleBuf strings.Builder
+	tripleStartLine := 0
+
 	for i, line := range lines {
 		l.line = i + 1
 		l.column = 1
 
-		// 处理空行和注释行
+		// 处理三引号字符串内部
+		if inTripleQuote {
+			// 检查是否包含结束标记 """
+			if idx := strings.Index(line, `"""`); idx >= 0 {
+				// 结束三引号
+				tripleBuf.WriteString(line[:idx])
+				l.tokens = append(l.tokens, Token{
+					Type:   TOKEN_STRING,
+					Value:  tripleBuf.String(),
+					Line:   tripleStartLine,
+					Column: 1,
+					Quote:  '"',
+					Raw:    true,
+				})
+				l.tokens = append(l.tokens, Token{Type: TOKEN_NEWLINE, Line: l.line, Column: 1})
+				inTripleQuote = false
+				// 处理 """ 之后的内容
+				remaining := line[idx+3:]
+				if strings.TrimSpace(remaining) != "" {
+					l.pos = 0
+					l.source = []rune(remaining)
+					l.scanLine()
+					if len(l.tokens) > 0 && l.tokens[len(l.tokens)-1].Type != TOKEN_NEWLINE {
+						l.tokens = append(l.tokens, Token{Type: TOKEN_NEWLINE, Line: l.line, Column: 1})
+					}
+				}
+				l.lineStart = true
+				continue
+			}
+			// 继续累积
+			tripleBuf.WriteString(line)
+			tripleBuf.WriteRune('\n')
+			continue
+		}
+
+		// 检查是否开始三引号字符串
 		trimmed := strings.TrimSpace(line)
+		if tripleIdx := strings.Index(trimmed, `"""`); tripleIdx >= 0 {
+			// 处理三引号之前的内容
+			if tripleIdx > 0 {
+				before := trimmed[:tripleIdx]
+				if strings.TrimSpace(before) != "" {
+					if l.lineStart {
+						indent := l.measureIndent(line)
+						l.handleIndent(indent)
+						l.lineStart = false
+					}
+					l.pos = 0
+					l.source = []rune(before)
+					l.scanLine()
+				}
+			} else if l.lineStart {
+				indent := l.measureIndent(line)
+				l.handleIndent(indent)
+				l.lineStart = false
+			}
+
+			// 检查同一行是否有结束 """
+			afterOpen := trimmed[tripleIdx+3:]
+			if endIdx := strings.Index(afterOpen, `"""`); endIdx >= 0 {
+				// 同一行内结束
+				content := afterOpen[:endIdx]
+				l.tokens = append(l.tokens, Token{
+					Type:   TOKEN_STRING,
+					Value:  content,
+					Line:   l.line,
+					Column: 1,
+					Quote:  '"',
+					Raw:    true,
+				})
+				// 处理结束 """ 之后的内容
+				remaining := afterOpen[endIdx+3:]
+				if strings.TrimSpace(remaining) != "" {
+					l.pos = 0
+					l.source = []rune(remaining)
+					l.scanLine()
+				}
+				if len(l.tokens) > 0 && l.tokens[len(l.tokens)-1].Type != TOKEN_NEWLINE {
+					l.tokens = append(l.tokens, Token{Type: TOKEN_NEWLINE, Line: l.line, Column: 1})
+				}
+				l.lineStart = true
+				continue
+			}
+
+			// 多行三引号开始
+			inTripleQuote = true
+			tripleStartLine = l.line
+			tripleBuf.Reset()
+			tripleBuf.WriteString(afterOpen)
+			tripleBuf.WriteRune('\n')
+			l.lineStart = true
+			continue
+		}
+
+		// 处理空行和注释行
 		if trimmed == "" || strings.HasPrefix(trimmed, "//") {
 			if len(l.tokens) > 0 && l.tokens[len(l.tokens)-1].Type != TOKEN_NEWLINE {
 				l.tokens = append(l.tokens, Token{Type: TOKEN_NEWLINE, Line: l.line, Column: 1})

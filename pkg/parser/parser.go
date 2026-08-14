@@ -629,10 +629,11 @@ func (p *Parser) parsePrimary() ast.Expression {
 	case lexer.TOKEN_STRING:
 		val := p.current.Value
 		quote := p.current.Quote
+		raw := p.current.Raw
 		// 引号已由 lexer 去除
 		p.advance()
-		// 仅双引号字符串支持插值
-		if quote == '"' && strings.Contains(val, "{") {
+		// 仅双引号、非 raw 字符串支持插值
+		if !raw && quote == '"' && strings.Contains(val, "{") {
 			return p.parseInterpolatedString(val, pos)
 		}
 		return &ast.StringLitExpr{Value: val, Position: pos}

@@ -246,18 +246,31 @@ func (v *VM) execBlock(stmts []ast.Statement, env map[string]Value) (Signal, Val
 }
 
 func (v *VM) execForLoop(varName string, iterable Value, body []ast.Statement, env map[string]Value) (Signal, Value, error) {
+	// 保存循环变量的旧值（防止泄漏到外层作用域）
+	oldVal, hadOld := env[varName]
+
 	switch iterable.Type {
 	case TypeArray:
 		for _, item := range iterable.Arr {
 			env[varName] = item
 			signal, _, err := v.execBlock(body, env)
 			if err != nil {
+				if hadOld {
+					env[varName] = oldVal
+				} else {
+					delete(env, varName)
+				}
 				return SignalNone, Value{}, err
 			}
 			if signal == SignalBreak {
 				break
 			}
 			if signal == SignalReturn {
+				if hadOld {
+					env[varName] = oldVal
+				} else {
+					delete(env, varName)
+				}
 				return SignalReturn, Value{}, nil
 			}
 		}
@@ -266,12 +279,22 @@ func (v *VM) execForLoop(varName string, iterable Value, body []ast.Statement, e
 			env[varName] = Value{Type: TypeString, Str: string(ch)}
 			signal, _, err := v.execBlock(body, env)
 			if err != nil {
+				if hadOld {
+					env[varName] = oldVal
+				} else {
+					delete(env, varName)
+				}
 				return SignalNone, Value{}, err
 			}
 			if signal == SignalBreak {
 				break
 			}
 			if signal == SignalReturn {
+				if hadOld {
+					env[varName] = oldVal
+				} else {
+					delete(env, varName)
+				}
 				return SignalReturn, Value{}, nil
 			}
 		}
@@ -280,15 +303,32 @@ func (v *VM) execForLoop(varName string, iterable Value, body []ast.Statement, e
 			env[varName] = Value{Type: TypeString, Str: k}
 			signal, _, err := v.execBlock(body, env)
 			if err != nil {
+				if hadOld {
+					env[varName] = oldVal
+				} else {
+					delete(env, varName)
+				}
 				return SignalNone, Value{}, err
 			}
 			if signal == SignalBreak {
 				break
 			}
 			if signal == SignalReturn {
+				if hadOld {
+					env[varName] = oldVal
+				} else {
+					delete(env, varName)
+				}
 				return SignalReturn, Value{}, nil
 			}
 		}
+	}
+
+	// 恢复循环变量的旧值
+	if hadOld {
+		env[varName] = oldVal
+	} else {
+		delete(env, varName)
 	}
 	return SignalNone, Value{Nil: true, Type: TypeNil}, nil
 }
@@ -1505,7 +1545,7 @@ func (v *VM) registerBuiltins() {
 	}
 
 	// str 模块（字符串工具）
-	v.globals["str"] = Value{
+	v.globals["strings"] = Value{
 		Type: TypeMap,
 		Map: map[string]Value{
 			"split": {Type: TypeFunction, Fn: &FuncValue{
