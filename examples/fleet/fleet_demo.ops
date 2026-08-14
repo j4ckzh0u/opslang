@@ -1,98 +1,38 @@
-// fleet_demo.ops - 批量执行引擎演示
+// fleet_demo.ops - Fleet 批量执行引擎演示
 
-// 定义服务器清单
-inventory = {
-    web_servers: ["10.0.0.1", "10.0.0.2", "10.0.0.3"],
-    db_servers: ["10.0.1.1", "10.0.1.2"],
-    cache_servers: ["10.0.2.1"],
-}
-
-// ============================================
-// 示例 1: 批量执行命令
-// ============================================
-print("=== 批量执行 uptime ===")
-
-results = fleet.exec(
-    hosts = inventory.web_servers,
-    command = "uptime",
-    parallel = 10,
-    timeout = "30s",
-)
-
-for r in results {
-    print("{r.host}: {r.stdout}")
-}
-
-// ============================================
-// 示例 2: 滚动更新
-// ============================================
+print("=== Fleet 批量执行引擎演示 ===")
 print("")
-print("=== 滚动更新 Nginx ===")
 
-fleet.rolling_update(
-    hosts = inventory.web_servers,
-    batch_size = 1,          // 每次更新 1 台
-    delay = "30s",            // 每批间隔 30 秒
-    task = fn(host) {
-        print("更新 {host} ...")
-        ssh.run(host, "yum update nginx -y")
-        ssh.run(host, "systemctl restart nginx")
+// 服务器清单
+webHosts = ["web01", "web02", "web03"]
 
-        // 健康检查
-        health = http.get("http://{host}/health")
-        if health.status != 200 {
-            print("健康检查失败，回滚 {host}")
-            ssh.run(host, "yum downgrade nginx -y")
-            return false
-        }
-        return true
-    },
-)
+// 1. 串行执行
+print("--- 串行执行 ---")
+results = fleet.serial(webHosts, fn(h) => "checked " + h)
+for r in results
+    h = r["host"]
+    ok = r["ok"]
+    print("  " + h + ": ok=" + str(ok))
 
-// ============================================
-// 示例 3: 批量健康检查
-// ============================================
+// 2. 并行执行
 print("")
-print("=== 批量健康检查 ===")
+print("--- 并行执行 ---")
+results = fleet.parallel(webHosts, fn(h) => "deployed " + h)
+for r in results
+    h = r["host"]
+    ok = r["ok"]
+    print("  " + h + ": ok=" + str(ok))
 
-all_hosts = inventory.web_servers + inventory.db_servers + inventory.cache_servers
-
-health_results = fleet.health_check(
-    hosts = all_hosts,
-    checks = [
-        check.ssh(),                    // SSH 连通性
-        check.disk(max=80),             // 磁盘使用率 < 80%
-        check.memory(max=85),           // 内存使用率 < 85%
-        check.load(max=5),              // 负载 < 5
-    ],
-)
-
-// 汇总
-health_results.summary()
-
-// 失败的自动告警
-if health_results.has_failures() {
-    health_results.notify(
-        channels = ["wechat:ops-group", "email:ops@company.com"],
-        template = "health_check_alert",
-    )
-}
-
-// ============================================
-// 示例 4: 配置分发
-// ============================================
+// 3. 结果汇总
 print("")
-print("=== 分发配置文件 ===")
+print("--- 结果汇总 ---")
+summary = fleet.summary(results)
+t = summary["total"]
+o = summary["ok"]
+f = summary["fail"]
+print("  总计: " + str(t))
+print("  成功: " + str(o))
+print("  失败: " + str(f))
 
-fleet.distribute(
-    hosts = inventory.web_servers,
-    files = [
-        {src: "./config/nginx.conf", dst: "/etc/nginx/nginx.conf"},
-        {src: "./config/logrotate.conf", dst: "/etc/logrotate.d/nginx"},
-    ],
-    backup = true,           // 备份原文件
-    on_change = fn(host, path) {
-        print("配置已更新: {host}:{path}")
-        ssh.run(host, "nginx -t && nginx -s reload")
-    },
-)
+print("")
+print("Fleet 演示完成")

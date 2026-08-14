@@ -54,6 +54,12 @@ replace github.com/opslang/opslang => %s
 
 	// 编译
 	absOutput, _ := filepath.Abs(outputFile)
+
+	// 先运行 go mod tidy 确保依赖完整
+	tidyCmd := exec.Command("go", "mod", "tidy")
+	tidyCmd.Dir = tmpDir
+	tidyCmd.Run() // 忽略 tidy 错误，build 可能会报更具体的错误
+
 	cmd := exec.Command("go", "build", "-trimpath",
 		"-ldflags", "-s -w",
 		"-o", absOutput, ".")

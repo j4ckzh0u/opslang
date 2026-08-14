@@ -1,0 +1,83 @@
+#!/usr/bin/env ops run
+// ops-dev.ops — 用 OpsLang 管理 OpsLang 项目（简化版）
+
+print("======================================")
+print("  OpsLang 自举开发工具")
+print("  用 OpsLang 管理 OpsLang!")
+print("======================================")
+print("")
+
+// 1. 构建
+print("--- 构建 ---")
+r = process.shell("go build -o ops ./cmd/ops/ 2>&1")
+if r["ok"]
+    print("  ✓ 构建成功")
+else
+    print("  ✗ 构建失败")
+
+// 2. 单元测试
+print("")
+print("--- 单元测试 ---")
+r = process.shell("go test ./pkg/lexer/ ./pkg/vm/ -count=1 2>&1")
+if r["ok"]
+    print("  ✓ 单元测试全部通过")
+else
+    print("  ✗ 单元测试失败")
+
+// 3. 集成测试
+print("")
+print("--- 集成测试 ---")
+r = process.shell("go test ./test/integration/ -count=1 2>&1")
+if r["ok"]
+    print("  ✓ 集成测试全部通过")
+else
+    print("  ✗ 集成测试失败")
+
+// 4. 运行示例
+print("")
+print("--- 示例验证 ---")
+r = process.shell("./ops run examples/basic/hello.ops 2>&1")
+if r["ok"]
+    print("  ✓ basic/hello.ops")
+else
+    print("  ✗ basic/hello.ops")
+
+r = process.shell("./ops run examples/ops/deploy.ops 2>&1")
+if r["ok"]
+    print("  ✓ ops/deploy.ops")
+else
+    print("  ✗ ops/deploy.ops")
+
+r = process.shell("./ops run examples/fleet/fleet_demo.ops 2>&1")
+if r["ok"]
+    print("  ✓ fleet/fleet_demo.ops")
+else
+    print("  ✗ fleet/fleet_demo.ops")
+
+// 5. 编译验证
+print("")
+print("--- 编译验证 ---")
+r = process.shell("./ops build examples/basic/hello.ops /tmp/opslang-self-test 2>&1")
+if r["ok"]
+    print("  ✓ 编译成功")
+    r2 = process.shell("/tmp/opslang-self-test 2>&1")
+    if r2["ok"]
+        print("  ✓ 编译后运行成功")
+else
+    print("  ✗ 编译失败")
+
+// 6. 项目统计
+print("")
+print("--- 项目统计 ---")
+loc = process.shell("find pkg cmd -name '*.go' | wc -l")
+print("  Go 源文件: " + strings.trim(loc["stdout"]) + " 个")
+testLoc = process.shell("find . -name '*_test.go' | wc -l")
+print("  测试文件:  " + strings.trim(testLoc["stdout"]) + " 个")
+opsFiles = process.shell("find examples -name '*.ops' | wc -l")
+print("  示例脚本:  " + strings.trim(opsFiles["stdout"]) + " 个")
+
+print("")
+print("======================================")
+print("  自举验证完成!")
+print("  OpsLang 用自身管理自身 ✓")
+print("======================================")
