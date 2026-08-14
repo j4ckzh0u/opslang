@@ -168,7 +168,7 @@ func executeREPL(input string, machine *vm.VM) {
 
 // printHelp 打印帮助
 func printHelp() {
-	fmt.Println(`
+	fmt.Print(`
 OpsLang REPL 帮助:
   :help, :h      显示帮助
   :quit, :q      退出

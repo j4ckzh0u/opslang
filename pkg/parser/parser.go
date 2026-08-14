@@ -61,13 +61,6 @@ func (p *Parser) advance() lexer.Token {
 	return tok
 }
 
-func (p *Parser) peek() lexer.Token {
-	if p.pos+1 < len(p.tokens) {
-		return p.tokens[p.pos+1]
-	}
-	return lexer.Token{Type: lexer.TOKEN_EOF}
-}
-
 func (p *Parser) isAtEnd() bool {
 	return p.current.Type == lexer.TOKEN_EOF
 }

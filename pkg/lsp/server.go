@@ -307,7 +307,6 @@ type Server struct {
 	transport *Transport
 	documents map[string]string // URI -> 内容
 	definitions map[string][]Definition // 函数定义索引
-	logger    *os.File
 }
 
 // Definition 函数定义
