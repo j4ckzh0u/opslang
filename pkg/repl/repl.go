@@ -11,6 +11,7 @@ import (
 	"github.com/opslang/opslang/pkg/lexer"
 	"github.com/opslang/opslang/pkg/parser"
 	"github.com/opslang/opslang/pkg/vm"
+	opsos "github.com/opslang/opslang/stdlib/os"
 )
 
 // Start 启动 REPL
@@ -21,6 +22,7 @@ func Start() {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	machine := vm.New()
+	opsos.Register(machine.Globals(), machine.SSHPool())
 
 	for {
 		// 读取一行

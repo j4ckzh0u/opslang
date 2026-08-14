@@ -12,6 +12,7 @@ import (
 	"github.com/opslang/opslang/pkg/parser"
 	"github.com/opslang/opslang/pkg/repl"
 	"github.com/opslang/opslang/pkg/vm"
+	opsos "github.com/opslang/opslang/stdlib/os"
 )
 
 const version = "0.1.0-dev"
@@ -125,6 +126,7 @@ func runFile(filename string) {
 
 	// 执行
 	machine := vm.New()
+	opsos.Register(machine.Globals(), machine.SSHPool())
 	if err := machine.Run(program); err != nil {
 		fmt.Fprintf(os.Stderr, "运行错误: %v\n", err)
 		os.Exit(1)

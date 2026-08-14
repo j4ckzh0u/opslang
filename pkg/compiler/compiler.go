@@ -95,6 +95,7 @@ import (
 	"github.com/opslang/opslang/pkg/lexer"
 	"github.com/opslang/opslang/pkg/parser"
 	"github.com/opslang/opslang/pkg/vm"
+	opsos "github.com/opslang/opslang/stdlib/os"
 )
 
 const script = ` + "`" + `%s` + "`" + `
@@ -111,6 +112,7 @@ func main() {
 	}
 
 	machine := vm.New()
+	opsos.Register(machine.Globals(), machine.SSHPool())
 	if err := machine.Run(program); err != nil {
 		fmt.Fprintf(os.Stderr, "运行错误: %%v\n", err)
 		os.Exit(1)

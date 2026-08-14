@@ -15,6 +15,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/opslang/opslang/pkg/ast"
+	"github.com/opslang/opslang/stdlib/net/ssh"
 )
 
 // VM 虚拟机（树遍历解释器）
@@ -24,6 +25,7 @@ type VM struct {
 	output     *strings.Builder // 捕获输出（用于测试）
 	callDepth  int
 	maxDepth   int
+	sshPool    *ssh.Pool // SSH 连接池
 }
 
 // Value 运行时值
@@ -95,9 +97,27 @@ func New() *VM {
 		globals:  make(map[string]Value),
 		builtins: make(map[string]BuiltinFunc),
 		maxDepth: 1000,
+		sshPool:  ssh.NewPool(),
 	}
 	vm.registerBuiltins()
 	return vm
+}
+
+// Close releases resources held by the VM (e.g. SSH pool connections).
+func (v *VM) Close() {
+	if v.sshPool != nil {
+		v.sshPool.Close()
+	}
+}
+
+// Globals returns the VM's global variable map (for external module registration).
+func (v *VM) Globals() map[string]Value {
+	return v.globals
+}
+
+// SSHPool returns the VM's SSH connection pool (for external module registration).
+func (v *VM) SSHPool() *ssh.Pool {
+	return v.sshPool
 }
 
 // Run 执行程序
@@ -1169,60 +1189,39 @@ func (v *VM) registerBuiltins() {
 		},
 	}
 
-	// ssh 模块（通过 ssh/sshpass 命令实现，支持密钥和密码认证）
-	// sshExec 内部辅助：构建 SSH 命令并执行
-	sshExec := func(host, command, user, password string) ([]byte, int64, error) {
-		target := user + "@" + host
-		var cmd *exec.Cmd
-		if password != "" {
-			cmd = exec.Command("sshpass", "-p", password, "ssh",
-				"-o", "StrictHostKeyChecking=no",
-				"-o", "ConnectTimeout=10",
-				target, command)
-		} else {
-			cmd = exec.Command("ssh",
-				"-o", "StrictHostKeyChecking=no",
-				"-o", "ConnectTimeout=10",
-				"-o", "BatchMode=yes",
-				target, command)
+	// ssh 模块（使用 Go 原生 SSH 实现，支持密钥和密码认证，连接池复用）
+	// sshExec 内部辅助：通过 SSH 连接池执行远程命令
+	sshExec := func(host, command, user, password string) (string, int64, error) {
+		cfg := ssh.Config{
+			Host:     host,
+			User:     user,
+			Password: password,
 		}
-		output, err := cmd.CombinedOutput()
-		exitCode := int64(0)
+		client, err := v.sshPool.Get(cfg)
 		if err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				exitCode = int64(exitErr.ExitCode())
-			} else {
-				return output, 255, err
-			}
+			return fmt.Sprintf("SSH 连接失败: %v", err), 255, err
 		}
-		return output, exitCode, nil
+		output, exitCode, runErr := client.CombinedOutput(command)
+		if runErr != nil || exitCode >= 128 {
+			// Connection-level error or signal-killed exit (e.g. SIGPIPE=141):
+			// evict from pool to avoid stale state on reused connections.
+			// Normal non-zero exits (e.g. grep no-match=1) are NOT connection errors.
+			v.sshPool.Remove(cfg)
+		}
+		return output, int64(exitCode), runErr
 	}
-	// scpExec 内部辅助：构建 SCP 命令并执行
-	scpExec := func(local, host, remote, user, password string) ([]byte, int64, error) {
-		target := user + "@" + host + ":" + remote
-		var cmd *exec.Cmd
-		if password != "" {
-			cmd = exec.Command("sshpass", "-p", password, "scp",
-				"-o", "StrictHostKeyChecking=no",
-				"-o", "ConnectTimeout=10",
-				local, target)
-		} else {
-			cmd = exec.Command("scp",
-				"-o", "StrictHostKeyChecking=no",
-				"-o", "ConnectTimeout=10",
-				"-o", "BatchMode=yes",
-				local, target)
+	// sftpCopy 内部辅助：通过 SFTP 传输文件
+	sftpCopy := func(local, host, remote, user, password string) error {
+		cfg := ssh.Config{
+			Host:     host,
+			User:     user,
+			Password: password,
 		}
-		output, err := cmd.CombinedOutput()
-		exitCode := int64(0)
+		client, err := v.sshPool.Get(cfg)
 		if err != nil {
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				exitCode = int64(exitErr.ExitCode())
-			} else {
-				return output, 255, err
-			}
+			return fmt.Errorf("SSH 连接失败: %w", err)
 		}
-		return output, exitCode, nil
+		return client.Upload(local, remote)
 	}
 	// getStrArg 安全获取字符串参数
 	getStrArg := func(args []Value, idx int, def string) string {
@@ -1256,7 +1255,7 @@ func (v *VM) registerBuiltins() {
 						}}, nil
 					}
 					return Value{Type: TypeMap, Map: map[string]Value{
-						"stdout":   {Type: TypeString, Str: string(output)},
+						"stdout":   {Type: TypeString, Str: output},
 						"exitCode": {Type: TypeInt, Int: exitCode},
 						"ok":       {Type: TypeBool, Bool: exitCode == 0},
 						"host":     {Type: TypeString, Str: host},
@@ -1275,14 +1274,13 @@ func (v *VM) registerBuiltins() {
 					remote := args[2].Str
 					user := getStrArg(args, 3, "root")
 					password := getStrArg(args, 4, "")
-					output, exitCode, connErr := scpExec(local, host, remote, user, password)
-					if connErr != nil && exitCode == 255 {
-						return Value{}, &RuntimeError{Message: fmt.Sprintf("SCP 失败: %v", connErr)}
+					if err := sftpCopy(local, host, remote, user, password); err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("SFTP 复制失败: %v", err)}
 					}
 					return Value{Type: TypeMap, Map: map[string]Value{
-						"stdout":   {Type: TypeString, Str: string(output)},
-						"exitCode": {Type: TypeInt, Int: exitCode},
-						"ok":       {Type: TypeBool, Bool: exitCode == 0},
+						"stdout":   {Type: TypeString, Str: ""},
+						"exitCode": {Type: TypeInt, Int: 0},
+						"ok":       {Type: TypeBool, Bool: true},
 					}}, nil
 				},
 			}},
@@ -1519,7 +1517,7 @@ func (v *VM) registerBuiltins() {
 							defer wg.Done()
 							hostStr := v.toString(host)
 							output, exitCode, _ := sshExec(hostStr, command, user, password)
-							results[idx] = result{host: hostStr, out: string(output), code: exitCode}
+							results[idx] = result{host: hostStr, out: output, code: exitCode}
 						}(i, h)
 					}
 					wg.Wait()
