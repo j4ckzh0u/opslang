@@ -7,6 +7,7 @@ import (
 
 	"github.com/opslang/opslang/pkg/lexer"
 	"github.com/opslang/opslang/pkg/parser"
+	"github.com/opslang/opslang/pkg/repl"
 	"github.com/opslang/opslang/pkg/vm"
 )
 
@@ -25,6 +26,8 @@ func main() {
 			os.Exit(1)
 		}
 		runFile(os.Args[2])
+	case "repl":
+		repl.Start()
 	case "check":
 		if len(os.Args) < 3 {
 			fmt.Fprintln(os.Stderr, "用法: ops check <file.ops>")
@@ -47,6 +50,7 @@ func printUsage() {
 
 用法:
   ops run <file>     运行 OpsLang 脚本
+  ops repl           启动交互式 REPL
   ops check <file>   语法检查（不执行）
   ops version        显示版本信息
   ops help           显示帮助`)

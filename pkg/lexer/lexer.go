@@ -88,6 +88,7 @@ type Token struct {
 	Line   int
 	Column int
 	File   string
+	Quote  byte // 字符串引号类型: '"' 或 '\''
 }
 
 // keywords 关键字映射
@@ -274,26 +275,44 @@ func (l *Lexer) scanString() {
 	l.column++
 
 	var sb strings.Builder
-	sb.WriteRune(quote)
+	// 不写入外层引号
 
 	for l.pos < len(l.source) {
 		ch := l.source[l.pos]
 
 		if ch == '\\' && l.pos+1 < len(l.source) {
-			// 转义字符
-			sb.WriteRune(ch)
+			// 转义字符处理
 			l.pos++
 			l.column++
-			if l.pos < len(l.source) {
-				sb.WriteRune(l.source[l.pos])
-				l.pos++
-				l.column++
+			next := l.source[l.pos]
+			switch next {
+			case '"':
+				sb.WriteRune('"')
+			case '\'':
+				sb.WriteRune('\'')
+			case '\\':
+				sb.WriteRune('\\')
+			case 'n':
+				sb.WriteRune('\n')
+			case 't':
+				sb.WriteRune('\t')
+			case 'r':
+				sb.WriteRune('\r')
+			case '{':
+				sb.WriteRune('{')
+			case '}':
+				sb.WriteRune('}')
+			default:
+				sb.WriteRune('\\')
+				sb.WriteRune(next)
 			}
+			l.pos++
+			l.column++
 			continue
 		}
 
 		if ch == quote {
-			sb.WriteRune(ch)
+			// 不写入外层引号
 			l.pos++
 			l.column++
 			break
@@ -309,6 +328,7 @@ func (l *Lexer) scanString() {
 		Value:  sb.String(),
 		Line:   l.line,
 		Column: startCol,
+		Quote:  byte(quote),
 	})
 }
 

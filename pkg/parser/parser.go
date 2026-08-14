@@ -295,8 +295,7 @@ func (p *Parser) parseImportStmt() ast.Statement {
 	path := ""
 	if p.check(lexer.TOKEN_STRING) {
 		path = p.current.Value
-		// 去掉引号
-		path = strings.Trim(path, "\"'")
+		// 引号已由 lexer 去除
 		p.advance()
 	} else if p.check(lexer.TOKEN_IDENT) {
 		path = p.current.Value
@@ -629,11 +628,11 @@ func (p *Parser) parsePrimary() ast.Expression {
 
 	case lexer.TOKEN_STRING:
 		val := p.current.Value
-		// 去掉外层引号
-		val = strings.Trim(val, "\"'")
+		quote := p.current.Quote
+		// 引号已由 lexer 去除
 		p.advance()
-		// 检查是否包含插值
-		if strings.Contains(val, "{") {
+		// 仅双引号字符串支持插值
+		if quote == '"' && strings.Contains(val, "{") {
 			return p.parseInterpolatedString(val, pos)
 		}
 		return &ast.StringLitExpr{Value: val, Position: pos}
@@ -732,7 +731,17 @@ func (p *Parser) parseInterpolatedString(raw string, pos ast.Position) ast.Expre
 	var exprs []ast.Expression
 	for _, part := range parts {
 		if part.isExpr {
-			exprs = append(exprs, &ast.IdentExpr{Name: part.text, Position: pos})
+			// 对表达式文本进行子解析
+			subLexer := lexer.New(part.text, "<interpolation>")
+			tokens := subLexer.Tokenize()
+			subParser := New(tokens)
+			expr := subParser.parseExpression()
+			if len(subParser.errors) > 0 {
+				// 解析失败时回退为标识符
+				exprs = append(exprs, &ast.IdentExpr{Name: part.text, Position: pos})
+			} else {
+				exprs = append(exprs, expr)
+			}
 		} else {
 			exprs = append(exprs, &ast.StringLitExpr{Value: part.text, Position: pos})
 		}

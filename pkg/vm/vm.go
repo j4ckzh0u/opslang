@@ -3,8 +3,11 @@
 package vm
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/opslang/opslang/pkg/ast"
@@ -916,15 +919,482 @@ func (v *VM) registerBuiltins() {
 		return Value{Type: TypeString, Str: line}, nil
 	}
 
-	// 将内置函数注册到全局环境
-	for name, fn := range v.builtins {
-		v.globals[name] = Value{
-			Type: TypeFunction,
-			Fn: &FuncValue{
-				Name:      name,
+	// === 标准库模块 ===
+
+	// file 模块
+	v.globals["file"] = Value{
+		Type: TypeMap,
+		Map: map[string]Value{
+			"read": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "file.read",
 				IsBuiltin: true,
-				Builtin:   fn,
-			},
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "file.read(path) 需要 1 个字符串参数"}
+					}
+					data, err := os.ReadFile(args[0].Str)
+					if err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("读取文件失败: %v", err)}
+					}
+					return Value{Type: TypeString, Str: string(data)}, nil
+				},
+			}},
+			"write": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "file.write",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 2 || args[0].Type != TypeString || args[1].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "file.write(path, content) 需要 2 个字符串参数"}
+					}
+					err := os.WriteFile(args[0].Str, []byte(args[1].Str), 0644)
+					if err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("写入文件失败: %v", err)}
+					}
+					return Value{Type: TypeNil, Nil: true}, nil
+				},
+			}},
+			"exists": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "file.exists",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "file.exists(path) 需要 1 个字符串参数"}
+					}
+					_, err := os.Stat(args[0].Str)
+					return Value{Type: TypeBool, Bool: err == nil}, nil
+				},
+			}},
+			"mkdir": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "file.mkdir",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "file.mkdir(path) 需要 1 个字符串参数"}
+					}
+					err := os.MkdirAll(args[0].Str, 0755)
+					if err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("创建目录失败: %v", err)}
+					}
+					return Value{Type: TypeNil, Nil: true}, nil
+				},
+			}},
+			"list": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "file.list",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "file.list(dir) 需要 1 个字符串参数"}
+					}
+					entries, err := os.ReadDir(args[0].Str)
+					if err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("列出目录失败: %v", err)}
+					}
+					arr := make([]Value, len(entries))
+					for i, e := range entries {
+						arr[i] = Value{Type: TypeString, Str: e.Name()}
+					}
+					return Value{Type: TypeArray, Arr: arr}, nil
+				},
+			}},
+			"basename": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "file.basename",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "file.basename(path) 需要 1 个字符串参数"}
+					}
+					return Value{Type: TypeString, Str: filepath.Base(args[0].Str)}, nil
+				},
+			}},
+			"dirname": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "file.dirname",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "file.dirname(path) 需要 1 个字符串参数"}
+					}
+					return Value{Type: TypeString, Str: filepath.Dir(args[0].Str)}, nil
+				},
+			}},
+		},
+	}
+
+	// process 模块
+	v.globals["process"] = Value{
+		Type: TypeMap,
+		Map: map[string]Value{
+			"run": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "process.run",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) < 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "process.run(cmd, args...) 需要至少 1 个参数"}
+					}
+					cmdArgs := make([]string, len(args)-1)
+					for i := 1; i < len(args); i++ {
+						cmdArgs[i-1] = v.toString(args[i])
+					}
+					cmd := exec.Command(args[0].Str, cmdArgs...)
+					output, err := cmd.CombinedOutput()
+					exitCode := int64(0)
+					if err != nil {
+						if exitErr, ok := err.(*exec.ExitError); ok {
+							exitCode = int64(exitErr.ExitCode())
+						} else {
+							return Value{}, &RuntimeError{Message: fmt.Sprintf("执行命令失败: %v", err)}
+						}
+					}
+					return Value{Type: TypeMap, Map: map[string]Value{
+						"stdout":   {Type: TypeString, Str: string(output)},
+						"exitCode": {Type: TypeInt, Int: exitCode},
+						"ok":       {Type: TypeBool, Bool: exitCode == 0},
+					}}, nil
+				},
+			}},
+			"shell": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "process.shell",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "process.shell(cmd) 需要 1 个字符串参数"}
+					}
+					cmd := exec.Command("sh", "-c", args[0].Str)
+					output, err := cmd.CombinedOutput()
+					exitCode := int64(0)
+					if err != nil {
+						if exitErr, ok := err.(*exec.ExitError); ok {
+							exitCode = int64(exitErr.ExitCode())
+						} else {
+							return Value{}, &RuntimeError{Message: fmt.Sprintf("执行 Shell 失败: %v", err)}
+						}
+					}
+					return Value{Type: TypeMap, Map: map[string]Value{
+						"stdout":   {Type: TypeString, Str: string(output)},
+						"exitCode": {Type: TypeInt, Int: exitCode},
+						"ok":       {Type: TypeBool, Bool: exitCode == 0},
+					}}, nil
+				},
+			}},
+			"env": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "process.env",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "process.env(name) 需要 1 个字符串参数"}
+					}
+					val := os.Getenv(args[0].Str)
+					return Value{Type: TypeString, Str: val}, nil
+				},
+			}},
+			"cwd": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "process.cwd",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					dir, err := os.Getwd()
+					if err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("获取当前目录失败: %v", err)}
+					}
+					return Value{Type: TypeString, Str: dir}, nil
+				},
+			}},
+			"hostname": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "process.hostname",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					name, err := os.Hostname()
+					if err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("获取主机名失败: %v", err)}
+					}
+					return Value{Type: TypeString, Str: name}, nil
+				},
+			}},
+		},
+	}
+
+	// json 模块
+	v.globals["json"] = Value{
+		Type: TypeMap,
+		Map: map[string]Value{
+			"parse": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "json.parse",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "json.parse(str) 需要 1 个字符串参数"}
+					}
+					var raw interface{}
+					if err := json.Unmarshal([]byte(args[0].Str), &raw); err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("JSON 解析失败: %v", err)}
+					}
+					return jsonToValue(raw), nil
+				},
+			}},
+			"dump": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "json.dump",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 {
+						return Value{}, &RuntimeError{Message: "json.dump(value) 需要 1 个参数"}
+					}
+					raw := valueToJson(args[0])
+					data, err := json.Marshal(raw)
+					if err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("JSON 序列化失败: %v", err)}
+					}
+					return Value{Type: TypeString, Str: string(data)}, nil
+				},
+			}},
+			"prettify": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "json.prettify",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 {
+						return Value{}, &RuntimeError{Message: "json.prettify(value) 需要 1 个参数"}
+					}
+					raw := valueToJson(args[0])
+					data, err := json.MarshalIndent(raw, "", "  ")
+					if err != nil {
+						return Value{}, &RuntimeError{Message: fmt.Sprintf("JSON 格式化失败: %v", err)}
+					}
+					return Value{Type: TypeString, Str: string(data)}, nil
+				},
+			}},
+		},
+	}
+
+	// str 模块（字符串工具）
+	v.globals["str"] = Value{
+		Type: TypeMap,
+		Map: map[string]Value{
+			"split": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "str.split",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 2 || args[0].Type != TypeString || args[1].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "str.split(s, sep) 需要 2 个字符串参数"}
+					}
+					parts := strings.Split(args[0].Str, args[1].Str)
+					arr := make([]Value, len(parts))
+					for i, p := range parts {
+						arr[i] = Value{Type: TypeString, Str: p}
+					}
+					return Value{Type: TypeArray, Arr: arr}, nil
+				},
+			}},
+			"join": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "str.join",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 2 || args[0].Type != TypeArray || args[1].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "str.join(arr, sep) 需要数组和分隔符"}
+					}
+					parts := make([]string, len(args[0].Arr))
+					for i, item := range args[0].Arr {
+						parts[i] = v.toString(item)
+					}
+					return Value{Type: TypeString, Str: strings.Join(parts, args[1].Str)}, nil
+				},
+			}},
+			"contains": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "str.contains",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 2 || args[0].Type != TypeString || args[1].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "str.contains(s, sub) 需要 2 个字符串参数"}
+					}
+					return Value{Type: TypeBool, Bool: strings.Contains(args[0].Str, args[1].Str)}, nil
+				},
+			}},
+			"replace": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "str.replace",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 3 || args[0].Type != TypeString || args[1].Type != TypeString || args[2].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "str.replace(s, old, new) 需要 3 个字符串参数"}
+					}
+					return Value{Type: TypeString, Str: strings.ReplaceAll(args[0].Str, args[1].Str, args[2].Str)}, nil
+				},
+			}},
+			"trim": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "str.trim",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "str.trim(s) 需要 1 个字符串参数"}
+					}
+					return Value{Type: TypeString, Str: strings.TrimSpace(args[0].Str)}, nil
+				},
+			}},
+			"upper": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "str.upper",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "str.upper(s) 需要 1 个字符串参数"}
+					}
+					return Value{Type: TypeString, Str: strings.ToUpper(args[0].Str)}, nil
+				},
+			}},
+			"lower": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "str.lower",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 || args[0].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "str.lower(s) 需要 1 个字符串参数"}
+					}
+					return Value{Type: TypeString, Str: strings.ToLower(args[0].Str)}, nil
+				},
+			}},
+			"has_prefix": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "str.has_prefix",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 2 || args[0].Type != TypeString || args[1].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "str.has_prefix(s, prefix) 需要 2 个字符串参数"}
+					}
+					return Value{Type: TypeBool, Bool: strings.HasPrefix(args[0].Str, args[1].Str)}, nil
+				},
+			}},
+			"has_suffix": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "str.has_suffix",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 2 || args[0].Type != TypeString || args[1].Type != TypeString {
+						return Value{}, &RuntimeError{Message: "str.has_suffix(s, suffix) 需要 2 个字符串参数"}
+					}
+					return Value{Type: TypeBool, Bool: strings.HasSuffix(args[0].Str, args[1].Str)}, nil
+				},
+			}},
+		},
+	}
+
+	// math 模块
+	v.globals["math"] = Value{
+		Type: TypeMap,
+		Map: map[string]Value{
+			"abs": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "math.abs",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 1 {
+						return Value{}, &RuntimeError{Message: "math.abs(n) 需要 1 个参数"}
+					}
+					if args[0].Type == TypeInt {
+						n := args[0].Int
+						if n < 0 {
+							n = -n
+						}
+						return Value{Type: TypeInt, Int: n}, nil
+					}
+					return Value{}, &RuntimeError{Message: "math.abs 需要数字参数"}
+				},
+			}},
+			"min": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "math.min",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 2 {
+						return Value{}, &RuntimeError{Message: "math.min(a, b) 需要 2 个参数"}
+					}
+					a, b := v.toFloat(args[0]), v.toFloat(args[1])
+					if a < b {
+						return args[0], nil
+					}
+					return args[1], nil
+				},
+			}},
+			"max": {Type: TypeFunction, Fn: &FuncValue{
+				Name:      "math.max",
+				IsBuiltin: true,
+				Builtin: func(args []Value) (Value, error) {
+					if len(args) != 2 {
+						return Value{}, &RuntimeError{Message: "math.max(a, b) 需要 2 个参数"}
+					}
+					a, b := v.toFloat(args[0]), v.toFloat(args[1])
+					if a > b {
+						return args[0], nil
+					}
+					return args[1], nil
+				},
+			}},
+		},
+	}
+
+	// 将内置函数注册到全局环境（不覆盖已有模块）
+	for name, fn := range v.builtins {
+		if _, exists := v.globals[name]; !exists {
+			v.globals[name] = Value{
+				Type: TypeFunction,
+				Fn: &FuncValue{
+					Name:      name,
+					IsBuiltin: true,
+					Builtin:   fn,
+				},
+			}
 		}
+	}
+}
+
+// === JSON 转换辅助 ===
+
+// jsonToValue 将 Go 的 JSON 解析结果转换为 OpsLang Value
+func jsonToValue(raw interface{}) Value {
+	switch v := raw.(type) {
+	case nil:
+		return Value{Type: TypeNil, Nil: true}
+	case bool:
+		return Value{Type: TypeBool, Bool: v}
+	case float64:
+		// JSON 数字都是 float64，尝试转为 int
+		if v == float64(int64(v)) {
+			return Value{Type: TypeInt, Int: int64(v)}
+		}
+		return Value{Type: TypeFloat, Float: v}
+	case string:
+		return Value{Type: TypeString, Str: v}
+	case []interface{}:
+		arr := make([]Value, len(v))
+		for i, item := range v {
+			arr[i] = jsonToValue(item)
+		}
+		return Value{Type: TypeArray, Arr: arr}
+	case map[string]interface{}:
+		m := make(map[string]Value)
+		for k, val := range v {
+			m[k] = jsonToValue(val)
+		}
+		return Value{Type: TypeMap, Map: m}
+	default:
+		return Value{Type: TypeNil, Nil: true}
+	}
+}
+
+// valueToJson 将 OpsLang Value 转换为可 JSON 序列化的 Go 值
+func valueToJson(val Value) interface{} {
+	switch val.Type {
+	case TypeNil:
+		return nil
+	case TypeBool:
+		return val.Bool
+	case TypeInt:
+		return val.Int
+	case TypeFloat:
+		return val.Float
+	case TypeString:
+		return val.Str
+	case TypeArray:
+		arr := make([]interface{}, len(val.Arr))
+		for i, item := range val.Arr {
+			arr[i] = valueToJson(item)
+		}
+		return arr
+	case TypeMap:
+		m := make(map[string]interface{})
+		for k, v := range val.Map {
+			m[k] = valueToJson(v)
+		}
+		return m
+	default:
+		return nil
 	}
 }
