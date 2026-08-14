@@ -90,27 +90,19 @@ func List() ([]ProcessInfo, error) {
 }
 
 // FindByName returns processes whose name contains the given string (case-insensitive).
+// An empty name matches all processes with a non-empty name.
 func FindByName(name string) ([]ProcessInfo, error) {
-	procs, err := process.Processes()
+	allProcs, err := List()
 	if err != nil {
 		return nil, err
 	}
 
 	searchLower := strings.ToLower(name)
-	result := make([]ProcessInfo, 0)
+	result := make([]ProcessInfo, 0, len(allProcs))
 
-	for _, p := range procs {
-		procName, err := p.Name()
-		if err != nil {
-			continue
-		}
-
-		if strings.Contains(strings.ToLower(procName), searchLower) {
-			info, err := getProcessInfo(p)
-			if err != nil {
-				continue
-			}
-			result = append(result, info)
+	for _, p := range allProcs {
+		if strings.Contains(strings.ToLower(p.Name), searchLower) {
+			result = append(result, p)
 		}
 	}
 
