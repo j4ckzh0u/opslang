@@ -7,6 +7,7 @@ import (
 
 	"github.com/opslang/opslang/pkg/compiler"
 	"github.com/opslang/opslang/pkg/lexer"
+	"github.com/opslang/opslang/pkg/lsp"
 	"github.com/opslang/opslang/pkg/packagemanager"
 	"github.com/opslang/opslang/pkg/parser"
 	"github.com/opslang/opslang/pkg/repl"
@@ -68,6 +69,8 @@ func main() {
 			name = os.Args[2]
 		}
 		initPackage(name)
+	case "lsp":
+		runLSP()
 	case "help", "-h", "--help":
 		printUsage()
 	default:
@@ -92,6 +95,9 @@ func printUsage() {
   ops list                列出已安装的包
   ops uninstall <name>    卸载包
   ops init [name]         初始化新包
+
+开发工具:
+  ops lsp                 启动 LSP 语言服务器
 
 其他:
   ops version             显示版本信息
@@ -219,6 +225,14 @@ func initPackage(name string) {
 
 	if err := mgr.InitPackage(name, "0.1.0", "A OpsLang package"); err != nil {
 		fmt.Fprintf(os.Stderr, "初始化包失败: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func runLSP() {
+	server := lsp.NewServer()
+	if err := server.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "LSP 服务器错误: %v\n", err)
 		os.Exit(1)
 	}
 }
