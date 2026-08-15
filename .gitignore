@@ -1,3 +1,5 @@
 coverage.out
 ops-runner
+output
+.opslang-build/
 *.swp
