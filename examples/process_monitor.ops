@@ -1,52 +1,82 @@
-// process_monitor.ops - Monitor system resources and process info
-// Demonstrates: sys.*, process.find_by_name() with real data
-// Note: process.list()/find_by_name() and process.exec() may hang on some systems
-//       due to gopsutil or subprocess issues. This example uses sys.* primarily.
+// process_monitor.ops - Monitor running processes
+// Demonstrates: process.find_by_name(), process.exec(), sys.cpu.usage(), sys.memory.info()
+// Uses real process data - works on both macOS and Linux
+// Note: process.find_by_name() is called sparingly as it enumerates all processes internally
 // Usage: opsctl run examples/process_monitor.ops
 
-print("=== System Monitor ===")
+print("=== Process Monitor ===")
 
 let hostname = sys.hostname()
 let cpu = sys.cpu.usage()
 let mem = sys.memory.info()
 
 print("Host: " + hostname.hostname)
-print("CPU: " + str(int(cpu.percent)) + "% | Memory: " + str(int(mem.used_percent)) + "%")
+print("System CPU: " + str(int(cpu.percent)) + "% | Memory: " + str(int(mem.used_percent)) + "%")
 print("")
 
-// Resource summary
-print("--- Resource Summary ---")
-let cpu_count = sys.cpu.count()
-print("  CPU cores: " + str(cpu_count.logical) + " logical, " + str(cpu_count.physical) + " physical")
-print("  CPU usage: " + str(int(cpu.percent)) + "%")
-print("    user=" + str(int(cpu.user)) + "% system=" + str(int(cpu.system)) + "% idle=" + str(int(cpu.idle)) + "%")
-print("  Memory used: " + str(int(mem.used_percent)) + "%")
-print("    total=" + str(mem.total / 1024 / 1024) + " MB available=" + str(mem.available / 1024 / 1024) + " MB")
+// 1. Use process.exec to get process count (cross-platform)
+print("--- Process Listing (via ps) ---")
+let ps_result = process.exec("ps", "aux")
+if ps_result.exit_code == 0 {
+    // Output is large, just report the exit code and size
+    let output_len = len(ps_result.stdout)
+    print("  ps aux returned " + str(output_len) + " chars (exit code: " + str(ps_result.exit_code) + ")")
+    // Show stderr if any
+    if len(ps_result.stderr) > 0 {
+        print("  stderr: " + ps_result.stderr)
+    }
+} else {
+    print("  ps aux failed with exit code: " + str(ps_result.exit_code))
+}
 
-let load = sys.load()
-print("  Load average: " + str(load.load1) + " / " + str(load.load5) + " / " + str(load.load15))
-
-let up = sys.uptime()
-print("  Uptime: " + str(up.uptime) + " seconds")
-
-// Disk usage
+// 2. Check for a specific process using find_by_name
+// We only call this once since each call enumerates all processes
 print("")
-print("--- Disk Usage ---")
-let disk_root = sys.disk.usage("/")
-print("  / : " + str(int(disk_root.used_percent)) + "% used (" + str(disk_root.free / 1024 / 1024) + " MB free)")
+print("--- Process Detection ---")
 
-// Network interfaces
-print("")
-print("--- Network Interfaces ---")
-let ifaces = sys.net.interfaces()
-let up_count = 0
-for let i = 0; i < len(ifaces); i = i + 1 {
-    let iface = ifaces[i]
-    if iface.flags != "" {
-        up_count = up_count + 1
+// Try to find the init process (platform-dependent)
+let init_name = "launchd"
+let init_procs = process.find_by_name(init_name)
+if len(init_procs) > 0 {
+    let p = init_procs[0]
+    print("  [FOUND] " + init_name + " - PID: " + str(p.pid) + " Status: " + p.status + " User: " + p.username)
+} else {
+    // Try systemd on Linux
+    init_name = "systemd"
+    let init_procs2 = process.find_by_name(init_name)
+    if len(init_procs2) > 0 {
+        let p = init_procs2[0]
+        print("  [FOUND] " + init_name + " - PID: " + str(p.pid) + " Status: " + p.status + " User: " + p.username)
+    } else {
+        print("  Init process not found (launchd/systemd)")
     }
 }
-print("  Total: " + str(len(ifaces)) + " interfaces, " + str(up_count) + " active")
+
+// 3. Check for the opsctl process itself
+print("")
+print("--- Self-Detection ---")
+let self_procs = process.find_by_name("opsctl")
+if len(self_procs) > 0 {
+    let self_p = self_procs[0]
+    print("  opsctl running - PID: " + str(self_p.pid) + " Status: " + self_p.status + " CPU: " + str(int(self_p.cpu_percent)) + "%")
+} else {
+    print("  opsctl not found in process list (may have already exited)")
+}
+
+// 4. System resource summary
+print("")
+print("--- Resource Summary ---")
+let cpucount = sys.cpu.count()
+print("  CPU cores: " + str(cpucount.logical) + " logical, " + str(cpucount.physical) + " physical")
+print("  CPU usage: " + str(int(cpu.percent)) + "%")
+print("  Memory used: " + str(int(mem.used_percent)) + "%")
+
+let load = sys.load()
+print("  Load average: " + str(int(load.load1)) + " / " + str(int(load.load5)) + " / " + str(int(load.load15)))
+
+let up = sys.uptime()
+let uptime_hours = up.uptime / 3600
+print("  Uptime: " + str(int(uptime_hours)) + " hours")
 
 // Alert on high resource usage
 if cpu.percent > 90 {
@@ -55,28 +85,17 @@ if cpu.percent > 90 {
 if mem.used_percent > 90 {
     alert("Memory usage is critical: " + str(int(mem.used_percent)) + "%")
 }
-if disk_root.used_percent > 90 {
-    alert("Disk usage is critical: " + str(int(disk_root.used_percent)) + "%")
-}
 
 report {
     host: hostname.hostname,
     cpu_percent: cpu.percent,
-    cpu_user: cpu.user,
-    cpu_system: cpu.system,
-    cpu_idle: cpu.idle,
-    cpu_logical: cpu_count.logical,
-    cpu_physical: cpu_count.physical,
     memory_percent: mem.used_percent,
-    memory_total_mb: mem.total / 1024 / 1024,
-    memory_available_mb: mem.available / 1024 / 1024,
     load1: load.load1,
     load5: load.load5,
     load15: load.load15,
-    disk_percent: disk_root.used_percent,
-    disk_free_mb: disk_root.free / 1024 / 1024,
-    uptime_seconds: up.uptime,
-    network_interfaces: len(ifaces)
+    cpu_logical: cpucount.logical,
+    cpu_physical: cpucount.physical,
+    uptime_hours: int(uptime_hours)
 }
 
-log("System monitoring completed")
+log("Process monitoring completed")
