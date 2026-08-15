@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
+	osexec "os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -445,7 +445,7 @@ func (c *runnerCache) build(goos, goarch string) error {
 	output := c.getCachedPath(goos, goarch)
 	srcDir := filepath.Join(root, "cmd", "ops-runner")
 
-	cmd := exec.Command("go", "build", "-ldflags", "-s -w", "-o", output, ".")
+	cmd := osexec.Command("go", "build", "-ldflags", "-s -w", "-o", output, ".")
 	cmd.Dir = srcDir
 	cmd.Env = append(os.Environ(),
 		"GOOS="+goos,

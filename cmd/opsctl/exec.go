@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	opsexec "github.com/opslang/opslang/internal/exec"
@@ -137,17 +136,4 @@ func runExecCommand() error {
 	}
 
 	return nil
-}
-
-// parseHostList is a helper to parse a comma-separated host list.
-// It supports both "host1,host2" and "user@host1,user@host2" formats.
-func parseHostList(hostsStr string) []string {
-	var hosts []string
-	for _, h := range strings.Split(hostsStr, ",") {
-		h = strings.TrimSpace(h)
-		if h != "" {
-			hosts = append(hosts, h)
-		}
-	}
-	return hosts
 }
