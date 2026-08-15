@@ -8,7 +8,9 @@ for let i = 0; i < count; i = i + 1 {
     let path = files[i]
     print("处理文件: " + path)
     // 实际环境: file.write(path, "content")
+    file.write(path, "content")
     // 实际环境: let checksum = file.checksum(path, "sha256")
+    let checksum = file.checksum(path, "sha256")
 }
 
 print("所有文件处理完成")

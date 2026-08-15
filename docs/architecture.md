@@ -1,70 +1,68 @@
 # OpsLang 系统架构文档
 
+## 目录
+
+1. [系统架构概览](#1-系统架构概览)
+2. [架构图](#2-架构图)
+3. [模块说明](#3-模块说明)
+4. [执行模式](#4-执行模式)
+5. [数据流](#5-数据流)
+6. [扩展指南](#6-扩展指南)
+
+---
+
 ## 1. 系统架构概览
 
-OpsLang 是一门面向运维领域的领域特定语言（DSL），采用纯 Go 实现，支持交叉编译（`CGO_ENABLED=0`），零 cgo 依赖。系统由 CLI 工具 `opsctl`、通用执行器 `ops-runner`、独立标准库 `ops-core-sdk` 三大部分组成，提供解释执行与 AOT 编译两种运行模式。
+OpsLang 是一门面向运维领域的领域特定语言（DSL），旨在通过简洁的脚本完成复杂的运维操作。系统采用纯 Go 实现，支持零依赖远程执行、异构架构、结构化返回等核心特性。
 
-### 核心设计原则
+### 1.1 核心设计原则
 
-- **纯 Go 生态**：全部代码支持 `CGO_ENABLED=0` 交叉编译，覆盖 linux/amd64、linux/arm64 等主流架构
-- **结构化返回**：标准库每个函数返回强类型结构体（带 JSON tag），禁止返回原始字符串
-- **无 Shell 依赖**：所有系统操作通过 Go 标准库或直接系统调用完成，不使用 shell 解析
-- **极简语法**：16 个关键字，类 Go + Python 混合风格，静态类型 + 类型推断
-- **安全内置**：权限分级、审计日志、Ed25519 签名验证、资源限制、自动重试与清理
+- **纯 Go 生态**：所有依赖支持 `CGO_ENABLED=0` 交叉编译，无 cgo 依赖
+- **结构化返回**：标准库函数一律返回结构体，禁止返回原始字符串
+- **无 Shell 依赖**：所有操作直接使用 Go 库或读取 `/proc`/`/sys`，不依赖 shell
+- **极简语法**：关键字 ≤ 15 个，类 Go + Python 混合风格
+- **双执行引擎**：通用 Runner（解释执行）+ AOT 编译（静态二进制）
+- **零依赖远程执行**：通过 SSH 下发预编译 Runner 或定制二进制
+- **安全内置**：权限分级、审批流、审计日志、签名验证、资源限制
 
-### 技术依赖
+### 1.2 技术栈
 
-| 依赖 | 用途 |
-|------|------|
-| `gopsutil` | 系统信息采集（CPU、内存、磁盘、进程等） |
-| `cobra` | CLI 命令行框架 |
-| `pkg/sftp` | SFTP 文件传输 |
-| `crypto/ed25519` | Runner 二进制签名验证 |
-| `gopkg.in/yaml.v3` | YAML 配置解析 |
+| 组件 | 技术选型 | 说明 |
+|------|---------|------|
+| 实现语言 | Go 1.21+ | 纯 Go，支持交叉编译 |
+| CLI 框架 | cobra | 命令行参数解析 |
+| SSH 客户端 | golang.org/x/crypto/ssh | SSH 连接管理 |
+| SFTP | github.com/pkg/sftp | 文件传输 |
+| 系统信息 | gopsutil | 跨平台系统信息采集 |
+| YAML 解析 | gopkg.in/yaml.v3 | 配置文件解析 |
+| 加密签名 | crypto/ed25519 | Runner 二进制签名 |
 
 ---
 
 ## 2. 架构图
 
-### 2.1 总体架构
+### 2.1 整体架构
 
 ```
-+---------------------------------------------------------------+
-|                        opsctl (CLI)                            |
-|  cmd/opsctl/                                                   |
-|  main.go | run.go | build.go | exec.go | repl.go              |
-+-------+----------------------------+--------------------------+
-        |                            |
-        v                            v
-+------------------+    +-------------------------+
-|   语言前端        |    |    远程执行面            |
-|                  |    |                         |
-| lexer/  token.go |    | exec/      执行调度      |
-| parser/ parser.go|    | sshx/      SSH 客户端    |
-| ast/    ast.go   |    | inventory/ 主机清单      |
-|                  |    | arch/      架构检测      |
-| interpreter/     |    | runner/    指令包处理    |
-|   解释器          |    | security/  安全特性      |
-| compiler/        |    | output/    结构化输出    |
-|   编译管线        |    +-------------------------+
-+------------------+
-        |
-        v
-+-------------------------+
-|   ops-core-sdk          |
-|   pkg/ops-core-sdk/     |
-|   sys | file | net      |
-|   process | service     |
-|   pkg | json | yaml     |
-|   time                  |
-+-------------------------+
-        |
-        v
-+-------------------------+
-|   ops-runner            |
-|   cmd/ops-runner/       |
-|   通用执行器（多架构）    |
-+-------------------------+
+┌─────────────────────────────────────────────────────────────┐
+│                       opsctl (CLI)                          │
+│  解析用户输入，调度本地编译/解释，管理远程执行与结果汇总       │
+└───────┬─────────────────────────────────────────────────────┘
+        │
+        ├── 语言前端（Lexer → Parser → AST）
+        │        ├── 解释引擎（AST 遍历执行，用于本地调试/REPL）
+        │        └── 编译管线（AST → Go 源码 → go build → 二进制）
+        │
+        ├── 标准库（ops-core-sdk）
+        │        ├── sys / file / net / process / service / pkg ...
+        │        └── 每个函数返回结构体，支持 JSON 序列化
+        │
+        └── 远程控制面
+                 ├── SSH 客户端（连接池、超时、重试、架构检测）
+                 ├── 通用 Runner（多架构预编译，缓存复用）
+                 ├── 分层中继引擎（自动选择中继节点，支持大规模文件分发/收集）
+                 ├── 指令包生成（JSON，与架构无关）
+                 └── 结果回收（stdout JSON 解析、错误聚合、审计日志）
 ```
 
 ### 2.2 项目目录结构
@@ -73,73 +71,73 @@ OpsLang 是一门面向运维领域的领域特定语言（DSL），采用纯 Go
 opslang/
 ├── cmd/
 │   ├── opsctl/                 # CLI 主程序
-│   │   ├── main.go             # 入口，cobra 根命令
-│   │   ├── run.go              # opsctl run - 解释执行脚本
-│   │   ├── build.go            # opsctl build - AOT 编译
-│   │   ├── exec.go             # opsctl exec - 远程执行
-│   │   └── repl.go             # opsctl repl - 交互式环境
-│   └── ops-runner/             # 通用 Runner
-│       └── main.go             # 从 stdin 读取 JSON 指令包执行
+│   │   ├── main.go            # 入口，命令注册
+│   │   ├── run.go             # opsctl run - 本地解释执行
+│   │   ├── build.go           # opsctl build - AOT 编译
+│   │   ├── exec.go            # opsctl exec - 远程执行
+│   │   └── repl.go            # opsctl repl - 交互式环境
+│   └── ops-runner/            # 通用 Runner 程序
+│       └── main.go            # 从 stdin 读取 JSON 指令包并执行
 ├── internal/
-│   ├── lexer/                  # 词法分析
+│   ├── lexer/                 # 词法分析
 │   │   ├── token/
-│   │   │   └── token.go        # 16 个关键字 + Token 类型定义
-│   │   └── lexer.go            # 词法分析器
+│   │   │   └── token.go      # Token 定义（16 个关键字）
+│   │   └── lexer.go          # 词法分析器
 │   ├── parser/
-│   │   └── parser.go           # 递归下降语法分析器
+│   │   └── parser.go         # 语法分析器（递归下降）
 │   ├── ast/
-│   │   └── ast.go              # AST 节点定义
+│   │   └── ast.go            # AST 节点定义
 │   ├── interpreter/
-│   │   └── interpreter.go      # AST 遍历解释器，环境作用域链
+│   │   └── interpreter.go    # 解释器（AST 遍历执行）
 │   ├── compiler/
-│   │   ├── compiler.go         # 编译器主逻辑
-│   │   ├── codegen.go          # AST -> Go 源码生成
-│   │   ├── cache.go            # 编译缓存（hash + arch）
-│   │   └── mode_selector.go    # Runner/AOT 自动模式选择
-│   ├── sshx/                   # SSH 客户端封装
-│   │   ├── client.go           # 连接管理
-│   │   ├── pool.go             # 连接池
-│   │   ├── sftp.go             # SFTP 传输（断点续传、压缩）
-│   │   ├── config.go           # 连接配置
-│   │   └── errors.go           # 错误定义
+│   │   ├── compiler.go       # 编译器主逻辑
+│   │   ├── codegen.go        # Go 代码生成器
+│   │   ├── cache.go          # 编译缓存
+│   │   └── mode_selector.go  # 执行模式自动选择
+│   ├── sshx/                  # SSH 客户端封装
+│   │   ├── client.go         # SSH 连接管理
+│   │   ├── pool.go           # 连接池
+│   │   ├── sftp.go           # SFTP 文件传输
+│   │   ├── config.go         # 配置管理
+│   │   └── errors.go         # 错误定义
 │   ├── exec/
-│   │   └── exec.go             # Executor 执行调度，Target 定义
+│   │   └── exec.go           # 远程执行协调器
 │   ├── inventory/
-│   │   └── inventory.go        # YAML 主机清单解析
+│   │   └── inventory.go      # 主机清单解析
 │   ├── arch/
-│   │   └── arch.go             # uname -m -> GOARCH 映射
-│   ├── runner/
-│   │   ├── executor.go         # Runner 指令执行引擎
-│   │   ├── instruction_gen.go  # AST -> JSON 指令包生成
-│   │   ├── registry.go         # 操作注册表
-│   │   └── types.go            # 指令/结果类型定义
-│   ├── security/
-│   │   ├── privilege.go        # 权限分级（read_only / admin / root）
-│   │   ├── audit.go            # 审计日志（JSON 格式）
-│   │   ├── signature.go        # Ed25519 签名验证
-│   │   ├── resource_limit.go   # 资源限制（systemd-run / ulimit）
-│   │   ├── retry.go            # 自动重试
-│   │   └── cleanup.go          # 临时目录自清理
+│   │   └── arch.go           # 架构检测（uname -m → GOARCH）
+│   ├── runner/                # Runner 指令包处理
+│   │   ├── executor.go       # 指令执行器
+│   │   ├── instruction_gen.go # 指令包生成器
+│   │   ├── registry.go       # 内置函数注册表
+│   │   └── types.go          # 类型定义
+│   ├── relay/                 # 分层中继调度（Phase 4）
+│   ├── security/              # 安全特性（Phase 5）
+│   │   ├── privilege.go      # 权限分级
+│   │   ├── audit.go          # 审计日志
+│   │   ├── signature.go      # 签名验证
+│   │   ├── resource_limit.go # 资源限制
+│   │   ├── retry.go          # 自动重试
+│   │   └── cleanup.go        # 自清理
 │   └── output/
-│       └── output.go           # 结构化输出处理
+│       └── output.go         # 结构化输出处理
 ├── pkg/
-│   └── ops-core-sdk/           # 原子操作标准库（独立 Go module）
-│       ├── sys/                # 系统信息
-│       ├── file/               # 文件操作
-│       ├── net/                # 网络操作
-│       ├── process/            # 进程管理
-│       ├── service/            # systemd 服务管理
-│       ├── pkg/                # 包管理（apt/yum/dnf）
-│       ├── json/               # JSON 编解码
-│       ├── yaml/               # YAML 编解码
-│       └── time/               # 时间操作
-├── tests/                      # 集成测试
-├── examples/                   # 示例脚本
-├── docs/                       # 文档
-├── go.mod
-├── Makefile
-├── .gitignore
-└── README.md
+│   └── ops-core-sdk/         # 原子操作标准库（独立 Go module）
+│       ├── sys/              # 系统信息
+│       ├── file/             # 文件操作
+│       ├── net/              # 网络操作
+│       ├── process/          # 进程管理
+│       ├── service/          # 服务管理
+│       ├── pkg/              # 包管理
+│       ├── json/             # JSON 编解码
+│       ├── yaml/             # YAML 编解码
+│       └── time/             # 时间操作
+├── tests/                    # 集成测试
+├── examples/                 # 示例脚本
+├── docs/                     # 文档
+├── go.mod                    # Go module 定义
+├── Makefile                  # 构建脚本
+└── README.md                 # 项目说明
 ```
 
 ---
@@ -148,432 +146,208 @@ opslang/
 
 ### 3.1 语言前端
 
-#### 词法分析器（`internal/lexer`）
+#### 词法分析器（internal/lexer）
 
-词法分析器将源代码转换为 Token 流。
+**职责**：将源代码转换为 Token 流
 
-- **`token/token.go`**：定义 16 个关键字（`let`, `fn`, `if`, `else`, `for`, `while`, `return`, `true`, `false`, `task`, `on`, `ensure`, `report`, `alert`, `import`, `nil`）以及所有 Token 类型（标识符、字面量、运算符、分隔符等）
-- **`lexer.go`**：逐字符扫描源代码，支持行号/列号追踪，错误报告精确定位
+**关键文件**：
+- `token/token.go`：定义 16 个关键字和所有 Token 类型
+  - 关键字：`let`, `fn`, `if`, `else`, `for`, `while`, `return`, `task`, `on`, `ensure`, `report`, `metric`, `log`, `alert`, `import`, `nil`
+  - Token 类型：标识符、字面量（整数/浮点/字符串/布尔）、运算符、分隔符、注释等
+- `lexer.go`：词法分析实现，支持行列号追踪，错误报告包含位置信息
 
-#### 语法分析器（`internal/parser`）
-
-递归下降解析器，将 Token 流转换为 AST。
-
-- 支持变量声明、函数定义、控制流（if/else/for/while）、函数调用
-- 支持 `task ... on targets` 声明
-- 支持 `ensure` 声明式幂等块
-- 错误恢复机制，单个语法错误不阻塞后续解析
-
-#### AST 节点（`internal/ast`）
-
-所有语法结构的节点定义：
-
+**核心流程**：
 ```
-Program          -- 程序根节点
-TaskDecl         -- task 声明
-LetStmt          -- let 变量声明
-FnDecl           -- 函数声明
-IfStmt           -- if/else 条件
-ForStmt          -- for 循环
-WhileStmt        -- while 循环
-ReturnStmt       -- return 语句
-EnsureStmt       -- ensure 幂等块
-ReportStmt       -- report 输出
-AlertStmt        -- alert 告警
-ImportStmt       -- import 导入
-AssignStmt       -- 赋值语句
-ExprStmt         -- 表达式语句
-BinaryExpr       -- 二元表达式
-UnaryExpr        -- 一元表达式
-CallExpr         -- 函数调用
-IndexExpr        -- 索引访问
-MemberExpr       -- 成员访问
-Ident            -- 标识符
-IntLit/FloatLit/StringLit/BoolLit/NilLit  -- 字面量
-ListLit/DictLit  -- 列表/字典字面量
+源代码字符串 → Lexer → Token 流
 ```
 
-### 3.2 解释器（`internal/interpreter`）
+#### 语法分析器（internal/parser）
 
-基于 AST 遍历的解释执行引擎。
+**职责**：将 Token 流转换为抽象语法树（AST）
 
-- **作用域链**：`Environment` 结构体持有变量映射和父环境指针，支持闭包
-- **内置函数注册**：`registerDefaults()` 注册所有标准库函数映射
-- **类型系统**：支持整数、浮点数、字符串、布尔、列表、字典、结构体、函数
-- **错误处理**：运行时错误携带 AST 节点位置信息
+**实现方式**：递归下降解析
 
-### 3.3 编译管线（`internal/compiler`）
+**支持的语法结构**：
+- 变量声明：`let x = 10`
+- 函数定义：`fn add(a, b) { return a + b }`
+- 控制流：`if/else`, `for`, `while`
+- 任务声明：`task "name" on targets { ... }`
+- 幂等声明：`ensure condition { actions }`
+- 输出语句：`report`, `metric`, `log`, `alert`
+- 导入语句：`import go "package"`
 
-将 OpsLang 脚本编译为静态二进制。
+#### AST 节点（internal/ast）
 
-- **`compiler.go`**：编译流程编排 -- AST 分析 -> Go 代码生成 -> 调用 `go build` -> 输出二进制
-- **`codegen.go`**：AST 到 Go 源码的翻译器
-  - 变量声明 -> `var` / `:=`
-  - 函数定义 -> Go `func`
-  - 控制流 -> 对应 Go 语法
-  - 内置函数调用 -> `ops-core-sdk` 直接调用
-  - 自动生成 `main()` 函数
-- **`cache.go`**：编译缓存，键为 `脚本内容 hash + 目标架构 + 标准库版本`，命中缓存直接复用
-- **`mode_selector.go`**：自动模式选择启发式
-  - 脚本 < 100 行且无 `import go "..."` -> Runner 模式
-  - 否则 -> AOT 编译模式
-  - 支持 `--mode runner|aot|auto` 覆盖
+**职责**：定义所有语法节点的 Go 结构体
 
-### 3.4 SSH 控制面（`internal/sshx`）
+**主要节点类型**：
+- `Program`：程序根节点
+- `TaskDecl`：任务声明
+- `FunctionDecl`：函数声明
+- `LetStmt`：变量声明
+- `IfStmt`：条件语句
+- `ForStmt`：循环语句
+- `WhileStmt`：While 循环
+- `ReturnStmt`：返回语句
+- `EnsureStmt`：幂等声明
+- `ReportStmt`：报告语句
+- `CallExpr`：函数调用
+- `BinaryExpr`：二元表达式
+- `UnaryExpr`：一元表达式
+- `Literal`：字面量（整数/浮点/字符串/布尔）
+- `Identifier`：标识符
+- `ListLiteral`：列表字面量
+- `MapLiteral`：字典字面量
 
-SSH 远程连接管理。
+### 3.2 执行引擎
 
-| 组件 | 职责 |
-|------|------|
-| `client.go` | SSH 连接建立，支持密码/密钥认证，超时控制 |
-| `pool.go` | 连接池管理，复用连接，并发限制 |
-| `sftp.go` | SFTP 文件传输，支持断点续传、压缩传输 |
-| `config.go` | 连接配置（地址、端口、用户、认证方式） |
-| `errors.go` | SSH 层错误定义 |
+#### 解释器（internal/interpreter）
 
-### 3.5 远程执行（`internal/exec` + `internal/runner`）
+**职责**：遍历 AST 执行脚本，用于本地调试和 REPL
 
-#### 执行调度（`internal/exec`）
+**核心特性**：
+- 基于 AST 节点类型的 switch-case 分发
+- 支持变量作用域（词法作用域链）
+- 内置函数注册机制，映射到 ops-core-sdk
+- 错误处理：运行时错误包含行列号
 
-- `Executor`：协调远程执行全流程
-- `Target`：目标主机定义（地址、认证信息、标签）
-- 并发执行多台主机，`--parallel` 参数控制并发数
-
-#### Runner 指令处理（`internal/runner`）
-
-- **`executor.go`**：Runner 侧指令执行引擎，从 stdin 读取 JSON 指令包，逐条执行，输出 JSON 结果
-- **`instruction_gen.go`**：将 AST 中远程执行部分转换为 JSON 指令序列
-- **`registry.go`**：操作注册表，映射操作名到 SDK 函数
-- **`types.go`**：指令包和结果的结构体定义
-
-#### 架构检测（`internal/arch`）
-
-SSH 会话执行 `uname -m`，映射到 GOARCH：
-
+**执行流程**：
 ```
-x86_64   -> amd64
-aarch64  -> arm64
-armv7l   -> arm
+AST → Interpreter → 执行结果（结构化）
 ```
 
-结果缓存在 `~/.cache/opslang/runners/` 目录，按架构区分 Runner 二进制。
+#### 编译器（internal/compiler）
 
-### 3.6 标准库（`pkg/ops-core-sdk`）
+**职责**：将 AST 编译为静态二进制，用于生产部署
 
-独立 Go module，可单独使用。每个包返回强类型结构体。
+**核心组件**：
 
-#### sys 包
+1. **compiler.go**：编译主流程
+   - 检查编译缓存
+   - 调用代码生成器
+   - 调用 go build 生成二进制
+   - 更新缓存
 
-| 函数 | 返回类型 | 说明 |
-|------|---------|------|
-| `sys.Hostname()` | `HostnameInfo` | 主机名 |
-| `sys.OS()` | `OSInfo` | 操作系统信息 |
-| `sys.Kernel()` | `KernelInfo` | 内核版本 |
-| `sys.CPUUsage()` | `CPUUsage` | CPU 使用率 |
-| `sys.CPUInfo()` | `CPUInfo` | CPU 核心数/型号 |
-| `sys.MemoryInfo()` | `MemoryInfo` | 内存信息 |
-| `sys.DiskUsage(path)` | `DiskUsage` | 磁盘使用率 |
-| `sys.DiskPartitions()` | `[]DiskPartition` | 分区列表 |
-| `sys.Load()` | `LoadAvg` | 负载均值 |
-| `sys.Users()` | `[]User` | 登录用户 |
-| `sys.Uptime()` | `Uptime` | 运行时长 |
-| `sys.Processes()` | `[]ProcessInfo` | 进程列表 |
-| `sys.NetInterfaces()` | `[]NetInterface` | 网络接口 |
+2. **codegen.go**：Go 代码生成器
+   - 将 AST 翻译为 Go 源码
+   - 变量声明 → Go 变量声明
+   - 函数调用 → ops-core-sdk 调用
+   - 控制流 → Go 控制流
+   - 生成 main() 函数
 
-#### file 包
+3. **cache.go**：编译缓存
+   - 缓存键：脚本 hash + 标准库版本 + 目标架构
+   - 缓存目录：`~/.cache/opslang/compilation/`
+   - 命中缓存直接返回，避免重复编译
 
-| 函数 | 返回类型 | 说明 |
-|------|---------|------|
-| `file.Read(path)` | `FileContent` | 读取文件 |
-| `file.Write(path, content, mode)` | `FileInfo` | 写入文件 |
-| `file.Copy(src, dst)` | `FileInfo` | 复制文件 |
-| `file.Move(src, dst)` | `FileInfo` | 移动文件 |
-| `file.Delete(path)` | `DeleteResult` | 删除文件 |
-| `file.Exists(path)` | `bool` | 是否存在 |
-| `file.Stat(path)` | `FileInfo` | 文件信息 |
-| `file.Chmod(path, mode)` | `FileInfo` | 修改权限 |
-| `file.List(dir)` | `[]FileInfo` | 目录列表 |
-| `file.Mkdir(path)` | `FileInfo` | 创建目录 |
-| `file.Checksum(path, algo)` | `ChecksumResult` | 校验和 |
+4. **mode_selector.go**：执行模式自动选择
+   - 简单任务（<100行，无第三方 Go 库）→ Runner 模式
+   - 复杂任务（≥100行或有 `import go`）→ AOT 编译模式
+   - 支持手动覆盖：`--mode runner|aot|auto`
 
-#### net 包
-
-| 函数 | 返回类型 | 说明 |
-|------|---------|------|
-| `net.HTTPGet(url, headers)` | `HTTPResponse` | HTTP GET |
-| `net.HTTPPost(url, body, headers)` | `HTTPResponse` | HTTP POST |
-| `net.TCPConnect(host, port)` | `TCPResult` | TCP 连通检测 |
-| `net.DNSLookup(domain)` | `DNSResult` | DNS 解析 |
-| `net.Interfaces()` | `[]NetInterface` | 网络接口 |
-
-#### process 包
-
-| 函数 | 返回类型 | 说明 |
-|------|---------|------|
-| `process.List()` | `[]ProcessInfo` | 进程列表 |
-| `process.FindByName(name)` | `[]ProcessInfo` | 按名称查找 |
-| `process.FindByPort(port)` | `ProcessInfo` | 按端口查找 |
-| `process.Exec(cmd, args...)` | `ExecResult` | 执行命令（不经 shell） |
-
-#### service 包
-
-| 函数 | 返回类型 | 说明 |
-|------|---------|------|
-| `service.Status(name)` | `ServiceStatus` | 服务状态 |
-| `service.Start(name)` | `ServiceResult` | 启动 |
-| `service.Stop(name)` | `ServiceResult` | 停止 |
-| `service.Restart(name)` | `ServiceResult` | 重启 |
-| `service.Enable(name)` | `ServiceResult` | 开机启动 |
-| `service.Disable(name)` | `ServiceResult` | 禁用启动 |
-
-#### pkg 包
-
-| 函数 | 返回类型 | 说明 |
-|------|---------|------|
-| `pkg.Install(name, version)` | `PkgResult` | 安装 |
-| `pkg.Remove(name)` | `PkgResult` | 卸载 |
-| `pkg.Info(name)` | `PkgInfo` | 包信息 |
-| `pkg.List()` | `[]PkgInfo` | 已安装包列表 |
-
-#### json / yaml / time 包
-
-- `json.Encode(v)` / `json.Decode(data, &v)` -- JSON 编解码
-- `yaml.Encode(v)` / `yaml.Decode(data, &v)` -- YAML 编解码
-- `time.Now()` / `time.Format(t, layout)` / `time.Parse(s, layout)` / `time.Since(t)` / `time.Sleep(d)` / `time.Diff(a, b)` -- 时间操作
-
-### 3.7 安全模块（`internal/security`）
-
-| 组件 | 职责 |
-|------|------|
-| `privilege.go` | 权限分级：`read_only` / `admin` / `root`，编译期 + 运行时双重校验 |
-| `audit.go` | 审计日志：每次任务完整记录，JSON 输出，默认存储 `/var/log/opsctl/` |
-| `signature.go` | Ed25519 签名验证：Runner 二进制签名，目标机可选校验 |
-| `resource_limit.go` | 资源限制：优先 `systemd-run --scope`，回退 `ulimit` |
-| `retry.go` | 自动重试：可配置次数和间隔 |
-| `cleanup.go` | 自清理：临时目录 `/tmp/ops-<random>`，trap 保证异常退出也清理 |
-
----
-
-## 4. 执行模式
-
-### 4.1 Runner 模式（解释执行）
-
+**编译流程**：
 ```
-+------------------+
-| source.ops       |
-+--------+---------+
-         |
-         v
-+------------------+
-| Lexer            |   token/token.go
-| 词法分析          |
-+--------+---------+
-         | Token 流
-         v
-+------------------+
-| Parser           |   parser.go
-| 语法分析          |
-+--------+---------+
-         | AST
-         v
-+------------------+
-| Interpreter      |   interpreter.go
-| 解释执行          |   环境作用域链
-+--------+---------+
-         | 结构化结果
-         v
-+------------------+
-| JSON 输出         |
-+------------------+
+AST → CodeGen → Go 源码 → go build → 静态二进制
 ```
 
-**使用场景**：
-- `opsctl run script.ops` -- 本地解释执行
-- `opsctl repl` -- 交互式环境
-- 简单脚本（< 100 行，无第三方 Go 库依赖）
-- 紧急故障处理（零编译延迟）
+### 3.3 标准库（pkg/ops-core-sdk）
 
-**特点**：
-- 启动快，无需编译
-- 直接遍历 AST 执行
-- 适合调试和交互
+**职责**：提供运维原子操作，返回结构化数据
 
-### 4.2 AOT 编译模式
+**设计原则**：
+- 独立 Go module，可单独使用
+- 每个函数返回 `(结构体, error)`
+- 结构体带 JSON tag，支持序列化
+- 所有操作不依赖 shell，直接使用 Go 库或系统调用
 
-```
-+------------------+
-| source.ops       |
-+--------+---------+
-         |
-         v
-+------------------+
-| Lexer + Parser   |
-| 词法 + 语法分析   |
-+--------+---------+
-         | AST
-         v
-+------------------+
-| Compiler         |   compiler.go
-| 编译编排          |
-+--------+---------+
-         |
-         v
-+------------------+
-| CodeGen          |   codegen.go
-| AST -> Go 源码    |   映射到 ops-core-sdk
-+--------+---------+
-         | Go 源码
-         v
-+------------------+
-| 编译缓存检查      |   cache.go
-| key: hash+arch   |   命中则直接返回
-+--------+---------+
-         | 未命中
-         v
-+------------------+
-| go build         |   CGO_ENABLED=0
-| -ldflags "-s -w" |   GOOS/GOARCH 交叉编译
-+--------+---------+
-         |
-         v
-+------------------+
-| 静态二进制        |   零依赖，可分发
-+------------------+
+**模块列表**：
+
+| 模块 | 功能 | 示例函数 |
+|------|------|---------|
+| sys | 系统信息 | `cpu.usage()`, `memory.info()`, `disk.usage()`, `hostname()` |
+| file | 文件操作 | `read()`, `write()`, `copy()`, `move()`, `delete()`, `exists()`, `checksum()` |
+| net | 网络操作 | `http_get()`, `http_post()`, `tcp_check()`, `dns_lookup()`, `interfaces()` |
+| process | 进程管理 | `list()`, `find_by_name()`, `find_by_port()`, `exec()`, `kill()` |
+| service | 服务管理 | `status()`, `start()`, `stop()`, `restart()`, `enable()` |
+| pkg | 包管理 | `install()`, `remove()`, `list()` |
+| json | JSON 编解码 | `encode()`, `decode()` |
+| yaml | YAML 编解码 | `encode()`, `decode()` |
+| time | 时间操作 | `now()`, `format()`, `parse()`, `since()`, `sleep()`, `diff()` |
+
+**返回结构体示例**：
+
+```go
+// sys.CPUUsage 返回
+type CPUUsage struct {
+    Percent float64 `json:"percent"`
+    User    float64 `json:"user"`
+    System  float64 `json:"system"`
+    Idle    float64 `json:"idle"`
+}
+
+// file.ChecksumResult 返回
+type ChecksumResult struct {
+    Path   string `json:"path"`
+    Algo   string `json:"algo"`
+    Value  string `json:"value"`
+    Size   int64  `json:"size"`
+}
 ```
 
-**使用场景**：
-- `opsctl build --output bin --target-arch linux/arm64`
-- 复杂业务逻辑
-- 需要第三方 Go 库（`import go "..."`）
-- 生产环境部署
+### 3.4 远程控制面
 
-**特点**：
-- 生成静态二进制，目标机零依赖
-- 支持交叉编译（amd64 -> arm64）
-- 编译缓存加速重复构建
+#### SSH 客户端（internal/sshx）
 
-### 4.3 模式自动选择
+**职责**：管理 SSH 连接，支持认证、超时、重试、连接池
 
-```
-                    +-------------------+
-                    | 脚本输入           |
-                    +--------+----------+
-                             |
-                             v
-                    +-------------------+
-                    | mode_selector.go  |
-                    | 启发式分析         |
-                    +--------+----------+
-                             |
-              +--------------+--------------+
-              |                             |
-              v                             v
-    +------------------+          +------------------+
-    | 脚本 < 100 行     |          | 脚本 >= 100 行   |
-    | 无 import go     |          | 或有 import go   |
-    | -> Runner 模式    |          | -> AOT 编译模式  |
-    +------------------+          +------------------+
+**核心功能**：
+- 密码/密钥认证
+- 连接超时控制
+- 命令执行超时
+- 自动重试（可配置次数）
+- 连接池管理（复用连接）
+- 并发限制
+
+**关键文件**：
+- `client.go`：SSH 连接创建和管理
+- `pool.go`：连接池实现
+- `sftp.go`：SFTP 文件传输（支持断点续传、压缩）
+- `config.go`：连接配置
+- `errors.go`：错误定义
+
+#### 架构检测（internal/arch）
+
+**职责**：检测远程主机架构，映射到 GOARCH
+
+**实现方式**：
+```bash
+# 远程执行
+uname -m
+# 输出示例：x86_64, aarch64, armv7l
 ```
 
-用户可通过 `--mode runner|aot|auto` 强制指定。
+**映射规则**：
+- `x86_64` → `linux/amd64`
+- `aarch64` → `linux/arm64`
+- `armv7l` → `linux/arm`
 
-### 4.4 远程执行流程
+**缓存策略**：
+- 缓存目录：`~/.cache/opslang/runners/`
+- 按架构存储 Runner 二进制
+- 首次上传后复用，避免重复传输
 
-```
-opsctl exec --hosts h1,h2,h3 --instructions task.json
-    |
-    v
-+---------------------------+
-| 解析目标主机               |
-| --hosts 或 --inventory    |
-| (inventory.go YAML 解析)  |
-+------------+--------------+
-             |
-             v
-+---------------------------+
-| 加载 JSON 指令包          |
-+------------+--------------+
-             |
-             v
-+---------------------------+
-| 并发执行（--parallel 限流）|
-+------------+--------------+
-             |
-     +-------+-------+-------+
-     |               |       |
-     v               v       v
-  [host1]         [host2] [host3]
-     |               |       |
-     v               v       v
-  1. SSH 连接    (sshx 连接池)
-  2. 架构检测    (arch.go: uname -m -> GOARCH)
-  3. 上传 Runner (缓存: ~/.cache/opslang/runners/)
-  4. stdin 发送 JSON 指令包
-  5. stdout 收集 JSON 结果
-     |               |       |
-     v               v       v
-+---------------------------+
-| 结果聚合 -> JSON 汇总     |
-+---------------------------+
-```
+#### 通用 Runner（cmd/ops-runner）
 
-Runner 二进制按架构缓存，同架构第二次执行不重复上传。
+**职责**：在远程主机上执行 JSON 指令包
 
----
+**工作流程**：
+1. 从 stdin 读取 JSON 指令包
+2. 解析指令序列
+3. 按顺序执行每条指令（调用 ops-core-sdk）
+4. 收集执行结果
+5. 输出 JSON 结果到 stdout
 
-## 5. 数据流
-
-### 5.1 本地执行数据流
-
-```
-source.ops (源代码)
-    |
-    | Lexer: 逐字符扫描
-    v
-[]token.Token (Token 流)
-    |
-    | Parser: 递归下降
-    v
-*ast.Program (AST)
-    |
-    | Interpreter: 深度优先遍历
-    v
-*Object (运行时值)
-    |
-    | output.go: 序列化
-    v
-JSON 输出 (stdout)
-```
-
-### 5.2 远程执行数据流
-
-```
-[控制端]                              [目标端]
-
-task.json                             ops-runner (缓存)
-    |                                      |
-    |  SSH/SFTP 上传 Runner（如未缓存）      |
-    |------------------------------------->|
-    |                                      |
-    |  stdin: JSON 指令包                   |
-    |------------------------------------->|
-    |                                      |
-    |                            +---------+---------+
-    |                            | Runner Executor   |
-    |                            | 逐条执行指令       |
-    |                            | 调用 ops-core-sdk |
-    |                            +---------+---------|
-    |                                      |
-    |  stdout: JSON 结果                    |
-    |<-------------------------------------|
-    |                                      |
-    v
-结果聚合器
-JSON 汇总输出
-```
-
-### 5.3 Runner 指令包 JSON 格式
-
+**指令包格式**：
 ```json
 {
   "version": "1.0",
@@ -593,8 +367,7 @@ JSON 汇总输出
 }
 ```
 
-### 5.4 Runner 输出 JSON 格式
-
+**输出格式**：
 ```json
 {
   "status": "ok",
@@ -606,8 +379,33 @@ JSON 汇总输出
 }
 ```
 
-### 5.5 deploy 结果汇总格式
+**多架构构建**：
+```bash
+# 构建多架构 Runner
+make build-runner-linux-amd64
+make build-runner-linux-arm64
+```
 
+#### 执行协调器（internal/exec）
+
+**职责**：协调远程执行全流程
+
+**工作流程**：
+1. 解析目标主机列表（`--hosts` 或 `--inventory`）
+2. 加载 JSON 指令包
+3. 对每台主机并发执行：
+   - SSH 连接
+   - 架构检测
+   - 上传/复用 Runner
+   - 发送指令包
+   - 收集输出
+4. 汇总结果，输出 JSON 摘要
+
+**并发控制**：
+- `--parallel` 参数限制并发数
+- 默认并发数：10
+
+**结果汇总格式**：
 ```json
 {
   "task_id": "abc123",
@@ -616,7 +414,7 @@ JSON 汇总输出
   "started_at": "2026-08-15T10:00:00Z",
   "finished_at": "2026-08-15T10:00:12Z",
   "results": {
-    "host1": { "status": "success", "exit_code": 0, "data": {} },
+    "host1": { "status": "success", "exit_code": 0, "data": {...} },
     "host2": { "status": "failed", "exit_code": 1, "error": "timeout" }
   },
   "audit_log": "/var/log/opsctl/abc123.json"
@@ -625,144 +423,527 @@ JSON 汇总输出
 
 ---
 
+## 4. 执行模式
+
+### 4.1 Runner 模式（解释执行）
+
+**适用场景**：
+- 简单任务（<100行，无第三方 Go 库）
+- 紧急故障处理（零编译延迟）
+- 本地调试和 REPL
+
+**工作流程**：
+```
+脚本源码 → Lexer → Parser → AST → Interpreter → 执行结果
+```
+
+**特点**：
+- 无需编译，即时执行
+- 通过 SSH 下发预编译 Runner 二进制
+- 发送 JSON 指令包，Runner 解释执行
+- 适合快速迭代和调试
+
+**命令示例**：
+```bash
+# 本地解释执行
+opsctl run script.ops
+
+# 远程解释执行
+opsctl exec --hosts host1,host2 --instructions script.ops
+```
+
+### 4.2 AOT 编译模式
+
+**适用场景**：
+- 复杂业务逻辑
+- 需要第三方 Go 库（`import go "..."`）
+- 生产环境部署（需要高性能）
+
+**工作流程**：
+```
+脚本源码 → Lexer → Parser → AST → CodeGen → Go 源码 → go build → 静态二进制
+```
+
+**特点**：
+- 编译为静态二进制，零依赖
+- 支持交叉编译（amd64 → arm64）
+- 编译缓存加速重复构建
+- 适合生产环境
+
+**命令示例**：
+```bash
+# 本地编译执行
+opsctl build --input script.ops --output binary
+./binary
+
+# 交叉编译
+opsctl build --input script.ops --output binary --target-arch linux/arm64
+```
+
+### 4.3 模式自动选择
+
+**选择策略**（`mode_selector.go`）：
+
+| 条件 | 选择模式 | 原因 |
+|------|---------|------|
+| 脚本 < 100 行，无 `import go` | Runner | 逻辑简单，指令包分发高效 |
+| 脚本 ≥ 100 行，或有 `import go` | AOT | 需要 Go 生态支持 |
+| 用户强制指定 | 按用户选择 | `--mode runner|aot|auto` |
+
+**默认行为**：`--mode auto`（自动选择）
+
+---
+
+## 5. 数据流
+
+### 5.1 本地执行数据流
+
+```
+┌─────────────┐
+│  脚本源码    │
+│ (.ops 文件)  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Lexer     │  词法分析
+│ (lexer.go)  │  源码 → Token 流
+└──────┬──────┘
+       │ Token 流
+       ▼
+┌─────────────┐
+│   Parser    │  语法分析
+│ (parser.go) │  Token 流 → AST
+└──────┬──────┘
+       │ AST
+       ▼
+┌─────────────┐
+│ Interpreter │  解释执行
+│(interpreter │  AST → 执行结果
+│    .go)     │
+└──────┬──────┘
+       │ 结构化结果
+       ▼
+┌─────────────┐
+│  JSON 输出  │
+└─────────────┘
+```
+
+### 5.2 远程执行数据流（Runner 模式）
+
+```
+┌─────────────┐
+│  脚本源码    │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  语言前端    │  Lexer → Parser → AST
+└──────┬──────┘
+       │ AST
+       ▼
+┌─────────────┐
+│ 指令包生成  │  AST → JSON 指令包
+│(instruction │
+│  _gen.go)   │
+└──────┬──────┘
+       │ JSON 指令包
+       ▼
+┌─────────────┐
+│ SSH 传输    │  上传 Runner（如未缓存）
+│  (sshx)     │  发送指令包到 stdin
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Runner     │  读取 stdin 指令包
+│(ops-runner) │  执行 ops-core-sdk
+└──────┬──────┘
+       │ JSON 结果
+       ▼
+┌─────────────┐
+│ 结果回收    │  解析 stdout JSON
+│  (exec)     │  聚合多台主机结果
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  汇总输出   │  JSON 格式
+└─────────────┘
+```
+
+### 5.3 远程执行数据流（AOT 编译模式）
+
+```
+┌─────────────┐
+│  脚本源码    │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  语言前端    │  Lexer → Parser → AST
+└──────┬──────┘
+       │ AST
+       ▼
+┌─────────────┐
+│  编译器     │  AST → Go 源码 → go build
+│ (compiler)  │  → 静态二进制
+└──────┬──────┘
+       │ 静态二进制
+       ▼
+┌─────────────┐
+│ SSH 传输    │  上传二进制到远程主机
+│  (sshx)     │  （支持多架构）
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│ 远程执行    │  直接执行二进制
+│             │  零依赖，无需 Runner
+└──────┬──────┘
+       │ JSON 结果
+       ▼
+┌─────────────┐
+│ 结果回收    │  解析 stdout JSON
+│  (exec)     │  聚合多台主机结果
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  汇总输出   │  JSON 格式
+└─────────────┘
+```
+
+### 5.4 编译缓存数据流
+
+```
+┌─────────────┐
+│  脚本源码    │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  计算缓存键 │  hash(源码) + 标准库版本 + 目标架构
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐     命中      ┌─────────────┐
+│  检查缓存   │ ────────────→ │  直接返回   │
+└──────┬──────┘               └─────────────┘
+       │ 未命中
+       ▼
+┌─────────────┐
+│  编译生成   │  CodeGen → go build
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  写入缓存   │  存储到 ~/.cache/opslang/compilation/
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  返回二进制 │
+└─────────────┘
+```
+
+---
+
 ## 6. 扩展指南
 
 ### 6.1 添加新的标准库函数
 
-1. 在 `pkg/ops-core-sdk/<包名>/` 下创建函数，返回带 JSON tag 的结构体：
+**步骤**：
+
+1. **在对应模块中实现函数**（`pkg/ops-core-sdk/<module>/`）
 
 ```go
 // pkg/ops-core-sdk/sys/swap.go
-
 package sys
 
 // SwapInfo 交换分区信息
 type SwapInfo struct {
-    Total uint64  `json:"total"`
-    Used  uint64  `json:"used"`
-    Free  uint64  `json:"free"`
+    Total uint64 `json:"total"`
+    Used  uint64 `json:"used"`
+    Free  uint64 `json:"free"`
 }
 
-// Swap 返回交换分区信息
+// Swap 获取交换分区信息
 func Swap() (*SwapInfo, error) {
-    // 实现...
+    // 实现逻辑
+    // 使用 gopsutil 或直接读取 /proc/meminfo
 }
 ```
 
-2. 编写单元测试，确保覆盖率 >= 80%
-3. 验证交叉编译：`CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./pkg/ops-core-sdk/...`
+2. **编写单元测试**
 
-### 6.2 添加新的内置函数
+```go
+// pkg/ops-core-sdk/sys/swap_test.go
+func TestSwap(t *testing.T) {
+    info, err := Swap()
+    if err != nil {
+        t.Fatalf("Swap() error = %v", err)
+    }
+    if info.Total == 0 {
+        t.Error("Swap() Total = 0, want > 0")
+    }
+}
+```
 
-在 `internal/interpreter/interpreter.go` 的 `registerDefaults()` 中注册：
+3. **在 Runner 中注册**（`internal/runner/registry.go`）
+
+```go
+func init() {
+    Registry["sys.swap"] = func(args map[string]interface{}) (interface{}, error) {
+        return sys.Swap()
+    }
+}
+```
+
+4. **在解释器中注册**（`internal/interpreter/interpreter.go`）
 
 ```go
 func (i *Interpreter) registerDefaults() {
-    // ... 现有注册 ...
-
     i.registerBuiltin("sys.swap", func(args ...Object) (Object, error) {
-        info, err := sys.Swap()
+        result, err := sys.Swap()
         if err != nil {
             return nil, err
         }
-        return structToMap(info), nil
+        return structToObject(result), nil
     })
 }
 ```
 
-### 6.3 添加新的语句类型
+### 6.2 添加新的 AST 节点类型
 
-按以下顺序完成：
+**步骤**：
 
-1. **定义 AST 节点**（`internal/ast/ast.go`）：
+1. **定义节点结构**（`internal/ast/ast.go`）
 
 ```go
-type MyNewStmt struct {
-    Token    token.Token
-    Name     string
-    Body     *BlockStmt
+// CustomStmt 自定义语句
+type CustomStmt struct {
+    Token token.Token
+    Name  string
+    Body  []Statement
 }
 ```
 
-2. **添加解析规则**（`internal/parser/parser.go`）：
+2. **在 Parser 中实现解析逻辑**（`internal/parser/parser.go`）
 
 ```go
-func (p *Parser) parseMyNewStmt() Statement {
-    // 解析逻辑...
+func (p *Parser) parseCustomStatement() *ast.CustomStmt {
+    stmt := &ast.CustomStmt{Token: p.curToken}
+    // 解析逻辑
+    return stmt
 }
 ```
 
-在 `parseStatement()` 中增加分支。
-
-3. **实现解释执行**（`internal/interpreter/interpreter.go`）：
+3. **在 Interpreter 中实现执行逻辑**（`internal/interpreter/interpreter.go`）
 
 ```go
-func (i *Interpreter) evalMyNewStmt(stmt *ast.MyNewStmt) (Object, error) {
-    // 执行逻辑...
+func (i *Interpreter) evalCustomStmt(stmt *ast.CustomStmt) (Object, error) {
+    // 执行逻辑
+    return nil, nil
 }
 ```
 
-在 `eval()` 的 switch 中增加分支。
-
-4. **实现代码生成**（`internal/compiler/codegen.go`）：
+4. **在 CodeGen 中实现代码生成**（`internal/compiler/codegen.go`）
 
 ```go
-func (g *Generator) genMyNewStmt(stmt *ast.MyNewStmt) {
-    // Go 代码生成...
+func (g *Generator) genCustomStmt(stmt *ast.CustomStmt) {
+    // 生成 Go 代码
 }
 ```
 
-### 6.4 添加新的 CLI 命令
+### 6.3 添加新的 CLI 命令
 
-在 `cmd/opsctl/` 下新增文件，使用 cobra：
+**步骤**：
+
+1. **创建命令文件**（`cmd/opsctl/<command>.go`）
 
 ```go
-// cmd/opsctl/mycommand.go
+package main
 
-package cmd
+import (
+    "github.com/spf13/cobra"
+)
 
-import "github.com/spf13/cobra"
-
-var myCmd = &cobra.Command{
-    Use:   "mycommand",
-    Short: "命令描述",
+var customCmd = &cobra.Command{
+    Use:   "custom [args]",
+    Short: "自定义命令描述",
+    Long:  `自定义命令详细描述`,
     RunE: func(cmd *cobra.Command, args []string) error {
-        // 实现...
+        // 命令实现
         return nil
     },
 }
 
 func init() {
-    rootCmd.AddCommand(myCmd)
+    rootCmd.AddCommand(customCmd)
+    // 添加命令参数
+    customCmd.Flags().StringP("flag", "f", "default", "flag 描述")
 }
 ```
 
-### 6.5 模块依赖关系
+2. **实现命令逻辑**
 
-```
-opsctl (cmd/opsctl)
-├── internal/lexer
-├── internal/parser
-│   ├── internal/lexer
-│   └── internal/ast
-├── internal/interpreter
-│   └── internal/ast
-├── internal/compiler
-│   ├── internal/ast
-│   └── pkg/ops-core-sdk
-├── internal/exec
-│   ├── internal/sshx
-│   ├── internal/inventory
-│   └── internal/runner
-├── internal/sshx
-├── internal/runner
-│   └── pkg/ops-core-sdk
-└── internal/security
-
-ops-runner (cmd/ops-runner)
-├── internal/runner
-│   └── pkg/ops-core-sdk
-└── pkg/ops-core-sdk (独立 module，可单独使用)
+```go
+func runCustom(args []string, flag string) error {
+    // 实现逻辑
+    return nil
+}
 ```
 
-扩展时注意依赖方向：`internal/*` 依赖 `pkg/ops-core-sdk`，但 `pkg/ops-core-sdk` 不依赖任何 `internal/*` 包。标准库保持独立可用。
+### 6.4 添加新的安全特性
+
+**权限分级扩展**（`internal/security/privilege.go`）：
+
+```go
+// 添加新的权限级别
+const (
+    PrivilegeReadOnly  PrivilegeLevel = "read_only"
+    PrivilegeAdmin     PrivilegeLevel = "admin"
+    PrivilegeRoot      PrivilegeLevel = "root"
+    PrivilegeCustom    PrivilegeLevel = "custom" // 新增
+)
+
+// 添加权限检查函数
+func CheckCustomPrivilege(script *ast.Program) error {
+    // 检查逻辑
+    return nil
+}
+```
+
+**审计日志扩展**（`internal/security/audit.go`）：
+
+```go
+// 添加新的审计事件类型
+type AuditEventType string
+
+const (
+    EventTaskExec    AuditEventType = "task_exec"
+    EventFileAccess  AuditEventType = "file_access"
+    EventCustomEvent AuditEventType = "custom_event" // 新增
+)
+
+// 记录自定义事件
+func LogCustomEvent(event *AuditEvent) error {
+    // 记录逻辑
+    return nil
+}
+```
+
+### 6.5 测试指南
+
+**单元测试**：
+```bash
+# 运行所有测试
+go test ./...
+
+# 运行特定包测试
+go test ./pkg/ops-core-sdk/sys/...
+
+# 带覆盖率
+go test -cover ./...
+```
+
+**集成测试**：
+```bash
+# 运行集成测试
+go test ./tests/...
+
+# 端到端测试
+make e2e-test
+```
+
+**交叉编译测试**：
+```bash
+# 测试 amd64
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build ./...
+
+# 测试 arm64
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...
+```
+
+### 6.6 贡献流程
+
+1. Fork 项目仓库
+2. 创建功能分支：`git checkout -b feature/new-feature`
+3. 编写代码和测试
+4. 确保所有测试通过：`go test ./...`
+5. 确保代码格式化：`go fmt ./...`
+6. 提交更改：`git commit -m 'feat: add new feature'`
+7. 推送分支：`git push origin feature/new-feature`
+8. 创建 Pull Request
+
+**提交信息规范**：
+- `feat`: 新功能
+- `fix`: 修复 bug
+- `docs`: 文档更新
+- `style`: 代码格式调整
+- `refactor`: 重构
+- `test`: 测试相关
+- `chore`: 构建/工具相关
+
+---
+
+## 附录
+
+### A. 关键字列表
+
+| 关键字 | 用途 | 示例 |
+|--------|------|------|
+| `let` | 变量声明 | `let x = 10` |
+| `fn` | 函数定义 | `fn add(a, b) { return a + b }` |
+| `if` | 条件语句 | `if x > 0 { ... }` |
+| `else` | 条件分支 | `else { ... }` |
+| `for` | 循环语句 | `for i in list { ... }` |
+| `while` | 循环语句 | `while x > 0 { ... }` |
+| `return` | 返回语句 | `return result` |
+| `task` | 任务声明 | `task "name" on targets { ... }` |
+| `on` | 目标声明 | `on ["host1", "host2"]` |
+| `ensure` | 幂等声明 | `ensure condition { actions }` |
+| `report` | 报告输出 | `report { key: value }` |
+| `metric` | 指标输出 | `metric(name, value, labels)` |
+| `log` | 日志输出 | `log("message")` |
+| `alert` | 告警输出 | `alert("warning")` |
+| `import` | 导入语句 | `import go "package"` |
+| `nil` | 空值 | `let x = nil` |
+
+### B. 标准库函数完整列表
+
+详见 `CLAUDE.md` 附录 A。
+
+### C. 数据类型
+
+**基本类型**：
+- 整数：`42`
+- 浮点数：`3.14`
+- 字符串：`"hello"`
+- 布尔：`true`, `false`
+- 空值：`nil`
+
+**复合类型**：
+- 列表：`[1, 2, 3]`
+- 字典：`{"key": "value"}`
+- 结构体：由标准库函数返回
+
+### D. 运算符
+
+**算术运算符**：`+`, `-`, `*`, `/`, `%`
+
+**比较运算符**：`==`, `!=`, `<`, `>`, `<=`, `>=`
+
+**逻辑运算符**：`&&`, `||`, `!`
+
+**赋值运算符**：`=`
+
+---
+
+## 参考资源
+
+- 项目仓库：https://github.com/j4ckzh0u/opslang
+- Go 文档：https://pkg.go.dev/github.com/j4ckzh0u/opslang
+- 示例脚本：`examples/` 目录
+- 开发计划：`CLAUDE.md`
