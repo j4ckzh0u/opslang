@@ -6,6 +6,10 @@ output
 # Test environment (local only)
 test_env/
 *.test.env
+tests/integration/test_config.env
+tests/reports/*.html
+tests/reports/*.json
+*.log
 
 # Build artifacts
 bin/
