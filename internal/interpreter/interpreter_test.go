@@ -238,9 +238,9 @@ func TestIfStatement(t *testing.T) {
 	p := prog(
 		let("x", intLit(10)),
 		&ast.IfStatement{
-			Position:  pos(),
-			Condition: binOp(ident("x"), ">", intLit(5)),
-			Body:      block(assign(ident("x"), intLit(100))),
+			Position:   pos(),
+			Condition:  binOp(ident("x"), ">", intLit(5)),
+			Body:       block(assign(ident("x"), intLit(100))),
 			ElseClause: block(assign(ident("x"), intLit(0))),
 		},
 	)
@@ -257,9 +257,9 @@ func TestIfElseStatement(t *testing.T) {
 	p := prog(
 		let("x", intLit(2)),
 		&ast.IfStatement{
-			Position:  pos(),
-			Condition: binOp(ident("x"), ">", intLit(5)),
-			Body:      block(assign(ident("x"), intLit(100))),
+			Position:   pos(),
+			Condition:  binOp(ident("x"), ">", intLit(5)),
+			Body:       block(assign(ident("x"), intLit(100))),
 			ElseClause: block(assign(ident("x"), intLit(0))),
 		},
 	)

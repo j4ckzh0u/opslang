@@ -433,13 +433,13 @@ func generateTaskID(scriptPath string) string {
 func outputDeployResult(summary *opsexec.Summary, startedAt time.Time, scriptPath string) error {
 	// Add script info to summary.
 	deployResult := map[string]interface{}{
-		"task_id":    summary.TaskID,
-		"script":     scriptPath,
-		"started_at": startedAt.Format(time.RFC3339),
+		"task_id":     summary.TaskID,
+		"script":      scriptPath,
+		"started_at":  startedAt.Format(time.RFC3339),
 		"finished_at": time.Now().UTC().Format(time.RFC3339),
-		"status":     summary.Status,
-		"targets":    summary.Targets,
-		"results":    summary.Results,
+		"status":      summary.Status,
+		"targets":     summary.Targets,
+		"results":     summary.Results,
 	}
 
 	result, err := json.MarshalIndent(deployResult, "", "  ")

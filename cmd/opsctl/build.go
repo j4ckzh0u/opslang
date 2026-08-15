@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	buildSource    string
-	buildOutput    string
+	buildSource     string
+	buildOutput     string
 	buildTargetArch string
 )
 

@@ -189,7 +189,6 @@ func (l *Lexer) advanceRune() rune {
 	return r
 }
 
-
 // --- Whitespace and comment skipping ---
 
 func (l *Lexer) skipWhitespaceExceptNewline() {

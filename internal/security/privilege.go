@@ -44,21 +44,21 @@ func ParsePrivilege(s string) (Privilege, error) {
 
 // mutationOps contains operations that modify system state
 var mutationOps = map[string]bool{
-	"file.write":     true,
-	"file.delete":    true,
-	"file.move":      true,
-	"file.copy":      true,
-	"file.append":    true,
-	"file.touch":     true,
-	"file.template":  true,
-	"service.start":  true,
-	"service.stop":   true,
+	"file.write":      true,
+	"file.delete":     true,
+	"file.move":       true,
+	"file.copy":       true,
+	"file.append":     true,
+	"file.touch":      true,
+	"file.template":   true,
+	"service.start":   true,
+	"service.stop":    true,
 	"service.restart": true,
-	"service.enable": true,
-	"pkg.install":    true,
-	"pkg.remove":     true,
-	"process.kill":   true,
-	"process.exec":   true,
+	"service.enable":  true,
+	"pkg.install":     true,
+	"pkg.remove":      true,
+	"process.kill":    true,
+	"process.exec":    true,
 }
 
 // IsMutationOp checks if an operation is a mutation operation

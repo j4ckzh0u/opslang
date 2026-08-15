@@ -49,7 +49,7 @@ type Program struct {
 	Statements []Statement
 }
 
-func (p *Program) Pos() Position   { return p.Position }
+func (p *Program) Pos() Position { return p.Position }
 func (p *Program) String() string {
 	var b strings.Builder
 	for i, s := range p.Statements {
@@ -72,8 +72,8 @@ type LetStatement struct {
 	Value    Expression
 }
 
-func (s *LetStatement) Pos() Position    { return s.Position }
-func (s *LetStatement) statementNode()   {}
+func (s *LetStatement) Pos() Position  { return s.Position }
+func (s *LetStatement) statementNode() {}
 func (s *LetStatement) String() string {
 	return fmt.Sprintf("let %s = %s", s.Name, s.Value)
 }
@@ -86,8 +86,8 @@ type FnStatement struct {
 	Body     *BlockStatement
 }
 
-func (s *FnStatement) Pos() Position    { return s.Position }
-func (s *FnStatement) statementNode()   {}
+func (s *FnStatement) Pos() Position  { return s.Position }
+func (s *FnStatement) statementNode() {}
 func (s *FnStatement) String() string {
 	params := make([]string, len(s.Params))
 	for i, p := range s.Params {
@@ -105,8 +105,8 @@ type IfStatement struct {
 	ElseClause Node // *BlockStatement or *IfStatement; nil when no else
 }
 
-func (s *IfStatement) Pos() Position    { return s.Position }
-func (s *IfStatement) statementNode()   {}
+func (s *IfStatement) Pos() Position  { return s.Position }
+func (s *IfStatement) statementNode() {}
 func (s *IfStatement) String() string {
 	out := fmt.Sprintf("if %s { ... }", s.Condition)
 	if s.ElseClause != nil {
@@ -129,8 +129,8 @@ type ForStatement struct {
 	Body      *BlockStatement
 }
 
-func (s *ForStatement) Pos() Position    { return s.Position }
-func (s *ForStatement) statementNode()   {}
+func (s *ForStatement) Pos() Position  { return s.Position }
+func (s *ForStatement) statementNode() {}
 func (s *ForStatement) String() string {
 	return fmt.Sprintf("for %s; %s; %s { ... }", s.Init, s.Condition, s.Post)
 }
@@ -142,8 +142,8 @@ type WhileStatement struct {
 	Body      *BlockStatement
 }
 
-func (s *WhileStatement) Pos() Position    { return s.Position }
-func (s *WhileStatement) statementNode()   {}
+func (s *WhileStatement) Pos() Position  { return s.Position }
+func (s *WhileStatement) statementNode() {}
 func (s *WhileStatement) String() string {
 	return fmt.Sprintf("while %s { ... }", s.Condition)
 }
@@ -154,8 +154,8 @@ type ReturnStatement struct {
 	Value    Expression // nil when returning no value
 }
 
-func (s *ReturnStatement) Pos() Position    { return s.Position }
-func (s *ReturnStatement) statementNode()   {}
+func (s *ReturnStatement) Pos() Position  { return s.Position }
+func (s *ReturnStatement) statementNode() {}
 func (s *ReturnStatement) String() string {
 	if s.Value == nil {
 		return "return"
@@ -171,8 +171,8 @@ type TaskStatement struct {
 	Body     *BlockStatement
 }
 
-func (s *TaskStatement) Pos() Position    { return s.Position }
-func (s *TaskStatement) statementNode()   {}
+func (s *TaskStatement) Pos() Position  { return s.Position }
+func (s *TaskStatement) statementNode() {}
 func (s *TaskStatement) String() string {
 	return fmt.Sprintf("task %q on %s { ... }", s.Name, s.Targets)
 }
@@ -183,8 +183,8 @@ type ImportStatement struct {
 	Path     string
 }
 
-func (s *ImportStatement) Pos() Position    { return s.Position }
-func (s *ImportStatement) statementNode()   {}
+func (s *ImportStatement) Pos() Position  { return s.Position }
+func (s *ImportStatement) statementNode() {}
 func (s *ImportStatement) String() string {
 	return fmt.Sprintf("import %q", s.Path)
 }
@@ -195,8 +195,8 @@ type ExpressionStatement struct {
 	Expr     Expression
 }
 
-func (s *ExpressionStatement) Pos() Position    { return s.Position }
-func (s *ExpressionStatement) statementNode()   {}
+func (s *ExpressionStatement) Pos() Position  { return s.Position }
+func (s *ExpressionStatement) statementNode() {}
 func (s *ExpressionStatement) String() string {
 	return fmt.Sprintf("%s", s.Expr)
 }
@@ -213,8 +213,8 @@ type ReportStatement struct {
 	Fields   []ReportField
 }
 
-func (s *ReportStatement) Pos() Position    { return s.Position }
-func (s *ReportStatement) statementNode()   {}
+func (s *ReportStatement) Pos() Position  { return s.Position }
+func (s *ReportStatement) statementNode() {}
 func (s *ReportStatement) String() string {
 	pairs := make([]string, len(s.Fields))
 	for i, f := range s.Fields {
@@ -229,8 +229,8 @@ type AlertStatement struct {
 	Message  Expression
 }
 
-func (s *AlertStatement) Pos() Position    { return s.Position }
-func (s *AlertStatement) statementNode()   {}
+func (s *AlertStatement) Pos() Position  { return s.Position }
+func (s *AlertStatement) statementNode() {}
 func (s *AlertStatement) String() string {
 	return fmt.Sprintf("alert(%s)", s.Message)
 }
@@ -239,13 +239,13 @@ func (s *AlertStatement) String() string {
 // Implements check → apply → verify semantics.
 type EnsureStatement struct {
 	Position  Position
-	Condition Expression       // the condition to ensure
-	Body      *BlockStatement  // actions to take if condition is false
-	Notify    Expression       // optional notification expression (nil if not set)
+	Condition Expression      // the condition to ensure
+	Body      *BlockStatement // actions to take if condition is false
+	Notify    Expression      // optional notification expression (nil if not set)
 }
 
-func (s *EnsureStatement) Pos() Position    { return s.Position }
-func (s *EnsureStatement) statementNode()   {}
+func (s *EnsureStatement) Pos() Position  { return s.Position }
+func (s *EnsureStatement) statementNode() {}
 func (s *EnsureStatement) String() string {
 	out := fmt.Sprintf("ensure %s { ... }", s.Condition)
 	if s.Notify != nil {
@@ -262,8 +262,8 @@ type MetricStatement struct {
 	Labels   Expression // dict expression or nil
 }
 
-func (s *MetricStatement) Pos() Position    { return s.Position }
-func (s *MetricStatement) statementNode()   {}
+func (s *MetricStatement) Pos() Position  { return s.Position }
+func (s *MetricStatement) statementNode() {}
 func (s *MetricStatement) String() string {
 	if s.Labels != nil {
 		return fmt.Sprintf("metric(%s, %s, %s)", s.Name, s.Value, s.Labels)
@@ -277,8 +277,8 @@ type LogStatement struct {
 	Message  Expression
 }
 
-func (s *LogStatement) Pos() Position    { return s.Position }
-func (s *LogStatement) statementNode()   {}
+func (s *LogStatement) Pos() Position  { return s.Position }
+func (s *LogStatement) statementNode() {}
 func (s *LogStatement) String() string {
 	return fmt.Sprintf("log(%s)", s.Message)
 }
@@ -289,8 +289,8 @@ type BlockStatement struct {
 	Statements []Statement
 }
 
-func (s *BlockStatement) Pos() Position    { return s.Position }
-func (s *BlockStatement) statementNode()   {}
+func (s *BlockStatement) Pos() Position  { return s.Position }
+func (s *BlockStatement) statementNode() {}
 func (s *BlockStatement) String() string {
 	parts := make([]string, len(s.Statements))
 	for i, st := range s.Statements {
@@ -307,8 +307,8 @@ type AssignStatement struct {
 	Value    Expression
 }
 
-func (s *AssignStatement) Pos() Position    { return s.Position }
-func (s *AssignStatement) statementNode()   {}
+func (s *AssignStatement) Pos() Position  { return s.Position }
+func (s *AssignStatement) statementNode() {}
 func (s *AssignStatement) String() string {
 	return fmt.Sprintf("%s = %s", s.Target, s.Value)
 }
@@ -323,9 +323,9 @@ type IntegerLiteral struct {
 	Value    int64
 }
 
-func (e *IntegerLiteral) Pos() Position       { return e.Position }
-func (e *IntegerLiteral) expressionNode()     {}
-func (e *IntegerLiteral) String() string    { return fmt.Sprintf("%d", e.Value) }
+func (e *IntegerLiteral) Pos() Position   { return e.Position }
+func (e *IntegerLiteral) expressionNode() {}
+func (e *IntegerLiteral) String() string  { return fmt.Sprintf("%d", e.Value) }
 
 // FloatLiteral represents a floating-point value.
 type FloatLiteral struct {
@@ -333,9 +333,9 @@ type FloatLiteral struct {
 	Value    float64
 }
 
-func (e *FloatLiteral) Pos() Position       { return e.Position }
-func (e *FloatLiteral) expressionNode()     {}
-func (e *FloatLiteral) String() string    { return fmt.Sprintf("%g", e.Value) }
+func (e *FloatLiteral) Pos() Position   { return e.Position }
+func (e *FloatLiteral) expressionNode() {}
+func (e *FloatLiteral) String() string  { return fmt.Sprintf("%g", e.Value) }
 
 // StringLiteral represents a quoted string value.
 type StringLiteral struct {
@@ -343,9 +343,9 @@ type StringLiteral struct {
 	Value    string
 }
 
-func (e *StringLiteral) Pos() Position       { return e.Position }
-func (e *StringLiteral) expressionNode()     {}
-func (e *StringLiteral) String() string    { return fmt.Sprintf("%q", e.Value) }
+func (e *StringLiteral) Pos() Position   { return e.Position }
+func (e *StringLiteral) expressionNode() {}
+func (e *StringLiteral) String() string  { return fmt.Sprintf("%q", e.Value) }
 
 // BoolLiteral represents true or false.
 type BoolLiteral struct {
@@ -353,8 +353,8 @@ type BoolLiteral struct {
 	Value    bool
 }
 
-func (e *BoolLiteral) Pos() Position       { return e.Position }
-func (e *BoolLiteral) expressionNode()     {}
+func (e *BoolLiteral) Pos() Position   { return e.Position }
+func (e *BoolLiteral) expressionNode() {}
 func (e *BoolLiteral) String() string {
 	if e.Value {
 		return "true"
@@ -369,7 +369,7 @@ type NilLiteral struct {
 
 func (e *NilLiteral) Pos() Position   { return e.Position }
 func (e *NilLiteral) expressionNode() {}
-func (e *NilLiteral) String() string { return "nil" }
+func (e *NilLiteral) String() string  { return "nil" }
 
 // ListLiteral represents [elem1, elem2, ...]
 type ListLiteral struct {
@@ -413,7 +413,7 @@ type Identifier struct {
 
 func (e *Identifier) Pos() Position   { return e.Position }
 func (e *Identifier) expressionNode() {}
-func (e *Identifier) String() string { return e.Name }
+func (e *Identifier) String() string  { return e.Name }
 
 // CallExpression represents a function call: <Function>(<Args>...)
 // Function can be *Identifier (e.g. print(x)) or *MemberExpression

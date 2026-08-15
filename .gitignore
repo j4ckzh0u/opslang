@@ -6,3 +6,8 @@ output
 # Test environment (local only)
 test_env/
 *.test.env
+
+# Build artifacts
+bin/
+dist/
+coverage.out

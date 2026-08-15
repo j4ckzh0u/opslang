@@ -855,4 +855,3 @@ func sanitizeName(name string) string {
 	}
 	return result.String()
 }
-

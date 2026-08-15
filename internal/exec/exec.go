@@ -33,14 +33,14 @@ type Target struct {
 
 // HostResult captures the execution result for a single host.
 type HostResult struct {
-	Status    string                 `json:"status"`
-	Error     string                 `json:"error,omitempty"`
-	ExitCode  int                    `json:"exit_code"`
-	Data      map[string]interface{} `json:"data,omitempty"`
-	Errors    []string               `json:"errors,omitempty"`
-	Warnings  []string               `json:"warnings,omitempty"`
-	StartedAt time.Time              `json:"started_at"`
-	FinishedAt time.Time             `json:"finished_at"`
+	Status     string                 `json:"status"`
+	Error      string                 `json:"error,omitempty"`
+	ExitCode   int                    `json:"exit_code"`
+	Data       map[string]interface{} `json:"data,omitempty"`
+	Errors     []string               `json:"errors,omitempty"`
+	Warnings   []string               `json:"warnings,omitempty"`
+	StartedAt  time.Time              `json:"started_at"`
+	FinishedAt time.Time              `json:"finished_at"`
 }
 
 // Summary is the aggregated result across all hosts.
@@ -55,16 +55,16 @@ type Summary struct {
 
 // Executor runs instructions on remote hosts via SSH.
 type Executor struct {
-	Targets       []Target
-	Instructions  *runner.InstructionPackage
-	User          string
-	KeyFile       string
-	Password      string
-	Parallel      int
-	DryRun        bool
-	RunnerPath    string // explicit path to a pre-built runner binary (optional)
-	ProjectRoot   string // root of the OpsLang project (for building runner)
-	runnerCache   *runnerCache
+	Targets      []Target
+	Instructions *runner.InstructionPackage
+	User         string
+	KeyFile      string
+	Password     string
+	Parallel     int
+	DryRun       bool
+	RunnerPath   string // explicit path to a pre-built runner binary (optional)
+	ProjectRoot  string // root of the OpsLang project (for building runner)
+	runnerCache  *runnerCache
 }
 
 // SSHClientFactory creates SSH clients. Can be overridden for testing.

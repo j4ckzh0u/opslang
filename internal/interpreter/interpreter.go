@@ -43,10 +43,10 @@ func (e *RuntimeError) Error() string {
 
 // FunctionValue represents a user-defined function.
 type FunctionValue struct {
-	Params []ast.Parameter
-	Body   *ast.BlockStatement
+	Params  []ast.Parameter
+	Body    *ast.BlockStatement
 	Closure *Environment
-	Name   string
+	Name    string
 }
 
 func (f *FunctionValue) String() string {
@@ -121,9 +121,9 @@ func (e *Environment) lookup(name string) (*Environment, bool) {
 
 // Interpreter executes an OpsLang AST.
 type Interpreter struct {
-	builtins   map[string]BuiltinFunc
-	output     []OutputEntry
-	globalEnv  *Environment
+	builtins  map[string]BuiltinFunc
+	output    []OutputEntry
+	globalEnv *Environment
 }
 
 // New creates a new interpreter with optional extra built-in functions.

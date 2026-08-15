@@ -10,13 +10,13 @@ import (
 
 // Host represents a single host in the inventory.
 type Host struct {
-	Name     string `yaml:"name" json:"name"`
-	Host     string `yaml:"host" json:"host"`
-	Port     int    `yaml:"port" json:"port"`
-	User     string `yaml:"user" json:"user"`
-	Password string `yaml:"password" json:"-"`
-	KeyFile  string `yaml:"key_file" json:"key_file"`
-	Group    string `yaml:"group" json:"group"`
+	Name     string            `yaml:"name" json:"name"`
+	Host     string            `yaml:"host" json:"host"`
+	Port     int               `yaml:"port" json:"port"`
+	User     string            `yaml:"user" json:"user"`
+	Password string            `yaml:"password" json:"-"`
+	KeyFile  string            `yaml:"key_file" json:"key_file"`
+	Group    string            `yaml:"group" json:"group"`
 	Tags     map[string]string `yaml:"tags" json:"tags"`
 }
 

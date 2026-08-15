@@ -54,66 +54,66 @@ const (
 	NOT     // !
 
 	// Delimiters / punctuation
-	DOT        // .
-	COMMA      // ,
-	COLON      // :
-	LPAREN     // (
-	RPAREN     // )
-	LBRACE     // {
-	RBRACE     // }
-	LBRACKET   // [
-	RBRACKET   // ]
+	DOT      // .
+	COMMA    // ,
+	COLON    // :
+	LPAREN   // (
+	RPAREN   // )
+	LBRACE   // {
+	RBRACE   // }
+	LBRACKET // [
+	RBRACKET // ]
 )
 
 var tokenNames = map[TokenType]string{
-	ILLEGAL:  "ILLEGAL",
-	EOF:      "EOF",
-	NEWLINE:  "NEWLINE",
+	ILLEGAL:   "ILLEGAL",
+	EOF:       "EOF",
+	NEWLINE:   "NEWLINE",
 	SEMICOLON: "SEMICOLON",
-	IDENT:    "IDENT",
-	INT:      "INT",
-	FLOAT:    "FLOAT",
-	STRING:   "STRING",
-	TRUE:     "TRUE",
-	FALSE:    "FALSE",
-	NIL:      "NIL",
-	LET:      "LET",
-	FN:       "FN",
-	IF:       "IF",
-	ELSE:     "ELSE",
-	FOR:      "FOR",
-	WHILE:    "WHILE",
-	RETURN:   "RETURN",
-	TASK:     "TASK",
-	ON:       "ON",
-	IMPORT:   "IMPORT",
-	REPORT:   "REPORT",
-	ALERT:    "ALERT",
-	ENSURE:   "ENSURE",
-	PLUS:     "PLUS",
-	MINUS:    "MINUS",
-	STAR:     "STAR",
-	SLASH:    "SLASH",
-	PERCENT:  "PERCENT",
-	EQ:       "EQ",
-	NEQ:      "NEQ",
-	LT:       "LT",
-	GT:       "GT",
-	LTE:      "LTE",
-	GTE:      "GTE",
-	ASSIGN:   "ASSIGN",
-	AND:      "AND",
-	OR:       "OR",
-	NOT:      "NOT",
-	DOT:      "DOT",
-	COMMA:    "COMMA",
-	COLON:    "COLON",
-	LPAREN:   "LPAREN",
-	RPAREN:   "RPAREN",
-	LBRACE:   "LBRACE",
-	RBRACE:   "RBRACE",
-	LBRACKET: "LBRACKET",
-	RBRACKET: "RBRACKET",
+	IDENT:     "IDENT",
+	INT:       "INT",
+	FLOAT:     "FLOAT",
+	STRING:    "STRING",
+	TRUE:      "TRUE",
+	FALSE:     "FALSE",
+	NIL:       "NIL",
+	LET:       "LET",
+	FN:        "FN",
+	IF:        "IF",
+	ELSE:      "ELSE",
+	FOR:       "FOR",
+	WHILE:     "WHILE",
+	RETURN:    "RETURN",
+	TASK:      "TASK",
+	ON:        "ON",
+	IMPORT:    "IMPORT",
+	REPORT:    "REPORT",
+	ALERT:     "ALERT",
+	ENSURE:    "ENSURE",
+	PLUS:      "PLUS",
+	MINUS:     "MINUS",
+	STAR:      "STAR",
+	SLASH:     "SLASH",
+	PERCENT:   "PERCENT",
+	EQ:        "EQ",
+	NEQ:       "NEQ",
+	LT:        "LT",
+	GT:        "GT",
+	LTE:       "LTE",
+	GTE:       "GTE",
+	ASSIGN:    "ASSIGN",
+	AND:       "AND",
+	OR:        "OR",
+	NOT:       "NOT",
+	DOT:       "DOT",
+	COMMA:     "COMMA",
+	COLON:     "COLON",
+	LPAREN:    "LPAREN",
+	RPAREN:    "RPAREN",
+	LBRACE:    "LBRACE",
+	RBRACE:    "RBRACE",
+	LBRACKET:  "LBRACKET",
+	RBRACKET:  "RBRACKET",
 }
 
 // String returns the name of the token type.

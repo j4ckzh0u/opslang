@@ -57,8 +57,8 @@ func applySystemd(limit ResourceLimit) (*AppliedLimit, error) {
 // DefaultResourceLimit returns sensible default resource limits
 func DefaultResourceLimit() ResourceLimit {
 	return ResourceLimit{
-		CPUPercent: 80,    // 80% CPU
-		MemoryMB:   1024,  // 1GB memory
+		CPUPercent: 80,   // 80% CPU
+		MemoryMB:   1024, // 1GB memory
 	}
 }
 
