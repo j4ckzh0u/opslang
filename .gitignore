@@ -3,3 +3,6 @@ ops-runner
 output
 .opslang-build/
 *.swp
+# Test environment (local only)
+test_env/
+*.test.env
