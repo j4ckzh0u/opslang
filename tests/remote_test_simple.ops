@@ -1,0 +1,14 @@
+// 远程测试：获取系统信息（简化版）
+let hostname = sys.hostname()
+let cpu_info = sys.cpu.info()
+let memory = sys.memory.info()
+let disk = sys.disk.usage("/")
+
+report {
+    host: hostname.hostname,
+    cpu_cores: cpu_info.cores,
+    memory_total: memory.total,
+    memory_used_percent: memory.used_percent,
+    disk_total: disk.total,
+    disk_used_percent: disk.used_percent
+}

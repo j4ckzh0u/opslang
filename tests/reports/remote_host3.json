@@ -1,0 +1,23 @@
+{
+  "task_id": "",
+  "targets": [
+    "openclaw@192.168.1.151"
+  ],
+  "started_at": "2026-08-15T20:00:33.934202Z",
+  "finished_at": "2026-08-15T20:00:53.08934Z",
+  "status": "success",
+  "results": {
+    "openclaw@192.168.1.151": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "cpu": "$cpu",
+        "disk": "$disk",
+        "host": "$hostname",
+        "memory": "$memory"
+      },
+      "started_at": "2026-08-15T20:00:33.934278Z",
+      "finished_at": "2026-08-15T20:00:53.08912Z"
+    }
+  }
+}
