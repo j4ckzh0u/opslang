@@ -74,54 +74,30 @@ type UserInfo struct {
 
 // GetCPUUsage returns overall CPU utilization percentages.
 //
-// It uses cpu.Percent(true) to obtain per-CPU usage percentages and averages
-// them for the overall Percent field. It then uses cpu.Times(false) to get
-// aggregate CPU times and computes User/System/Idle breakdowns by scaling the
-// time ratios by the overall non-idle percentage, so User+System+Idle ~ 100.
+// It uses cpu.Times(false) to get aggregate CPU times since boot and computes
+// User/System/Idle/Percent breakdowns directly from those cumulative times.
+// This ensures User+System+Idle ~ 100 and User+System ~ Percent.
 func GetCPUUsage() (CPUUsage, error) {
-	// Per-CPU percentages (100ms sample interval)
-	perCPU, err := cpu.Percent(100*1e6, true)
-	if err != nil {
-		return CPUUsage{}, fmt.Errorf("failed to get per-CPU percentages: %w", err)
-	}
-
-	// Overall non-idle percentage from per-CPU average
-	var overallPct float64
-	if len(perCPU) > 0 {
-		var sum float64
-		for _, p := range perCPU {
-			sum += p
-		}
-		overallPct = sum / float64(len(perCPU))
-	}
-
-	// Aggregate CPU times since boot for User/System/Idle ratios
+	// Aggregate CPU times since boot
 	times, err := cpu.Times(false)
 	if err != nil {
 		return CPUUsage{}, fmt.Errorf("failed to get CPU times: %w", err)
 	}
 
-	result := CPUUsage{
-		Percent: math.Round(overallPct*100) / 100,
-	}
+	var result CPUUsage
 
 	if len(times) > 0 {
 		t := times[0]
 		total := t.User + t.System + t.Idle + t.Nice + t.Iowait + t.Irq +
 			t.Softirq + t.Steal + t.Guest + t.GuestNice
 		if total > 0 {
-			idleRatio := (t.Idle + t.Iowait) / total
-			nonIdleRatio := 1 - idleRatio
+			idle := t.Idle + t.Iowait
+			active := total - idle
 
-			if nonIdleRatio > 0 {
-				userRatio := (t.User + t.Guest) / total / nonIdleRatio
-				sysRatio := (t.System + t.Irq + t.Softirq) / total / nonIdleRatio
-				result.Idle = math.Round(idleRatio*100*100) / 100
-				result.User = math.Round(userRatio*overallPct*100) / 100
-				result.System = math.Round(sysRatio*overallPct*100) / 100
-			} else {
-				result.Idle = 100.0
-			}
+			result.Idle = math.Round(idle/total*100*100) / 100
+			result.User = math.Round((t.User+t.Guest)/total*100*100) / 100
+			result.System = math.Round((t.System+t.Irq+t.Softirq)/total*100*100) / 100
+			result.Percent = math.Round(active/total*100*100) / 100
 		}
 	}
 
