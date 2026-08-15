@@ -357,7 +357,7 @@ func TestGetRunnerBinaryExplicitPath(t *testing.T) {
 	}
 
 	e := &Executor{RunnerPath: runnerFile}
-	path, err := e.getRunnerBinary("amd64")
+	path, err := e.getRunnerBinary("linux", "amd64")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -368,7 +368,7 @@ func TestGetRunnerBinaryExplicitPath(t *testing.T) {
 
 func TestGetRunnerBinaryExplicitPathMissing(t *testing.T) {
 	e := &Executor{RunnerPath: "/nonexistent/runner"}
-	_, err := e.getRunnerBinary("amd64")
+	_, err := e.getRunnerBinary("linux", "amd64")
 	if err == nil {
 		t.Error("expected error for missing runner")
 	}

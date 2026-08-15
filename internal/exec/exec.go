@@ -10,7 +10,6 @@ import (
 	"os"
 	osexec "os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -199,7 +198,8 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	}
 
 	// Find or build runner binary.
-	runnerPath, err := e.getRunnerBinary(goarch)
+	// Remote targets are always Linux, so we build for linux/<goarch>.
+	runnerPath, err := e.getRunnerBinary("linux", goarch)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Sprintf("failed to get runner binary: %v", err)
@@ -291,9 +291,9 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	return result
 }
 
-// getRunnerBinary returns the path to a runner binary for the given GOARCH.
+// getRunnerBinary returns the path to a runner binary for the given GOOS/GOARCH.
 // It checks explicit path, then cache, then builds from source.
-func (e *Executor) getRunnerBinary(goarch string) (string, error) {
+func (e *Executor) getRunnerBinary(goos, goarch string) (string, error) {
 	// If user specified an explicit runner path, use it directly.
 	if e.RunnerPath != "" {
 		if _, err := os.Stat(e.RunnerPath); err != nil {
@@ -303,13 +303,13 @@ func (e *Executor) getRunnerBinary(goarch string) (string, error) {
 	}
 
 	// Check cache.
-	cached := e.runnerCache.getCachedPath(runtime.GOOS, goarch)
+	cached := e.runnerCache.getCachedPath(goos, goarch)
 	if _, err := os.Stat(cached); err == nil {
 		return cached, nil
 	}
 
 	// Build and cache.
-	if err := e.runnerCache.build(runtime.GOOS, goarch); err != nil {
+	if err := e.runnerCache.build(goos, goarch); err != nil {
 		return "", fmt.Errorf("failed to build runner: %w", err)
 	}
 	return cached, nil
