@@ -1,0 +1,30 @@
+// deploy_app.ops - Application deployment example
+// Usage: opsctl deploy examples/deploy_app.ops --targets host1,host2
+
+print("=== Application Deployment ===")
+
+let app_name = "myapp"
+let app_version = "2.1.0"
+let deploy_path = "/opt/app/releases/"
+let service_name = "myapp.service"
+
+print("Deploying " + app_name + " v" + str(app_version))
+print("Target path: " + deploy_path)
+
+// Simulate deployment steps
+let step1 = "Upload package"
+let step2 = "Extract files"
+let step3 = "Update symlink"
+let step4 = "Restart service"
+
+print("Step 1: " + step1)
+print("Step 2: " + step2)
+print("Step 3: " + step3)
+print("Step 4: " + step4)
+
+report {
+    app: app_name,
+    version: app_version,
+    path: deploy_path,
+    status: "deployed"
+}

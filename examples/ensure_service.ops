@@ -1,0 +1,28 @@
+// ensure_service.ops - Ensure a service is running
+// Usage: opsctl run examples/ensure_service.ops
+
+print("=== Service Health Check ===")
+
+let service_name = "nginx"
+let service_running = true
+let service_enabled = true
+
+print("Checking service: " + service_name)
+print("Running: " + str(service_running))
+print("Enabled: " + str(service_enabled))
+
+if service_running {
+    print("Service " + service_name + " is healthy")
+} else {
+    alert("Service " + service_name + " is not running!")
+}
+
+if service_enabled {
+    print("Service starts on boot: yes")
+}
+
+report {
+    service: service_name,
+    running: service_running,
+    enabled: service_enabled
+}

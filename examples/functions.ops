@@ -1,0 +1,57 @@
+// functions.ops - User-defined functions
+// Usage: opsctl run examples/functions.ops
+
+print("=== Functions Demo ===")
+
+// Simple function
+fn greet(name) {
+    print("Hello, " + name + "!")
+}
+
+greet("World")
+greet("OpsLang")
+
+// Function with return value
+fn add(a, b) {
+    return a + b
+}
+
+let result = add(10, 20)
+print("10 + 20 = " + str(result))
+
+// Function with default parameter
+fn power(base, exp = 2) {
+    let r = 1
+    for let i = 0; i < exp; i = i + 1 {
+        r = r * base
+    }
+    return r
+}
+
+print("3^2 = " + str(power(3)))
+print("2^10 = " + str(power(2, 10)))
+
+// Recursive function
+fn factorial(n) {
+    if n <= 1 {
+        return 1
+    }
+    return n * factorial(n - 1)
+}
+
+print("5! = " + str(factorial(5)))
+print("10! = " + str(factorial(10)))
+
+// Higher-order-like pattern
+fn apply(fn_op, x, y) {
+    return fn_op(x, y)
+}
+
+let sum = apply(add, 5, 3)
+print("apply(add, 5, 3) = " + str(sum))
+
+report {
+    add_result: result,
+    power_result: power(2, 10),
+    factorial_5: factorial(5)
+}

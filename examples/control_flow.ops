@@ -1,0 +1,45 @@
+// control_flow.ops - Control flow examples
+// Usage: opsctl run examples/control_flow.ops
+
+print("=== Control Flow Demo ===")
+
+// If/else
+let score = 85
+if score >= 90 {
+    print("Grade: A")
+} else if score >= 80 {
+    print("Grade: B")
+} else if score >= 70 {
+    print("Grade: C")
+} else {
+    print("Grade: F")
+}
+
+// For loop
+print("Counting:")
+for let i = 1; i <= 5; i = i + 1 {
+    print("  " + str(i))
+}
+
+// While loop
+let n = 10
+let total = 0
+while n > 0 {
+    total = total + n
+    n = n - 1
+}
+print("Sum 1..10: " + str(total))
+
+// Nested structures
+let matrix = [[1, 2], [3, 4], [5, 6]]
+for let i = 0; i < len(matrix); i = i + 1 {
+    let row = matrix[i]
+    for let j = 0; j < len(row); j = j + 1 {
+        print("  [" + str(i) + "][" + str(j) + "] = " + str(row[j]))
+    }
+}
+
+report {
+    score: score,
+    total: total
+}

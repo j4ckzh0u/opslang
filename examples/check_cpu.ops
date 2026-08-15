@@ -1,0 +1,19 @@
+// check_cpu.ops - Collect CPU usage information
+// Usage: opsctl run examples/check_cpu.ops
+
+let cpu = {"percent": 0, "cores": 4}
+let hostname = "localhost"
+
+print("=== CPU Information ===")
+print("Hostname: " + hostname)
+print("CPU cores: " + str(cpu.cores))
+print("CPU usage: " + str(cpu.percent) + "%")
+
+if cpu.percent > 80 {
+    alert("CPU usage is high: " + str(cpu.percent) + "%")
+}
+
+report {
+    host: hostname,
+    cpu: cpu
+}

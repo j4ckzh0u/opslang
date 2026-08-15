@@ -1,0 +1,46 @@
+// variables.ops - Variable types and operations
+// Usage: opsctl run examples/variables.ops
+
+print("=== Variables Demo ===")
+
+// Integer
+let count = 42
+print("Integer: " + str(count))
+
+// Float
+let pi = 3.14159
+print("Float: " + str(pi))
+
+// String
+let name = "OpsLang"
+print("String: " + name)
+
+// Boolean
+let active = true
+print("Boolean: " + str(active))
+
+// List
+let items = ["alpha", "beta", "gamma"]
+print("List: " + str(items))
+print("First item: " + items[0])
+print("List length: " + str(len(items)))
+
+// Dict
+let config = {"host": "localhost", "port": 8080}
+print("Dict host: " + config.host)
+print("Dict port: " + str(config.port))
+
+// Arithmetic
+let sum = count + 8
+let product = count * 2
+print("Sum: " + str(sum))
+print("Product: " + str(product))
+
+report {
+    count: count,
+    pi: pi,
+    name: name,
+    active: active,
+    items: items,
+    config: config
+}

@@ -18,6 +18,9 @@ func init() {
 	rootCmd.AddCommand(execCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(buildCmd)
+	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(replCmd)
+	rootCmd.AddCommand(deployCmd)
 }
 
 func main() {

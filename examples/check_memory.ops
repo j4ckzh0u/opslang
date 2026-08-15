@@ -1,0 +1,26 @@
+// check_memory.ops - Collect memory usage information
+// Usage: opsctl run examples/check_memory.ops
+
+let total_mb = 16384
+let used_mb = 12288
+let available_mb = total_mb - used_mb
+let usage_percent = (used_mb * 100) / total_mb
+
+print("=== Memory Information ===")
+print("Total: " + str(total_mb) + " MB")
+print("Used: " + str(used_mb) + " MB")
+print("Available: " + str(available_mb) + " MB")
+print("Usage: " + str(usage_percent) + "%")
+
+if usage_percent > 90 {
+    alert("Memory usage critical: " + str(usage_percent) + "%")
+} else if usage_percent > 70 {
+    print("WARNING: Memory usage elevated")
+}
+
+report {
+    total_mb: total_mb,
+    used_mb: used_mb,
+    available_mb: available_mb,
+    usage_percent: usage_percent
+}

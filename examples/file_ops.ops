@@ -1,0 +1,29 @@
+// file_ops.ops - File operations example
+// Usage: opsctl run examples/file_ops.ops
+
+print("=== File Operations Demo ===")
+
+// List operations
+let files = ["config.yaml", "data.json", "app.log"]
+print("Files in directory:")
+
+for let i = 0; i < len(files); i = i + 1 {
+    print("  - " + files[i])
+}
+
+// Simulate file check
+let config_exists = true
+let log_size = 1024000
+
+print("Config exists: " + str(config_exists))
+print("Log size: " + str(log_size) + " bytes")
+
+if log_size > 100000 {
+    alert("Log file is large, consider rotation")
+}
+
+report {
+    file_count: len(files),
+    config_exists: config_exists,
+    log_size: log_size
+}
