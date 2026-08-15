@@ -177,6 +177,19 @@ func (s *TaskStatement) String() string {
 	return fmt.Sprintf("task %q on %s { ... }", s.Name, s.Targets)
 }
 
+// ParallelStatement represents: parallel { <Body> }
+// All statements in the body execute concurrently.
+type ParallelStatement struct {
+	Position Position
+	Body     *BlockStatement
+}
+
+func (s *ParallelStatement) Pos() Position  { return s.Position }
+func (s *ParallelStatement) statementNode() {}
+func (s *ParallelStatement) String() string {
+	return "parallel { ... }"
+}
+
 // ImportStatement represents: import "<Path>"
 type ImportStatement struct {
 	Position Position

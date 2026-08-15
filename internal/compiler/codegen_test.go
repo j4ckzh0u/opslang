@@ -372,3 +372,41 @@ func TestSanitizeNameFunction(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateParallelStatement(t *testing.T) {
+	source := `parallel {
+  let x = 1
+  let y = 2
+}`
+	code, err := GenerateCode(source, "test.ops")
+	if err != nil {
+		t.Fatalf("GenerateCode failed: %v", err)
+	}
+	if !strings.Contains(code, "sync.WaitGroup") {
+		t.Errorf("expected sync.WaitGroup, got:\n%s", code)
+	}
+	if !strings.Contains(code, "_pWg.Add(2)") {
+		t.Errorf("expected _pWg.Add(2), got:\n%s", code)
+	}
+	if !strings.Contains(code, "go func(") {
+		t.Errorf("expected goroutine launch, got:\n%s", code)
+	}
+	if !strings.Contains(code, "_pWg.Wait()") {
+		t.Errorf("expected _pWg.Wait(), got:\n%s", code)
+	}
+	if !strings.Contains(code, "\"sync\"") {
+		t.Errorf("expected sync import, got:\n%s", code)
+	}
+}
+
+func TestGenerateParallelEmptyBlock(t *testing.T) {
+	source := `parallel {}`
+	code, err := GenerateCode(source, "test.ops")
+	if err != nil {
+		t.Fatalf("GenerateCode failed: %v", err)
+	}
+	// Empty parallel block should not emit sync import or WaitGroup
+	if strings.Contains(code, "sync.WaitGroup") {
+		t.Errorf("empty parallel should not use WaitGroup, got:\n%s", code)
+	}
+}

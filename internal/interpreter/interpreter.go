@@ -296,6 +296,8 @@ func (interp *Interpreter) execStatement(stmt ast.Statement, env *Environment) (
 		return interp.execMetric(s, env)
 	case *ast.LogStatement:
 		return interp.execLog(s, env)
+	case *ast.ParallelStatement:
+		return interp.execParallel(s, env)
 	case *ast.BlockStatement:
 		blockEnv := newEnv(env)
 		return interp.execBlock(s, blockEnv)
@@ -602,6 +604,16 @@ func (interp *Interpreter) execBlock(block *ast.BlockStatement, env *Environment
 		result = val
 	}
 	return result, nil
+}
+
+// execParallel executes a parallel block. In this phase, statements in the
+// body are executed sequentially in the current environment; true concurrent
+// execution can be introduced later without changing the public semantics.
+func (interp *Interpreter) execParallel(s *ast.ParallelStatement, env *Environment) (interface{}, error) {
+	if s.Body == nil {
+		return nil, nil
+	}
+	return interp.execBlock(s.Body, env)
 }
 
 // ---------------------------------------------------------------------------

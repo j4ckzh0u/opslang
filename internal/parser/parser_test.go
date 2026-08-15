@@ -844,3 +844,98 @@ func TestMetricCallParsed(t *testing.T) {
 		t.Errorf("labels = %s, want nil", metricStmt.Labels)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Parallel statement
+// ---------------------------------------------------------------------------
+
+func TestParallelStatement(t *testing.T) {
+	tests := []struct {
+		name       string
+		src        string
+		wantStmts  int
+	}{
+		{
+			name: "basic let statements",
+			src: `parallel {
+  let x = 1
+  let y = 2
+  let z = 3
+}`,
+			wantStmts: 3,
+		},
+		{
+			name:      "empty parallel block",
+			src:       `parallel {}`,
+			wantStmts: 0,
+		},
+		{
+			name: "function calls",
+			src: `parallel {
+  print("a")
+  print("b")
+}`,
+			wantStmts: 2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			prog := mustParse(t, tt.src)
+			if len(prog.Statements) != 1 {
+				t.Fatalf("want 1 statement, got %d", len(prog.Statements))
+			}
+			par, ok := prog.Statements[0].(*ast.ParallelStatement)
+			if !ok {
+				t.Fatalf("expected *ast.ParallelStatement, got %T", prog.Statements[0])
+			}
+			if len(par.Body.Statements) != tt.wantStmts {
+				t.Errorf("body stmts = %d, want %d", len(par.Body.Statements), tt.wantStmts)
+			}
+		})
+	}
+}
+
+func TestParallelStatementWithLetValues(t *testing.T) {
+	src := `parallel {
+  let a = 10
+  let b = "hello"
+}`
+	prog := mustParse(t, src)
+	par := prog.Statements[0].(*ast.ParallelStatement)
+	if len(par.Body.Statements) != 2 {
+		t.Fatalf("want 2 body stmts, got %d", len(par.Body.Statements))
+	}
+
+	let0, ok := par.Body.Statements[0].(*ast.LetStatement)
+	if !ok {
+		t.Fatalf("stmt[0] = %T, want *ast.LetStatement", par.Body.Statements[0])
+	}
+	if let0.Name.Name != "a" {
+		t.Errorf("stmt[0].Name = %q, want %q", let0.Name.Name, "a")
+	}
+	if let0.Value.String() != "10" {
+		t.Errorf("stmt[0].Value = %s, want 10", let0.Value)
+	}
+
+	let1, ok := par.Body.Statements[1].(*ast.LetStatement)
+	if !ok {
+		t.Fatalf("stmt[1] = %T, want *ast.LetStatement", par.Body.Statements[1])
+	}
+	if let1.Name.Name != "b" {
+		t.Errorf("stmt[1].Name = %q, want %q", let1.Name.Name, "b")
+	}
+	if let1.Value.String() != `"hello"` {
+		t.Errorf("stmt[1].Value = %s, want \"hello\"", let1.Value)
+	}
+}
+
+func TestParallelStatementString(t *testing.T) {
+	src := `parallel { let x = 1 }`
+	prog := mustParse(t, src)
+	par := prog.Statements[0].(*ast.ParallelStatement)
+	got := par.String()
+	want := "parallel { ... }"
+	if got != want {
+		t.Errorf("String() = %q, want %q", got, want)
+	}
+}

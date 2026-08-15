@@ -183,6 +183,8 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 		stmt, err = p.parseLogStatement()
 	case token.ENSURE:
 		stmt, err = p.parseEnsureStatement()
+	case token.PARALLEL:
+		stmt, err = p.parseParallelStatement()
 	default:
 		// Expression statement, possibly an assignment.
 		stmt, err = p.parseExpressionOrAssignStatement()
@@ -692,6 +694,24 @@ func (p *Parser) parseLogStatement() (*ast.LogStatement, error) {
 	return &ast.LogStatement{
 		Position: astPos(pos),
 		Message:  msg,
+	}, nil
+}
+
+// --- Parallel ---------------------------------------------------------------
+
+func (p *Parser) parseParallelStatement() (*ast.ParallelStatement, error) {
+	pos := p.current().Pos
+	p.advance() // consume 'parallel'
+	p.skipNewlines()
+
+	body, err := p.parseBlockStatement()
+	if err != nil {
+		return nil, err
+	}
+
+	return &ast.ParallelStatement{
+		Position: astPos(pos),
+		Body:     body,
 	}, nil
 }
 

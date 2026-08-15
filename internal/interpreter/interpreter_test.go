@@ -1198,6 +1198,107 @@ func TestBuiltinMetricTooFewArgs(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// ParallelStatement
+// ---------------------------------------------------------------------------
+
+func TestParallelBasicLetStatements(t *testing.T) {
+	p := prog(
+		&ast.ParallelStatement{
+			Position: pos(),
+			Body: block(
+				let("a", intLit(1)),
+				let("b", intLit(2)),
+				let("c", intLit(3)),
+			),
+		},
+	)
+	r, err := newInterp().Execute(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// All variables from parallel body should be available after
+	if r.Variables["a"] != int64(1) {
+		t.Errorf("a = %v, want 1", r.Variables["a"])
+	}
+	if r.Variables["b"] != int64(2) {
+		t.Errorf("b = %v, want 2", r.Variables["b"])
+	}
+	if r.Variables["c"] != int64(3) {
+		t.Errorf("c = %v, want 3", r.Variables["c"])
+	}
+}
+
+func TestParallelWithFunctionCalls(t *testing.T) {
+	p := prog(
+		&ast.ParallelStatement{
+			Position: pos(),
+			Body: block(
+				exprStmt(call(ident("print"), strLit("hello"))),
+				exprStmt(call(ident("print"), strLit("world"))),
+			),
+		},
+	)
+	r, err := newInterp().Execute(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Both print calls should have produced output
+	if len(r.Output) != 2 {
+		t.Fatalf("expected 2 output entries, got %d", len(r.Output))
+	}
+	prints := make(map[string]bool)
+	for _, o := range r.Output {
+		if o.Type != "print" {
+			t.Errorf("expected print output, got %s", o.Type)
+		}
+		prints[o.Data.(string)] = true
+	}
+	if !prints["hello"] || !prints["world"] {
+		t.Errorf("expected hello and world prints, got %v", r.Output)
+	}
+}
+
+func TestParallelErrorPropagation(t *testing.T) {
+	// One goroutine references an undefined variable → should error
+	p := prog(
+		&ast.ParallelStatement{
+			Position: pos(),
+			Body: block(
+				let("a", intLit(1)),
+				let("b", ident("nonexistent_var")),
+			),
+		},
+	)
+	_, err := newInterp().Execute(p)
+	if err == nil {
+		t.Fatal("expected error from parallel block with undefined variable")
+	}
+	re, ok := err.(*RuntimeError)
+	if !ok {
+		t.Fatalf("expected RuntimeError, got %T: %v", err, err)
+	}
+	if !strings.Contains(re.Msg, "undefined variable") {
+		t.Errorf("error msg = %q, want it to mention 'undefined variable'", re.Msg)
+	}
+}
+
+func TestParallelEmptyBody(t *testing.T) {
+	p := prog(
+		&ast.ParallelStatement{
+			Position: pos(),
+			Body:     block(),
+		},
+	)
+	r, err := newInterp().Execute(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.Variables) != 0 {
+		t.Errorf("expected no variables, got %v", r.Variables)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // LogStatement (AST-direct execution)
 // ---------------------------------------------------------------------------
 

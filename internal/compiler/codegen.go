@@ -119,6 +119,7 @@ type CodeGenerator struct {
 	buf       strings.Builder
 	usedSDK   map[string]bool // tracks which SDK packages are used
 	useOS     bool            // whether "os" is needed
+	useSync   bool            // whether "sync" is needed (for parallel blocks)
 	userFuncs []userFunc      // user-defined functions collected during generation
 }
 
@@ -133,6 +134,7 @@ func (g *CodeGenerator) Generate(prog *ast.Program) (string, error) {
 	g.usedSDK = make(map[string]bool)
 	g.userFuncs = nil
 	g.useOS = false
+	g.useSync = false
 
 	// First pass: collect user-defined functions
 	for _, stmt := range prog.Statements {
@@ -184,6 +186,9 @@ func (g *CodeGenerator) assemble(mainCode string) (string, error) {
 	b.WriteString("\t\"strings\"\n")
 	if g.useOS {
 		b.WriteString("\t\"os\"\n")
+	}
+	if g.useSync {
+		b.WriteString("\t\"sync\"\n")
 	}
 
 	// SDK imports
@@ -427,6 +432,9 @@ func (g *CodeGenerator) genStatementTo(b *strings.Builder, stmt ast.Statement, i
 			}
 		}
 
+	case *ast.ParallelStatement:
+		return g.genParallel(b, s, indent)
+
 	default:
 		return fmt.Errorf("unsupported statement type: %T", stmt)
 	}
@@ -520,6 +528,34 @@ func (g *CodeGenerator) genWhile(b *strings.Builder, s *ast.WhileStatement, inde
 			return err
 		}
 	}
+	b.WriteString(fmt.Sprintf("%s}\n", prefix))
+	return nil
+}
+
+func (g *CodeGenerator) genParallel(b *strings.Builder, s *ast.ParallelStatement, indent int) error {
+	prefix := strings.Repeat("\t", indent)
+	stmts := s.Body.Statements
+	if len(stmts) == 0 {
+		return nil
+	}
+
+	g.useSync = true
+
+	// Generate a result struct and WaitGroup for goroutine-based concurrency
+	b.WriteString(fmt.Sprintf("%s{\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\tvar _pWg sync.WaitGroup\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t_pWg.Add(%d)\n", prefix, len(stmts)))
+
+	for i, stmt := range stmts {
+		b.WriteString(fmt.Sprintf("%s\tgo func(_pIdx%d int) {\n", prefix, i))
+		b.WriteString(fmt.Sprintf("%s\t\tdefer _pWg.Done()\n", prefix))
+		if err := g.genStatementTo(b, stmt, indent+2); err != nil {
+			return err
+		}
+		b.WriteString(fmt.Sprintf("%s\t}(%d)\n", prefix, i))
+	}
+
+	b.WriteString(fmt.Sprintf("%s\t_pWg.Wait()\n", prefix))
 	b.WriteString(fmt.Sprintf("%s}\n", prefix))
 	return nil
 }

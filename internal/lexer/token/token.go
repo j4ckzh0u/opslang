@@ -37,6 +37,7 @@ const (
 	ENSURE
 	METRIC
 	LOG
+	PARALLEL
 
 	// Operators
 	PLUS    // +
@@ -174,7 +175,8 @@ var keywords = map[string]TokenType{
 	"alert":  ALERT,
 	"ensure": ENSURE,
 	"metric": METRIC,
-	"log":    LOG,
+	"log":      LOG,
+	"parallel": PARALLEL,
 }
 
 // LookupKeyword returns the token type for an identifier,
