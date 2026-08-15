@@ -1,37 +1,75 @@
-// 函数特性演示
+// functions_closures.ops - Closures and nested functions with SDK data
+// Usage: opsctl run examples/functions_closures.ops
+// Demonstrates: closures, nested functions, capturing outer variables
 
-// 基本函数
-fn add(a, b) {
-    return a + b
-}
+print("=== Closures Demo ===")
 
-// 默认参数
-fn greet(name, prefix = "Hello") {
-    return prefix + ", " + name + "!"
-}
-
-// 递归函数
-fn factorial(n) {
-    if n <= 1 {
-        return 1
+// Closure: make a threshold checker for CPU usage.
+// The inner function captures `threshold` from the outer scope.
+fn make_cpu_checker(threshold) {
+    fn check() {
+        let cpu = sys.cpu.usage()
+        if cpu.percent > threshold {
+            return "ABOVE " + str(threshold) + "% (actual: " + str(cpu.percent) + "%)"
+        }
+        return "BELOW " + str(threshold) + "% (actual: " + str(cpu.percent) + "%)"
     }
-    return n * factorial(n - 1)
+    return check
 }
 
-// 使用
-print(add(3, 4))
-print(greet("OpsLang"))
-print(greet("World", "Hi"))
-print(factorial(5))
+let strict_checker = make_cpu_checker(30)
+let relaxed_checker = make_cpu_checker(80)
 
-// 列表操作
-fn sum_list(items) {
+print("Strict check: " + strict_checker())
+print("Relaxed check: " + relaxed_checker())
+
+// Function that sums disk usage across a list of paths
+fn disk_usage_sum(paths) {
     let total = 0
-    for let i = 0; i < len(items); i = i + 1 {
-        total = total + items[i]
+    for let i = 0; i < len(paths); i = i + 1 {
+        let d = sys.disk.usage(paths[i])
+        total = total + d.used
     }
     return total
 }
 
-let numbers = [1, 2, 3, 4, 5]
-print("Sum: " + str(sum_list(numbers)))
+let sum = disk_usage_sum(["/", "/tmp"])
+print("Total disk used (/ + /tmp): " + str(sum / 1024 / 1024) + " MB")
+
+// Accumulator function: count various system resources
+fn count_resources() {
+    let ifaces = sys.net.interfaces()
+    let parts = sys.disk.partitions()
+    let cpus = sys.cpu.count()
+    return len(ifaces) + len(parts) + cpus.logical
+}
+
+let total_resources = count_resources()
+print("Total resources (ifaces + parts + cores): " + str(total_resources))
+
+// Nested function that computes average CPU then compares to threshold
+fn cpu_health(warning_threshold) {
+    // Take 3 readings and average (simulated by 3 sequential calls)
+    let total_pct = 0
+    let readings = 3
+    for let i = 0; i < readings; i = i + 1 {
+        let c = sys.cpu.usage()
+        total_pct = total_pct + c.percent
+    }
+    let avg = total_pct / readings
+
+    if avg > warning_threshold {
+        return "UNHEALTHY (avg " + str(avg) + "% > " + str(warning_threshold) + "%)"
+    }
+    return "HEALTHY (avg " + str(avg) + "% <= " + str(warning_threshold) + "%)"
+}
+
+print("CPU health (threshold=50): " + cpu_health(50))
+
+report {
+    strict_check: strict_checker(),
+    relaxed_check: relaxed_checker(),
+    disk_used_mb: sum / 1024 / 1024,
+    resources: total_resources,
+    health: cpu_health(50)
+}

@@ -1,45 +1,55 @@
-// control_flow.ops - Control flow examples
+// control_flow.ops - Control flow examples using real system data
 // Usage: opsctl run examples/control_flow.ops
+// Demonstrates: if/else, C-style for loop, while loop with real SDK data
 
 print("=== Control Flow Demo ===")
 
-// If/else
-let score = 85
-if score >= 90 {
-    print("Grade: A")
-} else if score >= 80 {
-    print("Grade: B")
-} else if score >= 70 {
-    print("Grade: C")
+// If/else based on real CPU usage
+let cpu = sys.cpu.usage()
+let percent = cpu.percent
+
+if percent >= 90 {
+    print("CPU Status: CRITICAL (" + str(percent) + "%)")
+} else if percent >= 70 {
+    print("CPU Status: WARNING (" + str(percent) + "%)")
+} else if percent >= 40 {
+    print("CPU Status: NORMAL (" + str(percent) + "%)")
 } else {
-    print("Grade: F")
+    print("CPU Status: LOW (" + str(percent) + "%)")
 }
 
-// For loop
-print("Counting:")
-for let i = 1; i <= 5; i = i + 1 {
-    print("  " + str(i))
+// C-style for loop - iterate over disk partitions (index-based)
+print("\nDisk Partitions:")
+let parts = sys.disk.partitions()
+for let i = 0; i < len(parts); i = i + 1 {
+    let p = parts[i]
+    print("  [" + str(i) + "] " + p.mountpoint + " (" + p.fstype + ")")
 }
 
-// While loop
-let n = 10
-let total = 0
-while n > 0 {
-    total = total + n
-    n = n - 1
+// While loop - compute factorial of logical core count
+let cores = sys.cpu.count()
+let n = cores.logical
+let total = 1
+let counter = n
+while counter > 0 {
+    total = total * counter
+    counter = counter - 1
 }
-print("Sum 1..10: " + str(total))
+print("\nFactorial of " + str(n) + " (core count): " + str(total))
 
-// Nested structures
-let matrix = [[1, 2], [3, 4], [5, 6]]
-for let i = 0; i < len(matrix); i = i + 1 {
-    let row = matrix[i]
-    for let j = 0; j < len(row); j = j + 1 {
-        print("  [" + str(i) + "][" + str(j) + "] = " + str(row[j]))
+// Nested C-style for loops - build a matrix of real partition info
+print("\nPartition info matrix:")
+for let i = 0; i < len(parts); i = i + 1 {
+    let p = parts[i]
+    let cols = [p.mountpoint, p.fstype, p.device]
+    for let j = 0; j < len(cols); j = j + 1 {
+        print("  [" + str(i) + "][" + str(j) + "] = " + cols[j])
     }
 }
 
 report {
-    score: score,
-    total: total
+    cpu_percent: percent,
+    partitions_count: len(parts),
+    cores: n,
+    factorial: total
 }

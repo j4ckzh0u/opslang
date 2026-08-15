@@ -1,34 +1,67 @@
-// disk_check.ops - Check disk usage across mounts
+// disk_check.ops - Check disk usage across all mounted partitions
+// Demonstrates: sys.disk.usage(), sys.disk.partitions(), alerting, structured report
+// Works on both macOS and Linux
 // Usage: opsctl run examples/disk_check.ops
 
 print("=== Disk Usage Check ===")
 
-// Simulated disk data
-let disks = [
-    {"mount": "/", "used_percent": 45, "total_gb": 100},
-    {"mount": "/home", "used_percent": 72, "total_gb": 500},
-    {"mount": "/var", "used_percent": 88, "total_gb": 200},
-    {"mount": "/tmp", "used_percent": 5, "total_gb": 50}
-]
+// Get all mounted partitions
+let partitions = sys.disk.partitions()
+let hostname = sys.hostname()
+
+print("Host: " + hostname.hostname)
+print("Checking " + str(len(partitions)) + " partitions...")
+print("")
 
 let warn_threshold = 80
 let alert_threshold = 90
+let warn_count = 0
+let alert_count = 0
+let ok_count = 0
 
-for let i = 0; i < len(disks); i = i + 1 {
-    let disk = disks[i]
+// Check each partition's disk usage
+for let i = 0; i < len(partitions); i = i + 1 {
+    let part = partitions[i]
+    let mount = part.mountpoint
+    let device = part.device
+
+    // Get usage for this mount point
+    let usage = sys.disk.usage(mount)
+    let pct = usage.used_percent
+    let total_gb = usage.total / 1073741824
+    let used_gb = usage.used / 1073741824
+    let free_gb = usage.free / 1073741824
+
+    // Determine status based on thresholds
     let status = "OK"
-    if disk.used_percent >= alert_threshold {
+    if pct >= alert_threshold {
         status = "CRITICAL"
-        alert("Disk " + disk.mount + " is " + str(disk.used_percent) + "% full!")
-    } else if disk.used_percent >= warn_threshold {
+        alert("Disk " + mount + " is " + str(int(pct)) + "% full (" + str(int(used_gb)) + "GB / " + str(int(total_gb)) + "GB)")
+        alert_count = alert_count + 1
+    } else if pct >= warn_threshold {
         status = "WARNING"
-        print("WARNING: Disk " + disk.mount + " is " + str(disk.used_percent) + "% full")
+        print("WARNING: " + mount + " is " + str(int(pct)) + "% full (" + str(int(used_gb)) + "GB / " + str(int(total_gb)) + "GB)")
+        warn_count = warn_count + 1
+    } else {
+        ok_count = ok_count + 1
     }
-    print(disk.mount + ": " + str(disk.used_percent) + "% [" + status + "]")
+
+    // Print status line
+    print("  " + mount + " (" + device + "): " + str(int(pct)) + "% used [" + status + "] - " + str(int(free_gb)) + "GB free")
 }
 
+print("")
+print("Summary: " + str(ok_count) + " OK, " + str(warn_count) + " warnings, " + str(alert_count) + " critical")
+
+// Structured report
 report {
-    disk_count: len(disks),
+    host: hostname.hostname,
+    partition_count: len(partitions),
+    ok_count: ok_count,
+    warn_count: warn_count,
+    alert_count: alert_count,
     threshold_warn: warn_threshold,
     threshold_alert: alert_threshold
 }
+
+log("Disk check completed: " + str(len(partitions)) + " partitions scanned")

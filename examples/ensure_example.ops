@@ -1,19 +1,137 @@
-// 声明式幂等示例
-// ensure 语法: ensure <条件> { <动作> }
-// 语义: 检查条件 -> 如果为假则执行动作 -> 再次验证条件
+// ensure_example.ops - Demonstrate the ensure (idempotent) pattern
+// Demonstrates: ensure statement with file operations
+// The ensure pattern implements check -> apply -> verify semantics:
+//   1. CHECK: evaluate condition
+//   2. APPLY: if false, execute body
+//   3. VERIFY: re-evaluate condition; error if still false
+//
+// This makes operations idempotent - safe to run multiple times
+// Usage: opsctl run examples/ensure_example.ops
 
-let config_path = "/etc/myapp/config.yaml"
+print("=== Ensure (Idempotent) Pattern Demo ===")
 
-// 简化演示（实际环境使用 file.exists() 等函数）
-let file_exists = true
+let hostname = sys.hostname()
+let base_dir = "/tmp/ops-example-ensure"
+let app_dir = base_dir + "/app"
+let config_file = app_dir + "/config.json"
+let data_file = app_dir + "/data.txt"
 
-ensure file_exists {
-    print("创建配置文件: " + config_path)
+print("Host: " + hostname.hostname)
+print("Base directory: " + base_dir)
+
+// --- First run: nothing exists, ensure will create everything ---
+print("")
+print("--- First run: creating resources ---")
+
+// Ensure directory structure
+ensure file.exists(base_dir).exists {
+    print("  Creating base directory: " + base_dir)
+    file.mkdir(base_dir)
 }
 
-print("配置文件已就绪")
+ensure file.exists(app_dir).exists {
+    print("  Creating app directory: " + app_dir)
+    file.mkdir(app_dir)
+}
 
-// ensure 的 check -> apply -> verify 语义:
-// 1. CHECK: 评估条件 (file_exists == true)
-// 2. APPLY: 条件为假时执行动作体
-// 3. VERIFY: 重新评估条件，若仍为假则报错
+// Ensure config file exists
+ensure file.exists(config_file).exists {
+    print("  Creating config file: " + config_file)
+    file.write(config_file, "{\"app\": \"demo\", \"version\": \"1.0\", \"debug\": false}")
+}
+
+// Ensure data file exists
+ensure file.exists(data_file).exists {
+    print("  Creating data file: " + data_file)
+    file.write(data_file, "initial data\n")
+}
+
+// Verify everything is in place
+let s1 = file.exists(base_dir)
+let s2 = file.exists(app_dir)
+let s3 = file.exists(config_file)
+let s4 = file.exists(data_file)
+
+print("")
+print("After first run:")
+print("  base_dir exists: " + str(s1.exists))
+print("  app_dir exists: " + str(s2.exists))
+print("  config exists: " + str(s3.exists))
+print("  data exists: " + str(s4.exists))
+
+// --- Second run: everything exists, ensure bodies will NOT execute ---
+print("")
+print("--- Second run: idempotent (no changes expected) ---")
+
+let changes = 0
+
+ensure file.exists(base_dir).exists {
+    print("  SHOULD NOT SEE THIS - base_dir already exists")
+    changes = changes + 1
+}
+
+ensure file.exists(app_dir).exists {
+    print("  SHOULD NOT SEE THIS - app_dir already exists")
+    changes = changes + 1
+}
+
+ensure file.exists(config_file).exists {
+    print("  SHOULD NOT SEE THIS - config already exists")
+    changes = changes + 1
+}
+
+ensure file.exists(data_file).exists {
+    print("  SHOULD NOT SEE THIS - data already exists")
+    changes = changes + 1
+}
+
+if changes == 0 {
+    print("  No changes made - idempotency verified!")
+} else {
+    alert("Unexpected changes detected: " + str(changes))
+}
+
+// --- Show current state ---
+print("")
+print("--- Current state ---")
+let cfg = file.read(config_file)
+print("Config content: " + cfg.content)
+
+let data = file.read(data_file)
+print("Data content: " + data.content)
+
+let listing = file.list(app_dir)
+print("Files in app directory:")
+for let i = 0; i < len(listing.files); i = i + 1 {
+    let f = listing.files[i]
+    print("  " + f.name + " (" + str(f.size) + " bytes)")
+}
+
+// Compute checksums for verification
+let cs1 = file.checksum(config_file, "sha256")
+let cs2 = file.checksum(data_file, "sha256")
+print("Config checksum: " + cs1.checksum)
+print("Data checksum: " + cs2.checksum)
+
+report {
+    host: hostname.hostname,
+    resources_ensured: 4,
+    changes_on_rerun: changes,
+    idempotent: changes == 0,
+    config_checksum: cs1.checksum,
+    data_checksum: cs2.checksum
+}
+
+// Cleanup - delete files first, then directories
+let cleanup_list = file.list(app_dir)
+for let i = 0; i < len(cleanup_list.files); i = i + 1 {
+    file.delete(app_dir + "/" + cleanup_list.files[i].name)
+}
+file.delete(app_dir)
+let cleanup_base = file.list(base_dir)
+for let i = 0; i < len(cleanup_base.files); i = i + 1 {
+    file.delete(base_dir + "/" + cleanup_base.files[i].name)
+}
+file.delete(base_dir)
+
+log("Ensure pattern demo completed")

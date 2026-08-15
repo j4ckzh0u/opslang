@@ -1,45 +1,78 @@
-// config_generator.ops - Generate configuration files
-// Usage: opsctl run examples/config_generator.ops
+// config_generator.ops - 基于真实系统信息生成配置文件
+// 演示使用 SDK 获取系统信息，据此生成优化的配置
 
-print("=== Configuration Generator ===")
+print("=== 配置生成器 ===")
 
-// Base configuration template
+// 获取真实系统信息
+let host = sys.hostname()
+let cpu_count = sys.cpu.count()
+let mem_info = sys.memory.info()
+let disk_info = sys.disk.usage("/")
+let ts = time.now()
+
+// 根据系统资源自动计算配置参数
+let max_workers = cpu_count.logical
+if max_workers > 16 {
+    max_workers = 16
+}
+
+// 内存分配：总内存的 50% 作为应用内存（MB）
+let app_memory_mb = mem_info.total / 1024 / 1024 / 2
+
+// 日志级别：根据磁盘使用率自动调整
+let log_level = "info"
+if disk_info.used_percent > 90 {
+    log_level = "error"
+}
+
+// 生成基础配置
 let base_config = {
-    "app_name": "myapp",
+    "app_name": "opslang-app",
+    "hostname": host.hostname,
     "environment": "production",
-    "log_level": "info",
-    "max_workers": 4,
-    "timeout": 30
+    "log_level": log_level,
+    "max_workers": max_workers,
+    "memory_limit_mb": app_memory_mb,
+    "timeout": 30,
+    "generated_at": ts.iso8601
 }
 
-// Override per environment
-fn merge_config(base, overrides) {
-    let result = {}
-    let keys = ["app_name", "environment", "log_level", "max_workers", "timeout"]
-    for let i = 0; i < len(keys); i = i + 1 {
-        let k = keys[i]
-        result[k] = base[k]
-    }
-    return result
+print("基于系统信息生成配置:")
+print("  主机名: " + host.hostname)
+print("  逻辑核心数: " + str(cpu_count.logical))
+print("  物理核心数: " + str(cpu_count.physical))
+print("  总内存: " + str(mem_info.total / 1024 / 1024) + " MB")
+print("  推荐 workers: " + str(max_workers))
+print("  推荐内存限制: " + str(app_memory_mb) + " MB")
+print("  日志级别: " + log_level)
+
+// 将配置编码为 JSON
+let config_json = json.encode(base_config)
+print("---")
+print("生成的 JSON 配置:")
+print(config_json.json)
+
+// 写入配置文件
+let config_path = "/tmp/opslang_generated_config.json"
+let write_result = file.write(config_path, config_json.json)
+print("---")
+print("配置已写入: " + config_path + " (" + str(write_result.size) + " bytes)")
+
+// 验证写入
+let check = file.exists(config_path)
+if check.exists == true {
+    let stat = file.stat(config_path)
+    print("文件验证: " + stat.name + " (" + str(stat.size) + " bytes, mode: " + stat.mode + ")")
 }
 
-let prod_overrides = {"max_workers": 8, "timeout": 60}
-let staging_overrides = {"max_workers": 2, "log_level": "debug"}
-
-let prod_config = merge_config(base_config, prod_overrides)
-let staging_config = merge_config(base_config, staging_overrides)
-
-print("Production config:")
-print("  app_name: " + prod_config.app_name)
-print("  workers: " + str(prod_config.max_workers))
-print("  timeout: " + str(prod_config.timeout))
-
-print("Staging config:")
-print("  app_name: " + staging_config.app_name)
-print("  workers: " + str(staging_config.max_workers))
-print("  timeout: " + str(staging_config.timeout))
+// 清理
+file.delete(config_path)
 
 report {
-    production: prod_config,
-    staging: staging_config
+    config: base_config,
+    config_path: config_path,
+    workers: max_workers,
+    memory_limit_mb: app_memory_mb,
+    log_level: log_level,
+    generated: true
 }

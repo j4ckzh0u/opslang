@@ -1,31 +1,64 @@
 // 系统信息采集脚本
 // 演示变量、函数、条件判断、循环和结构化输出
+// 使用真实 SDK 调用采集本机系统信息
 
-let hostname = "server-01"
-
-// 模拟 CPU/内存数据（实际环境调用 sys.cpu.usage() 等）
-let cpu_percent = 45.2
-let mem_total = 16384
-let mem_used = 8192
-let mem_percent = 50.0
+let hostname_info = sys.hostname()
+let cpu_usage = sys.cpu.usage()
+let cpu_count = sys.cpu.count()
+let mem_info = sys.memory.info()
+let disk_info = sys.disk.usage("/")
+let load_info = sys.load()
+let os_info = sys.os()
+let uptime_info = sys.uptime()
+let net_ifaces = sys.net.interfaces()
 
 // 条件告警
-if cpu_percent > 80 {
-    alert("CPU 使用率过高: " + str(cpu_percent) + "%")
+if cpu_usage.percent > 80 {
+    alert("CPU 使用率过高: " + str(cpu_usage.percent) + "%")
 }
 
-if mem_percent > 90 {
-    alert("内存使用率过高: " + str(mem_percent) + "%")
+if mem_info.used_percent > 90 {
+    alert("内存使用率过高: " + str(mem_info.used_percent) + "%")
 }
+
+if disk_info.used_percent > 90 {
+    alert("磁盘使用率过高: " + str(disk_info.used_percent) + "%")
+}
+
+// 输出网络接口名称
+let iface_names = []
+for let i = 0; i < len(net_ifaces); i = i + 1 {
+    let iface = net_ifaces[i]
+    iface_names = iface_names + [iface.name]
+}
+
+// 计算运行时长（小时）
+let uptime_hours = uptime_info.seconds / 3600.0
 
 // 结构化报告
 report {
-    host: hostname,
-    cpu: cpu_percent,
-    mem_total: mem_total,
-    mem_used: mem_used,
-    mem_percent: mem_percent,
-    status: "ok"
+    host: hostname_info.hostname,
+    os: os_info.os,
+    platform: os_info.platform,
+    kernel: os_info.kernel_version,
+    cpu_percent: cpu_usage.percent,
+    cpu_user: cpu_usage.user,
+    cpu_system: cpu_usage.system,
+    cpu_cores_logical: cpu_count.logical,
+    cpu_cores_physical: cpu_count.physical,
+    mem_total: mem_info.total,
+    mem_used: mem_info.used,
+    mem_available: mem_info.available,
+    mem_percent: mem_info.used_percent,
+    disk_total: disk_info.total,
+    disk_used: disk_info.used,
+    disk_free: disk_info.free,
+    disk_percent: disk_info.used_percent,
+    load_1m: load_info.load1,
+    load_5m: load_info.load5,
+    load_15m: load_info.load15,
+    uptime_hours: uptime_hours,
+    network_interfaces: iface_names
 }
 
 log("系统信息采集完成")

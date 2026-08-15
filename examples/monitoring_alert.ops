@@ -1,14 +1,5 @@
 // 监控告警脚本
-fn get_metric(name) {
-    // 模拟指标获取（实际环境调用 sys.* 函数）
-    let metrics = {
-        "cpu": 75.5,
-        "memory": 82.3,
-        "disk": 45.0,
-        "load": 2.5
-    }
-    return metrics[name]
-}
+// 使用真实 SDK 采集 CPU、内存、磁盘指标，按阈值生成告警
 
 // 阈值配置
 let thresholds = {
@@ -16,39 +7,58 @@ let thresholds = {
     "cpu_crit": 90,
     "mem_warn": 80,
     "mem_crit": 95,
-    "disk_warn": 80
+    "disk_warn": 80,
+    "disk_crit": 95
 }
 
-// 采集指标
-let cpu = get_metric("cpu")
-let mem = get_metric("memory")
-let disk = get_metric("disk")
+// 采集真实指标
+let cpu = sys.cpu.usage()
+let mem = sys.memory.info()
+let disk = sys.disk.usage("/")
+let load = sys.load()
+let host = sys.hostname()
 
 // 输出指标
-metric("cpu_usage", cpu, {"host": "server-01"})
-metric("memory_usage", mem, {"host": "server-01"})
-metric("disk_usage", disk, {"host": "server-01"})
+metric("cpu_usage", cpu.percent, {"host": host.hostname})
+metric("memory_usage", mem.used_percent, {"host": host.hostname})
+metric("disk_usage", disk.used_percent, {"host": host.hostname})
+metric("load_1m", load.load1, {"host": host.hostname})
 
-// 检查告警
-if cpu > thresholds["cpu_crit"] {
-    alert("[CRITICAL] CPU 使用率: " + str(cpu) + "%")
-} else if cpu > thresholds["cpu_warn"] {
-    alert("[WARNING] CPU 使用率: " + str(cpu) + "%")
+// 检查 CPU 告警
+if cpu.percent > thresholds["cpu_crit"] {
+    alert("[CRITICAL] CPU 使用率: " + str(cpu.percent) + "%")
+} else if cpu.percent > thresholds["cpu_warn"] {
+    alert("[WARNING] CPU 使用率: " + str(cpu.percent) + "%")
+} else {
+    print("[OK] CPU 使用率: " + str(cpu.percent) + "%")
 }
 
-if mem > thresholds["mem_crit"] {
-    alert("[CRITICAL] 内存使用率: " + str(mem) + "%")
-} else if mem > thresholds["mem_warn"] {
-    alert("[WARNING] 内存使用率: " + str(mem) + "%")
+// 检查内存告警
+if mem.used_percent > thresholds["mem_crit"] {
+    alert("[CRITICAL] 内存使用率: " + str(mem.used_percent) + "%")
+} else if mem.used_percent > thresholds["mem_warn"] {
+    alert("[WARNING] 内存使用率: " + str(mem.used_percent) + "%")
+} else {
+    print("[OK] 内存使用率: " + str(mem.used_percent) + "%")
 }
 
-if disk > thresholds["disk_warn"] {
-    alert("[WARNING] 磁盘使用率: " + str(disk) + "%")
+// 检查磁盘告警
+if disk.used_percent > thresholds["disk_crit"] {
+    alert("[CRITICAL] 磁盘使用率: " + str(disk.used_percent) + "%")
+} else if disk.used_percent > thresholds["disk_warn"] {
+    alert("[WARNING] 磁盘使用率: " + str(disk.used_percent) + "%")
+} else {
+    print("[OK] 磁盘使用率: " + str(disk.used_percent) + "%")
 }
 
+// 汇总报告
+let ts = time.now()
 report {
-    cpu: cpu,
-    memory: mem,
-    disk: disk,
+    host: host.hostname,
+    cpu: cpu.percent,
+    memory: mem.used_percent,
+    disk: disk.used_percent,
+    load: load.load1,
+    timestamp: ts.iso8601,
     alerts_generated: true
 }

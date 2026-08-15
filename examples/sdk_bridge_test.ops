@@ -1,53 +1,73 @@
-# SDK Bridge Test Script
-# This script demonstrates the ops-core-sdk functions available in the interpreter
+// SDK Bridge Test Script
+// This script demonstrates the ops-core-sdk functions available in the interpreter
 
-print("=== OpsLang SDK Bridge Test ===\n")
+print("=== OpsLang SDK Bridge Test ===")
 
-# System Information
+// System Information
 print("--- System Information ---")
 let hostname = sys.hostname()
-print("Hostname:", hostname.hostname)
-print("FQDN:", hostname.fqdn)
+print("Hostname: " + hostname.hostname)
+print("FQDN: " + hostname.fqdn)
 
 let cpu = sys.cpu.usage()
-print("CPU Usage:", cpu.percent, "%")
+print("CPU Usage: " + str(cpu.percent) + "%")
 
 let mem = sys.memory.info()
-print("Memory Used:", mem.used_percent, "%")
+print("Memory Used: " + str(mem.used_percent) + "%")
 
 let disk = sys.disk.usage("/")
-print("Disk Usage /:", disk.used_percent, "%")
+print("Disk Usage /: " + str(disk.used_percent) + "%")
 
 let load = sys.load()
-print("Load Average:", load.load1, load.load5, load.load15)
+print("Load Average: " + str(load.load1) + " " + str(load.load5) + " " + str(load.load15))
 
 let up = sys.uptime()
-print("Uptime (seconds):", up.uptime)
+print("Uptime (seconds): " + str(up.seconds))
 
-# File Operations
-print("\n--- File Operations ---")
+// File Operations
+print("")
+print("--- File Operations ---")
 let exists = file.exists("/tmp")
-print("/tmp exists:", exists.exists)
-print("Is directory:", exists.is_dir)
+print("/tmp exists: " + str(exists.exists))
 
 let stat = file.stat("/tmp")
-print("Name:", stat.name)
-print("Mode:", stat.mode)
+print("Name: " + stat.name)
 
-# Time Operations
-print("\n--- Time Operations ---")
+// Write and read back a test file
+let w = file.write("/tmp/opslang_sdk_test.txt", "Hello from OpsLang SDK!")
+print("Wrote: " + str(w.size) + " bytes")
+
+let r = file.read("/tmp/opslang_sdk_test.txt")
+print("Read back: " + r.content)
+
+let ck = file.checksum("/tmp/opslang_sdk_test.txt", "sha256")
+print("SHA256: " + ck.checksum)
+
+file.delete("/tmp/opslang_sdk_test.txt")
+print("Cleaned up test file")
+
+// Time Operations
+print("")
+print("--- Time Operations ---")
 let now = time.now()
-print("Current time (ISO):", now.iso8601)
-print("Unix timestamp:", now.unix)
+print("Current time (ISO): " + now.iso8601)
+print("Unix timestamp: " + str(now.unix))
 
-# Process Operations
-print("\n--- Process Operations ---")
-let procs = process.list()
-print("Total processes:", len(procs))
+// Process Operations (lightweight - find specific process)
+print("")
+print("--- Process Operations ---")
+let procs = process.find_by_name("opsctl")
+print("opsctl processes found: " + str(len(procs)))
 
-# Network Operations (commented out to avoid external dependencies)
-# print("\n--- Network Operations ---")
-# let dns = net.dns_lookup("example.com")
-# print("DNS lookup:", dns)
+// JSON Operations
+print("")
+print("--- JSON Operations ---")
+let data = {"name": "opslang", "version": "0.1.0"}
+let encoded = json.encode(data)
+print("JSON encode: " + encoded.json)
 
-print("\n=== Test Complete ===")
+let decoded = json.decode(encoded.json)
+print("JSON decode name: " + decoded.data.name)
+
+print("")
+print("=== Test Complete ===")

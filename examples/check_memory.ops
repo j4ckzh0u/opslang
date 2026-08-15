@@ -1,10 +1,13 @@
-// check_memory.ops - Collect memory usage information
+// check_memory.ops - Collect real memory usage information
 // Usage: opsctl run examples/check_memory.ops
+// Demonstrates: sys.memory.info(), arithmetic on SDK results, conditional alerts
 
-let total_mb = 16384
-let used_mb = 12288
-let available_mb = total_mb - used_mb
-let usage_percent = (used_mb * 100) / total_mb
+// Fetch real memory data from the system
+let mem = sys.memory.info()
+let total_mb = mem.total / 1024 / 1024
+let used_mb = mem.used / 1024 / 1024
+let available_mb = mem.available / 1024 / 1024
+let usage_percent = mem.used_percent
 
 print("=== Memory Information ===")
 print("Total: " + str(total_mb) + " MB")
@@ -12,12 +15,16 @@ print("Used: " + str(used_mb) + " MB")
 print("Available: " + str(available_mb) + " MB")
 print("Usage: " + str(usage_percent) + "%")
 
+// Thresholds with alerts
 if usage_percent > 90 {
     alert("Memory usage critical: " + str(usage_percent) + "%")
 } else if usage_percent > 70 {
-    print("WARNING: Memory usage elevated")
+    print("WARNING: Memory usage elevated: " + str(usage_percent) + "%")
+} else {
+    print("Memory usage is normal.")
 }
 
+// Structured report
 report {
     total_mb: total_mb,
     used_mb: used_mb,

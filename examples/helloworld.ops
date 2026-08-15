@@ -1,12 +1,19 @@
 // Hello World - OpsLang 入门示例
+// Demonstrates: basic variable declaration, print, report, and first SDK call
+// Usage: opsctl run examples/helloworld.ops
+
+// Get the real hostname from the system using the SDK
+let hostname_info = sys.hostname()
 let name = "OpsLang"
 let version = "0.1.0"
 
-print("Hello, " + name + " v" + version)
+print("Hello from " + hostname_info.hostname + "!")
+print("Running " + name + " v" + version)
 
-// 使用 report 输出结构化数据
+// Use report to output structured data (real host, not hardcoded)
 report {
     lang: name,
     ver: version,
+    host: hostname_info.hostname,
     status: "ready"
 }

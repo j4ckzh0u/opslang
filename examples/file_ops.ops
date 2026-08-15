@@ -1,29 +1,90 @@
-// file_ops.ops - File operations example
+// file_ops.ops - File operations demonstration
+// Demonstrates: file.write(), file.read(), file.exists(), file.copy(), file.move(),
+//               file.checksum(), file.stat(), file.list(), file.mkdir(), file.delete()
+// All operations use /tmp/ for cross-platform compatibility (macOS + Linux)
 // Usage: opsctl run examples/file_ops.ops
 
 print("=== File Operations Demo ===")
 
-// List operations
-let files = ["config.yaml", "data.json", "app.log"]
-print("Files in directory:")
+// Setup: create a working directory
+let base_dir = "/tmp/ops-example-fileops"
+file.mkdir(base_dir)
+print("Created working directory: " + base_dir)
 
-for let i = 0; i < len(files); i = i + 1 {
-    print("  - " + files[i])
+// 1. Write files
+let config_path = base_dir + "/config.txt"
+let data_path = base_dir + "/data.txt"
+
+let w1 = file.write(config_path, "app_name=myapp\nport=8080\nlog_level=info\n")
+print("Wrote config: " + str(w1.size) + " bytes -> " + config_path)
+
+let w2 = file.write(data_path, "record1,value1\nrecord2,value2\nrecord3,value3\n")
+print("Wrote data: " + str(w2.size) + " bytes -> " + data_path)
+
+// 2. Check existence
+let ex1 = file.exists(config_path)
+let ex2 = file.exists(base_dir + "/nonexistent.txt")
+print("Config exists: " + str(ex1.exists))
+print("Nonexistent exists: " + str(ex2.exists))
+
+// 3. Read file back
+let content = file.read(config_path)
+print("Read config (" + str(content.size) + " bytes):")
+print("  " + content.content)
+
+// 4. File stat
+let stat = file.stat(config_path)
+print("Config stat: name=" + stat.name + " size=" + str(stat.size) + " mode=" + stat.mode)
+
+// 5. Copy file
+let backup_path = base_dir + "/config.bak"
+let cp = file.copy(config_path, backup_path)
+print("Copied: " + cp.src + " -> " + cp.dst)
+
+// 6. Checksum both files (should match)
+let cs1 = file.checksum(config_path, "sha256")
+let cs2 = file.checksum(backup_path, "sha256")
+print("Config checksum: " + cs1.checksum)
+print("Backup checksum: " + cs2.checksum)
+if cs1.checksum == cs2.checksum {
+    print("Checksums match - copy verified!")
+} else {
+    alert("Checksum mismatch after copy!")
 }
 
-// Simulate file check
-let config_exists = true
-let log_size = 1024000
+// 7. Move file
+let moved_path = base_dir + "/data_moved.txt"
+let mv = file.move(data_path, moved_path)
+print("Moved: " + mv.src + " -> " + mv.dst)
 
-print("Config exists: " + str(config_exists))
-print("Log size: " + str(log_size) + " bytes")
+// Verify original is gone and moved file exists
+let orig_gone = file.exists(data_path)
+let moved_exists = file.exists(moved_path)
+print("Original still exists: " + str(orig_gone.exists) + " (should be false)")
+print("Moved file exists: " + str(moved_exists.exists) + " (should be true)")
 
-if log_size > 100000 {
-    alert("Log file is large, consider rotation")
+// 8. List directory
+let listing = file.list(base_dir)
+print("Files in " + base_dir + ":")
+for let i = 0; i < len(listing.files); i = i + 1 {
+    let f = listing.files[i]
+    print("  " + f.name + " (" + str(f.size) + " bytes, " + f.mode + ")")
 }
+
+// 9. Cleanup - delete all files
+file.delete(config_path)
+file.delete(backup_path)
+file.delete(moved_path)
+file.delete(base_dir)
+
+print("Cleanup complete - all test files removed")
 
 report {
-    file_count: len(files),
-    config_exists: config_exists,
-    log_size: log_size
+    operations: ["write", "read", "exists", "stat", "copy", "checksum", "move", "list", "delete"],
+    files_created: 3,
+    files_deleted: 4,
+    checksum_verified: cs1.checksum == cs2.checksum,
+    status: "completed"
 }
+
+log("File operations demo completed successfully")

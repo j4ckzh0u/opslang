@@ -1,46 +1,58 @@
-// variables.ops - Variable types and operations
+// variables.ops - Variable types and operations using real SDK data
 // Usage: opsctl run examples/variables.ops
+// Demonstrates: integers, floats, strings, booleans, lists, dicts,
+// and how SDK calls return structured data accessible via .field
 
 print("=== Variables Demo ===")
 
-// Integer
-let count = 42
-print("Integer: " + str(count))
+// Integer - CPU count is a real integer from the system
+let cpu_info = sys.cpu.count()
+let logical_cores = cpu_info.logical
+print("Integer (logical cores): " + str(logical_cores))
 
-// Float
-let pi = 3.14159
-print("Float: " + str(pi))
+// Float - CPU usage percent is a real float
+let cpu_usage = sys.cpu.usage()
+let cpu_percent = cpu_usage.percent
+print("Float (CPU usage %): " + str(cpu_percent))
 
-// String
-let name = "OpsLang"
-print("String: " + name)
+// String - hostname from SDK
+let hostname_info = sys.hostname()
+let host = hostname_info.hostname
+print("String (hostname): " + host)
 
-// Boolean
-let active = true
-print("Boolean: " + str(active))
+// Boolean - file existence check
+let check_path = "/tmp"
+let exists_result = file.exists(check_path)
+let path_exists = exists_result.exists
+print("Boolean (/tmp exists): " + str(path_exists))
 
-// List
-let items = ["alpha", "beta", "gamma"]
-print("List: " + str(items))
-print("First item: " + items[0])
-print("List length: " + str(len(items)))
+// List - disk partitions returned as a list of structs
+let parts = sys.disk.partitions()
+print("List (partitions count): " + str(len(parts)))
+if len(parts) > 0 {
+    print("First partition: " + parts[0].mountpoint)
+}
 
-// Dict
-let config = {"host": "localhost", "port": 8080}
-print("Dict host: " + config.host)
-print("Dict port: " + str(config.port))
+// Dict - memory info returns a struct (dict-like)
+let mem = sys.memory.info()
+print("Dict-like (memory total): " + str(mem.total))
+print("Dict-like (memory used_percent): " + str(mem.used_percent))
 
-// Arithmetic
-let sum = count + 8
-let product = count * 2
-print("Sum: " + str(sum))
-print("Product: " + str(product))
+// Arithmetic on SDK values
+let total_mb = mem.total / 1024 / 1024
+let used_mb = mem.used / 1024 / 1024
+let available_mb = total_mb - used_mb
+print("Total MB: " + str(total_mb))
+print("Used MB: " + str(used_mb))
+print("Available MB: " + str(available_mb))
 
 report {
-    count: count,
-    pi: pi,
-    name: name,
-    active: active,
-    items: items,
-    config: config
+    logical_cores: logical_cores,
+    cpu_percent: cpu_percent,
+    hostname: host,
+    path_exists: path_exists,
+    partitions_count: len(parts),
+    mem_total_mb: total_mb,
+    mem_used_mb: used_mb,
+    mem_available_mb: available_mb
 }

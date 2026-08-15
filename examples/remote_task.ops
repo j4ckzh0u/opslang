@@ -1,26 +1,62 @@
-// 远程任务声明示例
-// task 语法定义要在哪些目标上执行什么操作
-// 当前版本: task 体内代码在本地执行
-// Phase 4 将实现真正的远程执行
+// 远程任务示例
+// 模拟远程任务执行：采集本机信息并格式化为远程回传结构
+// 演示数据采集、JSON 序列化和结构化报告
 
-task "collect_info" on targets {
-    let hostname = "remote-server"
-    let cpu = 25.0
-    let mem = 4096
+print("=== 远程任务模拟 ===")
+print("采集本机系统信息，模拟远程任务回传...")
 
-    report {
-        host: hostname,
-        cpu: cpu,
-        memory: mem
-    }
+// 采集系统信息
+let host = sys.hostname()
+let mem = sys.memory.info()
+let disk = sys.disk.usage("/")
+let load = sys.load()
+let uptime = sys.uptime()
+let ts = time.now()
+
+// 构建结构化结果（模拟远程回传）
+let result = {
+    "host": host.hostname,
+    "memory_used_percent": mem.used_percent,
+    "memory_total_mb": mem.total / 1024 / 1024,
+    "disk_used_percent": disk.used_percent,
+    "disk_total_gb": disk.total / 1024 / 1024 / 1024,
+    "load_1m": load.load1,
+    "load_5m": load.load5,
+    "uptime_seconds": uptime.uptime,
+    "collected_at": ts.iso8601
 }
 
-task "deploy_config" on targets {
-    let config = "/etc/app/config.yaml"
-    print("部署配置到: " + config)
+// 编码为 JSON（模拟通过网络回传）
+let json_result = json.encode(result)
+print("---")
+print("采集结果 JSON (模拟远程回传):")
+print(json_result.json)
 
-    report {
-        target: config,
-        status: "deployed"
-    }
+// 模拟部署配置文件到远程主机
+let config_content = "# OpsLang Generated Config\nhostname=" + host.hostname + "\ngenerated_at=" + ts.iso8601 + "\n"
+let config_path = "/tmp/opslang_remote_config.conf"
+let write_result = file.write(config_path, config_content)
+
+// 计算校验和
+let checksum = file.checksum(config_path, "sha256")
+
+print("---")
+print("配置部署:")
+print("  路径: " + config_path)
+print("  大小: " + str(write_result.size) + " bytes")
+print("  SHA256: " + checksum.checksum)
+
+// 清理临时文件
+file.delete(config_path)
+
+// 结构化报告
+report {
+    task_name: "collect_and_deploy",
+    host: host.hostname,
+    memory: mem.used_percent,
+    disk: disk.used_percent,
+    load: load.load1,
+    uptime: uptime.uptime,
+    collected_at: ts.iso8601,
+    status: "completed"
 }

@@ -1,29 +1,32 @@
-// 综合演示脚本 - 展示 OpsLang 主要特性
+// demo.ops - 综合演示脚本 - 展示 OpsLang 主要特性（使用真实 SDK 调用）
+// Usage: opsctl run examples/demo.ops
 
-// 1. 变量与数据类型
+// 1. 变量与数据类型 - 使用真实系统数据
+let hostname_info = sys.hostname()
 let name = "OpsLang"
 let version = "0.1.0"
 let port = 8080
-let pi = 3.14159
 let debug = false
 let tags = ["ops", "devops", "automation"]
-let config = {"host": "localhost", "port": port, "debug": debug}
+let config = {"host": hostname_info.hostname, "port": port, "debug": debug}
 
 print("=== 变量与类型 ===")
 print("name: " + name + " (type: " + type(name) + ")")
 print("port: " + str(port) + " (type: " + type(port) + ")")
-print("pi: " + str(pi) + " (type: " + type(pi) + ")")
+print("hostname: " + hostname_info.hostname + " (type: " + type(hostname_info.hostname) + ")")
 print("debug: " + str(debug) + " (type: " + type(debug) + ")")
 print("tags: " + str(tags))
-print("config.host: " + config["host"])
+print("config.host: " + config.host)
 
-// 2. 函数定义与调用
-fn add(a, b) {
-    return a + b
+// 2. 函数定义与调用 - 封装 SDK 调用
+fn get_cpu_percent() {
+    let c = sys.cpu.usage()
+    return c.percent
 }
 
-fn greet(name, prefix = "Hello") {
-    return prefix + ", " + name + "!"
+fn get_mem_percent() {
+    let m = sys.memory.info()
+    return m.used_percent
 }
 
 fn max_val(a, b) {
@@ -33,57 +36,70 @@ fn max_val(a, b) {
     return b
 }
 
-print("\n=== 函数 ===")
-print("add(3, 4) = " + str(add(3, 4)))
-print(greet("World"))
-print(greet("OpsLang", "Hi"))
-print("max(10, 20) = " + str(max_val(10, 20)))
+print("\n=== 函数（SDK 封装） ===")
+let cpu_pct = get_cpu_percent()
+let mem_pct = get_mem_percent()
+print("CPU usage: " + str(cpu_pct) + "%")
+print("Memory usage: " + str(mem_pct) + "%")
+print("Max of CPU/Mem: " + str(max_val(cpu_pct, mem_pct)) + "%")
 
-// 3. 控制流
-print("\n=== 控制流 ===")
+// 3. 控制流 - 基于真实指标
+print("\n=== 控制流（基于真实指标） ===")
 
-let score = 85
+let score = cpu_pct
 if score >= 90 {
-    print("等级: A")
-} else if score >= 80 {
-    print("等级: B")
+    print("CPU 等级: CRITICAL")
+} else if score >= 70 {
+    print("CPU 等级: WARNING")
+} else if score >= 40 {
+    print("CPU 等级: NORMAL")
 } else {
-    print("等级: C")
+    print("CPU 等级: LOW")
 }
 
-// for 循环
-let sum = 0
-for let i = 1; i <= 10; i = i + 1 {
-    sum = sum + i
+// for 循环 - 遍历分区 (C-style), 查询每个分区使用率
+print("\n磁盘分区:")
+let parts = sys.disk.partitions()
+for let i = 0; i < len(parts); i = i + 1 {
+    let p = parts[i]
+    let u = sys.disk.usage(p.mountpoint)
+    print("  " + p.mountpoint + " - " + str(u.used_percent) + "% used")
 }
-print("1+2+...+10 = " + str(sum))
 
-// while 循环
+// while 循环 - 简单的倒计时
 let count = 5
-print("倒计时: ")
+print("\n倒计时:")
 while count > 0 {
     print("  " + str(count))
     count = count - 1
 }
 print("发射!")
 
-// 4. 列表与字典操作
+// 4. 列表与字典操作 - 使用 SDK 返回的结构
 print("\n=== 集合操作 ===")
-let fruits = ["apple", "banana", "cherry"]
-print("水果数量: " + str(len(fruits)))
-print("第一个: " + fruits[0])
-print("最后一个: " + fruits[len(fruits) - 1])
+let ifaces = sys.net.interfaces()
+print("网络接口数量: " + str(len(ifaces)))
+if len(ifaces) > 0 {
+    print("第一个接口: " + ifaces[0].name)
+}
+if len(ifaces) > 1 {
+    print("最后一个接口: " + ifaces[len(ifaces) - 1].name)
+}
 
 // 5. 结构化输出
 print("\n=== 结构化输出 ===")
 report {
     application: name,
     version: version,
+    host: hostname_info.hostname,
+    cpu_percent: cpu_pct,
+    mem_percent: mem_pct,
     config: config,
-    features: ["variables", "functions", "control_flow", "report"],
+    features: ["variables", "functions", "control_flow", "sdk_calls", "report"],
     status: "demo_complete"
 }
 
 log("演示脚本执行完成")
 
-metric("demo_score", score, {"level": "B"})
+metric("cpu_usage", cpu_pct, {"level": "info"})
+metric("mem_usage", mem_pct, {"level": "info"})

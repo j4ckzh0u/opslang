@@ -1,33 +1,63 @@
 // 服务健康检查脚本
-fn check_service(name, port) {
-    // 模拟检查（实际环境用 net.TCPConnect）
-    let result = {"name": name, "port": port, "status": "running"}
-    return result
+// 使用 SDK 检查系统资源、磁盘、进程等健康状态
+// 兼容 macOS 和 Linux（不使用 service.* 函数，因为 macOS 无 systemd）
+
+print("=== 服务健康检查 ===")
+
+let host = sys.hostname()
+let mem = sys.memory.info()
+let disk = sys.disk.usage("/")
+let os_info = sys.os()
+let ts = time.now()
+
+// 检查内存健康状态
+let mem_status = "healthy"
+if mem.used_percent > 95 {
+    mem_status = "critical"
+    alert("[CRITICAL] 内存使用率过高: " + str(mem.used_percent) + "%")
+} else if mem.used_percent > 80 {
+    mem_status = "warning"
+    alert("[WARNING] 内存使用率偏高: " + str(mem.used_percent) + "%")
 }
 
-let services = [
-    {"name": "nginx", "port": 80},
-    {"name": "mysql", "port": 3306},
-    {"name": "redis", "port": 6379}
-]
+print("主机: " + host.hostname)
+print("内存使用: " + str(mem.used_percent) + "% [" + mem_status + "]")
+print("内存总量: " + str(mem.total / 1024 / 1024) + " MB")
+print("可用内存: " + str(mem.available / 1024 / 1024) + " MB")
 
-let total = len(services)
-let healthy = 0
-
-for let i = 0; i < total; i = i + 1 {
-    let svc = services[i]
-    let result = check_service(svc["name"], svc["port"])
-    print("检查 " + svc["name"] + ":" + str(svc["port"]) + " -> " + result["status"])
-    healthy = healthy + 1
+// 检查磁盘健康
+let disk_status = "healthy"
+if disk.used_percent > 95 {
+    disk_status = "critical"
+} else if disk.used_percent > 80 {
+    disk_status = "warning"
 }
+print("磁盘 /: " + str(disk.used_percent) + "% 已用 [" + disk_status + "]")
+print("磁盘总量: " + str(disk.total / 1024 / 1024 / 1024) + " GB")
+print("磁盘已用: " + str(disk.used / 1024 / 1024 / 1024) + " GB")
 
+// 检查运行时间（使用 sys.os() 的 uptime 字段）
+let uptime_hours = os_info.uptime / 3600
+print("系统运行时长: " + str(uptime_hours) + " 小时")
+
+// 使用 process.exec 列出前几个进程
+print("---")
+print("系统进程 (前5个):")
+let ps_result = process.exec("ps", "-eo", "pid,comm")
+let lines = ps_result.stdout
+print(lines)
+
+// 汇总报告
 report {
-    total_services: total,
-    healthy: healthy,
-    unhealthy: total - healthy,
-    timestamp: "2026-08-15T10:00:00Z"
-}
-
-if healthy < total {
-    alert("有服务不健康！")
+    host: host.hostname,
+    timestamp: ts.iso8601,
+    memory_percent: mem.used_percent,
+    memory_status: mem_status,
+    disk_percent: disk.used_percent,
+    disk_status: disk_status,
+    uptime_hours: uptime_hours,
+    os: os_info.os,
+    platform: os_info.platform,
+    kernel: os_info.kernel_version,
+    overall_status: "checked"
 }

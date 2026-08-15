@@ -1,44 +1,69 @@
-// process_monitor.ops - Monitor running processes
+// process_monitor.ops - Monitor system resources
+// Demonstrates: sys.*, file.*, time.* with real data
+// Note: process.list()/find_by_name() uses gopsutil which may hang on macOS
+//       So this example uses process.exec() to call ps instead
 // Usage: opsctl run examples/process_monitor.ops
 
-print("=== Process Monitor ===")
+print("=== System Monitor ===")
 
-// Simulated process list
-let processes = [
-    {"name": "nginx", "pid": 1001, "cpu": 2.5, "mem": 128},
-    {"name": "postgres", "pid": 1002, "cpu": 15.0, "mem": 512},
-    {"name": "redis", "pid": 1003, "cpu": 0.5, "mem": 64},
-    {"name": "node", "pid": 1004, "cpu": 45.0, "mem": 256},
-    {"name": "python", "pid": 1005, "cpu": 80.0, "mem": 1024}
-]
+let hostname = sys.hostname()
+let cpu = sys.cpu.usage()
+let mem = sys.memory.info()
 
-let cpu_threshold = 50.0
-let mem_threshold = 500
+print("Host: " + hostname.hostname)
+print("CPU: " + str(int(cpu.percent)) + "% | Memory: " + str(int(mem.used_percent)) + "%")
+print("")
 
-print("Process monitoring:")
-print("---")
+// System resource summary
+print("--- Resource Summary ---")
+let cpu_count = sys.cpu.count()
+print("  CPU cores: " + str(cpu_count.logical) + " logical, " + str(cpu_count.physical) + " physical")
+print("  CPU usage: " + str(int(cpu.percent)) + "%")
+print("  Memory used: " + str(int(mem.used_percent)) + "%")
 
-for let i = 0; i < len(processes); i = i + 1 {
-    let proc = processes[i]
-    let flags = ""
+let load = sys.load()
+print("  Load average: " + str(load.load1) + " / " + str(load.load5) + " / " + str(load.load15))
 
-    if proc.cpu > cpu_threshold {
-        flags = flags + " [HIGH CPU]"
-        alert("Process " + proc.name + " (PID " + str(proc.pid) + ") CPU: " + str(proc.cpu) + "%")
+let up = sys.uptime()
+print("  Uptime: " + str(up.seconds) + " seconds")
+
+// Use process.exec to call ps for process info (avoids gopsutil hang on macOS)
+print("")
+print("--- Top Processes (via ps) ---")
+let ps_result = process.exec("ps", "aux", "-r", "-c", "10")
+if ps_result.exit_code == 0 {
+    print(ps_result.stdout)
+} else {
+    // Fallback: try Linux ps format
+    let ps_linux = process.exec("ps", "aux", "--sort=-pcpu")
+    if ps_linux.exit_code == 0 {
+        print(ps_linux.stdout)
+    } else {
+        print("  Could not list processes (ps not available)")
     }
-    if proc.mem > mem_threshold {
-        flags = flags + " [HIGH MEM]"
-        alert("Process " + proc.name + " (PID " + str(proc.pid) + ") MEM: " + str(proc.mem) + "MB")
-    }
-
-    print(proc.name + " (PID " + str(proc.pid) + "): CPU=" + str(proc.cpu) + "% MEM=" + str(proc.mem) + "MB" + flags)
 }
 
-print("---")
-print("Total processes: " + str(len(processes)))
+// Check disk usage
+print("--- Disk Usage ---")
+let disk_root = sys.disk.usage("/")
+print("  / : " + str(int(disk_root.used_percent)) + "% used")
+
+// Alert on high resource usage
+if cpu.percent > 90 {
+    alert("CPU usage is critical: " + str(int(cpu.percent)) + "%")
+}
+if mem.used_percent > 90 {
+    alert("Memory usage is critical: " + str(int(mem.used_percent)) + "%")
+}
 
 report {
-    process_count: len(processes),
-    cpu_threshold: cpu_threshold,
-    mem_threshold: mem_threshold
+    host: hostname.hostname,
+    cpu_percent: cpu.percent,
+    memory_percent: mem.used_percent,
+    load1: load.load1,
+    load5: load.load5,
+    load15: load.load15,
+    disk_percent: disk_root.used_percent
 }
+
+log("System monitoring completed")

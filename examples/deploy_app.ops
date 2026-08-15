@@ -1,37 +1,164 @@
-// 应用部署脚本
+// deploy_app.ops - Simulate application deployment using file operations
+// Demonstrates: file operations, checksums, ensure pattern, structured reporting
+// Simulates a real deployment: create dirs, write configs, deploy app, verify integrity
+// All operations use /tmp/ for cross-platform compatibility (macOS + Linux)
+// Usage: opsctl run examples/deploy_app.ops
+
+print("=== Application Deployment Simulation ===")
+
+let hostname = sys.hostname()
+let now = time.now()
 let app_name = "myapp"
 let app_version = "2.1.0"
-let deploy_dir = "/opt/app"
-let config = {
-    "worker": 4,
-    "timeout": 30,
-    "log_level": "info"
+let deploy_dir = "/tmp/ops-example-deploy"
+let release_dir = deploy_dir + "/releases/" + app_version
+let config_dir = deploy_dir + "/config"
+let log_dir = deploy_dir + "/logs"
+let current_link = deploy_dir + "/current"
+
+print("Host: " + hostname.hostname)
+print("App: " + app_name + " v" + app_version)
+print("Deploy dir: " + deploy_dir)
+print("Timestamp: " + now.iso8601)
+
+// --- Step 1: Create directory structure ---
+print("")
+print("[1/6] Creating directory structure...")
+
+file.mkdir(deploy_dir)
+file.mkdir(deploy_dir + "/releases")
+file.mkdir(release_dir)
+file.mkdir(config_dir)
+file.mkdir(log_dir)
+
+print("  Created: " + deploy_dir)
+print("  Created: " + release_dir)
+print("  Created: " + config_dir)
+print("  Created: " + log_dir)
+
+// --- Step 2: Write configuration files ---
+print("")
+print("[2/6] Writing configuration...")
+
+let app_config = "{\"name\": \"" + app_name + "\", \"version\": \"" + app_version + "\", \"workers\": 4, \"port\": 8080}"
+let config_path = config_dir + "/app.json"
+file.write(config_path, app_config)
+print("  Wrote: " + config_path + " (" + str(len(app_config)) + " bytes)")
+
+let env_config = "APP_NAME=" + app_name + "\nAPP_VERSION=" + app_version + "\nAPP_PORT=8080\nLOG_DIR=" + log_dir + "\n"
+let env_path = config_dir + "/env"
+file.write(env_path, env_config)
+print("  Wrote: " + env_path)
+
+// --- Step 3: Deploy application files ---
+print("")
+print("[3/6] Deploying application files...")
+
+let app_binary = "#!/bin/sh\necho \"" + app_name + " v" + app_version + " running\"\n"
+let binary_path = release_dir + "/" + app_name
+file.write(binary_path, app_binary)
+print("  Deployed: " + binary_path)
+
+let readme = app_name + " v" + app_version + "\nDeployed at: " + now.iso8601 + "\nHost: " + hostname.hostname + "\n"
+let readme_path = release_dir + "/README"
+file.write(readme_path, readme)
+print("  Deployed: " + readme_path)
+
+// --- Step 4: Verify file integrity with checksums ---
+print("")
+print("[4/6] Verifying integrity...")
+
+let cs_binary = file.checksum(binary_path, "sha256")
+let cs_config = file.checksum(config_path, "sha256")
+let cs_env = file.checksum(env_path, "sha256")
+let cs_readme = file.checksum(readme_path, "sha256")
+
+print("  Binary:  " + cs_binary.checksum)
+print("  Config:  " + cs_config.checksum)
+print("  Env:     " + cs_env.checksum)
+print("  README:  " + cs_readme.checksum)
+
+// Verify all files exist
+let all_exist = true
+let check_files = [binary_path, config_path, env_path, readme_path]
+for let i = 0; i < len(check_files); i = i + 1 {
+    let ex = file.exists(check_files[i])
+    if !ex.exists {
+        all_exist = false
+        alert("Missing file: " + check_files[i])
+    }
 }
 
-print("开始部署 " + app_name + " v" + app_version)
+if all_exist {
+    print("  All files verified!")
+} else {
+    alert("Deployment verification FAILED")
+}
 
-// 步骤 1: 检查环境
-print("[1/4] 检查部署目录...")
+// --- Step 5: Write deployment marker ---
+print("")
+print("[5/6] Writing deployment marker...")
 
-// 步骤 2: 创建备份
-print("[2/4] 创建备份...")
-let backup_name = app_name + "_backup_" + app_version
-print("  备份名: " + backup_name)
+let marker_path = deploy_dir + "/.deployed"
+let marker_content = "{\"version\": \"" + app_version + "\", \"deployed_at\": \"" + now.iso8601 + "\", \"host\": \"" + hostname.hostname + "\"}"
+file.write(marker_path, marker_content)
 
-// 步骤 3: 部署新版本
-print("[3/4] 部署新版本...")
-print("  配置: workers=" + str(config["worker"]) + " timeout=" + str(config["timeout"]))
+// Verify deployment is idempotent - running ensure again should not change anything
+ensure file.exists(marker_path).exists {
+    print("  SHOULD NOT SEE THIS - marker already exists")
+}
+print("  Marker verified (idempotent)")
 
-// 步骤 4: 验证
-print("[4/4] 验证部署...")
+// --- Step 6: Final summary ---
+print("")
+print("[6/6] Deployment summary...")
+
+// List all deployed files
+let release_files = file.list(release_dir)
+print("  Release files:")
+for let i = 0; i < len(release_files.files); i = i + 1 {
+    let f = release_files.files[i]
+    print("    " + f.name + " (" + str(f.size) + " bytes)")
+}
+
+let config_files = file.list(config_dir)
+print("  Config files:")
+for let i = 0; i < len(config_files.files); i = i + 1 {
+    let f = config_files.files[i]
+    print("    " + f.name + " (" + str(f.size) + " bytes)")
+}
+
+// Get system info for report
+let cpu = sys.cpu.usage()
+let mem = sys.memory.info()
 
 report {
+    host: hostname.hostname,
     app: app_name,
     version: app_version,
+    deployed_at: now.iso8601,
     deploy_dir: deploy_dir,
-    config: config,
-    status: "deployed",
-    steps_completed: 4
+    files_verified: all_exist,
+    binary_checksum: cs_binary.checksum,
+    config_checksum: cs_config.checksum,
+    cpu_percent: cpu.percent,
+    memory_percent: mem.used_percent,
+    status: "deployed"
 }
 
-log("部署完成: " + app_name + " v" + app_version)
+log("Deployment completed: " + app_name + " v" + app_version + " on " + hostname.hostname)
+
+// Cleanup
+file.delete(binary_path)
+file.delete(readme_path)
+file.delete(config_path)
+file.delete(env_path)
+file.delete(marker_path)
+file.delete(log_dir)
+file.delete(config_dir)
+file.delete(release_dir)
+file.delete(deploy_dir + "/releases")
+file.delete(deploy_dir)
+
+print("")
+print("Cleanup complete - all temporary files removed")

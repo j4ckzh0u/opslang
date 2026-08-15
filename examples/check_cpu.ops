@@ -1,19 +1,42 @@
-// check_cpu.ops - Collect CPU usage information
+// check_cpu.ops - Collect real CPU usage information
 // Usage: opsctl run examples/check_cpu.ops
+// Demonstrates: sys.hostname(), sys.cpu.usage(), sys.cpu.count(), sys.load()
 
-let cpu = {"percent": 0, "cores": 4}
-let hostname = "localhost"
+// Fetch real data from the system
+let hostname_info = sys.hostname()
+let cpu_usage = sys.cpu.usage()
+let cpu_count = sys.cpu.count()
+let load_info = sys.load()
 
 print("=== CPU Information ===")
-print("Hostname: " + hostname)
-print("CPU cores: " + str(cpu.cores))
-print("CPU usage: " + str(cpu.percent) + "%")
+print("Hostname: " + hostname_info.hostname)
+print("Logical cores: " + str(cpu_count.logical))
+print("Physical cores: " + str(cpu_count.physical))
+print("CPU usage: " + str(cpu_usage.percent) + "%")
+print("  User: " + str(cpu_usage.user) + "%")
+print("  System: " + str(cpu_usage.system) + "%")
+print("  Idle: " + str(cpu_usage.idle) + "%")
+print("Load average: " + str(load_info.load1) + " / " + str(load_info.load5) + " / " + str(load_info.load15))
 
-if cpu.percent > 80 {
-    alert("CPU usage is high: " + str(cpu.percent) + "%")
+// Alert if CPU usage is high
+if cpu_usage.percent > 80 {
+    alert("CPU usage is high: " + str(cpu_usage.percent) + "%")
+} else if cpu_usage.percent > 50 {
+    print("WARNING: CPU usage elevated: " + str(cpu_usage.percent) + "%")
+} else {
+    print("CPU usage is normal.")
 }
 
+// Structured report with all collected data
 report {
-    host: hostname,
-    cpu: cpu
+    host: hostname_info.hostname,
+    logical_cores: cpu_count.logical,
+    physical_cores: cpu_count.physical,
+    cpu_percent: cpu_usage.percent,
+    cpu_user: cpu_usage.user,
+    cpu_system: cpu_usage.system,
+    cpu_idle: cpu_usage.idle,
+    load_1m: load_info.load1,
+    load_5m: load_info.load5,
+    load_15m: load_info.load15
 }

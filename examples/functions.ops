@@ -1,37 +1,38 @@
-// functions.ops - User-defined functions
+// functions.ops - User-defined functions wrapping real SDK calls
 // Usage: opsctl run examples/functions.ops
+// Demonstrates: simple functions, return values, default parameters,
+// recursion, and using functions to wrap SDK operations
 
 print("=== Functions Demo ===")
 
-// Simple function
-fn greet(name) {
-    print("Hello, " + name + "!")
+// Simple function: get system summary from SDK
+fn system_summary() {
+    let h = sys.hostname()
+    let c = sys.cpu.count()
+    return h.hostname + " (" + str(c.logical) + " cores)"
 }
 
-greet("World")
-greet("OpsLang")
+print("System: " + system_summary())
 
-// Function with return value
-fn add(a, b) {
-    return a + b
+// Function with return value: get memory usage in MB
+fn memory_used_mb() {
+    let mem = sys.memory.info()
+    return mem.used / 1024 / 1024
 }
 
-let result = add(10, 20)
-print("10 + 20 = " + str(result))
+let used = memory_used_mb()
+print("Memory used: " + str(used) + " MB")
 
-// Function with default parameter
-fn power(base, exp = 2) {
-    let r = 1
-    for let i = 0; i < exp; i = i + 1 {
-        r = r * base
-    }
-    return r
+// Function with default parameter: disk usage for any path
+fn disk_usage_percent(path = "/") {
+    let d = sys.disk.usage(path)
+    return d.used_percent
 }
 
-print("3^2 = " + str(power(3)))
-print("2^10 = " + str(power(2, 10)))
+print("Root disk usage: " + str(disk_usage_percent()) + "%")
+print("/tmp disk usage: " + str(disk_usage_percent("/tmp")) + "%")
 
-// Recursive function
+// Recursive function: compute factorial
 fn factorial(n) {
     if n <= 1 {
         return 1
@@ -39,19 +40,29 @@ fn factorial(n) {
     return n * factorial(n - 1)
 }
 
-print("5! = " + str(factorial(5)))
-print("10! = " + str(factorial(10)))
+let cores = sys.cpu.count()
+let n = cores.logical
+print("Factorial of " + str(n) + " cores: " + str(factorial(n)))
 
-// Higher-order-like pattern
-fn apply(fn_op, x, y) {
-    return fn_op(x, y)
+// Higher-order pattern: function that takes a getter function
+fn report_value(label, getter_fn) {
+    let val = getter_fn()
+    print(label + ": " + str(val))
+    return val
 }
 
-let sum = apply(add, 5, 3)
-print("apply(add, 5, 3) = " + str(sum))
+// Use it with a wrapper function
+fn get_load() {
+    let l = sys.load()
+    return l.load1
+}
+
+let load1 = report_value("Load 1m", get_load)
 
 report {
-    add_result: result,
-    power_result: power(2, 10),
-    factorial_5: factorial(5)
+    system: system_summary(),
+    memory_used_mb: used,
+    root_disk_percent: disk_usage_percent(),
+    factorial_cores: factorial(n),
+    load_1m: load1
 }
