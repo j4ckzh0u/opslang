@@ -13,6 +13,7 @@
 【说话方式】直白通俗，别用空洞话术
 【回答规矩】不确定就说不知道，涉及敏感信息标可信度，需求不清先确认，先给结论再讲理由
 
+项目地址：https://github.com/j4ckzh0u/opslang , 开发好了就推送GitHub，并创建github action，进行自动化构建。
 ---
 项目要求：
 # OpsLang 开发计划（供 Claude Code 执行）

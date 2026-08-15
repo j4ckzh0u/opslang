@@ -25,7 +25,7 @@ func (c *Client) NewSFTPClient() (*SFTPClient, error) {
 		return nil, fmt.Errorf("not connected")
 	}
 
-	sftpClient, err := sftp.NewClient(conn)
+	sftpClient, err := c.sftpNewClient(conn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SFTP client: %w", err)
 	}

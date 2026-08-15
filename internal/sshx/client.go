@@ -7,15 +7,26 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
 
+// DialFunc is a function type for establishing SSH connections.
+// It can be injected for testing purposes.
+type DialFunc func(network, addr string, config *ssh.ClientConfig) (*ssh.Client, error)
+
+// SFTPClientFactory creates an SFTP client from an SSH connection.
+// Can be overridden in tests.
+type SFTPClientFactory func(conn *ssh.Client) (*sftp.Client, error)
+
 // Client wraps an SSH connection with retry, timeout, and execution capabilities.
 type Client struct {
-	config    *Config
-	sshConfig *ssh.ClientConfig
-	mu        sync.Mutex
-	conn      *ssh.Client
+	config        *Config
+	sshConfig     *ssh.ClientConfig
+	dial          DialFunc
+	sftpNewClient SFTPClientFactory
+	mu            sync.Mutex
+	conn          *ssh.Client
 }
 
 // NewClient creates a new SSH client with the given configuration.
@@ -32,9 +43,16 @@ func NewClient(cfg *Config) (*Client, error) {
 	}
 
 	return &Client{
-		config:    cfg,
-		sshConfig: sshConfig,
+		config:        cfg,
+		sshConfig:     sshConfig,
+		dial:          ssh.Dial,
+		sftpNewClient: defaultSFTPClientFactory,
 	}, nil
+}
+
+// defaultSFTPClientFactory is the default SFTP client factory.
+func defaultSFTPClientFactory(conn *ssh.Client) (*sftp.Client, error) {
+	return sftp.NewClient(conn)
 }
 
 // buildSSHConfig constructs an ssh.ClientConfig from the provided configuration.
@@ -87,7 +105,7 @@ func (c *Client) Connect(ctx context.Context) error {
 		default:
 		}
 
-		conn, err := ssh.Dial("tcp", addr, c.sshConfig)
+		conn, err := c.dial("tcp", addr, c.sshConfig)
 		if err != nil {
 			lastErr = fmt.Errorf("attempt %d: %w", attempt+1, err)
 			if attempt < c.config.Retries {

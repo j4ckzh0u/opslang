@@ -72,6 +72,51 @@ type UserInfo struct {
 	StartTime uint64 `json:"start_time"`
 }
 
+// CPUInfo represents CPU hardware information.
+type CPUInfo struct {
+	VendorID  string  `json:"vendor_id"`
+	ModelName string  `json:"model_name"`
+	Cores     int32   `json:"cores"`
+	Mhz       float64 `json:"mhz"`
+	CacheSize int32   `json:"cache_size"`
+}
+
+// CPUCount represents logical and physical CPU counts.
+type CPUCount struct {
+	Logical  int `json:"logical"`
+	Physical int `json:"physical"`
+}
+
+// DiskPartition represents a disk partition.
+type DiskPartition struct {
+	Device     string `json:"device"`
+	Mountpoint string `json:"mountpoint"`
+	Fstype     string `json:"fstype"`
+	Opts       string `json:"opts"`
+}
+
+// HostInfoResult represents detailed host/OS information.
+type HostInfoResult struct {
+	Hostname        string `json:"hostname"`
+	Uptime          uint64 `json:"uptime"`
+	BootTime        uint64 `json:"boot_time"`
+	OS              string `json:"os"`
+	Platform        string `json:"platform"`
+	PlatformFamily  string `json:"platform_family"`
+	PlatformVersion string `json:"platform_version"`
+	KernelVersion   string `json:"kernel_version"`
+	KernelArch      string `json:"kernel_arch"`
+}
+
+// NetInterface represents a network interface (defined in sys to avoid circular dependency).
+type NetInterface struct {
+	Name         string   `json:"name"`
+	HardwareAddr string   `json:"hardware_addr"`
+	MTU          int      `json:"mtu"`
+	Up           bool     `json:"up"`
+	Addresses    []string `json:"addresses"`
+}
+
 // GetCPUUsage returns overall CPU utilization percentages.
 //
 // It uses cpu.Times(false) to get aggregate CPU times since boot and computes
@@ -189,6 +234,107 @@ func Uptime() (UptimeInfo, error) {
 	return UptimeInfo{
 		Uptime:   up,
 		BootTime: boot,
+	}, nil
+}
+
+// GetNetInterfaces returns information about network interfaces.
+// Uses standard library net.Interfaces() directly to avoid circular dependency.
+func GetNetInterfaces() ([]NetInterface, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list net interfaces: %w", err)
+	}
+	result := make([]NetInterface, 0, len(ifaces))
+	for _, iface := range ifaces {
+		info := NetInterface{
+			Name: iface.Name,
+			MTU:  iface.MTU,
+			Up:   iface.Flags&net.FlagUp != 0,
+		}
+		if iface.HardwareAddr != nil {
+			info.HardwareAddr = iface.HardwareAddr.String()
+		}
+		addrs, err := iface.Addrs()
+		if err == nil {
+			info.Addresses = make([]string, 0, len(addrs))
+			for _, addr := range addrs {
+				info.Addresses = append(info.Addresses, addr.String())
+			}
+		} else {
+			info.Addresses = []string{}
+		}
+		result = append(result, info)
+	}
+	return result, nil
+}
+
+// GetCPUCount returns logical and physical CPU counts.
+func GetCPUCount() (CPUCount, error) {
+	logical, err := cpu.Counts(true)
+	if err != nil {
+		return CPUCount{}, fmt.Errorf("failed to get logical CPU count: %w", err)
+	}
+	physical, err := cpu.Counts(false)
+	if err != nil {
+		return CPUCount{}, fmt.Errorf("failed to get physical CPU count: %w", err)
+	}
+	return CPUCount{Logical: logical, Physical: physical}, nil
+}
+
+// GetCPUInfo returns CPU hardware information.
+func GetCPUInfo() ([]CPUInfo, error) {
+	infos, err := cpu.Info()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get CPU info: %w", err)
+	}
+	result := make([]CPUInfo, 0, len(infos))
+	for _, info := range infos {
+		result = append(result, CPUInfo{
+			VendorID:  info.VendorID,
+			ModelName: info.ModelName,
+			Cores:     info.Cores,
+			Mhz:       info.Mhz,
+			CacheSize: info.CacheSize,
+		})
+	}
+	return result, nil
+}
+
+// GetDiskPartitions returns information about disk partitions.
+// Includes only real filesystems (not pseudo/unmounted).
+func GetDiskPartitions() ([]DiskPartition, error) {
+	parts, err := disk.Partitions(false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get disk partitions: %w", err)
+	}
+	result := make([]DiskPartition, 0, len(parts))
+	for _, p := range parts {
+		result = append(result, DiskPartition{
+			Device:     p.Device,
+			Mountpoint: p.Mountpoint,
+			Fstype:     p.Fstype,
+			Opts:       strings.Join(p.Opts, ","),
+		})
+	}
+	return result, nil
+}
+
+// GetHostInfo returns detailed host/OS information.
+func GetHostInfo() (HostInfoResult, error) {
+	info, err := host.Info()
+	if err != nil {
+		return HostInfoResult{}, fmt.Errorf("failed to get host info: %w", err)
+	}
+	return HostInfoResult{
+		Hostname:        info.Hostname,
+		Uptime:          info.Uptime,
+		BootTime:        info.BootTime,
+		OS:              info.OS,
+		Platform:        info.Platform,
+		PlatformFamily:  info.PlatformFamily,
+		PlatformVersion: info.PlatformVersion,
+		KernelVersion:   info.KernelVersion,
+		KernelArch:      info.KernelArch,
 	}, nil
 }
 

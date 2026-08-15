@@ -80,6 +80,11 @@ func Enable(name string) (ServiceAction, error) {
 	return doAction(name, "enable")
 }
 
+// Disable disables a systemd service from starting at boot.
+func Disable(name string) (ServiceAction, error) {
+	return doAction(name, "disable")
+}
+
 // doAction executes a systemctl action (start/stop/restart/enable) on a service.
 func doAction(name, action string) (ServiceAction, error) {
 	result := ServiceAction{

@@ -5,9 +5,14 @@
 package file
 
 import (
+	"crypto/md5"
+	"crypto/sha1"
+	"crypto/sha256"
 	"fmt"
+	"hash"
 	"io"
 	"os"
+	"strings"
 )
 
 // FileContent is returned by Read, holding the path and full text content.
@@ -63,6 +68,26 @@ type FileInfo struct {
 type ChmodResult struct {
 	Path string `json:"path"`
 	Mode string `json:"mode"`
+}
+
+// ListResult is returned by List, holding the directory entries.
+type ListResult struct {
+	Path  string     `json:"path"`
+	Files []FileInfo `json:"files"`
+}
+
+// MkdirResult is returned by Mkdir.
+type MkdirResult struct {
+	Path    string `json:"path"`
+	Created bool   `json:"created"`
+}
+
+// ChecksumResult is returned by Checksum.
+type ChecksumResult struct {
+	Path      string `json:"path"`
+	Algorithm string `json:"algorithm"`
+	Checksum  string `json:"checksum"`
+	Size      int64  `json:"size"`
 }
 
 // Read reads the entire contents of the file at path and returns a FileContent.
@@ -201,5 +226,81 @@ func Chmod(path string, mode uint32) (ChmodResult, error) {
 	return ChmodResult{
 		Path: path,
 		Mode: fmt.Sprintf("%04o", mode),
+	}, nil
+}
+
+// List reads the contents of a directory and returns file info for each entry.
+func List(dir string) (ListResult, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ListResult{}, fmt.Errorf("file.List: %w", err)
+	}
+	result := ListResult{
+		Path:  dir,
+		Files: make([]FileInfo, 0, len(entries)),
+	}
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		result.Files = append(result.Files, FileInfo{
+			Path:    dir + "/" + entry.Name(),
+			Name:    entry.Name(),
+			Size:    info.Size(),
+			Mode:    fmt.Sprintf("%04o", info.Mode().Perm()),
+			ModTime: info.ModTime().Unix(),
+			IsDir:   entry.IsDir(),
+		})
+	}
+	return result, nil
+}
+
+// Mkdir creates a directory at path with mode 0755, including any necessary parents.
+func Mkdir(path string) (MkdirResult, error) {
+	// Check if it already exists
+	if info, err := os.Stat(path); err == nil && info.IsDir() {
+		return MkdirResult{Path: path, Created: false}, nil
+	}
+	if err := os.MkdirAll(path, 0755); err != nil {
+		return MkdirResult{}, fmt.Errorf("file.Mkdir: %w", err)
+	}
+	return MkdirResult{Path: path, Created: true}, nil
+}
+
+// Checksum computes the checksum of a file using the specified algorithm (md5, sha1, sha256).
+// If algo is empty, defaults to sha256.
+func Checksum(path string, algo string) (ChecksumResult, error) {
+	if algo == "" {
+		algo = "sha256"
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return ChecksumResult{}, fmt.Errorf("file.Checksum: %w", err)
+	}
+	defer f.Close()
+
+	var h hash.Hash
+	switch strings.ToLower(algo) {
+	case "md5":
+		h = md5.New()
+	case "sha1":
+		h = sha1.New()
+	case "sha256":
+		h = sha256.New()
+	default:
+		return ChecksumResult{}, fmt.Errorf("file.Checksum: unsupported algorithm %q", algo)
+	}
+
+	size, err := io.Copy(h, f)
+	if err != nil {
+		return ChecksumResult{}, fmt.Errorf("file.Checksum: %w", err)
+	}
+
+	return ChecksumResult{
+		Path:      path,
+		Algorithm: strings.ToLower(algo),
+		Checksum:  fmt.Sprintf("%x", h.Sum(nil)),
+		Size:      size,
 	}, nil
 }

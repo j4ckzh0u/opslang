@@ -36,6 +36,19 @@ type DurationResult struct {
 	HumanReadable string  `json:"human_readable"`
 }
 
+// SleepResult is returned by Sleep, confirming the duration slept.
+type SleepResult struct {
+	Milliseconds int `json:"milliseconds"`
+}
+
+// DiffResult is returned by Diff, holding the duration between two timestamps.
+type DiffResult struct {
+	Seconds       float64 `json:"seconds"`
+	Minutes       float64 `json:"minutes"`
+	Hours         float64 `json:"hours"`
+	HumanReadable string  `json:"human_readable"`
+}
+
 const (
 	defaultLayout = "2006-01-02 15:04:05"
 )
@@ -104,5 +117,39 @@ func Since(unix int64) DurationResult {
 		Minutes:       totalMinutes,
 		Hours:         totalHours,
 		HumanReadable: humanReadable,
+	}
+}
+
+// Sleep pauses execution for the given number of milliseconds.
+func Sleep(ms int) (SleepResult, error) {
+	if ms < 0 {
+		return SleepResult{}, fmt.Errorf("opstime.Sleep: milliseconds must be non-negative")
+	}
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+	return SleepResult{Milliseconds: ms}, nil
+}
+
+// Diff calculates the absolute duration between two Unix timestamps.
+func Diff(t1, t2 int64) DiffResult {
+	var d time.Duration
+	if t1 > t2 {
+		d = time.Unix(t1, 0).Sub(time.Unix(t2, 0))
+	} else {
+		d = time.Unix(t2, 0).Sub(time.Unix(t1, 0))
+	}
+
+	totalSeconds := d.Seconds()
+	totalMinutes := d.Minutes()
+	totalHours := d.Hours()
+
+	hours := int(totalHours)
+	minutes := int(totalMinutes) % 60
+	seconds := int(totalSeconds) % 60
+
+	return DiffResult{
+		Seconds:       totalSeconds,
+		Minutes:       totalMinutes,
+		Hours:         totalHours,
+		HumanReadable: fmt.Sprintf("%dh %dm %ds", hours, minutes, seconds),
 	}
 }
