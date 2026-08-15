@@ -71,6 +71,52 @@ GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bin/opsctl-linux-amd64 ./cmd/o
 GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o bin/opsctl-linux-arm64 ./cmd/opsctl
 ```
 
+## Makefile 使用说明
+
+项目提供了完整的 Makefile，覆盖构建、测试、代码质量检查和交叉编译等常用操作。运行 `make help` 查看所有可用目标。
+
+### 构建
+
+```bash
+make build          # 编译 opsctl 和 ops-runner 到 bin/
+make build-all      # 交叉编译 linux/darwin amd64/arm64 共 8 个二进制到 dist/
+make install        # 安装 opsctl 到 $GOPATH/bin
+```
+
+### 测试
+
+```bash
+make test           # 运行全部测试（含 race 检测）
+make coverage       # 生成覆盖率报告（终端输出 + HTML）
+make bench          # 运行基准测试
+```
+
+### 代码质量
+
+```bash
+make lint           # 运行 go vet + gofmt 检查
+make fmt            # 检查格式（有未格式化文件时报错）
+make fmt-fix        # 自动修复格式
+make vet            # 运行 go vet
+make tidy           # 整理 go.mod 依赖
+make check          # 运行 lint + vet（完整检查）
+```
+
+### 开发调试
+
+```bash
+make run ARGS="run examples/helloworld.ops"   # 运行脚本
+make repl                                      # 启动 REPL 交互环境
+make examples                                  # 运行所有示例脚本
+```
+
+### CI 与清理
+
+```bash
+make ci             # 本地 CI：check + test + build
+make clean          # 清理 bin/ dist/ coverage.out
+```
+
 ## 使用示例
 
 ### 1. 变量与数据类型
