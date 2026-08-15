@@ -736,6 +736,27 @@ func (interp *Interpreter) evalBinary(e *ast.BinaryExpression, env *Environment)
 func applyBinary(op string, left, right interface{}, pos ast.Position) (interface{}, error) {
 	switch op {
 	case "+":
+		// List concatenation: list + list or list + item
+		if ll, ok := left.([]interface{}); ok {
+			if rl, ok := right.([]interface{}); ok {
+				result := make([]interface{}, len(ll)+len(rl))
+				copy(result, ll)
+				copy(result[len(ll):], rl)
+				return result, nil
+			}
+			// list + single item → append
+			result := make([]interface{}, len(ll)+1)
+			copy(result, ll)
+			result[len(ll)] = right
+			return result, nil
+		}
+		if _, ok := right.([]interface{}); ok {
+			// single item + list → prepend
+			result := make([]interface{}, 0, 1+len(right.([]interface{})))
+			result = append(result, left)
+			result = append(result, right.([]interface{})...)
+			return result, nil
+		}
 		// String concatenation
 		if ls, ok := left.(string); ok {
 			return ls + formatValue(right), nil
