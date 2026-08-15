@@ -130,7 +130,7 @@ func TestSFTPClient_Upload_LocalFileNotFound(t *testing.T) {
 	sc := &SFTPClient{client: sftpClient}
 
 	ctx := context.Background()
-	err := sc.Upload(ctx, "/nonexistent/file", "/remote/file")
+	err := sc.Upload(ctx, "/nonexistent/file", "remote_file.txt")
 	if err == nil {
 		t.Error("Upload() should fail with nonexistent local file")
 	}
@@ -144,7 +144,7 @@ func TestSFTPClient_Download_RemoteFileNotFound(t *testing.T) {
 
 	ctx := context.Background()
 	tmpDir := t.TempDir()
-	err := sc.Download(ctx, "/nonexistent/file", filepath.Join(tmpDir, "local.txt"))
+	err := sc.Download(ctx, "nonexistent.txt", filepath.Join(tmpDir, "local.txt"))
 	if err == nil {
 		t.Error("Download() should fail with nonexistent remote file")
 	}

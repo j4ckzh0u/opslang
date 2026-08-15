@@ -157,6 +157,12 @@ type ExecResult struct {
 
 // Exec executes a command on the remote host with context-based timeout.
 func (c *Client) Exec(ctx context.Context, cmd string) (*ExecResult, error) {
+	return c.ExecWithStdin(ctx, cmd, nil)
+}
+
+// ExecWithStdin executes a command on the remote host, writing data to stdin.
+// If stdin is nil, no data is written to stdin.
+func (c *Client) ExecWithStdin(ctx context.Context, cmd string, stdin []byte) (*ExecResult, error) {
 	c.mu.Lock()
 	conn := c.conn
 	c.mu.Unlock()
@@ -174,6 +180,18 @@ func (c *Client) Exec(ctx context.Context, cmd string) (*ExecResult, error) {
 	var stdout, stderr safeBuffer
 	session.Stdout = &stdout
 	session.Stderr = &stderr
+
+	if stdin != nil {
+		stdinPipe, err := session.StdinPipe()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get stdin pipe: %w", err)
+		}
+		// Write stdin data and close the pipe so the remote process sees EOF.
+		go func() {
+			_, _ = stdinPipe.Write(stdin)
+			_ = stdinPipe.Close()
+		}()
+	}
 
 	done := make(chan error, 1)
 	go func() {

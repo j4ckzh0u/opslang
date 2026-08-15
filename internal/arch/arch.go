@@ -5,6 +5,7 @@ package arch
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -73,7 +74,7 @@ func MapArch(raw string) (string, error) {
 	return goarch, nil
 }
 
-// SupportedArchitectures returns all architectures that can be detected.
+// SupportedArchitectures returns all GOARCH values that can be detected, sorted.
 func SupportedArchitectures() []string {
 	seen := make(map[string]bool)
 	var result []string
@@ -83,6 +84,7 @@ func SupportedArchitectures() []string {
 			result = append(result, goarch)
 		}
 	}
+	sort.Strings(result)
 	return result
 }
 
