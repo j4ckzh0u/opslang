@@ -99,10 +99,11 @@ func (l *Lexer) nextToken() (token.Token, error) {
 	case isDigit(ch):
 		return l.scanNumber(startLine, startCol)
 
-	case isIdentStart(ch):
-		return l.scanIdentOrKeyword(startLine, startCol)
-
 	default:
+		// Check for Unicode identifier start (handles multi-byte UTF-8 runes)
+		if r, _ := l.peekRune(); isIdentStartRune(r) {
+			return l.scanIdentOrKeyword(startLine, startCol)
+		}
 		return l.scanOperatorOrDelimiter(startLine, startCol)
 	}
 }
@@ -123,11 +124,6 @@ func (l *Lexer) makeTokenAt(typ token.TokenType, literal string, line, col int) 
 		Literal: literal,
 		Pos:     token.Position{Line: line, Column: col, File: l.filename},
 	}
-}
-
-// position returns the current Position.
-func (l *Lexer) position() token.Position {
-	return token.Position{Line: l.line, Column: l.col, File: l.filename}
 }
 
 // --- Character helpers ---
@@ -167,6 +163,14 @@ func (l *Lexer) advance() byte {
 		l.col++
 	}
 	return ch
+}
+
+// peekRune returns the current UTF-8 rune and its byte size without consuming it.
+func (l *Lexer) peekRune() (rune, int) {
+	if l.atEnd() {
+		return 0, 0
+	}
+	return utf8.DecodeRuneInString(l.source[l.pos:])
 }
 
 // advanceRune consumes a full UTF-8 rune and returns it.
@@ -417,8 +421,12 @@ func (l *Lexer) scanNumber(startLine, startCol int) (token.Token, error) {
 
 func (l *Lexer) scanIdentOrKeyword(startLine, startCol int) (token.Token, error) {
 	start := l.pos
-	for !l.atEnd() && isIdentPart(l.source[l.pos]) {
-		l.advance()
+	for !l.atEnd() {
+		r, _ := l.peekRune()
+		if !isIdentPartRune(r) {
+			break
+		}
+		l.advanceRune()
 	}
 
 	literal := l.source[start:l.pos]
@@ -525,14 +533,6 @@ func (l *Lexer) scanOperatorOrDelimiter(startLine, startCol int) (token.Token, e
 
 func isDigit(ch byte) bool {
 	return ch >= '0' && ch <= '9'
-}
-
-func isIdentStart(ch byte) bool {
-	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_'
-}
-
-func isIdentPart(ch byte) bool {
-	return isIdentStart(ch) || isDigit(ch)
 }
 
 // isIdentStartRune checks if a rune can start an identifier (Unicode-aware).
