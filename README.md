@@ -338,11 +338,11 @@ type MemoryInfo struct {
 | 阶段 | 内容 | 状态 |
 |------|------|------|
 | Phase 0 | 原子操作 SDK（ops-core-sdk） | ✅ 已完成 |
-| Phase 1 | 远程执行通道（SSH + Runner） | 🚧 进行中 |
+| Phase 1 | 远程执行通道（SSH + Runner） | ✅ 已完成 |
 | Phase 2 | 语言前端与解释器（Lexer/Parser/Interpreter） | ✅ 已完成 |
 | Phase 3 | AOT 编译管线 | ✅ 已完成 |
-| Phase 4 | 远程编排与声明式特性 | 🔲 未开始 |
-| Phase 5 | 安全与生产化 | 🔲 未开始 |
+| Phase 4 | 远程编排与声明式特性 | 🚧 进行中（deploy/task/ensure 已完成，分层中继待实现） |
+| Phase 5 | 安全与生产化 | 🚧 进行中（权限/审计/签名/资源限制已完成） |
 
 ## 项目结构
 
