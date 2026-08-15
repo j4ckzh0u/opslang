@@ -1,0 +1,494 @@
+{
+  "task_id": "",
+  "targets": [
+    "host1",
+    "host2",
+    "host3"
+  ],
+  "started_at": "2026-08-15T18:37:30.366787Z",
+  "finished_at": "2026-08-15T18:41:51.71474Z",
+  "status": "success",
+  "results": {
+    "host1": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "cpu_info": [
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          }
+        ],
+        "host_info": {
+          "boot_time": 1784165104,
+          "hostname": "ubuntu2204",
+          "kernel_arch": "x86_64",
+          "kernel_version": "5.15.0-185-generic",
+          "os": "linux",
+          "platform": "ubuntu",
+          "platform_family": "debian",
+          "platform_version": "22.04",
+          "uptime": 2654161
+        },
+        "users": [
+          {
+            "host": "192.168.1.193",
+            "start_time": 1786816822,
+            "terminal": "pts/0",
+            "user": "jackzhou"
+          }
+        ]
+      },
+      "started_at": "2026-08-15T18:37:30.366821Z",
+      "finished_at": "2026-08-15T18:41:04.170453Z"
+    },
+    "host2": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "cpu_info": [
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          }
+        ],
+        "host_info": {
+          "boot_time": 1771920870,
+          "hostname": "master-01",
+          "kernel_arch": "x86_64",
+          "kernel_version": "5.15.0-170-generic",
+          "os": "linux",
+          "platform": "ubuntu",
+          "platform_family": "debian",
+          "platform_version": "22.04",
+          "uptime": 14898342
+        },
+        "users": [
+          {
+            "host": "",
+            "start_time": 1771924975,
+            "terminal": "tty1",
+            "user": "root"
+          },
+          {
+            "host": "tmux(4030501).%7",
+            "start_time": 1777472041,
+            "terminal": "pts/0",
+            "user": "claude"
+          },
+          {
+            "host": "tmux(2444114).%0",
+            "start_time": 1775616280,
+            "terminal": "pts/1",
+            "user": "root"
+          },
+          {
+            "host": "tmux(2444114).%1",
+            "start_time": 1776137128,
+            "terminal": "pts/2",
+            "user": "root"
+          },
+          {
+            "host": "tmux(2444114).%2",
+            "start_time": 1776482209,
+            "terminal": "pts/3",
+            "user": "root"
+          },
+          {
+            "host": "tmux(2444114).%3",
+            "start_time": 1777299195,
+            "terminal": "pts/4",
+            "user": "root"
+          },
+          {
+            "host": "10.8.8.3",
+            "start_time": 1786719243,
+            "terminal": "pts/5",
+            "user": "root"
+          },
+          {
+            "host": "tmux(4030501).%0",
+            "start_time": 1777299467,
+            "terminal": "pts/6",
+            "user": "claude"
+          },
+          {
+            "host": "tmux(4030501).%1",
+            "start_time": 1777300691,
+            "terminal": "pts/7",
+            "user": "claude"
+          },
+          {
+            "host": "tmux(4030501).%6",
+            "start_time": 1777347520,
+            "terminal": "pts/8",
+            "user": "claude"
+          },
+          {
+            "host": "tmux(2444114).%6",
+            "start_time": 1782436341,
+            "terminal": "pts/10",
+            "user": "root"
+          },
+          {
+            "host": "tmux(2444114).%4",
+            "start_time": 1778635147,
+            "terminal": "pts/11",
+            "user": "root"
+          },
+          {
+            "host": "tmux(4030501).%5",
+            "start_time": 1777307276,
+            "terminal": "pts/12",
+            "user": "claude"
+          },
+          {
+            "host": "tmux(2444114).%7",
+            "start_time": 1786528854,
+            "terminal": "pts/13",
+            "user": "root"
+          },
+          {
+            "host": "127.0.0.1",
+            "start_time": 1786719255,
+            "terminal": "pts/14",
+            "user": "root"
+          }
+        ]
+      },
+      "started_at": "2026-08-15T18:37:30.366907Z",
+      "finished_at": "2026-08-15T18:40:09.572332Z"
+    },
+    "host3": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "cpu_info": [
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          },
+          {
+            "cache_size": 512,
+            "cores": 1,
+            "mhz": 1999.999,
+            "model_name": "AMD EPYC 7662 64-Core Processor",
+            "vendor_id": "AuthenticAMD"
+          }
+        ],
+        "host_info": {
+          "boot_time": 1774051057,
+          "hostname": "worker-01",
+          "kernel_arch": "x86_64",
+          "kernel_version": "6.8.0-101-generic",
+          "os": "linux",
+          "platform": "ubuntu",
+          "platform_family": "debian",
+          "platform_version": "22.04",
+          "uptime": 12768255
+        },
+        "users": [
+          {
+            "host": "127.0.0.1",
+            "start_time": 1786719287,
+            "terminal": "pts/1",
+            "user": "openclaw"
+          },
+          {
+            "host": "tmux(41222).%2",
+            "start_time": 1775006164,
+            "terminal": "pts/2",
+            "user": "openclaw"
+          },
+          {
+            "host": "tmux(41222).%0",
+            "start_time": 1773038304,
+            "terminal": "pts/3",
+            "user": "openclaw"
+          },
+          {
+            "host": "tmux(41222).%1",
+            "start_time": 1773039375,
+            "terminal": "pts/4",
+            "user": "openclaw"
+          },
+          {
+            "host": "tmux(41222).%3",
+            "start_time": 1776614916,
+            "terminal": "pts/5",
+            "user": "openclaw"
+          },
+          {
+            "host": "192.168.1.193",
+            "start_time": 1786719274,
+            "terminal": "pts/0",
+            "user": "openclaw"
+          }
+        ]
+      },
+      "started_at": "2026-08-15T18:37:30.366808Z",
+      "finished_at": "2026-08-15T18:41:51.714603Z"
+    }
+  }
+}

@@ -1,0 +1,376 @@
+{
+  "task_id": "",
+  "targets": [
+    "host1",
+    "host2",
+    "host3"
+  ],
+  "started_at": "2026-08-15T18:26:01.054512Z",
+  "finished_at": "2026-08-15T18:30:18.342247Z",
+  "status": "success",
+  "results": {
+    "host1": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "disk": {
+          "free": 36643434496,
+          "path": "/",
+          "total": 104028168192,
+          "used": 62053146624,
+          "used_percent": 62.87
+        },
+        "partitions": [
+          {
+            "device": "/dev/dm-0",
+            "fstype": "ext4",
+            "mountpoint": "/",
+            "opts": "rw,relatime"
+          },
+          {
+            "device": "/dev/sda2",
+            "fstype": "ext4",
+            "mountpoint": "/boot",
+            "opts": "rw,relatime"
+          }
+        ]
+      },
+      "started_at": "2026-08-15T18:26:01.054564Z",
+      "finished_at": "2026-08-15T18:30:18.342048Z"
+    },
+    "host2": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "disk": {
+          "free": 31804456960,
+          "path": "/",
+          "total": 209064443904,
+          "used": 168482209792,
+          "used_percent": 84.12
+        },
+        "partitions": [
+          {
+            "device": "/dev/dm-0",
+            "fstype": "ext4",
+            "mountpoint": "/",
+            "opts": "rw,relatime"
+          },
+          {
+            "device": "/dev/sda2",
+            "fstype": "ext4",
+            "mountpoint": "/boot",
+            "opts": "rw,relatime"
+          }
+        ]
+      },
+      "started_at": "2026-08-15T18:26:01.054636Z",
+      "finished_at": "2026-08-15T18:27:48.706085Z"
+    },
+    "host3": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "disk": {
+          "free": 249483804672,
+          "path": "/",
+          "total": 315393671168,
+          "used": 49814016000,
+          "used_percent": 16.64
+        },
+        "partitions": [
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/",
+            "opts": "rw,relatime"
+          },
+          {
+            "device": "/dev/loop0",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/bare/5",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop3",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/gnome-3-38-2004/99",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop4",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/snap-store/575",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop5",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/gtk-common-themes/1534",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/sda2",
+            "fstype": "vfat",
+            "mountpoint": "/boot/efi",
+            "opts": "rw,relatime"
+          },
+          {
+            "device": "/dev/loop9",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/core22/2339",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop12",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/mesa-2404/1165",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop13",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/gnome-46-2404/153",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop14",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/gtk-common-themes/1535",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop15",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/gnome-3-38-2004/143",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop17",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/gnome-42-2204/247",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop18",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/snap-store/1216",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop6",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/core20/2769",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop23",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/core24/1587",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop24",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/core22/2411",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/b736d2be-6f0f-4e4f-b4fe-a0760697360f/volume-subpaths/ziti-controller-configmap/ziti-controller-init/0",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/b736d2be-6f0f-4e4f-b4fe-a0760697360f/volume-subpaths/ziti-controller-configmap/ziti-controller-init/2",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/b736d2be-6f0f-4e4f-b4fe-a0760697360f/volume-subpaths/ziti-controller-configmap/ziti-controller/1",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/b736d2be-6f0f-4e4f-b4fe-a0760697360f/volume-subpaths/ziti-controller-configmap/ziti-controller/2",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/b736d2be-6f0f-4e4f-b4fe-a0760697360f/volume-subpaths/ziti-controller-configmap/ziti-controller/3",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/b736d2be-6f0f-4e4f-b4fe-a0760697360f/volume-subpaths/ziti-controller-configmap/ziti-controller/10",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/cf867f63-d7c9-41df-a00a-1ddbb6def4f9/volume-subpaths/ziti-router-config/ziti-router/1",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/b54eb04f-b2ea-4a6f-894b-466dac462276/volume-subpaths/bootstrap-frontend/zrok2-bootstrap-frontend/1",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/b54eb04f-b2ea-4a6f-894b-466dac462276/volume-subpaths/ziti-ctrl-plane-cas/zrok2-bootstrap-frontend/2",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/b54eb04f-b2ea-4a6f-894b-466dac462276/volume-subpaths/frontend-config/zrok2-bootstrap-frontend/3",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/89b32143-bfc9-4c0e-a090-9f3dbb39ca20/volume-subpaths/bootstrap-ziti/zrok2-bootstrap/1",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/89b32143-bfc9-4c0e-a090-9f3dbb39ca20/volume-subpaths/ziti-ctrl-plane-cas/zrok2-bootstrap/3",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/db48b8c1-b8cd-4733-813d-97c37cf3a565/volume-subpaths/nginx-conf/frontend/0",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/db48b8c1-b8cd-4733-813d-97c37cf3a565/volume-subpaths/nginx-conf/frontend/1",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/loop29",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/core24/1643",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop19",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/core20/2866",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/ee80cdbc-2aee-4825-ab6f-b79fcc79b6be/volume-subpaths/nginx-conf/frontend/0",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/ee80cdbc-2aee-4825-ab6f-b79fcc79b6be/volume-subpaths/nginx-conf/frontend/1",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/sda3",
+            "fstype": "ext4",
+            "mountpoint": "/var/lib/kubelet/pods/ca9643b3-374e-4c42-bdb6-5e1fb1ff8e53/volume-subpaths/config/dex/0",
+            "opts": "rw,relatime,bind"
+          },
+          {
+            "device": "/dev/loop10",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/snapd-desktop-integration/387",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop16",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/gnome-46-2404/164",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop11",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/gnome-42-2204/263",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop2",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/snapd-desktop-integration/391",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop27",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/cups/1229",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop25",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/snapd/27591",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop28",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/chromium/3499",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop22",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/mesa-2404/1839",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop8",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/firefox/8664",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop20",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/firefox/8754",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop7",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/snapd/27710",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop30",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/chromium/3507",
+            "opts": "ro,nodev,relatime"
+          },
+          {
+            "device": "/dev/loop26",
+            "fstype": "squashfs",
+            "mountpoint": "/snap/cups/1238",
+            "opts": "ro,nodev,relatime"
+          }
+        ]
+      },
+      "started_at": "2026-08-15T18:26:01.054556Z",
+      "finished_at": "2026-08-15T18:29:46.782341Z"
+    }
+  }
+}

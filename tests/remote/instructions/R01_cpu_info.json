@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "task_id": "R01_cpu_info",
+  "dry_run": false,
+  "instructions": [
+    {"op": "sys.cpu.usage", "args": {}, "assign": "cpu"},
+    {"op": "sys.cpu.count", "args": {}, "assign": "cores"},
+    {"op": "report", "args": {"cpu": "cpu", "cores": "cores"}}
+  ]
+}

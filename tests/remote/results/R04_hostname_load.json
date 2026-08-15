@@ -1,0 +1,76 @@
+{
+  "task_id": "",
+  "targets": [
+    "host1",
+    "host2",
+    "host3"
+  ],
+  "started_at": "2026-08-15T18:29:37.692701Z",
+  "finished_at": "2026-08-15T18:31:56.458537Z",
+  "status": "success",
+  "results": {
+    "host1": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "hostname": {
+          "fqdn": "ubuntu2204",
+          "hostname": "ubuntu2204"
+        },
+        "load": {
+          "load1": 0.06,
+          "load15": 0.04,
+          "load5": 0.06
+        },
+        "uptime": {
+          "boot_time": 1784165104,
+          "uptime": 2653615
+        }
+      },
+      "started_at": "2026-08-15T18:29:37.692768Z",
+      "finished_at": "2026-08-15T18:31:56.458424Z"
+    },
+    "host2": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "hostname": {
+          "fqdn": "master-01",
+          "hostname": "master-01"
+        },
+        "load": {
+          "load1": 2.1,
+          "load15": 1.58,
+          "load5": 1.97
+        },
+        "uptime": {
+          "boot_time": 1771920870,
+          "uptime": 14897804
+        }
+      },
+      "started_at": "2026-08-15T18:29:37.692816Z",
+      "finished_at": "2026-08-15T18:31:12.387175Z"
+    },
+    "host3": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "hostname": {
+          "fqdn": "worker-01",
+          "hostname": "worker-01"
+        },
+        "load": {
+          "load1": 0.35,
+          "load15": 0.28,
+          "load5": 0.3
+        },
+        "uptime": {
+          "boot_time": 1774050996,
+          "uptime": 12767708
+        }
+      },
+      "started_at": "2026-08-15T18:29:37.692768Z",
+      "finished_at": "2026-08-15T18:31:44.171308Z"
+    }
+  }
+}

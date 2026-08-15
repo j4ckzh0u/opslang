@@ -1,0 +1,67 @@
+{
+  "task_id": "",
+  "targets": [
+    "host1",
+    "host2",
+    "host3"
+  ],
+  "started_at": "2026-08-15T18:18:21.39133Z",
+  "finished_at": "2026-08-15T18:19:43.029353Z",
+  "status": "success",
+  "results": {
+    "host1": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "cores": {
+          "logical": 16,
+          "physical": 16
+        },
+        "cpu": {
+          "idle": 99.78,
+          "percent": 0.22,
+          "system": 0.06,
+          "user": 0.17
+        }
+      },
+      "started_at": "2026-08-15T18:18:21.391476Z",
+      "finished_at": "2026-08-15T18:19:36.176998Z"
+    },
+    "host2": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "cores": {
+          "logical": 16,
+          "physical": 16
+        },
+        "cpu": {
+          "idle": 98.02,
+          "percent": 1.98,
+          "system": 0.64,
+          "user": 1.33
+        }
+      },
+      "started_at": "2026-08-15T18:18:21.391571Z",
+      "finished_at": "2026-08-15T18:19:27.871436Z"
+    },
+    "host3": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "cores": {
+          "logical": 8,
+          "physical": 8
+        },
+        "cpu": {
+          "idle": 97.91,
+          "percent": 2.09,
+          "system": 1.02,
+          "user": 1.06
+        }
+      },
+      "started_at": "2026-08-15T18:18:21.391434Z",
+      "finished_at": "2026-08-15T18:19:43.029229Z"
+    }
+  }
+}

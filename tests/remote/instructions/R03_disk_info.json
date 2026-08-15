@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "task_id": "R03_disk_info",
+  "dry_run": false,
+  "instructions": [
+    {"op": "sys.disk.usage", "args": {"path": "/"}, "assign": "disk"},
+    {"op": "sys.disk.partitions", "args": {}, "assign": "parts"},
+    {"op": "report", "args": {"disk": "disk", "partitions": "parts"}}
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "version": "1.0",
+  "task_id": "R10_time_ops",
+  "dry_run": false,
+  "instructions": [
+    {"op": "time.now", "args": {}, "assign": "now"},
+    {"op": "report", "args": {"current_time": "now"}}
+  ]
+}

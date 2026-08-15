@@ -1,0 +1,154 @@
+{
+  "task_id": "",
+  "targets": [
+    "host1",
+    "host2",
+    "host3"
+  ],
+  "started_at": "2026-08-15T18:43:47.58794Z",
+  "finished_at": "2026-08-15T18:46:24.773575Z",
+  "status": "success",
+  "results": {
+    "host1": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "cpu": {
+          "idle": 99.78,
+          "percent": 0.22,
+          "system": 0.06,
+          "user": 0.17
+        },
+        "disk": {
+          "free": 36647575552,
+          "path": "/",
+          "total": 104028168192,
+          "used": 62049005568,
+          "used_percent": 62.87
+        },
+        "hostname": {
+          "fqdn": "ubuntu2204",
+          "hostname": "ubuntu2204"
+        },
+        "load": {
+          "load1": 0,
+          "load15": 0,
+          "load5": 0.02
+        },
+        "memory": {
+          "available": 26865635328,
+          "total": 33615056896,
+          "used": 6261960704,
+          "used_percent": 18.63
+        },
+        "timestamp": {
+          "iso8601": "2026-08-15T18:46:26Z",
+          "timezone": "Local",
+          "unix": 1786819586,
+          "unix_nano": 1786819586860063500,
+          "utc": "2026-08-15T18:46:26Z"
+        },
+        "uptime": {
+          "boot_time": 1784165104,
+          "uptime": 2654483
+        }
+      },
+      "started_at": "2026-08-15T18:43:47.58798Z",
+      "finished_at": "2026-08-15T18:46:24.773435Z"
+    },
+    "host2": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "cpu": {
+          "idle": 98.02,
+          "percent": 1.98,
+          "system": 0.64,
+          "user": 1.33
+        },
+        "disk": {
+          "free": 31794847744,
+          "path": "/",
+          "total": 209064443904,
+          "used": 168491819008,
+          "used_percent": 84.13
+        },
+        "hostname": {
+          "fqdn": "master-01",
+          "hostname": "master-01"
+        },
+        "load": {
+          "load1": 1.29,
+          "load15": 1.55,
+          "load5": 1.52
+        },
+        "memory": {
+          "available": 20271460352,
+          "total": 33615044608,
+          "used": 12670513152,
+          "used_percent": 37.69
+        },
+        "timestamp": {
+          "iso8601": "2026-08-15T18:46:09Z",
+          "timezone": "Local",
+          "unix": 1786819569,
+          "unix_nano": 1786819569162754000,
+          "utc": "2026-08-15T18:46:09Z"
+        },
+        "uptime": {
+          "boot_time": 1771920870,
+          "uptime": 14898700
+        }
+      },
+      "started_at": "2026-08-15T18:43:47.588048Z",
+      "finished_at": "2026-08-15T18:46:07.080913Z"
+    },
+    "host3": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "cpu": {
+          "idle": 97.91,
+          "percent": 2.09,
+          "system": 1.02,
+          "user": 1.06
+        },
+        "disk": {
+          "free": 249466834944,
+          "path": "/",
+          "total": 315393671168,
+          "used": 49830985728,
+          "used_percent": 16.65
+        },
+        "hostname": {
+          "fqdn": "worker-01",
+          "hostname": "worker-01"
+        },
+        "load": {
+          "load1": 0.1,
+          "load15": 0.25,
+          "load5": 0.22
+        },
+        "memory": {
+          "available": 26235822080,
+          "total": 33607344128,
+          "used": 6867120128,
+          "used_percent": 20.43
+        },
+        "timestamp": {
+          "iso8601": "2026-08-16T02:46:10+08:00",
+          "timezone": "Local",
+          "unix": 1786819570,
+          "unix_nano": 1786819570024303900,
+          "utc": "2026-08-15T18:46:10Z"
+        },
+        "uptime": {
+          "boot_time": 1774051082,
+          "uptime": 12768488
+        }
+      },
+      "started_at": "2026-08-15T18:43:47.587991Z",
+      "finished_at": "2026-08-15T18:46:10.378672Z"
+    }
+  }
+}

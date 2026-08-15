@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "task_id": "R04_hostname_load",
+  "dry_run": false,
+  "instructions": [
+    {"op": "sys.hostname", "args": {}, "assign": "host"},
+    {"op": "sys.load.avg", "args": {}, "assign": "load"},
+    {"op": "sys.uptime", "args": {}, "assign": "up"},
+    {"op": "report", "args": {"hostname": "host", "load": "load", "uptime": "up"}}
+  ]
+}

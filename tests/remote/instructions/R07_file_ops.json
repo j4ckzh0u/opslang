@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "task_id": "R07_file_ops",
+  "dry_run": false,
+  "instructions": [
+    {"op": "file.write", "args": {"path": "/tmp/opslang_remote_test.txt", "content": "OpsLang remote test - created by opsctl\n"}, "assign": "write_result"},
+    {"op": "file.read", "args": {"path": "/tmp/opslang_remote_test.txt"}, "assign": "read_result"},
+    {"op": "file.exists", "args": {"path": "/tmp/opslang_remote_test.txt"}, "assign": "exists_result"},
+    {"op": "file.checksum", "args": {"path": "/tmp/opslang_remote_test.txt", "algo": "sha256"}, "assign": "checksum_result"},
+    {"op": "file.delete", "args": {"path": "/tmp/opslang_remote_test.txt"}, "assign": "delete_result"},
+    {"op": "report", "args": {"written": "write_result", "read": "read_result", "exists": "exists_result", "checksum": "checksum_result", "deleted": "delete_result"}}
+  ]
+}
