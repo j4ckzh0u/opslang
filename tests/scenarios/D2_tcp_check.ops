@@ -1,0 +1,7 @@
+// D2: TCP port check (localhost)
+let r1 = net.tcp_check("127.0.0.1", 22)
+let r2 = net.tcp_check("127.0.0.1", 1)
+print("=== D2: TCP Check ===")
+print("Port 22 reachable: " + str(r1.reachable) + " latency: " + str(r1.latency_ms) + "ms")
+print("Port 1 reachable: " + str(r2.reachable))
+report { scenario: "D2", status: "ok", ssh_reachable: r1.reachable, ssh_latency: r1.latency_ms }

@@ -1,0 +1,11 @@
+// F2: Monitor memory (3 samples)
+print("=== F2: Memory Monitor ===")
+let total = 0
+for let i = 0; i < 3; i = i + 1 {
+    let m = sys.memory.info()
+    print("  Sample " + str(i+1) + ": " + str(m.used_percent) + "%")
+    total = total + m.used_percent
+}
+let avg = total / 3
+print("Average: " + str(avg) + "%")
+report { scenario: "F2", status: "ok", avg_percent: avg, samples: 3 }

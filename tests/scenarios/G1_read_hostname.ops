@@ -1,0 +1,14 @@
+// G1: Read /etc/hostname (or equivalent)
+print("=== G1: Read Hostname File ===")
+let host = sys.hostname()
+print("Hostname via SDK: " + host.hostname)
+print("FQDN via SDK: " + host.fqdn)
+// Also try reading /etc/hostname if it exists
+let check = file.exists("/etc/hostname")
+if check.exists {
+    let content = file.read("/etc/hostname")
+    print("File content: " + content.content)
+} else {
+    print("/etc/hostname not found (macOS)")
+}
+report { scenario: "G1", status: "ok", hostname: host.hostname, fqdn: host.fqdn }

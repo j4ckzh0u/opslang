@@ -1,0 +1,15 @@
+// B7: File permission check
+let test_dir = "/tmp/opslang-test-B7"
+file.mkdir(test_dir)
+let p = test_dir + "/perms.txt"
+file.write(p, "permission test\n")
+let s = file.stat(p)
+let cs = file.checksum(p, "md5")
+print("=== B7: File Permissions ===")
+print("Mode: " + s.mode)
+print("Size: " + str(s.size))
+print("Name: " + s.name)
+print("MD5: " + cs.checksum)
+file.delete(p)
+process.exec("rmdir", test_dir)
+report { scenario: "B7", status: "ok", mode: s.mode, size: s.size }

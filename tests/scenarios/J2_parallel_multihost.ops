@@ -1,0 +1,12 @@
+// J2: Parallel multi-host command (simulated locally)
+print("=== J2: Parallel Multi-Host ===")
+let hosts = ["host1_sim", "host2_sim", "host3_sim"]
+let results = []
+for let i = 0; i < len(hosts); i = i + 1 {
+    let h = hosts[i]
+    let hostname = sys.hostname()
+    let mem = sys.memory.info()
+    print("  [" + h + "] " + hostname.hostname + " mem=" + str(mem.used_percent) + "%")
+    results = results + [h]
+}
+report { scenario: "J2", status: "ok", hosts_processed: len(results) }

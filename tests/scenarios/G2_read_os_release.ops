@@ -1,0 +1,14 @@
+// G2: Read /etc/os-release (or equivalent)
+print("=== G2: Read OS Release ===")
+let os_info = sys.os()
+print("OS: " + os_info.os)
+print("Platform: " + os_info.platform)
+print("Kernel: " + os_info.kernel_version)
+let check = file.exists("/etc/os-release")
+if check.exists {
+    let content = file.read("/etc/os-release")
+    print("os-release size: " + str(content.size))
+} else {
+    print("/etc/os-release not found (macOS)")
+}
+report { scenario: "G2", status: "ok", os: os_info.os, platform: os_info.platform }

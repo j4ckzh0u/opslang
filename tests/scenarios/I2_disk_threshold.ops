@@ -1,0 +1,11 @@
+// I2: If disk > 80% then alert
+let disk = sys.disk.usage("/")
+print("=== I2: Disk Threshold ===")
+print("Disk: " + str(disk.used_percent) + "%")
+if disk.used_percent > 80 {
+    alert("Disk above 80%!")
+    report { scenario: "I2", status: "alert", disk: disk.used_percent, above_threshold: true }
+} else {
+    print("OK: Disk below 80%")
+    report { scenario: "I2", status: "ok", disk: disk.used_percent, above_threshold: false }
+}

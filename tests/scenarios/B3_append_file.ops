@@ -1,0 +1,15 @@
+// B3: Append file content (using read+write since file.append may not exist)
+let test_dir = "/tmp/opslang-test-B3"
+file.mkdir(test_dir)
+let p = test_dir + "/test3.txt"
+file.write(p, "Line1\n")
+let original = file.read(p)
+let new_content = original.content + "Line2\n"
+let a = file.write(p, new_content)
+let r = file.read(p)
+print("=== B3: Append File ===")
+print("After append: " + r.content)
+print("Final size: " + str(a.size))
+file.delete(p)
+process.exec("rmdir", test_dir)
+report { scenario: "B3", status: "ok", final_size: a.size }

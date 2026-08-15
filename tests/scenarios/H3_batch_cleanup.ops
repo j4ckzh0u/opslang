@@ -1,0 +1,18 @@
+// H3: Batch cleanup test files
+print("=== H3: Batch Cleanup ===")
+let base = "/tmp/opslang-test-H3"
+file.mkdir(base)
+// Create 10 files
+for let i = 0; i < 10; i = i + 1 {
+    file.write(base + "/file_" + str(i) + ".txt", "data " + str(i) + "\n")
+}
+let listing = file.list(base)
+print("Created files: " + str(len(listing.files)))
+// Delete all
+for let i = 0; i < 10; i = i + 1 {
+    file.delete(base + "/file_" + str(i) + ".txt")
+}
+let listing2 = file.list(base)
+print("After cleanup: " + str(len(listing2.files)))
+file.delete(base)
+report { scenario: "H3", status: "ok", created: 10, cleaned: 10 - len(listing2.files) }

@@ -1,0 +1,7 @@
+// C1: List processes
+let ps = process.exec("ps", "-eo", "pid,comm")
+print("=== C1: List Processes ===")
+let lines = ps.stdout
+print("ps output length: " + str(len(lines)))
+print("Exit code: " + str(ps.exit_code))
+report { scenario: "C1", status: "ok", exit_code: ps.exit_code, output_len: len(lines) }

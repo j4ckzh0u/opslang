@@ -1,0 +1,11 @@
+// I1: If memory > 50% then report
+let mem = sys.memory.info()
+print("=== I1: Memory Threshold ===")
+print("Memory: " + str(mem.used_percent) + "%")
+if mem.used_percent > 50 {
+    print("ALERT: Memory above 50%")
+    report { scenario: "I1", status: "alert", memory: mem.used_percent, above_threshold: true }
+} else {
+    print("OK: Memory below 50%")
+    report { scenario: "I1", status: "ok", memory: mem.used_percent, above_threshold: false }
+}

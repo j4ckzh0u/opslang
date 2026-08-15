@@ -1,0 +1,8 @@
+// H1: Batch execute uptime command
+print("=== H1: Batch Uptime ===")
+let hosts = ["local"]
+for let i = 0; i < len(hosts); i = i + 1 {
+    let r = process.exec("uptime")
+    print("  [" + hosts[i] + "] " + r.stdout)
+}
+report { scenario: "H1", status: "ok", hosts_checked: len(hosts) }

@@ -1,0 +1,11 @@
+// A5: Network interface info
+let ifaces = net.interfaces()
+print("=== A5: Network Interfaces ===")
+print("Total interfaces: " + str(len(ifaces)))
+let up_count = 0
+for let i = 0; i < len(ifaces); i = i + 1 {
+    let iface = ifaces[i]
+    if iface.up { up_count = up_count + 1 }
+    print("  " + iface.name + " up=" + str(iface.up) + " mtu=" + str(iface.mtu))
+}
+report { scenario: "A5", status: "ok", total: len(ifaces), up: up_count }

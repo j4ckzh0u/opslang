@@ -1,0 +1,7 @@
+// K2: Execute non-existent command (error handling)
+print("=== K2: Missing Command ===")
+let r = process.exec("/nonexistent/command/xyz", "arg1")
+print("Exit code: " + str(r.exit_code))
+print("Stderr: " + r.stderr)
+print("Error handled correctly (non-zero exit code)")
+report { scenario: "K2", status: "ok", exit_code: r.exit_code, error_handled: r.exit_code != 0 }

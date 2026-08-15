@@ -1,0 +1,10 @@
+// A1: Get CPU information
+let host = sys.hostname()
+let cores = sys.cpu.count()
+let load = sys.load()
+print("=== A1: CPU Info ===")
+print("Host: " + host.hostname)
+print("Logical cores: " + str(cores.logical))
+print("Physical cores: " + str(cores.physical))
+print("Load: " + str(load.load1))
+report { scenario: "A1", status: "ok", logical: cores.logical, physical: cores.physical }

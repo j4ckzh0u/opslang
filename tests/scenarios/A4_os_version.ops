@@ -1,0 +1,7 @@
+// A4: Get OS version
+let os_info = sys.os()
+print("=== A4: OS Info ===")
+print("OS: " + os_info.os)
+print("Platform: " + os_info.platform)
+print("Kernel: " + os_info.kernel_version)
+report { scenario: "A4", status: "ok", os: os_info.os, platform: os_info.platform, kernel: os_info.kernel_version }

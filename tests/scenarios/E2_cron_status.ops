@@ -1,0 +1,7 @@
+// E2: Check cron/launchd service status
+let r1 = process.exec("pgrep", "-c", "cron")
+let r2 = process.exec("pgrep", "-c", "launchd")
+print("=== E2: Cron/Launchd Status ===")
+print("cron found: " + str(r1.exit_code == 0))
+print("launchd found: " + str(r2.exit_code == 0))
+report { scenario: "E2", status: "ok", cron_found: r1.exit_code == 0, launchd_found: r2.exit_code == 0 }

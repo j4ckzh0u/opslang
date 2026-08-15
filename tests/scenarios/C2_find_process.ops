@@ -1,0 +1,18 @@
+// C2: Find specific process using ps
+let r = process.exec("ps", "-eo", "pid,comm")
+print("=== C2: Find Process ===")
+// Count lines to estimate process count
+let count = 0
+if r.exit_code == 0 {
+    print("ps output length: " + str(len(r.stdout)))
+    count = 1
+}
+// Check for launchd specifically
+let r2 = process.exec("pgrep", "-c", "launchd")
+let launchd_count = 0
+if r2.exit_code == 0 {
+    launchd_count = 1
+    print("launchd found: yes")
+}
+print("Process listing: " + str(count == 1))
+report { scenario: "C2", status: "ok", ps_ok: count == 1, launchd_found: launchd_count == 1 }

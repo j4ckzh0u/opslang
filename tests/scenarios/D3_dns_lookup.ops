@@ -1,0 +1,9 @@
+// D3: DNS lookup
+let r = net.dns_lookup("localhost")
+print("=== D3: DNS Lookup ===")
+print("Domain: " + r.domain)
+print("Resolved: " + str(len(r.addresses)))
+if len(r.addresses) > 0 {
+    print("First addr: " + r.addresses[0])
+}
+report { scenario: "D3", status: "ok", domain: r.domain, addrs: len(r.addresses) }

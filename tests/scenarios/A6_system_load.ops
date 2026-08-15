@@ -1,0 +1,9 @@
+// A6: System load
+let load = sys.load()
+let up = sys.uptime()
+print("=== A6: System Load ===")
+print("Load 1m: " + str(load.load1))
+print("Load 5m: " + str(load.load5))
+print("Load 15m: " + str(load.load15))
+print("Uptime (s): " + str(up.uptime))
+report { scenario: "A6", status: "ok", load1: load.load1, load5: load.load5, load15: load.load15, uptime: up.uptime }
