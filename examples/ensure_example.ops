@@ -1,0 +1,19 @@
+// 声明式幂等示例
+// ensure 语法: ensure <条件> { <动作> }
+// 语义: 检查条件 -> 如果为假则执行动作 -> 再次验证条件
+
+let config_path = "/etc/myapp/config.yaml"
+
+// 简化演示（实际环境使用 file.exists() 等函数）
+let file_exists = true
+
+ensure file_exists {
+    print("创建配置文件: " + config_path)
+}
+
+print("配置文件已就绪")
+
+// ensure 的 check -> apply -> verify 语义:
+// 1. CHECK: 评估条件 (file_exists == true)
+// 2. APPLY: 条件为假时执行动作体
+// 3. VERIFY: 重新评估条件，若仍为假则报错

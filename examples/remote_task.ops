@@ -1,0 +1,26 @@
+// 远程任务声明示例
+// task 语法定义要在哪些目标上执行什么操作
+// 当前版本: task 体内代码在本地执行
+// Phase 4 将实现真正的远程执行
+
+task "collect_info" on targets {
+    let hostname = "remote-server"
+    let cpu = 25.0
+    let mem = 4096
+
+    report {
+        host: hostname,
+        cpu: cpu,
+        memory: mem
+    }
+}
+
+task "deploy_config" on targets {
+    let config = "/etc/app/config.yaml"
+    print("部署配置到: " + config)
+
+    report {
+        target: config,
+        status: "deployed"
+    }
+}

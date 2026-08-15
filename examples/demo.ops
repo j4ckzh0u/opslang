@@ -1,0 +1,89 @@
+// 综合演示脚本 - 展示 OpsLang 主要特性
+
+// 1. 变量与数据类型
+let name = "OpsLang"
+let version = "0.1.0"
+let port = 8080
+let pi = 3.14159
+let debug = false
+let tags = ["ops", "devops", "automation"]
+let config = {"host": "localhost", "port": port, "debug": debug}
+
+print("=== 变量与类型 ===")
+print("name: " + name + " (type: " + type(name) + ")")
+print("port: " + str(port) + " (type: " + type(port) + ")")
+print("pi: " + str(pi) + " (type: " + type(pi) + ")")
+print("debug: " + str(debug) + " (type: " + type(debug) + ")")
+print("tags: " + str(tags))
+print("config.host: " + config["host"])
+
+// 2. 函数定义与调用
+fn add(a, b) {
+    return a + b
+}
+
+fn greet(name, prefix = "Hello") {
+    return prefix + ", " + name + "!"
+}
+
+fn max_val(a, b) {
+    if a > b {
+        return a
+    }
+    return b
+}
+
+print("\n=== 函数 ===")
+print("add(3, 4) = " + str(add(3, 4)))
+print(greet("World"))
+print(greet("OpsLang", "Hi"))
+print("max(10, 20) = " + str(max_val(10, 20)))
+
+// 3. 控制流
+print("\n=== 控制流 ===")
+
+let score = 85
+if score >= 90 {
+    print("等级: A")
+} else if score >= 80 {
+    print("等级: B")
+} else {
+    print("等级: C")
+}
+
+// for 循环
+let sum = 0
+for let i = 1; i <= 10; i = i + 1 {
+    sum = sum + i
+}
+print("1+2+...+10 = " + str(sum))
+
+// while 循环
+let count = 5
+print("倒计时: ")
+while count > 0 {
+    print("  " + str(count))
+    count = count - 1
+}
+print("发射!")
+
+// 4. 列表与字典操作
+print("\n=== 集合操作 ===")
+let fruits = ["apple", "banana", "cherry"]
+print("水果数量: " + str(len(fruits)))
+print("第一个: " + fruits[0])
+print("最后一个: " + fruits[len(fruits) - 1])
+
+// 5. 结构化输出
+print("\n=== 结构化输出 ===")
+report {
+    application: name,
+    version: version,
+    config: config,
+    features: ["variables", "functions", "control_flow", "report"],
+    status: "demo_complete"
+}
+
+log("演示脚本执行完成")
+
+metric("demo_score", score, {"level": "B"})
