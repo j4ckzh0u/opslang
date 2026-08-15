@@ -33,7 +33,7 @@ for let i = 0; i < len(net_ifaces); i = i + 1 {
 }
 
 // 计算运行时长（小时）
-let uptime_hours = uptime_info.seconds / 3600.0
+let uptime_hours = uptime_info.uptime / 3600.0
 
 // 结构化报告
 report {

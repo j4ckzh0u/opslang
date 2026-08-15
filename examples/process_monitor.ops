@@ -1,7 +1,7 @@
-// process_monitor.ops - Monitor system resources
-// Demonstrates: sys.*, file.*, time.* with real data
-// Note: process.list()/find_by_name() uses gopsutil which may hang on macOS
-//       So this example uses process.exec() to call ps instead
+// process_monitor.ops - Monitor system resources and process info
+// Demonstrates: sys.*, process.find_by_name() with real data
+// Note: process.list()/find_by_name() and process.exec() may hang on some systems
+//       due to gopsutil or subprocess issues. This example uses sys.* primarily.
 // Usage: opsctl run examples/process_monitor.ops
 
 print("=== System Monitor ===")
@@ -14,39 +14,39 @@ print("Host: " + hostname.hostname)
 print("CPU: " + str(int(cpu.percent)) + "% | Memory: " + str(int(mem.used_percent)) + "%")
 print("")
 
-// System resource summary
+// Resource summary
 print("--- Resource Summary ---")
 let cpu_count = sys.cpu.count()
 print("  CPU cores: " + str(cpu_count.logical) + " logical, " + str(cpu_count.physical) + " physical")
 print("  CPU usage: " + str(int(cpu.percent)) + "%")
+print("    user=" + str(int(cpu.user)) + "% system=" + str(int(cpu.system)) + "% idle=" + str(int(cpu.idle)) + "%")
 print("  Memory used: " + str(int(mem.used_percent)) + "%")
+print("    total=" + str(mem.total / 1024 / 1024) + " MB available=" + str(mem.available / 1024 / 1024) + " MB")
 
 let load = sys.load()
 print("  Load average: " + str(load.load1) + " / " + str(load.load5) + " / " + str(load.load15))
 
 let up = sys.uptime()
-print("  Uptime: " + str(up.seconds) + " seconds")
+print("  Uptime: " + str(up.uptime) + " seconds")
 
-// Use process.exec to call ps for process info (avoids gopsutil hang on macOS)
+// Disk usage
 print("")
-print("--- Top Processes (via ps) ---")
-let ps_result = process.exec("ps", "aux", "-r", "-c", "10")
-if ps_result.exit_code == 0 {
-    print(ps_result.stdout)
-} else {
-    // Fallback: try Linux ps format
-    let ps_linux = process.exec("ps", "aux", "--sort=-pcpu")
-    if ps_linux.exit_code == 0 {
-        print(ps_linux.stdout)
-    } else {
-        print("  Could not list processes (ps not available)")
-    }
-}
-
-// Check disk usage
 print("--- Disk Usage ---")
 let disk_root = sys.disk.usage("/")
-print("  / : " + str(int(disk_root.used_percent)) + "% used")
+print("  / : " + str(int(disk_root.used_percent)) + "% used (" + str(disk_root.free / 1024 / 1024) + " MB free)")
+
+// Network interfaces
+print("")
+print("--- Network Interfaces ---")
+let ifaces = sys.net.interfaces()
+let up_count = 0
+for let i = 0; i < len(ifaces); i = i + 1 {
+    let iface = ifaces[i]
+    if iface.flags != "" {
+        up_count = up_count + 1
+    }
+}
+print("  Total: " + str(len(ifaces)) + " interfaces, " + str(up_count) + " active")
 
 // Alert on high resource usage
 if cpu.percent > 90 {
@@ -55,15 +55,28 @@ if cpu.percent > 90 {
 if mem.used_percent > 90 {
     alert("Memory usage is critical: " + str(int(mem.used_percent)) + "%")
 }
+if disk_root.used_percent > 90 {
+    alert("Disk usage is critical: " + str(int(disk_root.used_percent)) + "%")
+}
 
 report {
     host: hostname.hostname,
     cpu_percent: cpu.percent,
+    cpu_user: cpu.user,
+    cpu_system: cpu.system,
+    cpu_idle: cpu.idle,
+    cpu_logical: cpu_count.logical,
+    cpu_physical: cpu_count.physical,
     memory_percent: mem.used_percent,
+    memory_total_mb: mem.total / 1024 / 1024,
+    memory_available_mb: mem.available / 1024 / 1024,
     load1: load.load1,
     load5: load.load5,
     load15: load.load15,
-    disk_percent: disk_root.used_percent
+    disk_percent: disk_root.used_percent,
+    disk_free_mb: disk_root.free / 1024 / 1024,
+    uptime_seconds: up.uptime,
+    network_interfaces: len(ifaces)
 }
 
 log("System monitoring completed")
