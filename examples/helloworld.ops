@@ -1,0 +1,12 @@
+// Hello World - OpsLang 入门示例
+let name = "OpsLang"
+let version = "0.1.0"
+
+print("Hello, " + name + " v" + version)
+
+// 使用 report 输出结构化数据
+report {
+    lang: name,
+    ver: version,
+    status: "ready"
+}

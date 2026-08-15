@@ -1,0 +1,33 @@
+// 服务健康检查脚本
+fn check_service(name, port) {
+    // 模拟检查（实际环境用 net.TCPConnect）
+    let result = {"name": name, "port": port, "status": "running"}
+    return result
+}
+
+let services = [
+    {"name": "nginx", "port": 80},
+    {"name": "mysql", "port": 3306},
+    {"name": "redis", "port": 6379}
+]
+
+let total = len(services)
+let healthy = 0
+
+for let i = 0; i < total; i = i + 1 {
+    let svc = services[i]
+    let result = check_service(svc["name"], svc["port"])
+    print("检查 " + svc["name"] + ":" + str(svc["port"]) + " -> " + result["status"])
+    healthy = healthy + 1
+}
+
+report {
+    total_services: total,
+    healthy: healthy,
+    unhealthy: total - healthy,
+    timestamp: "2026-08-15T10:00:00Z"
+}
+
+if healthy < total {
+    alert("有服务不健康！")
+}

@@ -1,0 +1,20 @@
+// 批量文件操作示例
+let files = ["/tmp/a.txt", "/tmp/b.txt", "/tmp/c.txt"]
+let count = len(files)
+
+print("准备处理 " + str(count) + " 个文件")
+
+for let i = 0; i < count; i = i + 1 {
+    let path = files[i]
+    print("处理文件: " + path)
+    // 实际环境: file.write(path, "content")
+    // 实际环境: let checksum = file.checksum(path, "sha256")
+}
+
+print("所有文件处理完成")
+
+report {
+    total: count,
+    operation: "batch_process",
+    status: "completed"
+}

@@ -1,0 +1,31 @@
+// 系统信息采集脚本
+// 演示变量、函数、条件判断、循环和结构化输出
+
+let hostname = "server-01"
+
+// 模拟 CPU/内存数据（实际环境调用 sys.cpu.usage() 等）
+let cpu_percent = 45.2
+let mem_total = 16384
+let mem_used = 8192
+let mem_percent = 50.0
+
+// 条件告警
+if cpu_percent > 80 {
+    alert("CPU 使用率过高: " + str(cpu_percent) + "%")
+}
+
+if mem_percent > 90 {
+    alert("内存使用率过高: " + str(mem_percent) + "%")
+}
+
+// 结构化报告
+report {
+    host: hostname,
+    cpu: cpu_percent,
+    mem_total: mem_total,
+    mem_used: mem_used,
+    mem_percent: mem_percent,
+    status: "ok"
+}
+
+log("系统信息采集完成")

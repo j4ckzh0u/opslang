@@ -1,0 +1,37 @@
+// 函数特性演示
+
+// 基本函数
+fn add(a, b) {
+    return a + b
+}
+
+// 默认参数
+fn greet(name, prefix = "Hello") {
+    return prefix + ", " + name + "!"
+}
+
+// 递归函数
+fn factorial(n) {
+    if n <= 1 {
+        return 1
+    }
+    return n * factorial(n - 1)
+}
+
+// 使用
+print(add(3, 4))
+print(greet("OpsLang"))
+print(greet("World", "Hi"))
+print(factorial(5))
+
+// 列表操作
+fn sum_list(items) {
+    let total = 0
+    for let i = 0; i < len(items); i = i + 1 {
+        total = total + items[i]
+    }
+    return total
+}
+
+let numbers = [1, 2, 3, 4, 5]
+print("Sum: " + str(sum_list(numbers)))
