@@ -335,6 +335,7 @@ func parseTarget(s, defaultUser string) Target {
 	t := Target{
 		Port: 22,
 		User: defaultUser,
+		Name: s, // Preserve original input as the target name.
 	}
 
 	// Extract user if present.
@@ -354,7 +355,6 @@ func parseTarget(s, defaultUser string) Target {
 	}
 
 	t.Host = s
-	t.Name = s
 	return t
 }
 
