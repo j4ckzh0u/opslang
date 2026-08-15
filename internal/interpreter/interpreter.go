@@ -200,6 +200,36 @@ func (interp *Interpreter) registerDefaults() {
 		}
 		return typeName(args[0]), nil
 	}
+
+	interp.builtins["log"] = func(args ...interface{}) (interface{}, error) {
+		parts := make([]string, len(args))
+		for i, a := range args {
+			parts[i] = formatValue(a)
+		}
+		interp.output = append(interp.output, OutputEntry{
+			Type: "log",
+			Data: strings.Join(parts, " "),
+		})
+		return nil, nil
+	}
+
+	interp.builtins["metric"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("metric() requires at least 2 arguments (name, value)")
+		}
+		entry := map[string]interface{}{
+			"name":  formatValue(args[0]),
+			"value": formatValue(args[1]),
+		}
+		if len(args) >= 3 {
+			entry["labels"] = args[2]
+		}
+		interp.output = append(interp.output, OutputEntry{
+			Type: "metric",
+			Data: entry,
+		})
+		return nil, nil
+	}
 }
 
 // Execute runs a program and returns the result.
@@ -255,6 +285,12 @@ func (interp *Interpreter) execStatement(stmt ast.Statement, env *Environment) (
 		return interp.execReport(s, env)
 	case *ast.AlertStatement:
 		return interp.execAlert(s, env)
+	case *ast.EnsureStatement:
+		return interp.execEnsure(s, env)
+	case *ast.MetricStatement:
+		return interp.execMetric(s, env)
+	case *ast.LogStatement:
+		return interp.execLog(s, env)
 	case *ast.BlockStatement:
 		blockEnv := newEnv(env)
 		return interp.execBlock(s, blockEnv)
@@ -472,6 +508,82 @@ func (interp *Interpreter) execAlert(s *ast.AlertStatement, env *Environment) (i
 		return nil, err
 	}
 	interp.output = append(interp.output, OutputEntry{Type: "alert", Data: formatValue(msg)})
+	return nil, nil
+}
+
+func (interp *Interpreter) execEnsure(s *ast.EnsureStatement, env *Environment) (interface{}, error) {
+	// Step 1: CHECK - evaluate the condition
+	cond, err := interp.evalExpression(s.Condition, env)
+	if err != nil {
+		return nil, err
+	}
+
+	// If condition is true, nothing to do (state is already desired)
+	if isTruthy(cond) {
+		return nil, nil
+	}
+
+	// Step 2: APPLY - execute the body to reach desired state
+	blockEnv := newEnv(env)
+	_, err = interp.execBlock(s.Body, blockEnv)
+	if err != nil {
+		return nil, err
+	}
+
+	// Step 3: VERIFY - re-check the condition
+	cond2, err := interp.evalExpression(s.Condition, env)
+	if err != nil {
+		return nil, err
+	}
+	if !isTruthy(cond2) {
+		return nil, &RuntimeError{
+			Pos: s.Pos(),
+			Msg: "ensure: condition still false after applying actions",
+		}
+	}
+
+	return nil, nil
+}
+
+func (interp *Interpreter) execMetric(s *ast.MetricStatement, env *Environment) (interface{}, error) {
+	name, err := interp.evalExpression(s.Name, env)
+	if err != nil {
+		return nil, err
+	}
+	value, err := interp.evalExpression(s.Value, env)
+	if err != nil {
+		return nil, err
+	}
+
+	entry := map[string]interface{}{
+		"name":  formatValue(name),
+		"value": formatValue(value),
+	}
+
+	if s.Labels != nil {
+		labels, err := interp.evalExpression(s.Labels, env)
+		if err != nil {
+			return nil, err
+		}
+		entry["labels"] = labels
+	}
+
+	interp.output = append(interp.output, OutputEntry{
+		Type: "metric",
+		Data: entry,
+	})
+	return nil, nil
+}
+
+func (interp *Interpreter) execLog(s *ast.LogStatement, env *Environment) (interface{}, error) {
+	msg, err := interp.evalExpression(s.Message, env)
+	if err != nil {
+		return nil, err
+	}
+	interp.output = append(interp.output, OutputEntry{
+		Type: "log",
+		Data: formatValue(msg),
+	})
 	return nil, nil
 }
 

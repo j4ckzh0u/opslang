@@ -177,6 +177,8 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 		stmt, err = p.parseReportStatement()
 	case token.ALERT:
 		stmt, err = p.parseAlertStatement()
+	case token.ENSURE:
+		stmt, err = p.parseEnsureStatement()
 	default:
 		// Expression statement, possibly an assignment.
 		stmt, err = p.parseExpressionOrAssignStatement()
@@ -617,6 +619,45 @@ func (p *Parser) parseAlertStatement() (*ast.AlertStatement, error) {
 		Position: astPos(pos),
 		Message:  msg,
 	}, nil
+}
+
+// --- Ensure ----------------------------------------------------------------
+
+func (p *Parser) parseEnsureStatement() (*ast.EnsureStatement, error) {
+	pos := p.current().Pos
+	p.advance() // consume 'ensure'
+	p.skipNewlines()
+
+	cond, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipNewlines()
+	body, err := p.parseBlockStatement()
+	if err != nil {
+		return nil, err
+	}
+
+	stmt := &ast.EnsureStatement{
+		Position:  astPos(pos),
+		Condition: cond,
+		Body:      body,
+	}
+
+	// Optional notify clause: check for an IDENT "notify" after the block
+	p.skipNewlines()
+	if p.current().Type == token.IDENT && p.current().Literal == "notify" {
+		p.advance() // consume 'notify'
+		p.skipNewlines()
+		notifyExpr, err := p.parseExpression()
+		if err != nil {
+			return nil, err
+		}
+		stmt.Notify = notifyExpr
+	}
+
+	return stmt, nil
 }
 
 // --- Expression / Assignment statement ------------------------------------

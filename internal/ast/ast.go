@@ -235,6 +235,54 @@ func (s *AlertStatement) String() string {
 	return fmt.Sprintf("alert(%s)", s.Message)
 }
 
+// EnsureStatement represents: ensure <condition> { <Body> }
+// Implements check → apply → verify semantics.
+type EnsureStatement struct {
+	Position  Position
+	Condition Expression       // the condition to ensure
+	Body      *BlockStatement  // actions to take if condition is false
+	Notify    Expression       // optional notification expression (nil if not set)
+}
+
+func (s *EnsureStatement) Pos() Position    { return s.Position }
+func (s *EnsureStatement) statementNode()   {}
+func (s *EnsureStatement) String() string {
+	out := fmt.Sprintf("ensure %s { ... }", s.Condition)
+	if s.Notify != nil {
+		out += " notify " + s.Notify.String()
+	}
+	return out
+}
+
+// MetricStatement represents: metric(name, value, labels)
+type MetricStatement struct {
+	Position Position
+	Name     Expression
+	Value    Expression
+	Labels   Expression // dict expression or nil
+}
+
+func (s *MetricStatement) Pos() Position    { return s.Position }
+func (s *MetricStatement) statementNode()   {}
+func (s *MetricStatement) String() string {
+	if s.Labels != nil {
+		return fmt.Sprintf("metric(%s, %s, %s)", s.Name, s.Value, s.Labels)
+	}
+	return fmt.Sprintf("metric(%s, %s)", s.Name, s.Value)
+}
+
+// LogStatement represents: log(msg)
+type LogStatement struct {
+	Position Position
+	Message  Expression
+}
+
+func (s *LogStatement) Pos() Position    { return s.Position }
+func (s *LogStatement) statementNode()   {}
+func (s *LogStatement) String() string {
+	return fmt.Sprintf("log(%s)", s.Message)
+}
+
 // BlockStatement is a sequence of statements enclosed in braces.
 type BlockStatement struct {
 	Position   Position

@@ -29,6 +29,7 @@ func TestTokenTypeString(t *testing.T) {
 		{IMPORT, "IMPORT"},
 		{REPORT, "REPORT"},
 		{ALERT, "ALERT"},
+		{ENSURE, "ENSURE"},
 		{PLUS, "PLUS"},
 		{MINUS, "MINUS"},
 		{STAR, "STAR"},
@@ -110,6 +111,7 @@ func TestLookupKeyword(t *testing.T) {
 		{"nil", NIL},
 		{"report", REPORT},
 		{"alert", ALERT},
+		{"ensure", ENSURE},
 		{"foo", IDENT},
 		{"x", IDENT},
 		{"unknown", IDENT},
@@ -128,7 +130,7 @@ func TestLookupKeyword(t *testing.T) {
 
 func TestIsKeyword(t *testing.T) {
 	keywords := []string{"let", "fn", "if", "else", "for", "while", "return",
-		"task", "on", "import", "true", "false", "nil", "report", "alert"}
+		"task", "on", "import", "true", "false", "nil", "report", "alert", "ensure"}
 	for _, kw := range keywords {
 		t.Run(kw, func(t *testing.T) {
 			if !IsKeyword(kw) {

@@ -1021,3 +1021,235 @@ func TestExpressionStatement(t *testing.T) {
 		t.Errorf("expected no variables, got %v", r.Variables)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// EnsureStatement
+// ---------------------------------------------------------------------------
+
+func TestEnsureConditionTrue(t *testing.T) {
+	// Condition is true => body should NOT execute
+	p := prog(
+		let("x", intLit(10)),
+		&ast.EnsureStatement{
+			Position:  pos(),
+			Condition: binOp(ident("x"), ">", intLit(5)),
+			Body: block(
+				assign(ident("x"), intLit(999)),
+			),
+		},
+	)
+	r, err := newInterp().Execute(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// x should still be 10, body should not have run
+	if r.Variables["x"] != int64(10) {
+		t.Errorf("x = %v, want 10 (condition was true, body should not run)", r.Variables["x"])
+	}
+}
+
+func TestEnsureConditionFalseApplySuccess(t *testing.T) {
+	// Condition is false initially, body fixes it, re-check passes
+	p := prog(
+		let("x", intLit(0)),
+		&ast.EnsureStatement{
+			Position:  pos(),
+			Condition: binOp(ident("x"), ">", intLit(0)),
+			Body: block(
+				assign(ident("x"), intLit(5)),
+			),
+		},
+	)
+	r, err := newInterp().Execute(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// x should be 5 now (body set it)
+	if r.Variables["x"] != int64(5) {
+		t.Errorf("x = %v, want 5", r.Variables["x"])
+	}
+}
+
+func TestEnsureConditionFalseApplyFail(t *testing.T) {
+	// Condition is false, body does NOT fix it => error
+	p := prog(
+		let("x", intLit(0)),
+		&ast.EnsureStatement{
+			Position:  pos(),
+			Condition: binOp(ident("x"), ">", intLit(0)),
+			Body: block(
+				// body does nothing useful
+				assign(ident("x"), intLit(0)),
+			),
+		},
+	)
+	_, err := newInterp().Execute(p)
+	if err == nil {
+		t.Fatal("expected error when ensure condition still false after apply")
+	}
+	re, ok := err.(*RuntimeError)
+	if !ok {
+		t.Fatalf("expected RuntimeError, got %T: %v", err, err)
+	}
+	if !strings.Contains(re.Msg, "ensure") {
+		t.Errorf("error msg = %q, want it to mention 'ensure'", re.Msg)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// log() builtin
+// ---------------------------------------------------------------------------
+
+func TestBuiltinLog(t *testing.T) {
+	p := prog(exprStmt(call(ident("log"), strLit("server started"))))
+	r, err := newInterp().Execute(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.Output) != 1 {
+		t.Fatalf("expected 1 output entry, got %d", len(r.Output))
+	}
+	if r.Output[0].Type != "log" {
+		t.Errorf("type = %s, want log", r.Output[0].Type)
+	}
+	if r.Output[0].Data != "server started" {
+		t.Errorf("data = %v, want 'server started'", r.Output[0].Data)
+	}
+}
+
+func TestBuiltinLogMultipleArgs(t *testing.T) {
+	p := prog(exprStmt(call(ident("log"), strLit("count:"), intLit(42))))
+	r, err := newInterp().Execute(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.Output) != 1 {
+		t.Fatalf("expected 1 output entry, got %d", len(r.Output))
+	}
+	if r.Output[0].Data != "count: 42" {
+		t.Errorf("data = %v, want 'count: 42'", r.Output[0].Data)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// metric() builtin
+// ---------------------------------------------------------------------------
+
+func TestBuiltinMetric(t *testing.T) {
+	p := prog(exprStmt(call(ident("metric"), strLit("cpu_usage"), floatLit(42.5))))
+	r, err := newInterp().Execute(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.Output) != 1 {
+		t.Fatalf("expected 1 output entry, got %d", len(r.Output))
+	}
+	if r.Output[0].Type != "metric" {
+		t.Errorf("type = %s, want metric", r.Output[0].Type)
+	}
+	data, ok := r.Output[0].Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("data is not a map: %T", r.Output[0].Data)
+	}
+	if data["name"] != "cpu_usage" {
+		t.Errorf("name = %v, want cpu_usage", data["name"])
+	}
+	if data["value"] != "42.5" {
+		t.Errorf("value = %v, want 42.5", data["value"])
+	}
+	if _, hasLabels := data["labels"]; hasLabels {
+		t.Errorf("should not have labels key when no labels arg")
+	}
+}
+
+func TestBuiltinMetricWithLabels(t *testing.T) {
+	labels := &ast.DictLiteral{
+		Position: pos(),
+		Keys:     []ast.Expression{strLit("host")},
+		Values:   []ast.Expression{strLit("server1")},
+	}
+	p := prog(exprStmt(call(ident("metric"), strLit("mem_used"), intLit(1024), labels)))
+	r, err := newInterp().Execute(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := r.Output[0].Data.(map[string]interface{})
+	if data["name"] != "mem_used" {
+		t.Errorf("name = %v, want mem_used", data["name"])
+	}
+	if data["value"] != "1024" {
+		t.Errorf("value = %v, want 1024", data["value"])
+	}
+	lbls, ok := data["labels"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("labels is not a map: %T", data["labels"])
+	}
+	if lbls["host"] != "server1" {
+		t.Errorf("labels.host = %v, want server1", lbls["host"])
+	}
+}
+
+func TestBuiltinMetricTooFewArgs(t *testing.T) {
+	p := prog(exprStmt(call(ident("metric"), strLit("only_name"))))
+	_, err := newInterp().Execute(p)
+	if err == nil {
+		t.Fatal("expected error for metric() with too few args")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// LogStatement (AST-direct execution)
+// ---------------------------------------------------------------------------
+
+func TestLogStatement(t *testing.T) {
+	p := prog(
+		&ast.LogStatement{
+			Position: pos(),
+			Message:  strLit("something happened"),
+		},
+	)
+	r, err := newInterp().Execute(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.Output) != 1 {
+		t.Fatalf("expected 1 output entry, got %d", len(r.Output))
+	}
+	if r.Output[0].Type != "log" {
+		t.Errorf("type = %s, want log", r.Output[0].Type)
+	}
+	if r.Output[0].Data != "something happened" {
+		t.Errorf("data = %v, want 'something happened'", r.Output[0].Data)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// MetricStatement (AST-direct execution)
+// ---------------------------------------------------------------------------
+
+func TestMetricStatement(t *testing.T) {
+	p := prog(
+		&ast.MetricStatement{
+			Position: pos(),
+			Name:     strLit("requests"),
+			Value:    intLit(100),
+		},
+	)
+	r, err := newInterp().Execute(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.Output) != 1 {
+		t.Fatalf("expected 1 output entry, got %d", len(r.Output))
+	}
+	if r.Output[0].Type != "metric" {
+		t.Errorf("type = %s, want metric", r.Output[0].Type)
+	}
+	data := r.Output[0].Data.(map[string]interface{})
+	if data["name"] != "requests" {
+		t.Errorf("name = %v, want requests", data["name"])
+	}
+	if data["value"] != "100" {
+		t.Errorf("value = %v, want 100", data["value"])
+	}
+}

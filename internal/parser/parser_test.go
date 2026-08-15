@@ -752,3 +752,97 @@ report {
 		t.Errorf("want 5 statements, got %d", len(prog.Statements))
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Ensure statement
+// ---------------------------------------------------------------------------
+
+func TestEnsureStatement(t *testing.T) {
+	src := `ensure x > 0 { x = 1 }`
+	prog := mustParse(t, src)
+	if len(prog.Statements) != 1 {
+		t.Fatalf("want 1 statement, got %d", len(prog.Statements))
+	}
+	ens, ok := prog.Statements[0].(*ast.EnsureStatement)
+	if !ok {
+		t.Fatalf("expected *ast.EnsureStatement, got %T", prog.Statements[0])
+	}
+	if ens.Condition.String() != "(x > 0)" {
+		t.Errorf("condition = %q, want (x > 0)", ens.Condition.String())
+	}
+	if len(ens.Body.Statements) != 1 {
+		t.Fatalf("want 1 body stmt, got %d", len(ens.Body.Statements))
+	}
+	if ens.Notify != nil {
+		t.Errorf("expected nil Notify, got %v", ens.Notify)
+	}
+}
+
+func TestEnsureStatementWithNotify(t *testing.T) {
+	src := `ensure running { start() }
+notify "restart needed"`
+	prog := mustParse(t, src)
+	if len(prog.Statements) != 1 {
+		t.Fatalf("want 1 statement, got %d", len(prog.Statements))
+	}
+	ens, ok := prog.Statements[0].(*ast.EnsureStatement)
+	if !ok {
+		t.Fatalf("expected *ast.EnsureStatement, got %T", prog.Statements[0])
+	}
+	if ens.Notify == nil {
+		t.Fatal("expected non-nil Notify")
+	}
+	if ens.Notify.String() != `"restart needed"` {
+		t.Errorf("notify = %s, want \"restart needed\"", ens.Notify.String())
+	}
+}
+
+func TestEnsureStatementString(t *testing.T) {
+	src := `ensure ok { fix() }`
+	prog := mustParse(t, src)
+	ens := prog.Statements[0].(*ast.EnsureStatement)
+	got := ens.String()
+	want := "ensure ok { ... }"
+	if got != want {
+		t.Errorf("String() = %q, want %q", got, want)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// log() and metric() as call expressions (parsed normally)
+// ---------------------------------------------------------------------------
+
+func TestLogCallParsed(t *testing.T) {
+	src := `log("hello world")`
+	prog := mustParse(t, src)
+	if len(prog.Statements) != 1 {
+		t.Fatalf("want 1 statement, got %d", len(prog.Statements))
+	}
+	exprStmt, ok := prog.Statements[0].(*ast.ExpressionStatement)
+	if !ok {
+		t.Fatalf("expected *ast.ExpressionStatement, got %T", prog.Statements[0])
+	}
+	call, ok := exprStmt.Expr.(*ast.CallExpression)
+	if !ok {
+		t.Fatalf("expected *ast.CallExpression, got %T", exprStmt.Expr)
+	}
+	if call.Function.String() != "log" {
+		t.Errorf("function = %s, want log", call.Function)
+	}
+	if len(call.Args) != 1 || call.Args[0].String() != `"hello world"` {
+		t.Errorf("args = %v, want [\"hello world\"]", call.Args)
+	}
+}
+
+func TestMetricCallParsed(t *testing.T) {
+	src := `metric("cpu_usage", 42.5)`
+	prog := mustParse(t, src)
+	exprStmt := prog.Statements[0].(*ast.ExpressionStatement)
+	call := exprStmt.Expr.(*ast.CallExpression)
+	if call.Function.String() != "metric" {
+		t.Errorf("function = %s, want metric", call.Function)
+	}
+	if len(call.Args) != 2 {
+		t.Fatalf("want 2 args, got %d", len(call.Args))
+	}
+}
