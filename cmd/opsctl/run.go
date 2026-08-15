@@ -54,6 +54,7 @@ func runRunCommand(scriptPath string) error {
 
 	// Interpret.
 	interp := interpreter.New(nil)
+	interpreter.RegisterSDKBuiltins(interp)
 	result, err := interp.Execute(prog)
 	if err != nil {
 		return fmt.Errorf("runtime error: %w", err)

@@ -40,9 +40,12 @@ func runREPL() error {
 	}()
 
 	interp := interpreter.New(nil)
+	interpreter.RegisterSDKBuiltins(interp)
 
 	fmt.Println("OpsLang REPL v0.1.0")
 	fmt.Println("Type OpsLang expressions. Ctrl+D to exit, Ctrl+C to cancel line.")
+	fmt.Println()
+	fmt.Println("SDK builtins loaded: sys.*, file.*, net.*, process.*, service.*, pkg.*, time.*, json.*, yaml.*")
 	fmt.Println()
 
 	reader := bufio.NewReader(os.Stdin)

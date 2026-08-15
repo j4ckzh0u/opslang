@@ -1,0 +1,53 @@
+# SDK Bridge Test Script
+# This script demonstrates the ops-core-sdk functions available in the interpreter
+
+print("=== OpsLang SDK Bridge Test ===\n")
+
+# System Information
+print("--- System Information ---")
+let hostname = sys.hostname()
+print("Hostname:", hostname.hostname)
+print("FQDN:", hostname.fqdn)
+
+let cpu = sys.cpu.usage()
+print("CPU Usage:", cpu.percent, "%")
+
+let mem = sys.memory.info()
+print("Memory Used:", mem.used_percent, "%")
+
+let disk = sys.disk.usage("/")
+print("Disk Usage /:", disk.used_percent, "%")
+
+let load = sys.load()
+print("Load Average:", load.load1, load.load5, load.load15)
+
+let up = sys.uptime()
+print("Uptime (seconds):", up.uptime)
+
+# File Operations
+print("\n--- File Operations ---")
+let exists = file.exists("/tmp")
+print("/tmp exists:", exists.exists)
+print("Is directory:", exists.is_dir)
+
+let stat = file.stat("/tmp")
+print("Name:", stat.name)
+print("Mode:", stat.mode)
+
+# Time Operations
+print("\n--- Time Operations ---")
+let now = time.now()
+print("Current time (ISO):", now.iso8601)
+print("Unix timestamp:", now.unix)
+
+# Process Operations
+print("\n--- Process Operations ---")
+let procs = process.list()
+print("Total processes:", len(procs))
+
+# Network Operations (commented out to avoid external dependencies)
+# print("\n--- Network Operations ---")
+# let dns = net.dns_lookup("example.com")
+# print("DNS lookup:", dns)
+
+print("\n=== Test Complete ===")
