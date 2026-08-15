@@ -206,7 +206,7 @@ if file.exists(path) {
 
 // 计算校验和
 let checksum = file.checksum(path, "sha256")
-print("SHA256: " + checksum.hash)
+print("SHA256: " + checksum.checksum)
 
 // 删除文件
 file.delete(path)
