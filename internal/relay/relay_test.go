@@ -1233,9 +1233,9 @@ func TestParseTargets(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := parseTargets(tt.args)
+			got := parseDistributeTargets(tt.args)
 			if len(got) != tt.wantLen {
-				t.Fatalf("parseTargets returned %d targets, want %d", len(got), tt.wantLen)
+				t.Fatalf("parseDistributeTargets returned %d targets, want %d", len(got), tt.wantLen)
 			}
 			for i, w := range tt.want {
 				if i >= len(got) {
@@ -1250,8 +1250,8 @@ func TestParseTargets(t *testing.T) {
 				if got[i].User != w.User {
 					t.Errorf("target[%d].User = %q, want %q", i, got[i].User, w.User)
 				}
-				if got[i].DestPath != w.DestPath {
-					t.Errorf("target[%d].DestPath = %q, want %q", i, got[i].DestPath, w.DestPath)
+				if got[i].Dest != w.DestPath {
+					t.Errorf("target[%d].Dest = %q, want %q", i, got[i].Dest, w.DestPath)
 				}
 			}
 		})

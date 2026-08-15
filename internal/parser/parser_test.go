@@ -818,31 +818,29 @@ func TestLogCallParsed(t *testing.T) {
 	if len(prog.Statements) != 1 {
 		t.Fatalf("want 1 statement, got %d", len(prog.Statements))
 	}
-	exprStmt, ok := prog.Statements[0].(*ast.ExpressionStatement)
+	logStmt, ok := prog.Statements[0].(*ast.LogStatement)
 	if !ok {
-		t.Fatalf("expected *ast.ExpressionStatement, got %T", prog.Statements[0])
+		t.Fatalf("expected *ast.LogStatement, got %T", prog.Statements[0])
 	}
-	call, ok := exprStmt.Expr.(*ast.CallExpression)
-	if !ok {
-		t.Fatalf("expected *ast.CallExpression, got %T", exprStmt.Expr)
-	}
-	if call.Function.String() != "log" {
-		t.Errorf("function = %s, want log", call.Function)
-	}
-	if len(call.Args) != 1 || call.Args[0].String() != `"hello world"` {
-		t.Errorf("args = %v, want [\"hello world\"]", call.Args)
+	if logStmt.Message.String() != `"hello world"` {
+		t.Errorf("message = %s, want \"hello world\"", logStmt.Message)
 	}
 }
 
 func TestMetricCallParsed(t *testing.T) {
 	src := `metric("cpu_usage", 42.5)`
 	prog := mustParse(t, src)
-	exprStmt := prog.Statements[0].(*ast.ExpressionStatement)
-	call := exprStmt.Expr.(*ast.CallExpression)
-	if call.Function.String() != "metric" {
-		t.Errorf("function = %s, want metric", call.Function)
+	metricStmt, ok := prog.Statements[0].(*ast.MetricStatement)
+	if !ok {
+		t.Fatalf("expected *ast.MetricStatement, got %T", prog.Statements[0])
 	}
-	if len(call.Args) != 2 {
-		t.Fatalf("want 2 args, got %d", len(call.Args))
+	if metricStmt.Name.String() != `"cpu_usage"` {
+		t.Errorf("name = %s, want \"cpu_usage\"", metricStmt.Name)
+	}
+	if metricStmt.Value.String() != "42.5" {
+		t.Errorf("value = %s, want 42.5", metricStmt.Value)
+	}
+	if metricStmt.Labels != nil {
+		t.Errorf("labels = %s, want nil", metricStmt.Labels)
 	}
 }

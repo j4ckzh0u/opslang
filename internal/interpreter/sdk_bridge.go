@@ -305,6 +305,130 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return structToMap(r)
 	}
 
+	interp.builtins["file.distribute"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("file.distribute() requires at least 2 arguments (source, targets)")
+		}
+		source, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.distribute(): source must be string")
+		}
+		targetsRaw, ok := args[1].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("file.distribute(): targets must be a list")
+		}
+		var targets []sdkfile.DistributeTarget
+		for i, item := range targetsRaw {
+			m, ok := item.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("file.distribute(): target %d must be a dict", i)
+			}
+			t := sdkfile.DistributeTarget{}
+			if h, ok := m["host"].(string); ok {
+				t.Host = h
+			}
+			if p, ok := m["port"].(float64); ok {
+				t.Port = int(p)
+			}
+			if u, ok := m["user"].(string); ok {
+				t.User = u
+			}
+			if d, ok := m["dest"].(string); ok {
+				t.Dest = d
+			}
+			targets = append(targets, t)
+		}
+
+		opts := sdkfile.DistributeOptions{}
+		if len(args) >= 3 {
+			if optsMap, ok := args[2].(map[string]interface{}); ok {
+				if v, ok := optsMap["compress"].(bool); ok {
+					opts.Compress = v
+				}
+				if v, ok := optsMap["checksum"].(bool); ok {
+					opts.Checksum = v
+				}
+				if v, ok := optsMap["mode"].(string); ok {
+					opts.Mode = v
+				}
+				if v, ok := optsMap["owner"].(string); ok {
+					opts.Owner = v
+				}
+				if v, ok := optsMap["parallel"].(float64); ok {
+					opts.Parallel = int(v)
+				}
+				if v, ok := optsMap["retries"].(float64); ok {
+					opts.Retries = int(v)
+				}
+			}
+		}
+
+		r, err := sdkfile.Distribute(source, targets, opts)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	interp.builtins["file.collect"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("file.collect() requires at least 2 arguments (source, targets)")
+		}
+		source, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.collect(): source must be string")
+		}
+		targetsRaw, ok := args[1].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("file.collect(): targets must be a list")
+		}
+		var targets []sdkfile.CollectTarget
+		for i, item := range targetsRaw {
+			m, ok := item.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("file.collect(): target %d must be a dict", i)
+			}
+			t := sdkfile.CollectTarget{}
+			if h, ok := m["host"].(string); ok {
+				t.Host = h
+			}
+			if p, ok := m["port"].(float64); ok {
+				t.Port = int(p)
+			}
+			if u, ok := m["user"].(string); ok {
+				t.User = u
+			}
+			if s, ok := m["source"].(string); ok {
+				t.Source = s
+			}
+			targets = append(targets, t)
+		}
+
+		opts := sdkfile.CollectOptions{}
+		if len(args) >= 3 {
+			if optsMap, ok := args[2].(map[string]interface{}); ok {
+				if v, ok := optsMap["compress"].(bool); ok {
+					opts.Compress = v
+				}
+				if v, ok := optsMap["dest_dir"].(string); ok {
+					opts.DestDir = v
+				}
+				if v, ok := optsMap["parallel"].(float64); ok {
+					opts.Parallel = int(v)
+				}
+				if v, ok := optsMap["retries"].(float64); ok {
+					opts.Retries = int(v)
+				}
+			}
+		}
+
+		r, err := sdkfile.Collect(source, targets, opts)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
 	// ── net.* ──────────────────────────────────────────────────────────
 	interp.builtins["net.http_get"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 {

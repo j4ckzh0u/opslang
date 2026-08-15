@@ -21,7 +21,7 @@ const (
 	FALSE  // false
 	NIL    // nil
 
-	// Keywords (16)
+	// Keywords (18)
 	LET
 	FN
 	IF
@@ -35,6 +35,8 @@ const (
 	REPORT
 	ALERT
 	ENSURE
+	METRIC
+	LOG
 
 	// Operators
 	PLUS    // +
@@ -90,6 +92,8 @@ var tokenNames = map[TokenType]string{
 	REPORT:    "REPORT",
 	ALERT:     "ALERT",
 	ENSURE:    "ENSURE",
+	METRIC:    "METRIC",
+	LOG:       "LOG",
 	PLUS:      "PLUS",
 	MINUS:     "MINUS",
 	STAR:      "STAR",
@@ -169,6 +173,8 @@ var keywords = map[string]TokenType{
 	"report": REPORT,
 	"alert":  ALERT,
 	"ensure": ENSURE,
+	"metric": METRIC,
+	"log":    LOG,
 }
 
 // LookupKeyword returns the token type for an identifier,

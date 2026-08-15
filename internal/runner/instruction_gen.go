@@ -472,6 +472,10 @@ func argNamesForOp(op string) []string {
 		return []string{"path"}
 	case "file.checksum":
 		return []string{"path", "algo"}
+	case "file.distribute":
+		return []string{"source", "targets", "options"}
+	case "file.collect":
+		return []string{"source", "targets", "options"}
 	case "net.http.get":
 		return []string{"url"}
 	case "net.http.post":

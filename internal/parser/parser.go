@@ -177,6 +177,10 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 		stmt, err = p.parseReportStatement()
 	case token.ALERT:
 		stmt, err = p.parseAlertStatement()
+	case token.METRIC:
+		stmt, err = p.parseMetricStatement()
+	case token.LOG:
+		stmt, err = p.parseLogStatement()
 	case token.ENSURE:
 		stmt, err = p.parseEnsureStatement()
 	default:
@@ -616,6 +620,76 @@ func (p *Parser) parseAlertStatement() (*ast.AlertStatement, error) {
 	}
 
 	return &ast.AlertStatement{
+		Position: astPos(pos),
+		Message:  msg,
+	}, nil
+}
+
+// --- Metric ----------------------------------------------------------------
+
+func (p *Parser) parseMetricStatement() (*ast.MetricStatement, error) {
+	pos := p.current().Pos
+	p.advance() // consume 'metric'
+
+	if _, err := p.expect(token.LPAREN); err != nil {
+		return nil, err
+	}
+
+	name, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := p.expect(token.COMMA); err != nil {
+		return nil, err
+	}
+
+	value, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	var labels ast.Expression
+	if p.current().Type == token.COMMA {
+		p.advance() // consume ','
+		labels, err = p.parseExpression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if _, err := p.expect(token.RPAREN); err != nil {
+		return nil, err
+	}
+
+	return &ast.MetricStatement{
+		Position: astPos(pos),
+		Name:     name,
+		Value:    value,
+		Labels:   labels,
+	}, nil
+}
+
+// --- Log -------------------------------------------------------------------
+
+func (p *Parser) parseLogStatement() (*ast.LogStatement, error) {
+	pos := p.current().Pos
+	p.advance() // consume 'log'
+
+	if _, err := p.expect(token.LPAREN); err != nil {
+		return nil, err
+	}
+
+	msg, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := p.expect(token.RPAREN); err != nil {
+		return nil, err
+	}
+
+	return &ast.LogStatement{
 		Position: astPos(pos),
 		Message:  msg,
 	}, nil
