@@ -89,7 +89,7 @@ OpsLang 是一门面向运维领域的领域特定语言（DSL）。它允许运
 **目标**：开发独立可用的 Go 库，提供常用运维原子操作，返回强类型结构体，可被任何 Go 程序调用。
 
 **任务**：
-1. 创建 Go module `github.com/opslang/ops-core-sdk`。
+1. 创建 Go module `https://github.com/j4ckzh0u/opslang/ops-core-sdk`。
 2. 定义统一返回结构体规范：每个函数返回 `(T, error)`，`T` 为可 JSON 序列化的结构体；错误返回包含明确错误码和消息。
 3. 实现以下标准库包（函数列表见附录 A）：
    - `sys`：CPU、内存、磁盘、负载、主机名、用户、进程等。
