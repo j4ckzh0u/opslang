@@ -14,6 +14,8 @@
 【回答规矩】不确定就说不知道，涉及敏感信息标可信度，需求不清先确认，先给结论再讲理由
 
 项目地址：https://github.com/j4ckzh0u/opslang , 开发好了就推送GitHub，并创建github action，进行自动化构建。
+要关注一下GitHub action运行的结果，如果出现错误，请及时的修复。
+一定要保证程序能在GitHub action上编译通过。
 ---
 项目要求：
 # OpsLang 项目完整开发计划
