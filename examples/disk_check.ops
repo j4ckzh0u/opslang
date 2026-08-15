@@ -1,0 +1,34 @@
+// disk_check.ops - Check disk usage across mounts
+// Usage: opsctl run examples/disk_check.ops
+
+print("=== Disk Usage Check ===")
+
+// Simulated disk data
+let disks = [
+    {"mount": "/", "used_percent": 45, "total_gb": 100},
+    {"mount": "/home", "used_percent": 72, "total_gb": 500},
+    {"mount": "/var", "used_percent": 88, "total_gb": 200},
+    {"mount": "/tmp", "used_percent": 5, "total_gb": 50}
+]
+
+let warn_threshold = 80
+let alert_threshold = 90
+
+for let i = 0; i < len(disks); i = i + 1 {
+    let disk = disks[i]
+    let status = "OK"
+    if disk.used_percent >= alert_threshold {
+        status = "CRITICAL"
+        alert("Disk " + disk.mount + " is " + str(disk.used_percent) + "% full!")
+    } else if disk.used_percent >= warn_threshold {
+        status = "WARNING"
+        print("WARNING: Disk " + disk.mount + " is " + str(disk.used_percent) + "% full")
+    }
+    print(disk.mount + ": " + str(disk.used_percent) + "% [" + status + "]")
+}
+
+report {
+    disk_count: len(disks),
+    threshold_warn: warn_threshold,
+    threshold_alert: alert_threshold
+}

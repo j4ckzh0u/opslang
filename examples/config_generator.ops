@@ -1,0 +1,45 @@
+// config_generator.ops - Generate configuration files
+// Usage: opsctl run examples/config_generator.ops
+
+print("=== Configuration Generator ===")
+
+// Base configuration template
+let base_config = {
+    "app_name": "myapp",
+    "environment": "production",
+    "log_level": "info",
+    "max_workers": 4,
+    "timeout": 30
+}
+
+// Override per environment
+fn merge_config(base, overrides) {
+    let result = {}
+    let keys = ["app_name", "environment", "log_level", "max_workers", "timeout"]
+    for let i = 0; i < len(keys); i = i + 1 {
+        let k = keys[i]
+        result[k] = base[k]
+    }
+    return result
+}
+
+let prod_overrides = {"max_workers": 8, "timeout": 60}
+let staging_overrides = {"max_workers": 2, "log_level": "debug"}
+
+let prod_config = merge_config(base_config, prod_overrides)
+let staging_config = merge_config(base_config, staging_overrides)
+
+print("Production config:")
+print("  app_name: " + prod_config.app_name)
+print("  workers: " + str(prod_config.max_workers))
+print("  timeout: " + str(prod_config.timeout))
+
+print("Staging config:")
+print("  app_name: " + staging_config.app_name)
+print("  workers: " + str(staging_config.max_workers))
+print("  timeout: " + str(staging_config.timeout))
+
+report {
+    production: prod_config,
+    staging: staging_config
+}

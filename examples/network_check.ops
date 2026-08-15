@@ -1,0 +1,39 @@
+// network_check.ops - Network connectivity checks
+// Usage: opsctl run examples/network_check.ops
+
+print("=== Network Check ===")
+
+let hosts = [
+    {"name": "web-server", "host": "10.0.1.10", "port": 80},
+    {"name": "db-server", "host": "10.0.2.20", "port": 5432},
+    {"name": "cache-server", "host": "10.0.3.30", "port": 6379}
+]
+
+let results = []
+let all_ok = true
+
+for let i = 0; i < len(hosts); i = i + 1 {
+    let h = hosts[i]
+    // Simulated check result
+    let reachable = true
+    let latency_ms = 2
+
+    if reachable {
+        print(h.name + " (" + h.host + ":" + str(h.port) + "): OK (" + str(latency_ms) + "ms)")
+    } else {
+        print(h.name + " (" + h.host + ":" + str(h.port) + "): UNREACHABLE")
+        alert("Host " + h.name + " is unreachable!")
+        all_ok = false
+    }
+}
+
+if all_ok {
+    print("All hosts are reachable")
+} else {
+    alert("Some hosts are unreachable")
+}
+
+report {
+    hosts_checked: len(hosts),
+    all_ok: all_ok
+}

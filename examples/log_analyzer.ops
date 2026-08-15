@@ -1,0 +1,45 @@
+// log_analyzer.ops - Simple log analysis
+// Usage: opsctl run examples/log_analyzer.ops
+
+print("=== Log Analyzer ===")
+
+// Simulated log entries
+let logs = [
+    {"level": "INFO", "message": "Application started", "ts": 1000},
+    {"level": "WARN", "message": "High memory usage", "ts": 1060},
+    {"level": "ERROR", "message": "Database connection failed", "ts": 1120},
+    {"level": "INFO", "message": "Retrying connection", "ts": 1125},
+    {"level": "INFO", "message": "Connection established", "ts": 1130},
+    {"level": "ERROR", "message": "Request timeout", "ts": 1200},
+    {"level": "WARN", "message": "Slow query detected", "ts": 1250},
+    {"level": "INFO", "message": "Health check passed", "ts": 1300}
+]
+
+let counts = {"INFO": 0, "WARN": 0, "ERROR": 0}
+
+for let i = 0; i < len(logs); i = i + 1 {
+    let entry = logs[i]
+    if entry.level == "INFO" {
+        counts.INFO = counts.INFO + 1
+    } else if entry.level == "WARN" {
+        counts.WARN = counts.WARN + 1
+        print("WARNING: " + entry.message)
+    } else if entry.level == "ERROR" {
+        counts.ERROR = counts.ERROR + 1
+        alert("ERROR: " + entry.message)
+    }
+}
+
+print("---")
+print("Log Summary:")
+print("  INFO:  " + str(counts.INFO))
+print("  WARN:  " + str(counts.WARN))
+print("  ERROR: " + str(counts.ERROR))
+print("  Total: " + str(len(logs)))
+
+report {
+    total: len(logs),
+    info: counts.INFO,
+    warn: counts.WARN,
+    error: counts.ERROR
+}

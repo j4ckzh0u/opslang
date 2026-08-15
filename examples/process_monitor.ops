@@ -1,0 +1,44 @@
+// process_monitor.ops - Monitor running processes
+// Usage: opsctl run examples/process_monitor.ops
+
+print("=== Process Monitor ===")
+
+// Simulated process list
+let processes = [
+    {"name": "nginx", "pid": 1001, "cpu": 2.5, "mem": 128},
+    {"name": "postgres", "pid": 1002, "cpu": 15.0, "mem": 512},
+    {"name": "redis", "pid": 1003, "cpu": 0.5, "mem": 64},
+    {"name": "node", "pid": 1004, "cpu": 45.0, "mem": 256},
+    {"name": "python", "pid": 1005, "cpu": 80.0, "mem": 1024}
+]
+
+let cpu_threshold = 50.0
+let mem_threshold = 500
+
+print("Process monitoring:")
+print("---")
+
+for let i = 0; i < len(processes); i = i + 1 {
+    let proc = processes[i]
+    let flags = ""
+
+    if proc.cpu > cpu_threshold {
+        flags = flags + " [HIGH CPU]"
+        alert("Process " + proc.name + " (PID " + str(proc.pid) + ") CPU: " + str(proc.cpu) + "%")
+    }
+    if proc.mem > mem_threshold {
+        flags = flags + " [HIGH MEM]"
+        alert("Process " + proc.name + " (PID " + str(proc.pid) + ") MEM: " + str(proc.mem) + "MB")
+    }
+
+    print(proc.name + " (PID " + str(proc.pid) + "): CPU=" + str(proc.cpu) + "% MEM=" + str(proc.mem) + "MB" + flags)
+}
+
+print("---")
+print("Total processes: " + str(len(processes)))
+
+report {
+    process_count: len(processes),
+    cpu_threshold: cpu_threshold,
+    mem_threshold: mem_threshold
+}
