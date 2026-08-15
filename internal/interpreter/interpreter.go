@@ -232,6 +232,11 @@ func (interp *Interpreter) registerDefaults() {
 	}
 }
 
+// RegisterBuiltin adds a single built-in function by name.
+func (interp *Interpreter) RegisterBuiltin(name string, fn BuiltinFunc) {
+	interp.builtins[name] = fn
+}
+
 // Execute runs a program and returns the result.
 func (interp *Interpreter) Execute(prog *ast.Program) (*Result, error) {
 	interp.output = nil
