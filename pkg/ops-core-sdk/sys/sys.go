@@ -72,13 +72,13 @@ type UserInfo struct {
 	StartTime uint64 `json:"start_time"`
 }
 
-// CPUUsage returns overall CPU utilization percentages.
+// GetCPUUsage returns overall CPU utilization percentages.
 //
 // It uses cpu.Percent(true) to obtain per-CPU usage percentages and averages
 // them for the overall Percent field. It then uses cpu.Times(false) to get
 // aggregate CPU times and computes User/System/Idle breakdowns by scaling the
 // time ratios by the overall non-idle percentage, so User+System+Idle ~ 100.
-func CPUUsage() (CPUUsage, error) {
+func GetCPUUsage() (CPUUsage, error) {
 	// Per-CPU percentages (100ms sample interval)
 	perCPU, err := cpu.Percent(100*1e6, true)
 	if err != nil {
@@ -128,8 +128,8 @@ func CPUUsage() (CPUUsage, error) {
 	return result, nil
 }
 
-// MemoryInfo returns virtual memory statistics.
-func MemoryInfo() (MemoryInfo, error) {
+// GetMemoryInfo returns virtual memory statistics.
+func GetMemoryInfo() (MemoryInfo, error) {
 	v, err := mem.VirtualMemory()
 	if err != nil {
 		return MemoryInfo{}, fmt.Errorf("failed to get virtual memory info: %w", err)
@@ -142,9 +142,9 @@ func MemoryInfo() (MemoryInfo, error) {
 	}, nil
 }
 
-// DiskUsage returns disk usage statistics for the filesystem containing path.
+// GetDiskUsage returns disk usage statistics for the filesystem containing path.
 // The path must exist on the local filesystem.
-func DiskUsage(path string) (DiskUsage, error) {
+func GetDiskUsage(path string) (DiskUsage, error) {
 	if path == "" {
 		return DiskUsage{}, errors.New("path must not be empty")
 	}
@@ -161,8 +161,8 @@ func DiskUsage(path string) (DiskUsage, error) {
 	}, nil
 }
 
-// LoadAvg returns system load averages for 1, 5, and 15 minute intervals.
-func LoadAvg() (LoadAvg, error) {
+// GetLoadAvg returns system load averages for 1, 5, and 15 minute intervals.
+func GetLoadAvg() (LoadAvg, error) {
 	avg, err := load.Avg()
 	if err != nil {
 		return LoadAvg{}, fmt.Errorf("failed to get load average: %w", err)
@@ -230,7 +230,7 @@ func Users() ([]UserInfo, error) {
 			User:      u.User,
 			Terminal:  u.Terminal,
 			Host:      u.Host,
-			StartTime: u.LoginTime,
+			StartTime: uint64(u.Started),
 		})
 	}
 	return result, nil

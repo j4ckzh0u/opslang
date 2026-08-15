@@ -106,13 +106,11 @@ func Copy(src, dst string) (CopyResult, error) {
 	if err != nil {
 		return CopyResult{}, fmt.Errorf("file.Copy open dst: %w", err)
 	}
-	defer func() {
-		if cerr := out.Close(); cerr != nil {
-			_ = fmt.Errorf("file.Copy close dst: %w", cerr)
-		}
-	}()
 
 	n, err := io.Copy(out, in)
+	if cerr := out.Close(); cerr != nil && err == nil {
+		return CopyResult{}, fmt.Errorf("file.Copy close dst: %w", cerr)
+	}
 	if err != nil {
 		return CopyResult{}, fmt.Errorf("file.Copy copy: %w", err)
 	}

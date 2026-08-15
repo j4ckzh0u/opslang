@@ -128,7 +128,7 @@ func TCPConnect(host string, port int) (TCPResult, error) {
 		return TCPResult{}, fmt.Errorf("opsnet: TCPConnect port must be between 1 and 65535, got %d", port)
 	}
 
-	addr := fmt.Sprintf("%s:%d", host, port)
+	addr := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	start := time.Now()
 	conn, err := net.DialTimeout("tcp", addr, defaultTCPTimeout)
 	latency := time.Since(start)

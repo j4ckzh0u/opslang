@@ -21,7 +21,15 @@ type DecodeResult struct {
 }
 
 // Encode marshals data into a YAML string.
-func Encode(data interface{}) (EncodeResult, error) {
+func Encode(data interface{}) (result EncodeResult, err error) {
+	// yaml.v3 may panic on unsupported types (e.g. channels); recover and return as error.
+	defer func() {
+		if r := recover(); r != nil {
+			result = EncodeResult{}
+			err = fmt.Errorf("opsyaml.Encode: %v", r)
+		}
+	}()
+
 	bytes, err := yaml.Marshal(data)
 	if err != nil {
 		return EncodeResult{}, fmt.Errorf("opsyaml.Encode: %w", err)
