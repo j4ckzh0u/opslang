@@ -6,12 +6,9 @@ output
 # Test environment (local only)
 test_env/
 *.test.env
-tests/integration/test_config.env
-tests/reports/*.html
-tests/reports/*.log
-tests/reports/*.txt
-!tests/reports/*.json
-!tests/reports/*.md
+
+# Tests directory - contains credentials and test data
+tests/
 *.log
 
 # Build artifacts

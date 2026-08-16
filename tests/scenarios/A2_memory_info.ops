@@ -1,8 +1,0 @@
-// A2: Get memory usage
-let mem = sys.memory.info()
-print("=== A2: Memory Info ===")
-print("Total: " + str(mem.total / 1024 / 1024) + " MB")
-print("Used: " + str(mem.used / 1024 / 1024) + " MB")
-print("Available: " + str(mem.available / 1024 / 1024) + " MB")
-print("Usage: " + str(mem.used_percent) + "%")
-report { scenario: "A2", status: "ok", total_mb: mem.total / 1024 / 1024, used_percent: mem.used_percent }

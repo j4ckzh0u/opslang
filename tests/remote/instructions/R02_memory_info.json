@@ -1,9 +1,0 @@
-{
-  "version": "1.0",
-  "task_id": "R02_memory_info",
-  "dry_run": false,
-  "instructions": [
-    {"op": "sys.memory.info", "args": {}, "assign": "mem"},
-    {"op": "report", "args": {"memory": "mem"}}
-  ]
-}

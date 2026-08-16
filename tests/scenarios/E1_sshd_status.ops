@@ -1,9 +1,0 @@
-// E1: Check sshd service status
-let r = process.exec("pgrep", "-c", "sshd")
-print("=== E1: SSHD Status ===")
-if r.exit_code == 0 {
-    print("sshd running: yes (count: " + r.stdout + ")")
-} else {
-    print("sshd running: no (pgrep exit: " + str(r.exit_code) + ")")
-}
-report { scenario: "E1", status: "ok", sshd_found: r.exit_code == 0 }

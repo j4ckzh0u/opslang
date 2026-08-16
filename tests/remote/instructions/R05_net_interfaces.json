@@ -1,9 +1,0 @@
-{
-  "version": "1.0",
-  "task_id": "R05_net_interfaces",
-  "dry_run": false,
-  "instructions": [
-    {"op": "net.interfaces", "args": {}, "assign": "ifaces"},
-    {"op": "report", "args": {"interfaces": "ifaces"}}
-  ]
-}

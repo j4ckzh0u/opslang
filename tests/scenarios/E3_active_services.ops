@@ -1,6 +1,0 @@
-// E3: List active services (via process listing)
-let r = process.exec("ps", "-eo", "comm", "-x")
-print("=== E3: Active Services ===")
-print("Exit code: " + str(r.exit_code))
-print("Output length: " + str(len(r.stdout)))
-report { scenario: "E3", status: "ok", exit_code: r.exit_code, output_len: len(r.stdout) }

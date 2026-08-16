@@ -1,9 +1,0 @@
-// A3: Get disk usage
-let parts = sys.disk.partitions()
-let root_disk = sys.disk.usage("/")
-print("=== A3: Disk Info ===")
-print("Partitions: " + str(len(parts)))
-print("Root usage: " + str(root_disk.used_percent) + "%")
-print("Root total: " + str(root_disk.total / 1073741824) + " GB")
-print("Root free: " + str(root_disk.free / 1073741824) + " GB")
-report { scenario: "A3", status: "ok", partitions: len(parts), root_percent: root_disk.used_percent }

@@ -1,6 +1,0 @@
-// C3: Start simple process (sleep)
-let result = process.exec("echo", "test_process_output")
-print("=== C3: Start Process ===")
-print("Output: " + result.stdout)
-print("Exit code: " + str(result.exit_code))
-report { scenario: "C3", status: "ok", exit_code: result.exit_code, output: result.stdout }

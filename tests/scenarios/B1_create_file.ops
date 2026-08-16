@@ -1,9 +1,0 @@
-// B1: Create test file
-let test_dir = "/tmp/opslang-test-B"
-file.mkdir(test_dir)
-let f = file.write(test_dir + "/test1.txt", "Hello OpsLang test\n")
-print("=== B1: Create File ===")
-print("Created: " + test_dir + "/test1.txt (" + str(f.size) + " bytes)")
-let ex = file.exists(test_dir + "/test1.txt")
-print("Exists: " + str(ex.exists))
-report { scenario: "B1", status: "ok", size: f.size, exists: ex.exists }

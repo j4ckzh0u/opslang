@@ -1,6 +1,0 @@
-// D1: HTTP GET request test
-let result = net.http_get("http://httpbin.org/get", {})
-print("=== D1: HTTP GET ===")
-print("Status: " + str(result.status_code))
-print("Body length: " + str(len(result.body)))
-report { scenario: "D1", status: "ok", status_code: result.status_code, body_len: len(result.body) }

@@ -1,9 +1,0 @@
-// D4: Network interfaces
-let ifaces = net.interfaces()
-print("=== D4: Network Interfaces ===")
-print("Count: " + str(len(ifaces)))
-for let i = 0; i < len(ifaces); i = i + 1 {
-    let iface = ifaces[i]
-    print("  " + iface.name + " up=" + str(iface.up) + " mtu=" + str(iface.mtu))
-}
-report { scenario: "D4", status: "ok", count: len(ifaces) }
