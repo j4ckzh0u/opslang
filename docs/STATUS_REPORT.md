@@ -329,7 +329,7 @@
 
   <div class="summary">
     <div class="summary-cell">
-      <div class="summary-value">1516</div>
+      <div class="summary-value">1520</div>
       <div class="summary-label">测试通过</div>
     </div>
     <div class="summary-cell">
@@ -526,7 +526,7 @@
       <li><strong>CPU 配额未强制执行</strong>：<code>ResourceLimits.CPUQuota</code> 字段存在但 ulimit 无法设置 CPU 配额，仅内存限制生效。</li>
       <li><strong>CPU 使用率为采样值</strong>：<code>sys.cpu.usage()</code> 两次采样间隔 500ms，非实时值。</li>
       <li><strong>CI 未启用竞态检测</strong>：<code>-race</code> 在 CI 全量测试时 TSan OOM，已在 CI 配置中移除。本地应定期跑 <code>go test -race ./...</code>。</li>
-      <li><strong>无大规模真实测试</strong>：文件分发/收集的 1 万主机模拟测试未实现，当前测试使用 mock。</li>
+      <li><strong>大规模模拟测试的传输层为模拟</strong>：1 万主机分发/收集模拟测试已实现（<code>pkg/ops-core-sdk/file/scale_test.go</code>），在传输接缝注入虚拟 SFTP 层（真实字节流读写与 SHA-256、可配置延迟、0.1% 确定性故障注入），压测真实的调度/重试/校验/归档编排；断言成功率 &gt;99.9%、控制端带宽 ≤1.05×（主机数×文件大小）。CI 常驻 1 万档 + 1000 台门档（<code>go test -short</code> 可跳过万级档），<code>make scale-test</code> 跑满配，<code>OPS_SCALE_N</code>/<code>OPS_SCALE_FILE_KB</code>/<code>OPS_SCALE_FAIL_RATE</code>/<code>OPS_SCALE_LATENCY_MS</code> 可调。非真实 SSH 网络压测。</li>
       <li><strong>macOS 兼容性</strong>：<code>service</code>、<code>pkg</code> 包仅支持 Linux（systemd / apt / yum）。</li>
     </ul>
   </section>
@@ -581,15 +581,15 @@
   <div class="verdict">
     <h3>结论</h3>
     <p>
-      这是一个<strong>完整、可工作</strong>的实现。没有桩代码，没有空壳。所有 1516 个测试通过，23 个示例脚本可执行，双执行引擎（Runner + AOT）均可用，远程执行链路（SSH → 架构检测 → 缓存上传 → 执行 → 结果回收）已打通。
+      这是一个<strong>完整、可工作</strong>的实现。没有桩代码，没有空壳。所有 1520 个测试通过，23 个示例脚本可执行，双执行引擎（Runner + AOT）均可用，远程执行链路（SSH → 架构检测 → 缓存上传 → 执行 → 结果回收）已打通。
     </p>
     <p style="margin-top: 0.75rem;">
-      主要缺口：模块系统、大规模真实测试、CI 竞态检测。这些是有意识的简化而非遗漏——代码中有 <code>ponytail:</code> 注释标明升级路径。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制，变更类函数清单集中在 <code>internal/opsspec</code>）。
+      主要缺口：模块系统、CI 竞态检测。这些是有意识的简化而非遗漏——代码中有 <code>ponytail:</code> 注释标明升级路径。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制，变更类函数清单集中在 <code>internal/opsspec</code>）；1 万主机文件分发/收集模拟测试已实现（真实编排 + 模拟传输层，见已知限制区说明）。
     </p>
   </div>
 
   <div class="footer">
-    Generated 2026-08-16 · 1516 tests · 25 packages · 0 stubs
+    Generated 2026-08-16 · 1520 tests · 25 packages · 0 stubs
   </div>
 
 </div>
