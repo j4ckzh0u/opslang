@@ -35,7 +35,7 @@ OpsLang 是一门面向运维领域的领域特定语言（DSL），语法风格
 | `return` | 函数返回 |
 | `task` / `on` | 任务声明 |
 | `import` | 模块导入（声明性） |
-| `privilege` | 脚本权限级别声明 |
+| `privilege` | 脚本权限级别声明（`privilege: read_only \| admin \| root`，须置于脚本顶部；未声明默认 `read_only`。变更类函数（file.write、process.exec、service.* 等，清单见 opsspec）需要至少 `admin`，违反时解释器运行时报错、AOT 编译期报错、Runner 执行前二次校验拒绝） |
 | `true` / `false` | 布尔字面量 |
 | `nil` | 空值 |
 | `report` | 结构化报告输出 |

@@ -329,7 +329,7 @@
 
   <div class="summary">
     <div class="summary-cell">
-      <div class="summary-value">1456</div>
+      <div class="summary-value">1516</div>
       <div class="summary-label">测试通过</div>
     </div>
     <div class="summary-cell">
@@ -492,10 +492,11 @@
     <div class="card">
       <div class="card-header">
         <h3>安全模块</h3>
-        <span class="card-stats">148 tests</span>
+        <span class="card-stats">179 tests</span>
       </div>
       <ul>
-        <li><strong>权限分级</strong>：read_only / admin / root，操作分类（read/write/exec/admin/system）</li>
+        <li><strong>权限分级</strong>：read_only / admin / root，操作分类（read/write/exec/admin/system），变更类函数元数据以 <code>opsspec</code> 为单一事实来源</li>
+        <li><strong>权限自动执行</strong>：read_only 脚本调用变更函数在三层被拒绝——解释器（运行时，带行列号）、AOT 编译期静态检查、Runner 二次校验（指令包携带 privilege 字段）</li>
         <li><strong>审计日志</strong>：JSON 格式，记录任务 ID、脚本、权限、目标、用户、模式、结果</li>
         <li><strong>资源限制</strong>：<code>setrlimit(2)</code> 内存限制（CPU quota 未强制执行）</li>
         <li><strong>签名验证</strong>：Ed25519 签名/验签，密钥文件 I/O</li>
@@ -521,7 +522,6 @@
   <section>
     <h2>已知限制</h2>
     <ul class="limitations">
-      <li><strong>权限未自动执行</strong>：<code>CheckPrivilege()</code> 存在，但解释器不自动调用。read_only 脚本调用变更函数不会报错，需调用方自行检查。</li>
       <li><strong>无模块导入系统</strong>：OpsLang 脚本之间无法互相导入。第三方 Go 导入被显式拒绝。</li>
       <li><strong>CPU 配额未强制执行</strong>：<code>ResourceLimits.CPUQuota</code> 字段存在但 ulimit 无法设置 CPU 配额，仅内存限制生效。</li>
       <li><strong>CPU 使用率为采样值</strong>：<code>sys.cpu.usage()</code> 两次采样间隔 500ms，非实时值。</li>
@@ -581,15 +581,15 @@
   <div class="verdict">
     <h3>结论</h3>
     <p>
-      这是一个<strong>完整、可工作</strong>的实现。没有桩代码，没有空壳。所有 1456 个测试通过，23 个示例脚本可执行，双执行引擎（Runner + AOT）均可用，远程执行链路（SSH → 架构检测 → 缓存上传 → 执行 → 结果回收）已打通。
+      这是一个<strong>完整、可工作</strong>的实现。没有桩代码，没有空壳。所有 1516 个测试通过，23 个示例脚本可执行，双执行引擎（Runner + AOT）均可用，远程执行链路（SSH → 架构检测 → 缓存上传 → 执行 → 结果回收）已打通。
     </p>
     <p style="margin-top: 0.75rem;">
-      主要缺口：权限自动执行、模块系统、大规模真实测试、CI 竞态检测。这些是有意识的简化而非遗漏——代码中有 <code>ponytail:</code> 注释标明升级路径。
+      主要缺口：模块系统、大规模真实测试、CI 竞态检测。这些是有意识的简化而非遗漏——代码中有 <code>ponytail:</code> 注释标明升级路径。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制，变更类函数清单集中在 <code>internal/opsspec</code>）。
     </p>
   </div>
 
   <div class="footer">
-    Generated 2026-08-16 · 1456 tests · 25 packages · 0 stubs
+    Generated 2026-08-16 · 1516 tests · 25 packages · 0 stubs
   </div>
 
 </div>
