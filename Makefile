@@ -21,7 +21,7 @@ PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64
 CMDS := opsctl ops-runner
 
 .PHONY: all build test vet fmt lint clean install help
-.PHONY: build-all dist coverage bench tidy check ci
+.PHONY: build-all dist coverage bench scale-test tidy check ci
 .PHONY: run repl examples
 
 # ─── Default ────────────────────────────────────────────────────────
@@ -71,6 +71,11 @@ coverage: ## Run tests with coverage report
 
 bench: ## Run benchmarks
 	$(GOTEST) -bench=. -benchmem ./...
+
+# OPS_SCALE_N hosts (default 10000), OPS_SCALE_FILE_KB / OPS_SCALE_FAIL_RATE
+# / OPS_SCALE_LATENCY_MS tune payload size, fault injection and latency.
+scale-test: ## Run 10k-host distribute/collect simulation (full tier)
+	OPS_SCALE_N=10000 $(GOTEST) -run 'TestScale' -v -timeout 15m ./pkg/ops-core-sdk/file/
 
 # ─── Quality ────────────────────────────────────────────────────────
 
