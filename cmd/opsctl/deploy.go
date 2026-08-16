@@ -205,7 +205,9 @@ func deployAOTMode(ctx context.Context, scriptPath string, targets []opsexec.Tar
 		Password:     deployPassword,
 		Parallel:     deployParallel,
 		DryRun:       deployDryRun,
-		RunnerPath:   tmpOutput,
+		// Note: RunnerPath intentionally not set. Executor will detect target
+		// architecture and build/upload the appropriate runner binary.
+		// TODO: Implement true AOT mode with per-target cross-compilation.
 	}
 
 	summary := executor.Execute(ctx)

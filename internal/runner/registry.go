@@ -1,7 +1,9 @@
 package runner
 
 import (
+	"encoding/json"
 	"fmt"
+	"os/exec"
 
 	"github.com/opslang/opslang/pkg/ops-core-sdk/file"
 	opsjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
@@ -357,6 +359,36 @@ func (r *Registry) registerBuiltinOps() {
 			msg = getStringArg(args, "msg", "")
 		}
 		return msg, nil
+	})
+
+	// binary.exec: executes a compiled binary and returns its output.
+	// Used by AOT deployment mode to run compiled scripts.
+	r.Register("binary.exec", func(args map[string]interface{}) (interface{}, error) {
+		path := requireStringArg(args, "path")
+		if path == "" {
+			return nil, fmt.Errorf("binary.exec: path argument required")
+		}
+
+		// Execute the binary using os/exec
+		cmd := exec.Command(path)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return map[string]interface{}{
+				"error":  err.Error(),
+				"output": string(output),
+			}, nil
+		}
+
+		// Try to parse output as JSON
+		var result interface{}
+		if jsonErr := json.Unmarshal(output, &result); jsonErr == nil {
+			return result, nil
+		}
+
+		// Return as string if not JSON
+		return map[string]interface{}{
+			"output": string(output),
+		}, nil
 	})
 }
 
