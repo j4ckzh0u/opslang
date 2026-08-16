@@ -1,6 +1,6 @@
 coverage.out
 ops-runner
-output
+/output
 .opslang-build/
 *.swp
 # Test environment (local only)

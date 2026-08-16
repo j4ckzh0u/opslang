@@ -56,9 +56,9 @@ func TestMutatingSet(t *testing.T) {
 		"file.list": true, "file.checksum": true,
 		// file.template only renders text; it never writes a file.
 		"file.template": true,
-		"net.http_get": true, "net.tcp_check": true, "net.dns_lookup": true,
+		"net.http_get":  true, "net.tcp_check": true, "net.dns_lookup": true,
 		"net.interfaces": true,
-		"process.list": true, "process.find_by_name": true, "process.find_by_port": true,
+		"process.list":   true, "process.find_by_name": true, "process.find_by_port": true,
 		"service.status": true, "pkg.info": true, "pkg.list": true,
 		"time.now": true, "time.sleep": true,
 		"json.encode": true, "yaml.decode": true,
