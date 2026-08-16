@@ -26,10 +26,10 @@
     {
       "op": "report",
       "args": {
-        "host": "$hostname",
-        "cpu": "$cpu",
-        "memory": "$memory",
-        "disk": "$disk"
+        "host": "hostname",
+        "cpu": "cpu",
+        "memory": "memory",
+        "disk": "disk"
       }
     }
   ]
