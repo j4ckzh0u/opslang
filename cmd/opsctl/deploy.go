@@ -210,19 +210,26 @@ func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program,
 
 // deployAOTMode compiles the script and deploys the binary.
 func deployAOTMode(ctx context.Context, scriptPath string, targets []opsexec.Target, startedAt time.Time) error {
+	// Compile for linux/amd64 (most common target)
+	// The executor will detect the actual target architecture and handle accordingly
 	c, err := compiler.NewCompiler()
 	if err != nil {
 		return fmt.Errorf("failed to initialize compiler: %w", err)
 	}
 
-	// Compile for current architecture (will be recompiled per-target arch).
 	tmpOutput := fmt.Sprintf("/tmp/ops-deploy-%d", time.Now().UnixNano())
+
+	// Set environment for cross-compilation
+	os.Setenv("GOOS", "linux")
+	os.Setenv("GOARCH", "amd64")
+	os.Setenv("CGO_ENABLED", "0")
+
 	if err := c.Compile(scriptPath, "", tmpOutput); err != nil {
 		return fmt.Errorf("compilation failed: %w", err)
 	}
 	defer os.Remove(tmpOutput)
 
-	// For AOT mode, we create a minimal instruction package that runs the binary.
+	// Create instruction package to execute the binary
 	pkg := &runner.InstructionPackage{
 		Version: "1.0",
 		TaskID:  generateTaskID(scriptPath),
@@ -243,9 +250,6 @@ func deployAOTMode(ctx context.Context, scriptPath string, targets []opsexec.Tar
 		Password:     deployPassword,
 		Parallel:     deployParallel,
 		DryRun:       deployDryRun,
-		// Note: RunnerPath intentionally not set. Executor will detect target
-		// architecture and build/upload the appropriate runner binary.
-		// TODO: Implement true AOT mode with per-target cross-compilation.
 	}
 
 	summary := executor.Execute(ctx)
