@@ -4,8 +4,6 @@ package security
 import (
 	"fmt"
 	"os"
-	"os/exec"
-	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -29,56 +27,18 @@ func DefaultResourceLimits() *ResourceLimits {
 	}
 }
 
-// ApplyResourceLimits applies resource limits to the current process.
-// It tries systemd-run first, then falls back to ulimit.
+// ApplyResourceLimits applies resource limits to the current process via ulimit.
+//
+// ponytail: systemd-run --scope is an orchestrator tool — it wraps a process
+// from the outside. Using it to re-exec the current binary is a design flaw
+// (spawns process trees, breaks in tests, requires root). ulimit via
+// setrlimit(2) is the correct in-process mechanism. Add systemd back only
+// when an external orchestrator wraps the process before it starts.
 func ApplyResourceLimits(limits *ResourceLimits) error {
 	if limits == nil {
 		return nil
 	}
-
-	// Try systemd-run first (Linux only)
-	if runtime.GOOS == "linux" && isSystemdAvailable() {
-		if err := applySystemdLimits(limits); err == nil {
-			return nil // systemd succeeded
-		}
-		// systemd failed (e.g., no root, CI environment): fall through to ulimit
-	}
-
-	// Fall back to ulimit
 	return applyUlimitLimits(limits)
-}
-
-// isSystemdAvailable checks if systemd-run is available.
-func isSystemdAvailable() bool {
-	_, err := exec.LookPath("systemd-run")
-	return err == nil
-}
-
-// applySystemdLimits applies limits using systemd-run --scope.
-func applySystemdLimits(limits *ResourceLimits) error {
-	// Build systemd-run command
-	args := []string{
-		"--scope",
-		"-p", fmt.Sprintf("CPUQuota=%s", limits.CPUQuota),
-		"-p", fmt.Sprintf("MemoryLimit=%s", limits.MemoryLimit),
-	}
-
-	// Re-execute current process with systemd-run
-	cmd := exec.Command("systemd-run", args...)
-	cmd.Args = append(cmd.Args, os.Args...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	// Set environment
-	cmd.Env = os.Environ()
-
-	// Execute
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to apply systemd limits: %w", err)
-	}
-
-	return nil
 }
 
 // applyUlimitLimits applies limits using ulimit (Unix only).

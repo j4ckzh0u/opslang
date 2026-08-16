@@ -194,8 +194,3 @@ func TestParseMemoryString(t *testing.T) {
 		})
 	}
 }
-
-func TestIsSystemdAvailable(t *testing.T) {
-	// Just verify it doesn't panic
-	_ = isSystemdAvailable()
-}
