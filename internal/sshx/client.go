@@ -83,11 +83,24 @@ func buildSSHConfig(cfg *Config) (*ssh.ClientConfig, error) {
 		return nil, fmt.Errorf("no authentication method provided (need password or key file)")
 	}
 
+	hostKeyCB := ssh.HostKeyCallback(ssh.InsecureIgnoreHostKey())
+	if !cfg.InsecureSkipHostKeyVerify {
+		knownHostsPath := cfg.KnownHostsFile
+		if knownHostsPath == "" {
+			knownHostsPath = DefaultKnownHostsPath()
+		}
+		cb, err := tofuCallback(knownHostsPath)
+		if err != nil {
+			return nil, err
+		}
+		hostKeyCB = cb
+	}
+
 	return &ssh.ClientConfig{
 		User:            cfg.User,
 		Auth:            authMethods,
 		Timeout:         cfg.Timeout,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		HostKeyCallback: hostKeyCB,
 	}, nil
 }
 

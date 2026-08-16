@@ -3,7 +3,10 @@ package interpreter
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/opslang/opslang/internal/ast"
 )
@@ -68,6 +71,11 @@ func (r *returnSignal) Error() string { return "return" }
 type Environment struct {
 	vars   map[string]interface{}
 	parent *Environment
+	// barrier: when true, update() writes into this scope instead of
+	// walking up to the parent. Parallel-block goroutines use barrier
+	// environments so concurrent statements never write shared maps;
+	// execParallel merges the captured variables back serially afterwards.
+	barrier bool
 }
 
 func newEnv(parent *Environment) *Environment {
@@ -90,9 +98,14 @@ func (e *Environment) set(name string, value interface{}) {
 }
 
 // update walks the scope chain to find and update an existing variable.
-// Returns an error if the variable is not found.
+// Returns an error if the variable is not found. With barrier set, writes
+// are captured in the current scope instead.
 func (e *Environment) update(name string, value interface{}) error {
 	if _, ok := e.vars[name]; ok {
+		e.vars[name] = value
+		return nil
+	}
+	if e.barrier {
 		e.vars[name] = value
 		return nil
 	}
@@ -122,8 +135,17 @@ func (e *Environment) lookup(name string) (*Environment, bool) {
 // Interpreter executes an OpsLang AST.
 type Interpreter struct {
 	builtins  map[string]BuiltinFunc
+	outputMu  sync.Mutex // guards output: parallel blocks append concurrently
 	output    []OutputEntry
 	globalEnv *Environment
+}
+
+// appendOutput records one output entry. Safe for concurrent use: print
+// builtins run inside parallel blocks on separate goroutines.
+func (interp *Interpreter) appendOutput(entry OutputEntry) {
+	interp.outputMu.Lock()
+	interp.output = append(interp.output, entry)
+	interp.outputMu.Unlock()
 }
 
 // New creates a new interpreter with optional extra built-in functions.
@@ -150,7 +172,7 @@ func (interp *Interpreter) registerDefaults() {
 		for i, a := range args {
 			parts[i] = formatValue(a)
 		}
-		interp.output = append(interp.output, OutputEntry{
+		interp.appendOutput(OutputEntry{
 			Type: "print",
 			Data: strings.Join(parts, " "),
 		})
@@ -206,7 +228,7 @@ func (interp *Interpreter) registerDefaults() {
 		for i, a := range args {
 			parts[i] = formatValue(a)
 		}
-		interp.output = append(interp.output, OutputEntry{
+		interp.appendOutput(OutputEntry{
 			Type: "log",
 			Data: strings.Join(parts, " "),
 		})
@@ -224,7 +246,7 @@ func (interp *Interpreter) registerDefaults() {
 		if len(args) >= 3 {
 			entry["labels"] = args[2]
 		}
-		interp.output = append(interp.output, OutputEntry{
+		interp.appendOutput(OutputEntry{
 			Type: "metric",
 			Data: entry,
 		})
@@ -281,7 +303,19 @@ func (interp *Interpreter) execStatement(stmt ast.Statement, env *Environment) (
 	case *ast.TaskStatement:
 		return interp.execTask(s, env)
 	case *ast.ImportStatement:
-		return nil, nil // no-op for now
+		// SDK builtins are globally registered; imports are declarative
+		// only. Third-party Go imports are rejected at parse/run entry.
+		if strings.HasPrefix(s.Path, "go ") || strings.HasPrefix(s.Path, "go:") {
+			return nil, &RuntimeError{
+				Pos: s.Pos(),
+				Msg: fmt.Sprintf("import %q: third-party Go imports are not supported yet", s.Path),
+			}
+		}
+		return nil, nil
+	case *ast.PrivilegeStatement:
+		// Declares the script's required privilege level. opsctl checks it
+		// before execution; at interpretation time it is metadata.
+		return nil, nil
 	case *ast.ExpressionStatement:
 		return interp.evalExpression(s.Expr, env)
 	case *ast.AssignStatement:
@@ -310,6 +344,12 @@ func (interp *Interpreter) execLet(s *ast.LetStatement, env *Environment) (inter
 	val, err := interp.evalExpression(s.Value, env)
 	if err != nil {
 		return nil, err
+	}
+	if _, exists := env.vars[s.Name.Name]; exists {
+		return nil, &RuntimeError{
+			Pos: s.Pos(),
+			Msg: fmt.Sprintf("variable %q is already declared in this scope (use assignment without let to update it)", s.Name.Name),
+		}
 	}
 	env.set(s.Name.Name, val)
 	return nil, nil
@@ -424,7 +464,15 @@ func (interp *Interpreter) execReturn(s *ast.ReturnStatement, env *Environment) 
 }
 
 func (interp *Interpreter) execTask(s *ast.TaskStatement, env *Environment) (interface{}, error) {
-	// For now, just execute the body directly (remote execution is Phase 4)
+	// A task with an on-clause targets remote hosts. Executing its body on
+	// the local machine would silently do the wrong thing; `opsctl run` has
+	// no SSH context, so route it to `opsctl deploy` instead.
+	if s.Targets != nil {
+		return nil, &RuntimeError{
+			Pos: s.Pos(),
+			Msg: fmt.Sprintf("task %q targets remote hosts; use `opsctl deploy` to run it (opsctl run executes locally)", s.Name),
+		}
+	}
 	blockEnv := newEnv(env)
 	return interp.execBlock(s.Body, blockEnv)
 }
@@ -505,7 +553,7 @@ func (interp *Interpreter) execReport(s *ast.ReportStatement, env *Environment) 
 		}
 		data[field.Key] = val
 	}
-	interp.output = append(interp.output, OutputEntry{Type: "report", Data: data})
+	interp.appendOutput(OutputEntry{Type: "report", Data: data})
 	return nil, nil
 }
 
@@ -514,7 +562,7 @@ func (interp *Interpreter) execAlert(s *ast.AlertStatement, env *Environment) (i
 	if err != nil {
 		return nil, err
 	}
-	interp.output = append(interp.output, OutputEntry{Type: "alert", Data: formatValue(msg)})
+	interp.appendOutput(OutputEntry{Type: "alert", Data: formatValue(msg)})
 	return nil, nil
 }
 
@@ -549,6 +597,17 @@ func (interp *Interpreter) execEnsure(s *ast.EnsureStatement, env *Environment) 
 		}
 	}
 
+	// Step 4: NOTIFY - optional expression evaluated after a change was
+	// applied (typically alert(...)).
+	if s.Notify != nil {
+		if _, err := interp.evalExpression(s.Notify, env); err != nil {
+			return nil, &RuntimeError{
+				Pos: s.Pos(),
+				Msg: fmt.Sprintf("ensure notify: %v", err),
+			}
+		}
+	}
+
 	return nil, nil
 }
 
@@ -575,7 +634,7 @@ func (interp *Interpreter) execMetric(s *ast.MetricStatement, env *Environment) 
 		entry["labels"] = labels
 	}
 
-	interp.output = append(interp.output, OutputEntry{
+	interp.appendOutput(OutputEntry{
 		Type: "metric",
 		Data: entry,
 	})
@@ -587,7 +646,7 @@ func (interp *Interpreter) execLog(s *ast.LogStatement, env *Environment) (inter
 	if err != nil {
 		return nil, err
 	}
-	interp.output = append(interp.output, OutputEntry{
+	interp.appendOutput(OutputEntry{
 		Type: "log",
 		Data: formatValue(msg),
 	})
@@ -606,14 +665,56 @@ func (interp *Interpreter) execBlock(block *ast.BlockStatement, env *Environment
 	return result, nil
 }
 
-// execParallel executes a parallel block. In this phase, statements in the
-// body are executed sequentially in the current environment; true concurrent
-// execution can be introduced later without changing the public semantics.
+// execParallel executes a parallel block: each statement runs in its own
+// goroutine with an isolated child environment (concurrent writes to shared
+// variables would be a data race). After all statements finish, their
+// declared variables are merged back into the enclosing scope in source
+// order, so results ARE visible after the block - deterministically: when
+// two statements declare the same name, the later statement wins.
 func (interp *Interpreter) execParallel(s *ast.ParallelStatement, env *Environment) (interface{}, error) {
-	if s.Body == nil {
+	if s.Body == nil || len(s.Body.Statements) == 0 {
 		return nil, nil
 	}
-	return interp.execBlock(s.Body, env)
+
+	type outcome struct {
+		err error
+		env *Environment
+	}
+	outcomes := make([]outcome, len(s.Body.Statements))
+	var wg sync.WaitGroup
+
+	for i, stmt := range s.Body.Statements {
+		wg.Add(1)
+		go func(idx int, st ast.Statement) {
+			defer wg.Done()
+			// Isolated barrier env per statement: assignments are captured
+			// locally, never written to the shared parent map concurrently.
+			childEnv := newEnv(env)
+			childEnv.barrier = true
+			_, err := interp.execStatement(st, childEnv)
+			outcomes[idx] = outcome{err: err, env: childEnv}
+		}(i, stmt)
+	}
+	wg.Wait()
+
+	// Deterministic serial merge in source order.
+	for _, o := range outcomes {
+		if o.err != nil {
+			if _, ok := o.err.(*returnSignal); ok {
+				continue // return inside parallel is meaningless; ignore
+			}
+			return nil, o.err
+		}
+	}
+	for _, o := range outcomes {
+		if o.env == nil {
+			continue
+		}
+		for name, val := range o.env.vars {
+			env.set(name, val)
+		}
+	}
+	return nil, nil
 }
 
 // ---------------------------------------------------------------------------
@@ -962,7 +1063,10 @@ func (interp *Interpreter) callFunction(fn *FunctionValue, args []interface{}, p
 			}
 			fnEnv.set(param.Name.Name, val)
 		} else {
-			fnEnv.set(param.Name.Name, nil)
+			return nil, &RuntimeError{
+				Pos: pos,
+				Msg: fmt.Sprintf("missing argument %q (parameter %d)", param.Name.Name, i+1),
+			}
 		}
 	}
 
@@ -1002,7 +1106,14 @@ func (interp *Interpreter) evalIndex(e *ast.IndexExpression, env *Environment) (
 		if !ok {
 			return nil, &RuntimeError{Pos: e.Pos(), Msg: "dict key must be a string"}
 		}
-		return container[key], nil
+		val, ok := container[key]
+		if !ok {
+			return nil, &RuntimeError{
+				Pos: e.Pos(),
+				Msg: fmt.Sprintf("map has no key %q (available: %v)", key, mapKeys(container)),
+			}
+		}
+		return val, nil
 	default:
 		return nil, &RuntimeError{Pos: e.Pos(), Msg: fmt.Sprintf("cannot index %T", left)}
 	}
@@ -1018,7 +1129,13 @@ func (interp *Interpreter) evalMember(e *ast.MemberExpression, env *Environment)
 	case map[string]interface{}:
 		val, ok := o[e.Member.Name]
 		if !ok {
-			return nil, nil // return nil for missing keys
+			// A missing key is almost always a typo in the field name;
+			// failing here points at the real mistake instead of much
+			// later where nil eventually breaks an expression.
+			return nil, &RuntimeError{
+				Pos: e.Pos(),
+				Msg: fmt.Sprintf("map has no key %q (available: %v)", e.Member.Name, mapKeys(o)),
+			}
 		}
 		return val, nil
 	default:
@@ -1050,6 +1167,16 @@ func isTruthy(val interface{}) bool {
 	default:
 		return true
 	}
+}
+
+// mapKeys returns the sorted key list of a dict for error messages.
+func mapKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func isEqual(left, right interface{}) bool {
@@ -1131,8 +1258,9 @@ func toInt(val interface{}) (interface{}, error) {
 	case float64:
 		return int64(v), nil
 	case string:
-		var i int64
-		_, err := fmt.Sscanf(v, "%d", &i)
+		// Strict parse: "42abc" and "3.14" are errors, not 42/3. The old
+		// Sscanf prefix matching silently corrupted parsed command output.
+		i, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("cannot convert %q to int", v)
 		}
@@ -1156,8 +1284,7 @@ func toFloat(val interface{}) (float64, error) {
 	case int64:
 		return float64(v), nil
 	case string:
-		var f float64
-		_, err := fmt.Sscanf(v, "%f", &f)
+		f, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
 		if err != nil {
 			return 0, fmt.Errorf("cannot convert %q to float", v)
 		}

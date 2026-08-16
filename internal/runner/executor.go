@@ -3,7 +3,14 @@ package runner
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
+
+// varPrefix marks an argument value as a variable reference. Only strings
+// starting with "$" are resolved against executor variables; literal
+// strings are never rewritten (the previous scheme replaced ANY string
+// equal to a variable name, silently corrupting literal values).
+const varPrefix = "$"
 
 // Executor processes instructions using a registry, maintaining a variable
 // context for assignment and reference resolution.
@@ -25,9 +32,13 @@ func NewExecutor(registry *Registry, dryRun bool) *Executor {
 }
 
 // Execute runs a single instruction with variable resolution.
-// String argument values that match a previously assigned variable name
-// are replaced with that variable's value.
 func (e *Executor) Execute(inst *Instruction) (interface{}, error) {
+	// Look up the operation first so unknown ops fail even in dry-run.
+	fn, ok := e.registry.Get(inst.Op)
+	if !ok {
+		return nil, fmt.Errorf("unknown operation: %q", inst.Op)
+	}
+
 	// Resolve variable references in args.
 	resolvedArgs := e.resolveArgs(inst.Args)
 
@@ -38,12 +49,6 @@ func (e *Executor) Execute(inst *Instruction) (interface{}, error) {
 			"operation": inst.Op,
 			"args":      resolvedArgs,
 		}, nil
-	}
-
-	// Look up the operation.
-	fn, ok := e.registry.Get(inst.Op)
-	if !ok {
-		return nil, fmt.Errorf("unknown operation: %q", inst.Op)
 	}
 
 	// Handle built-in special operations.
@@ -58,57 +63,65 @@ func (e *Executor) Execute(inst *Instruction) (interface{}, error) {
 	return fn(resolvedArgs)
 }
 
-// resolveArgs replaces string values that match variable names with their values.
+// resolveArgs replaces "$name" string values with the variable's value.
+// "$$" escapes a literal leading dollar sign.
 func (e *Executor) resolveArgs(args map[string]interface{}) map[string]interface{} {
 	if args == nil {
 		return make(map[string]interface{})
 	}
 	resolved := make(map[string]interface{}, len(args))
 	for key, value := range args {
-		if s, ok := value.(string); ok {
-			if varVal, exists := e.vars[s]; exists {
-				resolved[key] = varVal
-				continue
-			}
-		}
-		resolved[key] = value
+		resolved[key] = e.resolveValue(value)
 	}
 	return resolved
 }
 
+// resolveValue resolves one argument value, recursing into lists and maps.
+func (e *Executor) resolveValue(value interface{}) interface{} {
+	switch v := value.(type) {
+	case string:
+		if strings.HasPrefix(v, varPrefix+varPrefix) {
+			return strings.TrimPrefix(v, varPrefix)
+		}
+		if strings.HasPrefix(v, varPrefix) {
+			name := v[1:]
+			if varVal, exists := e.vars[name]; exists {
+				return varVal
+			}
+			return nil // unresolved reference: yields nil, downstream ops validate
+		}
+		return v
+	case []interface{}:
+		out := make([]interface{}, len(v))
+		for i, elem := range v {
+			out[i] = e.resolveValue(elem)
+		}
+		return out
+	case map[string]interface{}:
+		out := make(map[string]interface{}, len(v))
+		for k, elem := range v {
+			out[k] = e.resolveValue(elem)
+		}
+		return out
+	default:
+		return value
+	}
+}
+
 // executeReport collects named variables into the output data map.
-// Each arg value is treated as a variable name; the variable's value is
-// included in the report under the arg's key.
 func (e *Executor) executeReport(args map[string]interface{}) (interface{}, error) {
 	result := make(map[string]interface{})
 	for key, value := range args {
-		// If the value is a string that matches a variable name, use the variable's value.
-		if varName, ok := value.(string); ok {
-			if varVal, exists := e.vars[varName]; exists {
-				result[key] = varVal
-				continue
-			}
-		}
-		// Otherwise, use the value as-is.
-		result[key] = value
+		result[key] = e.resolveValue(value)
 	}
 	return result, nil
 }
 
 // executeLog outputs a message to warnings and returns the message.
 func (e *Executor) executeLog(args map[string]interface{}) (interface{}, error) {
-	msg := ""
-	if v, ok := args["message"]; ok {
-		if s, ok := v.(string); ok {
-			msg = s
-		}
-	}
+	msg := getStringArg(args, "message", "")
 	if msg == "" {
-		if v, ok := args["msg"]; ok {
-			if s, ok := v.(string); ok {
-				msg = s
-			}
-		}
+		msg = getStringArg(args, "msg", "")
 	}
 	if msg != "" {
 		e.warnings = append(e.warnings, msg)
@@ -133,8 +146,14 @@ func (e *Executor) Warnings() []string {
 }
 
 // Run processes an instruction package and returns the output.
-// Errors in individual instructions do not stop execution — they are
-// collected in the output's Errors array.
+//
+// An instruction error does not abort the remaining instructions (later
+// steps may still collect useful state), but it is recorded and affects
+// the final status:
+//
+//	ok      - every instruction succeeded
+//	partial - some succeeded, some failed
+//	failed  - every instruction failed (or none produced a result)
 func Run(pkg *InstructionPackage, registry *Registry) *Output {
 	output := &Output{
 		Status:   "ok",
@@ -145,14 +164,17 @@ func Run(pkg *InstructionPackage, registry *Registry) *Output {
 
 	executor := NewExecutor(registry, pkg.DryRun)
 	var lastReport map[string]interface{}
+	succeeded, failed := 0, 0
 
 	for i, inst := range pkg.Instructions {
 		result, err := executor.Execute(&inst)
 		if err != nil {
+			failed++
 			output.Errors = append(output.Errors,
 				fmt.Sprintf("instruction %d (%s): %v", i, inst.Op, err))
 			continue
 		}
+		succeeded++
 
 		// Assign result to variable if specified.
 		if inst.Assign != "" {
@@ -171,9 +193,14 @@ func Run(pkg *InstructionPackage, registry *Registry) *Output {
 	// Collect warnings from executor (from log operations).
 	output.Warnings = append(output.Warnings, executor.Warnings()...)
 
-	// Determine final status.
-	if len(output.Errors) > 0 {
+	// Determine final status honestly.
+	switch {
+	case failed == 0:
+		output.Status = "ok"
+	case succeeded > 0:
 		output.Status = "partial"
+	default:
+		output.Status = "failed"
 	}
 
 	// If a report was generated, use it as the output data.

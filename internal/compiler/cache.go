@@ -30,9 +30,15 @@ func NewCache(dir string) (*Cache, error) {
 	return &Cache{dir: dir}, nil
 }
 
-// Key computes a cache key from source content and target architecture.
+// codegenVersion salts the cache key: bump it whenever code generation
+// semantics change, so stale binaries produced by an older compiler are
+// never reused for identical sources.
+const codegenVersion = "v2"
+
+// Key computes a cache key from codegen version, source content, and target
+// architecture.
 func (c *Cache) Key(source string, targetArch string) string {
-	h := sha256.Sum256([]byte(source + "|" + targetArch))
+	h := sha256.Sum256([]byte(codegenVersion + "|" + source + "|" + targetArch))
 	return fmt.Sprintf("%x", h[:16]) // 32 hex chars
 }
 

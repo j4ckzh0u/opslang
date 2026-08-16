@@ -9,16 +9,26 @@ import (
 	"strings"
 
 	"github.com/opslang/opslang/internal/ast"
+	"github.com/opslang/opslang/internal/opsspec"
 )
 
 // InstructionGenerator converts AST statements into instruction packages
 // that the Runner can execute sequentially.
+//
+// The runner is a linear instruction VM: it has no expression evaluator.
+// The generator therefore REFUSES (with a clear error) any statement whose
+// semantics it cannot preserve exactly — control flow, functions, ensure.
+// Scripts that need those features must be deployed in AOT mode, where the
+// full script is compiled. Silently dropping or mis-translating statements
+// is how this component used to lie; that path is closed for good.
 type InstructionGenerator struct {
 	instructions []Instruction
 	varCounter   int
 }
 
 // Generate creates an instruction package from a task statement's body.
+// The task's on-clause does not affect instruction generation: target
+// routing is a deploy-time concern handled by opsctl.
 func (g *InstructionGenerator) Generate(task *ast.TaskStatement, dryRun bool) (*InstructionPackage, error) {
 	g.instructions = nil
 	g.varCounter = 0
@@ -76,6 +86,12 @@ func (g *InstructionGenerator) genBlock(block *ast.BlockStatement) error {
 	return nil
 }
 
+// unsupportedErr renders the standard guidance for statements the runner
+// VM cannot express.
+func unsupportedErr(what string) error {
+	return fmt.Errorf("%s is not supported in runner mode; redeploy with --mode aot (the script is compiled to a full binary with exact semantics)", what)
+}
+
 // genStatement dispatches statement generation by concrete type.
 func (g *InstructionGenerator) genStatement(stmt ast.Statement) error {
 	switch s := stmt.(type) {
@@ -87,24 +103,38 @@ func (g *InstructionGenerator) genStatement(stmt ast.Statement) error {
 		return g.genReportStatement(s)
 	case *ast.AlertStatement:
 		return g.genAlertStatement(s)
-	case *ast.IfStatement:
-		return g.genIfStatement(s)
+	case *ast.LogStatement:
+		return g.genLogStatement(s)
 	case *ast.AssignStatement:
 		return g.genAssignStatement(s)
-	case *ast.ForStatement:
-		g.addWarning("for loops are not supported in runner mode; use AOT compilation")
+	case *ast.ImportStatement:
+		// SDK functions are globally registered; plain imports carry no
+		// behavior. Third-party Go imports are not supported anywhere yet.
+		if strings.HasPrefix(s.Path, "go ") || strings.HasPrefix(s.Path, "go:") {
+			return fmt.Errorf("import %q: third-party Go imports are not supported yet", s.Path)
+		}
 		return nil
-	case *ast.WhileStatement:
-		g.addWarning("while loops are not supported in runner mode; use AOT compilation")
-		return nil
-	case *ast.ReturnStatement:
-		// Return statements are no-ops in runner mode.
-		return nil
-	case *ast.FnStatement:
-		g.addWarning("function definitions are not supported in runner mode; use AOT compilation")
+	case *ast.PrivilegeStatement:
+		// Metadata only; enforced by opsctl before deployment.
 		return nil
 	case *ast.TaskStatement:
+		// Target routing is handled by the deploy layer; the body's
+		// statements translate like any other block.
 		return g.genBlock(s.Body)
+	case *ast.IfStatement:
+		return unsupportedErr("if statement")
+	case *ast.ForStatement:
+		return unsupportedErr("for loop")
+	case *ast.WhileStatement:
+		return unsupportedErr("while loop")
+	case *ast.FnStatement:
+		return unsupportedErr("function definition")
+	case *ast.ReturnStatement:
+		return unsupportedErr("return statement")
+	case *ast.EnsureStatement:
+		return unsupportedErr("ensure statement")
+	case *ast.ParallelStatement:
+		return unsupportedErr("parallel block")
 	default:
 		return fmt.Errorf("unsupported statement type in runner mode: %T", stmt)
 	}
@@ -117,7 +147,6 @@ func (g *InstructionGenerator) genLetStatement(s *ast.LetStatement) error {
 		return g.genCallAsTarget(call, s.Name.Name)
 	}
 
-	// For non-call values, evaluate the expression and assign directly.
 	value, err := g.genExpression(s.Value)
 	if err != nil {
 		return fmt.Errorf("let %s: %w", s.Name.Name, err)
@@ -132,13 +161,13 @@ func (g *InstructionGenerator) genLetStatement(s *ast.LetStatement) error {
 }
 
 // genExpressionStatement handles standalone expression statements.
-// Only call expressions produce instructions; other expressions are no-ops.
+// Only call expressions produce instructions; other expressions are errors:
+// silently dropping them hid dead code from the author.
 func (g *InstructionGenerator) genExpressionStatement(s *ast.ExpressionStatement) error {
 	if call, ok := s.Expr.(*ast.CallExpression); ok {
 		return g.genCallAsInstruction(call)
 	}
-	// Non-call expressions used as statements are silently ignored.
-	return nil
+	return fmt.Errorf("expression statement has no effect in runner mode: %s (only calls can be executed)", s.Expr.String())
 }
 
 // genReportStatement handles: report { key: value, ... }
@@ -175,17 +204,17 @@ func (g *InstructionGenerator) genAlertStatement(s *ast.AlertStatement) error {
 	return nil
 }
 
-// genIfStatement handles if statements. Complex control flow is not directly
-// translatable to linear instructions, so the condition is evaluated for
-// side-effect calls and a warning is emitted.
-func (g *InstructionGenerator) genIfStatement(s *ast.IfStatement) error {
-	// Evaluate the condition expression for any sub-calls (e.g. sys.cpu.usage()).
-	_, err := g.genExpression(s.Condition)
+// genLogStatement handles: log(<message>)
+func (g *InstructionGenerator) genLogStatement(s *ast.LogStatement) error {
+	msg, err := g.genExpression(s.Message)
 	if err != nil {
-		return fmt.Errorf("if condition: %w", err)
+		return fmt.Errorf("log: %w", err)
 	}
 
-	g.addWarning("if statements are not fully supported in runner mode; use AOT compilation")
+	g.emit(Instruction{
+		Op:   "log",
+		Args: map[string]interface{}{"message": msg},
+	})
 	return nil
 }
 
@@ -193,7 +222,7 @@ func (g *InstructionGenerator) genIfStatement(s *ast.IfStatement) error {
 func (g *InstructionGenerator) genAssignStatement(s *ast.AssignStatement) error {
 	targetName := expressionToString(s.Target)
 	if targetName == "" {
-		return fmt.Errorf("unsupported assignment target: %T", s.Target)
+		return fmt.Errorf("unsupported assignment target in runner mode: %s", s.Target.String())
 	}
 
 	if call, ok := s.Value.(*ast.CallExpression); ok {
@@ -218,8 +247,8 @@ func (g *InstructionGenerator) genAssignStatement(s *ast.AssignStatement) error 
 // ---------------------------------------------------------------------------
 
 // genExpression converts an AST expression into a value suitable for use
-// as an instruction argument. Literals are converted directly; calls are
-// extracted into temporary variables; variable references become strings.
+// as an instruction argument. Calls become temporary variables; variable
+// references become "$name" strings resolved by the executor.
 func (g *InstructionGenerator) genExpression(expr ast.Expression) (interface{}, error) {
 	switch e := expr.(type) {
 	case *ast.IntegerLiteral:
@@ -233,7 +262,7 @@ func (g *InstructionGenerator) genExpression(expr ast.Expression) (interface{}, 
 	case *ast.NilLiteral:
 		return nil, nil
 	case *ast.Identifier:
-		return e.Name, nil
+		return "$" + e.Name, nil
 	case *ast.CallExpression:
 		return g.evaluateCallExpression(e)
 	case *ast.ListLiteral:
@@ -241,23 +270,29 @@ func (g *InstructionGenerator) genExpression(expr ast.Expression) (interface{}, 
 	case *ast.DictLiteral:
 		return g.evaluateDictLiteral(e)
 	case *ast.BinaryExpression:
-		return g.evaluateBinaryExpression(e)
+		return nil, fmt.Errorf("runner mode cannot evaluate expression %s at runtime; use AOT mode for computed values", e.String())
+	case *ast.UnaryExpression:
+		return nil, fmt.Errorf("runner mode cannot evaluate expression %s at runtime; use AOT mode for computed values", e.String())
+	case *ast.IfExpression:
+		return nil, fmt.Errorf("runner mode cannot evaluate conditional expressions; use AOT mode")
 	case *ast.MemberExpression:
-		return resolveMemberPath(e), nil
+		return nil, fmt.Errorf("runner mode cannot dereference %s; assign the call result to a variable first or use AOT mode", e.String())
+	case *ast.IndexExpression:
+		return nil, fmt.Errorf("runner mode cannot index into %s; use AOT mode", e.Left.String())
 	default:
-		return nil, fmt.Errorf("unsupported expression type: %T", expr)
+		return nil, fmt.Errorf("unsupported expression type in runner mode: %T", expr)
 	}
 }
 
 // evaluateCallExpression handles a call expression used as a value.
-// The call is extracted into a temporary variable and the variable name
-// is returned so the caller can reference it.
+// The call is extracted into a temporary variable and the reference is
+// returned so later instructions can use its result.
 func (g *InstructionGenerator) evaluateCallExpression(call *ast.CallExpression) (interface{}, error) {
 	tmp := g.newTemp()
 	if err := g.genCallAsTarget(call, tmp); err != nil {
 		return nil, err
 	}
-	return tmp, nil
+	return "$" + tmp, nil
 }
 
 // evaluateListLiteral converts a list literal into []interface{}.
@@ -279,7 +314,7 @@ func (g *InstructionGenerator) evaluateDictLiteral(dict *ast.DictLiteral) (inter
 	for i := range dict.Keys {
 		key := expressionToString(dict.Keys[i])
 		if key == "" {
-			return nil, fmt.Errorf("dict key %d is not a simple expression", i)
+			return nil, fmt.Errorf("dict key %d must be a simple literal in runner mode", i)
 		}
 		val, err := g.genExpression(dict.Values[i])
 		if err != nil {
@@ -290,46 +325,15 @@ func (g *InstructionGenerator) evaluateDictLiteral(dict *ast.DictLiteral) (inter
 	return result, nil
 }
 
-// evaluateBinaryExpression handles binary expressions. Numeric literals are
-// folded at generation time; otherwise sub-calls are extracted and a string
-// representation is returned.
-func (g *InstructionGenerator) evaluateBinaryExpression(bin *ast.BinaryExpression) (interface{}, error) {
-	// Try constant folding for numeric literals.
-	leftLit, leftIsLit := bin.Left.(*ast.IntegerLiteral)
-	rightLit, rightIsLit := bin.Right.(*ast.IntegerLiteral)
-	if leftIsLit && rightIsLit {
-		switch bin.Op {
-		case "+":
-			return leftLit.Value + rightLit.Value, nil
-		case "-":
-			return leftLit.Value - rightLit.Value, nil
-		case "*":
-			return leftLit.Value * rightLit.Value, nil
-		}
-	}
-
-	// Evaluate both sides for sub-calls (they may produce temp variables).
-	left, err := g.genExpression(bin.Left)
-	if err != nil {
-		return nil, fmt.Errorf("binary left: %w", err)
-	}
-	right, err := g.genExpression(bin.Right)
-	if err != nil {
-		return nil, fmt.Errorf("binary right: %w", err)
-	}
-
-	return fmt.Sprintf("%v %s %v", left, bin.Op, right), nil
-}
-
 // genFieldValue generates the value for a report field. Sub-calls are
 // extracted into temporary variables.
 func (g *InstructionGenerator) genFieldValue(expr ast.Expression) (interface{}, error) {
 	if call, ok := expr.(*ast.CallExpression); ok {
 		tmp := g.newTemp()
-		if err := g.genCallAsTarget(call, tmp); err != nil {
+		if err := genCallAsTargetSafe(g, call, tmp); err != nil {
 			return nil, err
 		}
-		return tmp, nil
+		return "$" + tmp, nil
 	}
 	return g.genExpression(expr)
 }
@@ -339,11 +343,10 @@ func (g *InstructionGenerator) genFieldValue(expr ast.Expression) (interface{}, 
 // ---------------------------------------------------------------------------
 
 // genCallAsInstruction generates an instruction for a standalone call expression.
-// The result is NOT assigned to a variable.
 func (g *InstructionGenerator) genCallAsInstruction(call *ast.CallExpression) error {
-	opName := resolveFunctionName(call.Function)
-	if opName == "" {
-		return fmt.Errorf("unsupported function call: %s", call.Function)
+	opName, err := resolveOpName(call.Function)
+	if err != nil {
+		return err
 	}
 
 	args, err := g.buildArgs(call, opName)
@@ -353,6 +356,11 @@ func (g *InstructionGenerator) genCallAsInstruction(call *ast.CallExpression) er
 
 	g.emit(Instruction{Op: opName, Args: args})
 	return nil
+}
+
+// genCallAsTargetSafe is an alias kept for internal readability.
+func genCallAsTargetSafe(g *InstructionGenerator, call *ast.CallExpression, assign string) error {
+	return g.genCallAsTarget(call, assign)
 }
 
 // genCallAsTarget generates an instruction for a call expression and assigns
@@ -373,20 +381,73 @@ func (g *InstructionGenerator) genCallAsTarget(call *ast.CallExpression, assign 
 }
 
 // buildArgs extracts argument values from a call expression's argument list
-// and maps them to named parameters using the known operation signatures.
+// and maps them to named parameters using the canonical opsspec signature.
+// Unknown ops and argument-count mismatches are generation-time errors:
+// a typo must fail the deploy, not the remote run.
 func (g *InstructionGenerator) buildArgs(call *ast.CallExpression, opName string) (map[string]interface{}, error) {
-	paramNames := argNamesForOp(opName)
-	args := make(map[string]interface{}, len(call.Args))
+	// Skip validation for the special alert/log ops that go through the
+	// statement path; direct calls of print() map to log.
+	checkName := opName
+	if checkName == "print" {
+		checkName = "log"
+	}
 
+	paramNames, known := opsspec.ArgNames(checkName)
+	if !known {
+		return nil, fmt.Errorf("unknown function %q (not a registered operation)", opName)
+	}
+	if len(call.Args) > len(paramNames) {
+		// process.exec variadic: allow extra args, all named "args".
+		if checkName != "process.exec" {
+			return nil, fmt.Errorf("%s() takes at most %d argument(s), got %d", opName, len(paramNames), len(call.Args))
+		}
+	}
+
+	args := make(map[string]interface{}, len(call.Args))
 	for i, argExpr := range call.Args {
 		val, err := g.genExpression(argExpr)
 		if err != nil {
-			return nil, fmt.Errorf("arg %d: %w", i, err)
+			return nil, fmt.Errorf("%s arg %d: %w", opName, i, err)
 		}
-		paramName := paramNames[i]
-		args[paramName] = val
+		if checkName == "process.exec" && i >= 1 {
+			// Variadic tail collapses into the "args" list.
+			list, _ := args["args"].([]interface{})
+			args["args"] = append(list, val)
+			continue
+		}
+		args[paramNames[i]] = val
 	}
+
+	// Required-argument check against the canonical signature.
+	for _, p := range requiredArgs(checkName, paramNames) {
+		if _, ok := args[p]; !ok {
+			return nil, fmt.Errorf("%s() missing required argument %q", opName, p)
+		}
+	}
+
 	return args, nil
+}
+
+// requiredArgs returns the argument names that must be present. For most
+// ops every declared argument is required; optional trailing arguments are
+// listed here explicitly.
+func requiredArgs(op string, paramNames []string) []string {
+	optional := map[string]map[string]bool{
+		"file.checksum": {"algo": true},
+		"process.kill":  {"signal": true},
+		"time.format":   {"layout": true},
+		"net.http_post": {"body": true}, // an empty POST body is legal
+	}
+	if opt, ok := optional[op]; ok {
+		var req []string
+		for _, p := range paramNames {
+			if !opt[p] {
+				req = append(req, p)
+			}
+		}
+		return req
+	}
+	return paramNames
 }
 
 // ---------------------------------------------------------------------------
@@ -410,14 +471,8 @@ func resolveOpName(fn ast.Expression) (string, error) {
 	case *ast.MemberExpression:
 		return resolveMemberPath(f), nil
 	default:
-		return "", fmt.Errorf("unsupported function expression type: %T", fn)
+		return "", fmt.Errorf("unsupported function expression: %s", fn.String())
 	}
-}
-
-// resolveFunctionName is like resolveOpName but returns empty string instead of error.
-func resolveFunctionName(fn ast.Expression) string {
-	name, _ := resolveOpName(fn)
-	return name
 }
 
 // resolveMemberPath flattens a chain of MemberExpression nodes into a
@@ -441,91 +496,6 @@ func resolveMemberPath(member *ast.MemberExpression) string {
 }
 
 // ---------------------------------------------------------------------------
-// Argument name mapping
-// ---------------------------------------------------------------------------
-
-// argNamesForOp returns the positional parameter names for a known operation.
-// Unknown operations get generic names (arg0, arg1, ...).
-func argNamesForOp(op string) []string {
-	switch op {
-	case "sys.disk.usage":
-		return []string{"path"}
-	case "file.read":
-		return []string{"path"}
-	case "file.write":
-		return []string{"path", "content"}
-	case "file.append":
-		return []string{"path", "content"}
-	case "file.copy":
-		return []string{"src", "dst"}
-	case "file.move":
-		return []string{"src", "dst"}
-	case "file.delete":
-		return []string{"path"}
-	case "file.exists":
-		return []string{"path"}
-	case "file.info":
-		return []string{"path"}
-	case "file.list":
-		return []string{"dir"}
-	case "file.mkdir":
-		return []string{"path"}
-	case "file.checksum":
-		return []string{"path", "algo"}
-	case "file.distribute":
-		return []string{"source", "targets", "options"}
-	case "file.collect":
-		return []string{"source", "targets", "options"}
-	case "net.http.get":
-		return []string{"url"}
-	case "net.http.post":
-		return []string{"url", "body"}
-	case "net.tcp.ping":
-		return []string{"host", "port"}
-	case "net.dns.resolve":
-		return []string{"host"}
-	case "process.find.by_name":
-		return []string{"name"}
-	case "process.find.by_port":
-		return []string{"port"}
-	case "process.exec":
-		return []string{"command", "args"}
-	case "service.status", "service.start", "service.stop",
-		"service.restart", "service.enable", "service.disable":
-		return []string{"name"}
-	case "pkg.install":
-		return []string{"name"}
-	case "pkg.remove":
-		return []string{"name"}
-	case "pkg.search":
-		return []string{"name"}
-	case "time.format":
-		return []string{"layout", "ts"}
-	case "time.parse":
-		return []string{"layout", "value"}
-	case "time.diff":
-		return []string{"t1", "t2"}
-	case "time.sleep":
-		return []string{"ms"}
-	case "log":
-		return []string{"message"}
-	case "alert":
-		return []string{"message"}
-	default:
-		return nil // caller falls back to arg0, arg1, ...
-	}
-}
-
-// getParamName returns the parameter name for position i of the given operation.
-func getParamName(op string, i int) string {
-	names := argNamesForOp(op)
-	if i < len(names) {
-		return names[i]
-	}
-	return fmt.Sprintf("arg%d", i)
-}
-
-// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -535,14 +505,6 @@ func (g *InstructionGenerator) emit(inst Instruction) {
 		inst.Args = make(map[string]interface{})
 	}
 	g.instructions = append(g.instructions, inst)
-}
-
-// addWarning emits a log instruction with a warning message.
-func (g *InstructionGenerator) addWarning(msg string) {
-	g.emit(Instruction{
-		Op:   "log",
-		Args: map[string]interface{}{"message": "[runner-mode warning] " + msg},
-	})
 }
 
 // newTemp returns a fresh temporary variable name.

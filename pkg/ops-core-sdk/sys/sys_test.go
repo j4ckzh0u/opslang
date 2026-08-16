@@ -4,7 +4,12 @@ import (
 	"encoding/json"
 	"math"
 	"os"
+	"runtime"
+	"sync"
 	"testing"
+	"time"
+
+	"github.com/shirou/gopsutil/v3/cpu"
 )
 
 // ---------- Struct JSON marshaling tests ----------
@@ -460,4 +465,184 @@ func TestRoundTripJSON(t *testing.T) {
 			t.Errorf("round-trip mismatch: got %+v, want %+v", decoded, orig)
 		}
 	})
+}
+
+// ---------- Live system function tests ----------
+
+func TestGetNetInterfaces(t *testing.T) {
+	result, err := GetNetInterfaces()
+	if err != nil {
+		t.Fatalf("GetNetInterfaces() error = %v", err)
+	}
+	if len(result) == 0 {
+		t.Error("GetNetInterfaces() returned empty list, expected at least loopback")
+	}
+	// Verify struct fields are populated
+	for _, iface := range result {
+		if iface.Name == "" {
+			t.Error("interface has empty Name")
+		}
+		if iface.MTU < 0 {
+			t.Errorf("interface %q has non-positive MTU: %d", iface.Name, iface.MTU)
+		}
+	}
+}
+
+func TestGetCPUCount(t *testing.T) {
+	result, err := GetCPUCount()
+	if err != nil {
+		t.Fatalf("GetCPUCount() error = %v", err)
+	}
+	if result.Logical <= 0 {
+		t.Errorf("Logical CPU count = %d, want > 0", result.Logical)
+	}
+	if result.Physical <= 0 {
+		t.Errorf("Physical CPU count = %d, want > 0", result.Physical)
+	}
+	if result.Physical > result.Logical {
+		t.Errorf("Physical (%d) > Logical (%d), unexpected", result.Physical, result.Logical)
+	}
+}
+
+func TestGetCPUInfo(t *testing.T) {
+	result, err := GetCPUInfo()
+	if err != nil {
+		t.Fatalf("GetCPUInfo() error = %v", err)
+	}
+	if len(result) == 0 {
+		t.Fatal("GetCPUInfo() returned empty list")
+	}
+	for _, info := range result {
+		if info.ModelName == "" {
+			t.Error("CPU info returned empty ModelName")
+		}
+		if info.Cores <= 0 {
+			t.Errorf("Cores = %d, want > 0", info.Cores)
+		}
+	}
+}
+
+func TestGetDiskPartitions(t *testing.T) {
+	result, err := GetDiskPartitions()
+	if err != nil {
+		t.Fatalf("GetDiskPartitions() error = %v", err)
+	}
+	if len(result) == 0 {
+		t.Error("GetDiskPartitions() returned empty list")
+	}
+	for _, p := range result {
+		if p.Mountpoint == "" {
+			t.Error("partition has empty Mountpoint")
+		}
+		if p.Fstype == "" {
+			t.Error("partition has empty Fstype")
+		}
+	}
+}
+
+func TestGetHostInfo(t *testing.T) {
+	result, err := GetHostInfo()
+	if err != nil {
+		t.Fatalf("GetHostInfo() error = %v", err)
+	}
+	if result.OS == "" {
+		t.Error("GetHostInfo() returned empty OS")
+	}
+	if result.Platform == "" {
+		t.Error("GetHostInfo() returned empty Platform")
+	}
+	if result.KernelArch == "" {
+		t.Error("GetHostInfo() returned empty KernelArch")
+	}
+}
+
+func TestHostnameJSON(t *testing.T) {
+	orig := HostnameInfo{Hostname: "testhost", FQDN: "testhost.example.com"}
+	data, err := json.Marshal(orig)
+	if err != nil {
+		t.Fatalf("marshal error: %v", err)
+	}
+	var decoded HostnameInfo
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if decoded != orig {
+		t.Errorf("round-trip mismatch: got %+v, want %+v", decoded, orig)
+	}
+}
+
+// ---------- CPU usage sampling tests ----------
+
+func TestComputeUsageDelta(t *testing.T) {
+	// Deltas: user +60, system +20, idle +20 -> total 100 ticks.
+	// Expected: Percent 80, User 60, System 20, Idle 20.
+	t1 := cpu.TimesStat{User: 10, System: 5, Idle: 85}
+	t2 := cpu.TimesStat{User: 70, System: 25, Idle: 105}
+
+	usage, ok := computeUsageDelta(t1, t2)
+	if !ok {
+		t.Fatal("computeUsageDelta returned ok=false for a positive delta")
+	}
+
+	if usage.Percent != 80 {
+		t.Errorf("Percent = %v, want 80", usage.Percent)
+	}
+	if usage.Idle != 20 {
+		t.Errorf("Idle = %v, want 20", usage.Idle)
+	}
+	if usage.User != 60 {
+		t.Errorf("User = %v, want 60", usage.User)
+	}
+	if usage.System != 20 {
+		t.Errorf("System = %v, want 20", usage.System)
+	}
+}
+
+func TestComputeUsageDeltaNoDelta(t *testing.T) {
+	t1 := cpu.TimesStat{User: 10, System: 5, Idle: 80}
+	if _, ok := computeUsageDelta(t1, t1); ok {
+		t.Error("computeUsageDelta returned ok=true for identical samples")
+	}
+}
+
+func TestGetCPUUsageMeasuresCurrentWindow(t *testing.T) {
+	// Burn CPU on all cores and verify the reported usage reflects the
+	// sampling window (high), not a since-boot lifetime average (which
+	// would be far lower right after boot on an idle machine).
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < runtime.NumCPU(); i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+			}
+		}()
+	}
+
+	usage, err := GetCPUUsageInterval(400 * time.Millisecond)
+	close(stop)
+	wg.Wait()
+
+	if err != nil {
+		t.Fatalf("GetCPUUsageInterval error: %v", err)
+	}
+	if usage.Percent < 40 {
+		t.Errorf("Percent under full load = %v, want >= 40 (windowed sampling appears broken)", usage.Percent)
+	}
+}
+
+func TestGetCPUUsageSinceBootFallback(t *testing.T) {
+	usage, err := GetCPUUsageInterval(0)
+	if err != nil {
+		t.Fatalf("GetCPUUsageInterval(0) error: %v", err)
+	}
+	if usage.Percent < 0 || usage.Percent > 100 {
+		t.Errorf("Percent = %v, out of range", usage.Percent)
+	}
 }

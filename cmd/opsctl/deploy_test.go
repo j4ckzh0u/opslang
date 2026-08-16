@@ -1,178 +1,188 @@
 package main
 
 import (
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/opslang/opslang/internal/ast"
+	opsexec "github.com/opslang/opslang/internal/exec"
 	"github.com/opslang/opslang/internal/parser"
 )
 
-func TestAstToInstructions_SimpleTask(t *testing.T) {
-	source := `task "test" on ["localhost"] {
-    let x = 42
-}`
+func parseProgram(t *testing.T, source string) *ast.Program {
+	t.Helper()
 	p := parser.New(source, "test.ops")
 	prog, err := p.Parse()
 	if err != nil {
 		t.Fatalf("parse error: %v", err)
 	}
-
-	pkg, err := astToInstructions("test.ops", prog)
-	if err != nil {
-		t.Fatalf("astToInstructions error: %v", err)
-	}
-
-	if pkg.Version != "1.0" {
-		t.Errorf("expected version 1.0, got %s", pkg.Version)
-	}
-	if len(pkg.Instructions) == 0 {
-		t.Error("expected at least one instruction")
-	}
+	return prog
 }
 
-func TestAstToInstructions_EmptyScript(t *testing.T) {
-	source := ``
-	p := parser.New(source, "empty.ops")
-	prog, err := p.Parse()
-	if err != nil {
-		t.Fatalf("parse error: %v", err)
-	}
-
-	pkg, err := astToInstructions("empty.ops", prog)
-	if err != nil {
-		t.Fatalf("astToInstructions error: %v", err)
-	}
-
-	// Empty script should get a no-op instruction.
-	if len(pkg.Instructions) == 0 {
-		t.Error("expected at least one no-op instruction for empty script")
+func testTargets() []opsexec.Target {
+	return []opsexec.Target{
+		{Name: "web-01", Host: "10.0.0.1", Port: 22, User: "root"},
+		{Name: "web-02", Host: "10.0.0.2", Port: 22, User: "root"},
+		{Name: "db-01", Host: "10.0.0.10", Port: 22, User: "root"},
 	}
 }
 
 func TestResolveDeployMode(t *testing.T) {
-	tests := []struct {
-		mode     string
-		source   string
-		expected string
-	}{
-		{"runner", `print("hi")`, "runner"},
-		{"aot", `print("hi")`, "aot"},
-		{"auto", `print("hi")`, "runner"},
+	linear := parseProgram(t, `let cpu = sys.cpu.usage()
+report { cpu: cpu }`)
+	if got := resolveDeployMode("auto", linear); got != "runner" {
+		t.Errorf("linear script: mode = %q, want runner", got)
 	}
 
-	for _, tt := range tests {
-		p := parser.New(tt.source, "test.ops")
-		prog, err := p.Parse()
-		if err != nil {
-			t.Fatalf("parse error for mode=%s: %v", tt.mode, err)
-		}
+	controlFlow := parseProgram(t, `if true { print("x") }`)
+	if got := resolveDeployMode("auto", controlFlow); got != "aot" {
+		t.Errorf("control flow script: mode = %q, want aot", got)
+	}
 
-		result := resolveDeployMode(tt.mode, prog)
-		if result != tt.expected {
-			t.Errorf("resolveDeployMode(%q) = %q, want %q", tt.mode, result, tt.expected)
+	if got := resolveDeployMode("runner", controlFlow); got != "runner" {
+		t.Errorf("explicit runner override failed: %q", got)
+	}
+}
+
+func TestBuildDeploySteps_PreludeAndTaskRouting(t *testing.T) {
+	prog := parseProgram(t, `
+print("global setup")
+task "web" on "web-*" {
+	sys.cpu.usage()
+}
+task "db" on "db-01" {
+	sys.memory.info()
+}
+`)
+
+	steps, err := buildDeploySteps(prog, testTargets(), "task-1")
+	if err != nil {
+		t.Fatalf("buildDeploySteps failed: %v", err)
+	}
+
+	if len(steps) != 3 {
+		t.Fatalf("expected 3 steps (prelude + 2 tasks), got %d", len(steps))
+	}
+
+	// Prelude runs first on every target.
+	if steps[0].name != "main" || len(steps[0].targets) != 3 {
+		t.Errorf("prelude step: name=%q targets=%d", steps[0].name, len(steps[0].targets))
+	}
+
+	// Glob routing: web-* matches web-01 and web-02 only.
+	if steps[1].name != "web" || len(steps[1].targets) != 2 {
+		t.Errorf("web step: name=%q targets=%d, want 2", steps[1].name, len(steps[1].targets))
+	}
+	for _, tgt := range steps[1].targets {
+		if !strings.HasPrefix(tgt.Name, "web-") {
+			t.Errorf("web step wrongly routed to %q", tgt.Name)
+		}
+	}
+
+	// Exact routing.
+	if steps[2].name != "db" || len(steps[2].targets) != 1 || steps[2].targets[0].Name != "db-01" {
+		t.Errorf("db step routing wrong: %+v", steps[2].targets)
+	}
+
+	// Every package must be valid against the registry.
+	for _, step := range steps {
+		if step.pkg.TaskID == "" {
+			t.Errorf("step %q has empty TaskID", step.name)
 		}
 	}
 }
 
-func TestResolveCallName(t *testing.T) {
-	tests := []struct {
-		expr     ast.Expression
-		expected string
-	}{
-		{&ast.Identifier{Name: "print"}, "print"},
-		{&ast.MemberExpression{
-			Object: &ast.MemberExpression{
-				Object: &ast.Identifier{Name: "sys"},
-				Member: &ast.Identifier{Name: "cpu"},
-			},
-			Member: &ast.Identifier{Name: "usage"},
-		}, "sys.cpu.usage"},
-		{&ast.IntegerLiteral{Value: 42}, ""},
+func TestBuildDeploySteps_TaskMatchingNothingFails(t *testing.T) {
+	prog := parseProgram(t, `task "x" on "cache-*" { sys.cpu.usage() }`)
+	_, err := buildDeploySteps(prog, testTargets(), "task-1")
+	if err == nil {
+		t.Fatal("task selecting no targets must fail the deploy, not silently skip")
+	}
+	if !strings.Contains(err.Error(), "selects none") {
+		t.Errorf("unexpected error message: %v", err)
+	}
+}
+
+func TestBuildDeploySteps_ControlFlowInTaskFails(t *testing.T) {
+	prog := parseProgram(t, `task "x" on "web-01" {
+	if true { sys.cpu.usage() }
+}`)
+	_, err := buildDeploySteps(prog, testTargets(), "task-1")
+	if err == nil {
+		t.Fatal("control flow in runner mode must fail generation")
+	}
+	if !strings.Contains(err.Error(), "aot") {
+		t.Errorf("error should point at AOT mode: %v", err)
+	}
+}
+
+func TestBuildDeploySteps_VariableTargetFails(t *testing.T) {
+	prog := parseProgram(t, `let hosts = ["a"]
+task "x" on hosts { sys.cpu.usage() }`)
+	_, err := buildDeploySteps(prog, testTargets(), "task-1")
+	if err == nil {
+		t.Fatal("variable on-clause must fail at deploy time")
+	}
+}
+
+func TestSelectTaskTargets_MatchForms(t *testing.T) {
+	prog := parseProgram(t, `task "t" on "10.0.0.1" {}`)
+	task := prog.Statements[0].(*ast.TaskStatement)
+	selected, err := selectTaskTargets(task, testTargets())
+	if err != nil {
+		t.Fatalf("selectTaskTargets: %v", err)
+	}
+	if len(selected) != 1 || selected[0].Name != "web-01" {
+		t.Errorf("host-address matching failed: %+v", selected)
 	}
 
-	for i, tt := range tests {
-		result := resolveCallName(tt.expr)
-		if result != tt.expected {
-			t.Errorf("test %d: resolveCallName() = %q, want %q", i, result, tt.expected)
-		}
+	prog = parseProgram(t, `task "t" on "root@10.0.0.2" {}`)
+	task = prog.Statements[0].(*ast.TaskStatement)
+	selected, err = selectTaskTargets(task, testTargets())
+	if err != nil {
+		t.Fatalf("selectTaskTargets: %v", err)
+	}
+	if len(selected) != 1 || selected[0].Name != "web-02" {
+		t.Errorf("user@host matching failed: %+v", selected)
 	}
 }
 
 func TestGenerateTaskID(t *testing.T) {
-	id := generateTaskID("check_cpu.ops")
-	if id == "" {
-		t.Error("task ID should not be empty")
+	id1 := generateTaskID("scripts/check.ops")
+	id2 := generateTaskID("scripts/check.ops")
+	if id1 == id2 {
+		t.Error("expected unique task IDs")
 	}
-	// Should contain the script name (without extension).
-	if len(id) < 5 {
-		t.Errorf("task ID too short: %s", id)
-	}
-}
-
-func TestInstructionGen_WalkReport(t *testing.T) {
-	source := `report { status: "ok", count: 42 }`
-	p := parser.New(source, "test.ops")
-	prog, err := p.Parse()
-	if err != nil {
-		t.Fatalf("parse error: %v", err)
-	}
-
-	gen := &instructionGen{}
-	for _, stmt := range prog.Statements {
-		if err := gen.walkStatement(stmt); err != nil {
-			t.Fatalf("walkStatement error: %v", err)
-		}
-	}
-
-	if len(gen.instructions) == 0 {
-		t.Fatal("expected instructions from report")
-	}
-
-	found := false
-	for _, inst := range gen.instructions {
-		if inst.Op == "report" {
-			found = true
-		}
-	}
-	if !found {
-		t.Error("expected a report instruction")
+	if !strings.Contains(id1, "scripts_check") {
+		t.Errorf("unexpected ID format: %q", id1)
 	}
 }
 
-func TestInstructionGen_WalkLet(t *testing.T) {
-	source := `let x = 10`
-	p := parser.New(source, "test.ops")
-	prog, err := p.Parse()
-	if err != nil {
-		t.Fatalf("parse error: %v", err)
+func TestOutputDeployResultPartialIsError(t *testing.T) {
+	saved := deployOutput
+	deployOutput = t.TempDir() + "/result.json"
+	defer func() { deployOutput = saved }()
+
+	agg := &deployAggregate{
+		TaskID:  "t1",
+		Status:  "partial",
+		Targets: []string{"h1"},
+		Results: map[string]*opsexec.HostResult{},
+	}
+	if err := outputDeployResult(agg, nowUTC(), "x.ops"); err == nil {
+		t.Error("partial deploy must return an error (some hosts failed)")
 	}
 
-	gen := &instructionGen{}
-	for _, stmt := range prog.Statements {
-		if err := gen.walkStatement(stmt); err != nil {
-			t.Fatalf("walkStatement error: %v", err)
-		}
+	agg.Status = "failed"
+	if err := outputDeployResult(agg, nowUTC(), "x.ops"); err == nil {
+		t.Error("failed deploy must return an error")
 	}
 
-	if len(gen.instructions) == 0 {
-		t.Fatal("expected instructions from let statement")
-	}
-}
-
-func TestDeployMode_AutoWithImport(t *testing.T) {
-	// A script with import should resolve to AOT mode.
-	source := `let x = 42
-print(x)`
-
-	p := parser.New(source, "test.ops")
-	prog, err := p.Parse()
-	if err != nil {
-		t.Fatalf("parse error: %v", err)
-	}
-
-	// Without import, auto should pick runner.
-	result := resolveDeployMode("auto", prog)
-	if result != "runner" {
-		t.Errorf("auto mode without import should be runner, got %s", result)
+	agg.Status = "success"
+	if err := outputDeployResult(agg, nowUTC(), "x.ops"); err != nil {
+		t.Errorf("successful deploy returned error: %v", err)
 	}
 }
+
+func nowUTC() (t time.Time) { return time.Now().UTC() }

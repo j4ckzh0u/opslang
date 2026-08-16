@@ -1,5 +1,12 @@
 // ops-runner is the universal runner that executes JSON instruction packages
 // from stdin and outputs JSON results to stdout.
+//
+// Exit codes:
+//
+//	0 - all instructions succeeded (status "ok")
+//	1 - some instructions failed (status "partial")
+//	2 - every instruction failed (status "failed")
+//	3 - protocol/usage error (bad input, unsupported version)
 package main
 
 import (
@@ -29,9 +36,21 @@ func main() {
 
 	if err := run(os.Stdin, os.Stdout); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(3)
+	}
+
+	// The run itself may have partially or fully failed; report it via the
+	// exit code so the controller (and CI) can detect it without parsing JSON.
+	switch status {
+	case "partial":
 		os.Exit(1)
+	case "failed":
+		os.Exit(2)
 	}
 }
+
+// status records the outcome of the last run for exit-code mapping.
+var status string
 
 func run(in io.Reader, out io.Writer) error {
 	// Read instruction package from stdin.
@@ -61,6 +80,7 @@ func run(in io.Reader, out io.Writer) error {
 
 	// Execute instructions.
 	output := runner.Run(&pkg, registry)
+	status = output.Status
 
 	// Marshal output.
 	result, err := json.MarshalIndent(output, "", "  ")

@@ -13,8 +13,8 @@ func TestGenerateLetStatement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
-	if !strings.Contains(code, "x := int64(42)") {
-		t.Errorf("expected 'x := int64(42)', got:\n%s", code)
+	if !strings.Contains(code, "var x interface{} = int64(42)") {
+		t.Errorf("expected 'var x interface{} = int64(42)', got:\n%s", code)
 	}
 }
 
@@ -35,7 +35,7 @@ func TestGenerateBoolLiteral(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
-	if !strings.Contains(code, "flag := true") {
+	if !strings.Contains(code, "var flag interface{} = true") {
 		t.Errorf("expected 'flag := true', got:\n%s", code)
 	}
 }
@@ -46,7 +46,7 @@ func TestGenerateNilLiteral(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
-	if !strings.Contains(code, "x := nil") {
+	if !strings.Contains(code, "var x interface{} = nil") {
 		t.Errorf("expected 'x := nil', got:\n%s", code)
 	}
 }
@@ -57,7 +57,7 @@ func TestGenerateBinaryExpression(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
-	if !strings.Contains(code, "x :=") {
+	if !strings.Contains(code, "var x interface{} =") {
 		t.Errorf("expected assignment, got:\n%s", code)
 	}
 }
@@ -185,13 +185,13 @@ func TestGenerateSDKCallWithArgs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
-	if !strings.Contains(code, `sys.GetDiskUsage("/")`) {
+	if !strings.Contains(code, `sys.GetDiskUsage(opsStr("/"))`) {
 		t.Errorf("expected sys.GetDiskUsage(\"/\"), got:\n%s", code)
 	}
 }
 
 func TestGenerateNetSDKImport(t *testing.T) {
-	source := `let r = net.http.get("http://example.com")`
+	source := `let r = net.http_get("http://example.com")`
 	code, err := GenerateCode(source, "test.ops")
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
@@ -213,10 +213,10 @@ func TestGenerateReportStatement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
-	if !strings.Contains(code, `_output["host"]`) {
+	if !strings.Contains(code, `setOutput(&_outputMu, _output, "host"`) {
 		t.Errorf("expected report output for host, got:\n%s", code)
 	}
-	if !strings.Contains(code, `_output["cpu"]`) {
+	if !strings.Contains(code, `setOutput(&_outputMu, _output, "cpu"`) {
 		t.Errorf("expected report output for cpu, got:\n%s", code)
 	}
 }
@@ -227,7 +227,7 @@ func TestGenerateAlertStatement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
-	if !strings.Contains(code, `_output["alert"]`) {
+	if !strings.Contains(code, `setOutput(&_outputMu, _output, "alert"`) {
 		t.Errorf("expected alert output, got:\n%s", code)
 	}
 	if !strings.Contains(code, "ALERT:") {
@@ -244,7 +244,7 @@ func TestGenerateTaskStatement(t *testing.T) {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
 	// Task body should be inlined in AOT mode
-	if !strings.Contains(code, "x := int64(1)") {
+	if !strings.Contains(code, "var x interface{} = int64(1)") {
 		t.Errorf("expected task body inlined, got:\n%s", code)
 	}
 }
@@ -714,7 +714,7 @@ let x = 1`
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
 	// Import statement should not generate any code (no error, just skipped)
-	if !strings.Contains(code, "x := int64(1)") {
+	if !strings.Contains(code, "var x interface{} = int64(1)") {
 		t.Errorf("expected let statement after import, got:\n%s", code)
 	}
 }
@@ -940,19 +940,18 @@ func TestResolveFuncName(t *testing.T) {
 // genStatementTo default error case
 // ---------------------------------------------------------------------------
 
-func TestGenStatementToUnsupportedType(t *testing.T) {
+func TestGenStatementEnsureNowSupported(t *testing.T) {
+	// Ensure used to be an unsupported statement type; it now compiles to
+	// the check -> apply -> verify contract. Every real AST statement type
+	// is handled, so the "unsupported" default case is no longer reachable
+	// from valid programs.
 	g := &CodeGenerator{}
-	// Create a fake statement type that's not handled
 	stmt := &ast.EnsureStatement{
 		Condition: &ast.BoolLiteral{Value: true},
 		Body:      &ast.BlockStatement{},
 	}
-	err := g.genStatement(stmt)
-	if err == nil {
-		t.Fatal("expected error for unsupported statement type")
-	}
-	if !strings.Contains(err.Error(), "unsupported statement type") {
-		t.Errorf("expected 'unsupported statement type' error, got: %v", err)
+	if err := g.genStatement(stmt); err != nil {
+		t.Fatalf("ensure statement must generate code: %v", err)
 	}
 }
 
@@ -968,10 +967,10 @@ func TestGenerateSDKImportAliases(t *testing.T) {
 		sdkCall string
 	}{
 		{"sys uses sys alias", `let x = sys.hostname()`, "sys", "sys.Hostname()"},
-		{"file uses file alias", `let x = file.read("/etc/hosts")`, "file", `file.Read("/etc/hosts")`},
+		{"file uses file alias", `let x = file.read("/etc/hosts")`, "file", `file.Read(opsStr("/etc/hosts"))`},
 		{"net uses opsnet alias", `let x = net.interfaces()`, "opsnet", "opsnet.Interfaces()"},
 		{"process uses process alias", `let x = process.list()`, "process", "process.List()"},
-		{"service uses service alias", `let x = service.status("nginx")`, "service", `service.Status("nginx")`},
+		{"service uses service alias", `let x = service.status("nginx")`, "service", `service.Status(opsStr("nginx"))`},
 		{"pkg uses opspkg alias", `let x = pkg.list()`, "opspkg", "opspkg.List()"},
 		{"time uses opstime alias", `let x = time.now()`, "opstime", "opstime.Now()"},
 		{"json uses opsjson alias", `let x = json.encode("data")`, "opsjson", `opsjson.Encode("data")`},
@@ -1007,7 +1006,7 @@ func TestGenerateForLoopStructure(t *testing.T) {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
 	// Verify all parts of the C-style for loop are present
-	if !strings.Contains(code, "i := int64(0)") {
+	if !strings.Contains(code, "i := interface{}(int64(0))") {
 		t.Errorf("expected init statement 'i := int64(0)', got:\n%s", code)
 	}
 	if !strings.Contains(code, "isTruthy(") {
@@ -1143,16 +1142,12 @@ func TestGenCallUnknownFunctionFallback(t *testing.T) {
 			&ast.IntegerLiteral{Value: 42},
 		},
 	}
-	result, err := g.genCall(call)
-	if err != nil {
-		t.Fatalf("genCall fallback should not error: %v", err)
+	_, err := g.genCall(call)
+	if err == nil {
+		t.Fatal("unknown function must fail generation (the old fallback emitted uncompilable code)")
 	}
-	// Fallback generates: funcExpr(args)
-	if !strings.Contains(result, "unknownFunc(") {
-		t.Errorf("expected fallback call, got: %s", result)
-	}
-	if !strings.Contains(result, "int64(42)") {
-		t.Errorf("expected argument, got: %s", result)
+	if !strings.Contains(err.Error(), "unknown function") {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 
@@ -1258,7 +1253,7 @@ let v = d.name`
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
-	if !strings.Contains(code, `m["name"]`) {
+	if !strings.Contains(code, `opsToMapDeep(d)["name"]`) {
 		t.Errorf("expected member expression lookup, got:\n%s", code)
 	}
 }

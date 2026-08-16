@@ -251,7 +251,7 @@ func TestCollect_TargetOverridesSource(t *testing.T) {
 		t.Fatalf("CollectWith: %v", err)
 	}
 
-	if receivedSource != "/custom/path.log" {
-		t.Errorf("source = %q, want /custom/path.log", receivedSource)
+	if receivedSource != "ssh://root@host1:22/custom/path.log" {
+		t.Errorf("source = %q, want ssh://root@host1:22/custom/path.log", receivedSource)
 	}
 }

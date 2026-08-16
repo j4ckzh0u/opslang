@@ -19,6 +19,12 @@ type Config struct {
 	KeyFile string
 	// Timeout for connection and operations (default: 30s).
 	Timeout time.Duration
+	// KnownHostsFile overrides the TOFU known-hosts file. Empty uses
+	// $OPSLANG_KNOWN_HOSTS or ~/.ssh/opslang_known_hosts.
+	KnownHostsFile string
+	// InsecureSkipHostKeyVerify disables host key verification. Only for
+	// lab environments; production use must keep verification on.
+	InsecureSkipHostKeyVerify bool
 	// Retries is the number of connection retry attempts (default: 3).
 	Retries int
 	// MaxConnections limits concurrent connections in pool (default: 5).

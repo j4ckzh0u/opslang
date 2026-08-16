@@ -10,16 +10,18 @@ import (
 	"github.com/opslang/opslang/internal/ast"
 )
 
-// sdkMapping maps OpsLang dotted function names to Go SDK calls.
+// sdkMapping maps OpsLang dotted function names to Go SDK calls. Names
+// follow the canonical table in internal/opsspec; historical aliases are
+// resolved through sdkAliases.
 var sdkMapping = map[string]sdkFunc{
 	// sys
 	"sys.cpu.usage":       {pkg: "sys", goName: "GetCPUUsage"},
 	"sys.cpu.count":       {pkg: "sys", goName: "GetCPUCount"},
 	"sys.cpu.info":        {pkg: "sys", goName: "GetCPUInfo"},
 	"sys.memory.info":     {pkg: "sys", goName: "GetMemoryInfo"},
-	"sys.disk.usage":      {pkg: "sys", goName: "GetDiskUsage", args: true},
+	"sys.disk.usage":      {pkg: "sys", goName: "GetDiskUsage", args: true, params: []string{"s"}},
 	"sys.disk.partitions": {pkg: "sys", goName: "GetDiskPartitions"},
-	"sys.host.info":       {pkg: "sys", goName: "GetHostInfo"},
+	"sys.os":              {pkg: "sys", goName: "GetHostInfo"},
 	"sys.hostname":        {pkg: "sys", goName: "Hostname"},
 	"sys.load":            {pkg: "sys", goName: "GetLoadAvg"},
 	"sys.net.interfaces":  {pkg: "sys", goName: "GetNetInterfaces"},
@@ -27,57 +29,71 @@ var sdkMapping = map[string]sdkFunc{
 	"sys.uptime":          {pkg: "sys", goName: "Uptime"},
 
 	// file
-	"file.read":     {pkg: "file", goName: "Read", args: true},
-	"file.write":    {pkg: "file", goName: "Write", args: true},
-	"file.exists":   {pkg: "file", goName: "Exists", args: true},
-	"file.copy":     {pkg: "file", goName: "Copy", args: true},
-	"file.move":     {pkg: "file", goName: "Move", args: true},
-	"file.delete":   {pkg: "file", goName: "Delete", args: true},
-	"file.info":     {pkg: "file", goName: "Stat", args: true},
-	"file.list":     {pkg: "file", goName: "List", args: true},
-	"file.mkdir":    {pkg: "file", goName: "Mkdir", args: true},
-	"file.checksum": {pkg: "file", goName: "Checksum", args: true},
+	"file.read":     {pkg: "file", goName: "Read", args: true, params: []string{"s"}},
+	"file.write":    {pkg: "file", goName: "Write", args: true, params: []string{"s", "s"}},
+	"file.append":   {pkg: "file", goName: "Append", args: true, params: []string{"s", "s"}},
+	"file.exists":   {pkg: "file", goName: "Exists", args: true, params: []string{"s"}},
+	"file.copy":     {pkg: "file", goName: "Copy", args: true, params: []string{"s", "s"}},
+	"file.move":     {pkg: "file", goName: "Move", args: true, params: []string{"s", "s"}},
+	"file.delete":   {pkg: "file", goName: "Delete", args: true, params: []string{"s"}},
+	"file.stat":     {pkg: "file", goName: "Stat", args: true, params: []string{"s"}},
+	"file.list":     {pkg: "file", goName: "List", args: true, params: []string{"s"}},
+	"file.mkdir":    {pkg: "file", goName: "Mkdir", args: true, params: []string{"s"}},
+	"file.chmod":    {pkg: "file", goName: "Chmod", args: true, params: []string{"s", "m"}},
+	"file.checksum": {pkg: "file", goName: "Checksum", args: true, params: []string{"s", "s"}},
+	"file.template": {pkg: "file", goName: "Template", args: true, params: []string{"s", "d"}},
 
 	// net
-	"net.http.get":    {pkg: "net", goName: "HTTPGet", args: true},
-	"net.http.post":   {pkg: "net", goName: "HTTPPost", args: true},
-	"net.tcp.ping":    {pkg: "net", goName: "TCPConnect", args: true},
-	"net.dns.resolve": {pkg: "net", goName: "DNSLookup", args: true},
-	"net.interfaces":  {pkg: "net", goName: "Interfaces"},
+	"net.http_get":  {pkg: "net", goName: "HTTPGet", args: true, params: []string{"s"}},
+	"net.http_post": {pkg: "net", goName: "HTTPPost", args: true, params: []string{"s", "s"}},
+	"net.tcp_check": {pkg: "net", goName: "TCPConnect", args: true, params: []string{"s", "i"}},
+	"net.dns_lookup": {pkg: "net", goName: "DNSLookup", args: true, params: []string{"s"}},
+	"net.interfaces": {pkg: "net", goName: "Interfaces"},
 
 	// process
-	"process.list":         {pkg: "process", goName: "List"},
-	"process.find.by_name": {pkg: "process", goName: "FindByName", args: true},
-	"process.find.by_port": {pkg: "process", goName: "FindByPort", args: true},
-	"process.exec":         {pkg: "process", goName: "Exec", args: true},
+	"process.list":          {pkg: "process", goName: "List"},
+	"process.find_by_name":  {pkg: "process", goName: "FindByName", args: true, params: []string{"s"}},
+	"process.find_by_port":  {pkg: "process", goName: "FindByPort", args: true, params: []string{"i"}},
+	"process.kill":          {pkg: "process", goName: "Kill", args: true, params: []string{"i", "s"}},
+	"process.exec":          {pkg: "process", goName: "Exec", args: true, params: []string{"s", "l"}},
 
 	// service
-	"service.status":  {pkg: "service", goName: "Status", args: true},
-	"service.start":   {pkg: "service", goName: "Start", args: true},
-	"service.stop":    {pkg: "service", goName: "Stop", args: true},
-	"service.restart": {pkg: "service", goName: "Restart", args: true},
-	"service.enable":  {pkg: "service", goName: "Enable", args: true},
-	"service.disable": {pkg: "service", goName: "Disable", args: true},
+	"service.status":  {pkg: "service", goName: "Status", args: true, params: []string{"s"}},
+	"service.start":   {pkg: "service", goName: "Start", args: true, params: []string{"s"}},
+	"service.stop":    {pkg: "service", goName: "Stop", args: true, params: []string{"s"}},
+	"service.restart": {pkg: "service", goName: "Restart", args: true, params: []string{"s"}},
+	"service.enable":  {pkg: "service", goName: "Enable", args: true, params: []string{"s"}},
+	"service.disable": {pkg: "service", goName: "Disable", args: true, params: []string{"s"}},
 
 	// pkg
-	"pkg.install": {pkg: "pkg", goName: "Install", args: true},
-	"pkg.remove":  {pkg: "pkg", goName: "Remove", args: true},
-	"pkg.info":    {pkg: "pkg", goName: "Info", args: true},
+	"pkg.install": {pkg: "pkg", goName: "Install", args: true, params: []string{"s"}},
+	"pkg.remove":  {pkg: "pkg", goName: "Remove", args: true, params: []string{"s"}},
+	"pkg.info":    {pkg: "pkg", goName: "Info", args: true, params: []string{"s"}},
 	"pkg.list":    {pkg: "pkg", goName: "List"},
 
 	// time
 	"time.now":    {pkg: "time", goName: "Now"},
-	"time.format": {pkg: "time", goName: "Format", args: true},
-	"time.parse":  {pkg: "time", goName: "Parse", args: true},
-	"time.since":  {pkg: "time", goName: "Since", args: true},
-	"time.sleep":  {pkg: "time", goName: "Sleep", args: true},
-	"time.diff":   {pkg: "time", goName: "Diff", args: true},
+	"time.format": {pkg: "time", goName: "Format", args: true, params: []string{"i64", "s"}},
+	"time.parse":  {pkg: "time", goName: "Parse", args: true, params: []string{"s", "s"}},
+	"time.since":  {pkg: "time", goName: "Since", args: true, params: []string{"i64"}},
+	"time.sleep":  {pkg: "time", goName: "Sleep", args: true, params: []string{"i"}},
+	"time.diff":   {pkg: "time", goName: "Diff", args: true, params: []string{"i64", "i64"}},
 
 	// json / yaml
-	"json.encode": {pkg: "json", goName: "Encode", args: true},
-	"json.decode": {pkg: "json", goName: "Decode", args: true},
-	"yaml.encode": {pkg: "yaml", goName: "Encode", args: true},
-	"yaml.decode": {pkg: "yaml", goName: "Decode", args: true},
+	"json.encode": {pkg: "json", goName: "Encode", args: true, params: []string{"a"}},
+	"json.decode": {pkg: "json", goName: "Decode", args: true, params: []string{"s"}},
+	"yaml.encode": {pkg: "yaml", goName: "Encode", args: true, params: []string{"a"}},
+	"yaml.decode": {pkg: "yaml", goName: "Decode", args: true, params: []string{"s"}},
+}
+
+// SDKMappingNames returns every canonical function name the code generator
+// can translate. Used by cross-engine consistency tests.
+func SDKMappingNames() []string {
+	names := make([]string, 0, len(sdkMapping))
+	for name := range sdkMapping {
+		names = append(names, name)
+	}
+	return names
 }
 
 // sdkFunc describes how an OpsLang SDK call maps to Go.
@@ -85,6 +101,53 @@ type sdkFunc struct {
 	pkg    string // short package key (e.g. "sys", "net")
 	goName string // Go function name without package prefix
 	args   bool   // whether the function takes arguments
+	// params declares per-argument converters from dynamic interface{}
+	// values to the Go parameter type. Codes:
+	//   "s"  -> string          via opsStr
+	//   "i"  -> int             via int(toFloat(..))
+	//   "i64"-> int64           via int64(toFloat(..))
+	//   "m"  -> uint32 file mode via opsParseMode
+	//   "d"  -> map[string]interface{} via opsToMap
+	//   "l"  -> []string        via opsStrList
+	//   "a"  -> interface{}     as-is
+	// A nil params (with args true) means all-string convention and is
+	// only allowed where the SDK really takes strings.
+	params []string
+}
+
+// generateSDKCall renders the converted Go call for an SDK function.
+func (f sdkFunc) generateSDKCall(alias string, argExprs []string) string {
+	callArgs := make([]string, len(argExprs))
+	for i, a := range argExprs {
+		var conv string
+		if i < len(f.params) {
+			conv = f.params[i]
+		} else {
+			conv = "a"
+		}
+		callArgs[i] = convertArg(a, conv)
+	}
+	return fmt.Sprintf("%s.%s(%s)", alias, f.goName, strings.Join(callArgs, ", "))
+}
+
+// convertArg wraps an interface{} expression into the target Go type.
+func convertArg(expr, conv string) string {
+	switch conv {
+	case "s":
+		return fmt.Sprintf("opsStr(%s)", expr)
+	case "i":
+		return fmt.Sprintf("int(toFloat(%s))", expr)
+	case "i64":
+		return fmt.Sprintf("int64(toFloat(%s))", expr)
+	case "m":
+		return fmt.Sprintf("opsParseMode(%s)", expr)
+	case "d":
+		return fmt.Sprintf("opsToMap(%s)", expr)
+	case "l":
+		return fmt.Sprintf("opsStrList(%s)", expr)
+	default: // "a"
+		return expr
+	}
 }
 
 // pkgImportAlias maps our short package key to the import alias used in generated Go code.
@@ -183,13 +246,9 @@ func (g *CodeGenerator) assemble(mainCode string) (string, error) {
 	// Standard library imports (always needed by helpers)
 	b.WriteString("\t\"encoding/json\"\n")
 	b.WriteString("\t\"fmt\"\n")
+	b.WriteString("\t\"os\"\n")
 	b.WriteString("\t\"strings\"\n")
-	if g.useOS {
-		b.WriteString("\t\"os\"\n")
-	}
-	if g.useSync {
-		b.WriteString("\t\"sync\"\n")
-	}
+	b.WriteString("\t\"sync\"\n")
 
 	// SDK imports
 	sdkOrder := []string{"sys", "file", "net", "process", "service", "pkg", "time", "json", "yaml"}
@@ -207,10 +266,9 @@ func (g *CodeGenerator) assemble(mainCode string) (string, error) {
 	b.WriteString("var (\n")
 	b.WriteString("\t_ = fmt.Println\n")
 	b.WriteString("\t_ = json.Marshal\n")
+	b.WriteString("\t_ = os.Stderr\n")
 	b.WriteString("\t_ = strings.Join\n")
-	if g.useOS {
-		b.WriteString("\t_ = os.Stderr\n")
-	}
+	b.WriteString("\t_ = sync.Mutex{}\n")
 	b.WriteString(")\n\n")
 
 	// Runtime helpers
@@ -226,7 +284,9 @@ func (g *CodeGenerator) assemble(mainCode string) (string, error) {
 	// Main function
 	b.WriteString("func main() {\n")
 	b.WriteString("\t_output := make(map[string]interface{})\n")
+	b.WriteString("\tvar _outputMu sync.Mutex\n")
 	b.WriteString("\t_ = _output\n")
+	b.WriteString("\t_ = _outputMu\n")
 	b.WriteString(mainCode)
 	b.WriteString("\n\t// Print final output as JSON\n")
 	b.WriteString("\tif len(_output) > 0 {\n")
@@ -320,6 +380,131 @@ func isTruthy(v interface{}) bool {
 	}
 }
 
+// setOutput writes to the shared output map under lock: parallel blocks
+// run goroutines that emit reports concurrently.
+func setOutput(m *sync.Mutex, output map[string]interface{}, key string, value interface{}) {
+	m.Lock()
+	output[key] = value
+	m.Unlock()
+}
+
+func opsStr(v interface{}) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return formatValue(v)
+}
+
+func opsParseMode(v interface{}) uint32 {
+	var m uint64
+	fmt.Sscanf(opsStr(v), "%o", &m)
+	return uint32(m)
+}
+
+func opsToMap(v interface{}) map[string]interface{} {
+	if m, ok := v.(map[string]interface{}); ok {
+		return m
+	}
+	return map[string]interface{}{}
+}
+
+// opsToMapDeep converts SDK result structs into generic maps via a JSON
+// round-trip, mirroring the interpreter structToMap. Without this,
+// member access on a typed struct silently evaluated to nil.
+func opsToMapDeep(v interface{}) map[string]interface{} {
+	if m, ok := v.(map[string]interface{}); ok {
+		return m
+	}
+	data, err := json.Marshal(v)
+	if err != nil {
+		return map[string]interface{}{}
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return map[string]interface{}{}
+	}
+	return m
+}
+
+func opsStrList(v interface{}) []string {
+	list, ok := v.([]interface{})
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(list))
+	for _, e := range list {
+		out = append(out, opsStr(e))
+	}
+	return out
+}
+
+// opsFatal aborts the compiled script: runtime SDK errors must fail the
+// deployment, not become string values that flow onward silently.
+func opsFatal(err error) {
+	fmt.Fprintf(os.Stderr, "runtime error: %v\n", err)
+	os.Exit(1)
+}
+
+// opsEqual: numbers compare numerically (int64/float64/int), strings as
+// strings, bools as bools. Values of different kinds are NOT equal (1 != "1")
+// - cross-type string-coincidence matching hid real bugs. Matches the
+// interpreter's isEqual exactly.
+func opsEqual(l, r interface{}) bool {
+	if l == nil || r == nil {
+		return l == nil && r == nil
+	}
+	if lb, ok := l.(bool); ok {
+		rb, rok := r.(bool)
+		return rok && lb == rb
+	}
+	lf, lok := toNumber(l)
+	rf, rok := toNumber(r)
+	if lok && rok {
+		return lf == rf
+	}
+	ls, lok := l.(string)
+	rs, rsok := r.(string)
+	if lok && rsok {
+		return ls == rs
+	}
+	return false
+}
+
+func toNumber(v interface{}) (float64, bool) {
+	switch n := v.(type) {
+	case int64:
+		return float64(n), true
+	case float64:
+		return n, true
+	case int:
+		return float64(n), true
+	default:
+		return 0, false
+	}
+}
+
+// typeName mirrors the interpreter's type() names.
+func typeName(v interface{}) string {
+	switch v.(type) {
+	case nil:
+		return "nil"
+	case bool:
+		return "bool"
+	case int64, int:
+		return "int"
+	case float64:
+		return "float"
+	case string:
+		return "string"
+	case []interface{}:
+		return "list"
+	case map[string]interface{}:
+		return "dict"
+	default:
+		return fmt.Sprintf("%T", v)
+	}
+}
+
 `)
 }
 
@@ -359,7 +544,10 @@ func (g *CodeGenerator) genStatementTo(b *strings.Builder, stmt ast.Statement, i
 		if err != nil {
 			return err
 		}
-		b.WriteString(fmt.Sprintf("%s%s := %s\n", prefix, sanitizeName(s.Name.Name), expr))
+		// Dynamic typing: declare every variable as interface{} so that a
+		// later `x = <dynamic expr>` assignment always compiles. `x := int64(0)`
+		// followed by `x = func() interface{}{...}()` was a compile error.
+		b.WriteString(fmt.Sprintf("%svar %s interface{} = %s\n", prefix, sanitizeName(s.Name.Name), expr))
 
 	case *ast.AssignStatement:
 		target, err := g.genExpr(s.Target)
@@ -416,11 +604,38 @@ func (g *CodeGenerator) genStatementTo(b *strings.Builder, stmt ast.Statement, i
 		if err != nil {
 			return err
 		}
-		b.WriteString(fmt.Sprintf("%s_output[\"alert\"] = %s\n", prefix, msg))
+		b.WriteString(fmt.Sprintf("%ssetOutput(&_outputMu, _output, \"alert\", %s)\n", prefix, msg))
 		b.WriteString(fmt.Sprintf("%sfmt.Fprintf(os.Stderr, \"ALERT: %%s\\n\", formatValue(%s))\n", prefix, msg))
 
 	case *ast.ImportStatement:
-		// No-op in compiled mode
+		if strings.HasPrefix(s.Path, "go ") || strings.HasPrefix(s.Path, "go:") {
+			return fmt.Errorf("import %q: third-party Go imports are not supported yet", s.Path)
+		}
+		// Standard SDK imports are declarative; nothing to compile.
+
+	case *ast.PrivilegeStatement:
+		// Metadata enforced by opsctl before deployment.
+
+	case *ast.LogStatement:
+		msg, err := g.genExpr(s.Message)
+		if err != nil {
+			return err
+		}
+		b.WriteString(fmt.Sprintf("%sfmt.Println(formatValue(%s))\n", prefix, msg))
+
+	case *ast.MetricStatement:
+		name, err := g.genExpr(s.Name)
+		if err != nil {
+			return err
+		}
+		value, err := g.genExpr(s.Value)
+		if err != nil {
+			return err
+		}
+		b.WriteString(fmt.Sprintf("%ssetOutput(&_outputMu, _output, \"metric:\"+opsStr(%s), %s)\n", prefix, name, value))
+
+	case *ast.EnsureStatement:
+		return g.genEnsure(b, s, indent)
 
 	case *ast.FnStatement:
 		// Already collected
@@ -478,14 +693,25 @@ func (g *CodeGenerator) genIf(b *strings.Builder, s *ast.IfStatement, indent int
 func (g *CodeGenerator) genFor(b *strings.Builder, s *ast.ForStatement, indent int) error {
 	prefix := strings.Repeat("\t", indent)
 
-	// C-style for loop
+	// C-style for loop. The loop variable must be interface{} so that the
+	// post statement (`i = i + 1`, an interface{} expression) compiles.
+	// Go's for-init only accepts short declarations, so a let-initializer
+	// is emitted as `i := interface{}(<expr>)`.
 	initStr := ""
 	if s.Init != nil {
-		var tmp strings.Builder
-		if err := g.genStatementTo(&tmp, s.Init, 0); err != nil {
-			return err
+		if let, ok := s.Init.(*ast.LetStatement); ok {
+			expr, err := g.genExpr(let.Value)
+			if err != nil {
+				return err
+			}
+			initStr = fmt.Sprintf("%s := interface{}(%s)", sanitizeName(let.Name.Name), expr)
+		} else {
+			var tmp strings.Builder
+			if err := g.genStatementTo(&tmp, s.Init, 0); err != nil {
+				return err
+			}
+			initStr = strings.TrimSpace(tmp.String())
 		}
-		initStr = strings.TrimSpace(tmp.String())
 	}
 
 	condStr := "true"
@@ -532,6 +758,11 @@ func (g *CodeGenerator) genWhile(b *strings.Builder, s *ast.WhileStatement, inde
 	return nil
 }
 
+// genParallel compiles a parallel block: statements run concurrently, let
+// declarations are captured per goroutine and merged back in source order
+// after Wait (matching interpreter semantics: deterministic merge, no
+// shared-map writes while goroutines run). Assignments inside parallel are
+// rejected - they would race on shared variables.
 func (g *CodeGenerator) genParallel(b *strings.Builder, s *ast.ParallelStatement, indent int) error {
 	prefix := strings.Repeat("\t", indent)
 	stmts := s.Body.Statements
@@ -539,23 +770,82 @@ func (g *CodeGenerator) genParallel(b *strings.Builder, s *ast.ParallelStatement
 		return nil
 	}
 
-	g.useSync = true
+	// Validate statement kinds first: only let / expression / report / log
+	// statements can run isolated inside a goroutine.
+	for _, stmt := range stmts {
+		switch stmt.(type) {
+		case *ast.LetStatement, *ast.ExpressionStatement, *ast.ReportStatement, *ast.LogStatement:
+		default:
+			return fmt.Errorf("parallel blocks in AOT mode support let, calls, report and log statements; %T would need shared-variable mutation", stmt)
+		}
+	}
 
-	// Generate a result struct and WaitGroup for goroutine-based concurrency
 	b.WriteString(fmt.Sprintf("%s{\n", prefix))
 	b.WriteString(fmt.Sprintf("%s\tvar _pWg sync.WaitGroup\n", prefix))
 	b.WriteString(fmt.Sprintf("%s\t_pWg.Add(%d)\n", prefix, len(stmts)))
+	b.WriteString(fmt.Sprintf("%s\t_pRes := make([]map[string]interface{}, %d)\n", prefix, len(stmts)))
 
+	mergeLines := []string{}
 	for i, stmt := range stmts {
-		b.WriteString(fmt.Sprintf("%s\tgo func(_pIdx%d int) {\n", prefix, i))
-		b.WriteString(fmt.Sprintf("%s\t\tdefer _pWg.Done()\n", prefix))
-		if err := g.genStatementTo(b, stmt, indent+2); err != nil {
-			return err
+		switch st := stmt.(type) {
+		case *ast.LetStatement:
+			expr, err := g.genExpr(st.Value)
+			if err != nil {
+				return err
+			}
+			b.WriteString(fmt.Sprintf("%s\tgo func(idx int) {\n", prefix))
+			b.WriteString(fmt.Sprintf("%s\t\tdefer _pWg.Done()\n", prefix))
+			b.WriteString(fmt.Sprintf("%s\t\t_pRes[idx] = map[string]interface{}{%q: %s}\n", prefix, st.Name.Name, expr))
+			b.WriteString(fmt.Sprintf("%s\t}(%d)\n", prefix, i))
+			mergeLines = append(mergeLines,
+				fmt.Sprintf("%s\t%s = _pRes[%d][%q]\n", prefix, sanitizeName(st.Name.Name), i, st.Name.Name))
+		default:
+			b.WriteString(fmt.Sprintf("%s\tgo func() {\n", prefix))
+			b.WriteString(fmt.Sprintf("%s\t\tdefer _pWg.Done()\n", prefix))
+			if err := g.genStatementTo(b, stmt, indent+2); err != nil {
+				return err
+			}
+			b.WriteString(fmt.Sprintf("%s\t}()\n", prefix))
 		}
-		b.WriteString(fmt.Sprintf("%s\t}(%d)\n", prefix, i))
 	}
 
 	b.WriteString(fmt.Sprintf("%s\t_pWg.Wait()\n", prefix))
+	for _, line := range mergeLines {
+		b.WriteString(line)
+	}
+	b.WriteString(fmt.Sprintf("%s}\n", prefix))
+	return nil
+}
+
+// genEnsure implements the check -> apply -> verify (-> notify) contract
+// with the same semantics as the interpreter.
+func (g *CodeGenerator) genEnsure(b *strings.Builder, s *ast.EnsureStatement, indent int) error {
+	prefix := strings.Repeat("\t", indent)
+
+	cond, err := g.genExpr(s.Condition)
+	if err != nil {
+		return err
+	}
+
+	b.WriteString(fmt.Sprintf("%sif !isTruthy(%s) {\n", prefix, cond))
+	bodyPrefix := strings.Repeat("\t", indent+1)
+	for _, stmt := range s.Body.Statements {
+		if err := g.genStatementTo(b, stmt, indent+1); err != nil {
+			return err
+		}
+	}
+	// VERIFY
+	b.WriteString(fmt.Sprintf("%sif !isTruthy(%s) {\n", bodyPrefix, cond))
+	b.WriteString(fmt.Sprintf("%s\topsFatal(fmt.Errorf(\"ensure: condition still false after applying actions\"))\n", bodyPrefix))
+	b.WriteString(fmt.Sprintf("%s}\n", bodyPrefix))
+	// NOTIFY (optional)
+	if s.Notify != nil {
+		notify, err := g.genExpr(s.Notify)
+		if err != nil {
+			return err
+		}
+		b.WriteString(fmt.Sprintf("%s_ = %s\n", bodyPrefix, notify))
+	}
 	b.WriteString(fmt.Sprintf("%s}\n", prefix))
 	return nil
 }
@@ -567,7 +857,7 @@ func (g *CodeGenerator) genReport(b *strings.Builder, s *ast.ReportStatement, in
 		if err != nil {
 			return err
 		}
-		b.WriteString(fmt.Sprintf("%s_output[%q] = %s\n", prefix, field.Key, val))
+		b.WriteString(fmt.Sprintf("%ssetOutput(&_outputMu, _output, %q, %s)\n", prefix, field.Key, val))
 	}
 	return nil
 }
@@ -621,14 +911,14 @@ func (g *CodeGenerator) genExpr(expr ast.Expression) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("func() interface{} { l := %s; i := %s; switch v := l.(type) { case []interface{}: idx := int(toFloat(i)); if idx >= 0 && idx < len(v) { return v[idx] }; return nil; case map[string]interface{}: return v[fmt.Sprintf(\"%%v\", i)]; default: return nil } }()", left, idx), nil
+		return fmt.Sprintf("func() interface{} { l := %s; i := %s; if v, ok := l.([]interface{}); ok { idx := int(toFloat(i)); if idx >= 0 && idx < len(v) { return v[idx] }; return nil }; return opsToMapDeep(l)[opsStr(i)] }()", left, idx), nil
 
 	case *ast.MemberExpression:
 		obj, err := g.genExpr(e.Object)
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("func() interface{} { m, ok := %s.(map[string]interface{}); if !ok { return nil }; return m[%q] }()", obj, e.Member.Name), nil
+		return fmt.Sprintf("func() interface{} { return opsToMapDeep(%s)[%q] }()", obj, e.Member.Name), nil
 
 	case *ast.ListLiteral:
 		return g.genList(e)
@@ -656,7 +946,7 @@ func (g *CodeGenerator) genBinary(e *ast.BinaryExpression) (string, error) {
 
 	switch e.Op {
 	case "+":
-		return fmt.Sprintf("func() interface{} { l, r := %s, %s; if ls, ok := l.(string); ok { return ls + formatValue(r) }; if _, ok := r.(string); ok { return formatValue(l) + formatValue(r) }; return toFloat(l) + toFloat(r) }()", left, right), nil
+		return fmt.Sprintf("func() interface{} { var l, r interface{} = %s, %s; if ls, ok := l.(string); ok { return ls + formatValue(r) }; if _, ok := r.(string); ok { return formatValue(l) + formatValue(r) }; return toFloat(l) + toFloat(r) }()", left, right), nil
 	case "-":
 		return fmt.Sprintf("func() interface{} { l, r := toFloat(%s), toFloat(%s); if l == float64(int64(l)) && r == float64(int64(r)) { return int64(l) - int64(r) }; return l - r }()", left, right), nil
 	case "*":
@@ -666,9 +956,9 @@ func (g *CodeGenerator) genBinary(e *ast.BinaryExpression) (string, error) {
 	case "%":
 		return fmt.Sprintf("func() interface{} { l, r := toInt(%s), toInt(%s); if r == 0 { return nil }; return l %% r }()", left, right), nil
 	case "==":
-		return fmt.Sprintf("func() interface{} { l, r := %s, %s; return fmt.Sprintf(\"%%v\", l) == fmt.Sprintf(\"%%v\", r) }()", left, right), nil
+		return fmt.Sprintf("func() interface{} { return opsEqual(%s, %s) }()", left, right), nil
 	case "!=":
-		return fmt.Sprintf("func() interface{} { l, r := %s, %s; return fmt.Sprintf(\"%%v\", l) != fmt.Sprintf(\"%%v\", r) }()", left, right), nil
+		return fmt.Sprintf("func() interface{} { return !opsEqual(%s, %s) }()", left, right), nil
 	case "<":
 		return fmt.Sprintf("func() interface{} { return toFloat(%s) < toFloat(%s) }()", left, right), nil
 	case ">":
@@ -753,7 +1043,7 @@ func (g *CodeGenerator) genCall(e *ast.CallExpression) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("fmt.Sprintf(\"%%T\", %s)", arg), nil
+		return fmt.Sprintf("typeName(%s)", arg), nil
 	}
 
 	// Check user-defined functions
@@ -770,25 +1060,36 @@ func (g *CodeGenerator) genCall(e *ast.CallExpression) (string, error) {
 	// Check SDK mapping
 	if sdk, ok := sdkMapping[fnName]; ok {
 		g.usedSDK[sdk.pkg] = true
+		g.useOS = true // opsFatal writes to stderr and exits
 		alias := pkgImportAlias[sdk.pkg]
 		args, err := g.genArgs(e.Args)
 		if err != nil {
 			return "", err
 		}
-		call := fmt.Sprintf("%s.%s(%s)", alias, sdk.goName, strings.Join(args, ", "))
-		return fmt.Sprintf("func() interface{} { v, err := %s; if err != nil { return fmt.Sprintf(\"error: %%v\", err) }; return v }()", call), nil
+
+		// process.exec is variadic in the DSL: (command, arg1, arg2, ...).
+		if fnName == "process.exec" && len(args) >= 1 {
+			listArgs := "[]interface{}{}"
+			if len(args) > 1 {
+				listArgs = fmt.Sprintf("[]interface{}{%s}", strings.Join(args[1:], ", "))
+			}
+			args = []string{args[0], listArgs}
+		}
+
+		// Reject argument-count mismatches at generation time when the
+		// signature is fixed (process.exec handled above).
+		maxArgs := len(sdk.params)
+		if fnName != "process.exec" && len(args) > maxArgs {
+			return "", fmt.Errorf("%s() takes at most %d argument(s), got %d", fnName, maxArgs, len(e.Args))
+		}
+
+		call := sdk.generateSDKCall(alias, args)
+		// A runtime SDK error aborts the binary with a non-zero exit code.
+		// Turning errors into strings used to let failed deploys "succeed".
+		return fmt.Sprintf("func() interface{} { v, err := %s; if err != nil { opsFatal(err) }; return v }()", call), nil
 	}
 
-	// Unknown function - try to evaluate the function expression
-	funcExpr, err := g.genExpr(e.Function)
-	if err != nil {
-		return "", err
-	}
-	args, err := g.genArgs(e.Args)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%s(%s)", funcExpr, strings.Join(args, ", ")), nil
+	return "", fmt.Errorf("unknown function %q (not a builtin, user function, or SDK call)", fnName)
 }
 
 func (g *CodeGenerator) genList(e *ast.ListLiteral) (string, error) {

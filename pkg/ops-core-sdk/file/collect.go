@@ -59,7 +59,8 @@ type HostCollectResult struct {
 type CollectDownloadFunc func(ctx context.Context, src, dst string) error
 
 // DefaultCollectDownloadFunc is used by Collect when no explicit download
-// function is provided. Applications should set this at startup.
+// function is provided. The package wires a real SSH/SFTP implementation
+// (see ssh_transfer.go); tests may override it.
 var DefaultCollectDownloadFunc CollectDownloadFunc = func(_ context.Context, _, _ string) error {
 	return fmt.Errorf("no collect download function configured; set file.DefaultCollectDownloadFunc")
 }
@@ -135,10 +136,19 @@ func CollectWith(source string, targets []CollectTarget, opts CollectOptions, df
 				Source: t.Source,
 			}
 
-			remoteSource := t.Source
-			if remoteSource == "" {
-				remoteSource = source
+			remotePath := t.Source
+			if remotePath == "" {
+				remotePath = source
 			}
+			user := t.User
+			if user == "" {
+				user = "root"
+			}
+			port := t.Port
+			if port == 0 {
+				port = 22
+			}
+			remoteSource := formatEndpoint(user, t.Host, port, remotePath)
 
 			// Organize as {destDir}/{host}/{basename}.
 			hostDir := t.Host
@@ -151,7 +161,7 @@ func CollectWith(source string, targets []CollectTarget, opts CollectOptions, df
 			transferStart := time.Now()
 			var lastErr error
 
-			for attempt := 0; attempt <= retries; attempt++ {
+			for attempt := 0; attempt < retries; attempt++ {
 				if attempt > 0 {
 					time.Sleep(time.Duration(attempt*100) * time.Millisecond)
 				}

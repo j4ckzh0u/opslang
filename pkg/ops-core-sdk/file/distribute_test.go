@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -19,15 +21,35 @@ func TestDistribute_Success(t *testing.T) {
 		t.Fatalf("setup: %v", err)
 	}
 
-	// Mock transfer function that tracks calls.
+	// Mock transfer function that tracks calls and captures endpoints.
 	var callCount int64
+	var mu sync.Mutex
+	endpoints := map[string]bool{}
 	mockTransfer := func(_ context.Context, s, d string) error {
 		atomic.AddInt64(&callCount, 1)
 		if s != src {
 			return fmt.Errorf("unexpected source: %s", s)
 		}
+		mu.Lock()
+		endpoints[d] = true
+		mu.Unlock()
 		return nil
 	}
+
+	// Stub the verify hook: Checksum:true must trigger remote verification.
+	var verified int64
+	savedVerify := DefaultVerifyFunc
+	DefaultVerifyFunc = func(_ context.Context, endpoint, want string) error {
+		if !strings.HasPrefix(endpoint, "ssh://root@") {
+			return fmt.Errorf("unexpected endpoint %q", endpoint)
+		}
+		if want == "" {
+			return fmt.Errorf("verify called without expected digest")
+		}
+		atomic.AddInt64(&verified, 1)
+		return nil
+	}
+	defer func() { DefaultVerifyFunc = savedVerify }()
 
 	targets := []DistributeTarget{
 		{Host: "host1", Port: 22, User: "root", Dest: "/tmp/dest/"},
@@ -58,6 +80,15 @@ func TestDistribute_Success(t *testing.T) {
 	}
 	if atomic.LoadInt64(&callCount) != 3 {
 		t.Errorf("callCount = %d, want 3", callCount)
+	}
+	if atomic.LoadInt64(&verified) != 3 {
+		t.Errorf("verified = %d, want 3 (checksum verification must run per host)", atomic.LoadInt64(&verified))
+	}
+	mu.Lock()
+	ep := "ssh://root@host1:22/tmp/dest/" + filepath.Base(src)
+	mu.Unlock()
+	if !endpoints[ep] {
+		t.Errorf("expected endpoint %q among %v", ep, endpoints)
 	}
 	for _, hr := range result.Results {
 		if hr.Status != "success" {
@@ -229,25 +260,6 @@ func TestDistribute_DefaultTransferFunc(t *testing.T) {
 	}
 }
 
-func TestIsDir(t *testing.T) {
-	tests := []struct {
-		path string
-		want bool
-	}{
-		{"/tmp/dest/", true},
-		{"/tmp/dest", true},
-		{"/tmp/file.txt", false},
-		{"/tmp/archive.tar.gz", false},
-		{"relative/path/", true},
-		{"relative/file.go", false},
-	}
-	for _, tt := range tests {
-		got := isDir(tt.path)
-		if got != tt.want {
-			t.Errorf("isDir(%q) = %v, want %v", tt.path, got, tt.want)
-		}
-	}
-}
 
 func TestComputeFileChecksum(t *testing.T) {
 	dir := t.TempDir()

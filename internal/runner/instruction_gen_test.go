@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/opslang/opslang/internal/ast"
@@ -34,23 +35,42 @@ func findTask(t *testing.T, prog *ast.Program) *ast.TaskStatement {
 	return nil
 }
 
-// ============================================================
-// Generate tests
-// ============================================================
-
-func TestGenerate_SimpleTaskWithCPUAndReport(t *testing.T) {
-	source := `task "check" on "host1" {
-		let cpu = sys.cpu.usage()
-		report { cpu: cpu }
-	}`
-	prog := mustParse(t, source)
-	task := findTask(t, prog)
-
+// generate parses source, finds its task, and generates instructions.
+func generate(t *testing.T, source string) *InstructionPackage {
+	t.Helper()
+	task := findTask(t, mustParse(t, source))
 	gen := &InstructionGenerator{}
 	pkg, err := gen.Generate(task, false)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
+	return pkg
+}
+
+// generateErr parses source and expects Generate to fail with a message
+// containing want.
+func generateErr(t *testing.T, source, want string) {
+	t.Helper()
+	task := findTask(t, mustParse(t, source))
+	gen := &InstructionGenerator{}
+	_, err := gen.Generate(task, false)
+	if err == nil {
+		t.Fatalf("expected Generate error containing %q, got nil", want)
+	}
+	if !strings.Contains(err.Error(), want) {
+		t.Fatalf("expected Generate error containing %q, got: %v", want, err)
+	}
+}
+
+// ============================================================
+// Generate tests
+// ============================================================
+
+func TestGenerate_SimpleTaskWithCPUAndReport(t *testing.T) {
+	pkg := generate(t, `task "check" on "host1" {
+		let cpu = sys.cpu.usage()
+		report { cpu: cpu }
+	}`)
 
 	if pkg.Version != "1.0" {
 		t.Errorf("expected version 1.0, got %s", pkg.Version)
@@ -65,7 +85,6 @@ func TestGenerate_SimpleTaskWithCPUAndReport(t *testing.T) {
 		t.Fatalf("expected 2 instructions, got %d", len(pkg.Instructions))
 	}
 
-	// First instruction: sys.cpu.usage with assign "cpu"
 	inst0 := pkg.Instructions[0]
 	if inst0.Op != "sys.cpu.usage" {
 		t.Errorf("expected op sys.cpu.usage, got %s", inst0.Op)
@@ -74,36 +93,27 @@ func TestGenerate_SimpleTaskWithCPUAndReport(t *testing.T) {
 		t.Errorf("expected assign cpu, got %s", inst0.Assign)
 	}
 
-	// Second instruction: report
 	inst1 := pkg.Instructions[1]
 	if inst1.Op != "report" {
 		t.Errorf("expected op report, got %s", inst1.Op)
 	}
-	if cpuRef, ok := inst1.Args["cpu"]; !ok || cpuRef != "cpu" {
-		t.Errorf("expected report arg cpu=cpu, got %v", inst1.Args)
+	// Variable references must be explicit "$name" markers.
+	if cpuRef, ok := inst1.Args["cpu"]; !ok || cpuRef != "$cpu" {
+		t.Errorf("expected report arg cpu=$cpu, got %v", inst1.Args)
 	}
 }
 
 func TestGenerate_LetAssignments(t *testing.T) {
-	source := `task "test" on "host1" {
+	pkg := generate(t, `task "test" on "host1" {
 		let x = 42
 		let name = "hello"
 		let flag = true
-	}`
-	prog := mustParse(t, source)
-	task := findTask(t, prog)
-
-	gen := &InstructionGenerator{}
-	pkg, err := gen.Generate(task, false)
-	if err != nil {
-		t.Fatalf("Generate failed: %v", err)
-	}
+	}`)
 
 	if len(pkg.Instructions) != 3 {
 		t.Fatalf("expected 3 instructions, got %d", len(pkg.Instructions))
 	}
 
-	// let x = 42
 	inst0 := pkg.Instructions[0]
 	if inst0.Op != "set" {
 		t.Errorf("inst0: expected op set, got %s", inst0.Op)
@@ -112,318 +122,269 @@ func TestGenerate_LetAssignments(t *testing.T) {
 		t.Errorf("inst0: expected assign x, got %s", inst0.Assign)
 	}
 	if val, ok := inst0.Args["value"]; !ok || val != int64(42) {
-		t.Errorf("inst0: expected value=42, got %v", val)
+		t.Errorf("inst0: expected value=42, got %v (%T)", val, val)
 	}
 
-	// let name = "hello"
 	inst1 := pkg.Instructions[1]
-	if inst1.Assign != "name" {
-		t.Errorf("inst1: expected assign name, got %s", inst1.Assign)
-	}
-	if val, ok := inst1.Args["value"]; !ok || val != "hello" {
-		t.Errorf("inst1: expected value=hello, got %v", val)
+	if inst1.Assign != "name" || inst1.Args["value"] != "hello" {
+		t.Errorf("inst1: got %+v", inst1)
 	}
 
-	// let flag = true
 	inst2 := pkg.Instructions[2]
-	if inst2.Assign != "flag" {
-		t.Errorf("inst2: expected assign flag, got %s", inst2.Assign)
-	}
-	if val, ok := inst2.Args["value"]; !ok || val != true {
-		t.Errorf("inst2: expected value=true, got %v", val)
+	if inst2.Assign != "flag" || inst2.Args["value"] != true {
+		t.Errorf("inst2: got %+v", inst2)
 	}
 }
 
 func TestGenerate_FileOperations(t *testing.T) {
-	source := `task "files" on "host1" {
+	pkg := generate(t, `task "files" on "host1" {
 		let content = file.read("/etc/hosts")
 		file.exists("/tmp/test")
-	}`
-	prog := mustParse(t, source)
-	task := findTask(t, prog)
-
-	gen := &InstructionGenerator{}
-	pkg, err := gen.Generate(task, false)
-	if err != nil {
-		t.Fatalf("Generate failed: %v", err)
-	}
+	}`)
 
 	if len(pkg.Instructions) != 2 {
 		t.Fatalf("expected 2 instructions, got %d", len(pkg.Instructions))
 	}
 
-	// file.read with assign
 	inst0 := pkg.Instructions[0]
-	if inst0.Op != "file.read" {
-		t.Errorf("expected op file.read, got %s", inst0.Op)
-	}
-	if inst0.Assign != "content" {
-		t.Errorf("expected assign content, got %s", inst0.Assign)
+	if inst0.Op != "file.read" || inst0.Assign != "content" {
+		t.Errorf("inst0: %+v", inst0)
 	}
 	if path, ok := inst0.Args["path"]; !ok || path != "/etc/hosts" {
 		t.Errorf("expected path=/etc/hosts, got %v", path)
 	}
 
-	// file.exists standalone
 	inst1 := pkg.Instructions[1]
-	if inst1.Op != "file.exists" {
-		t.Errorf("expected op file.exists, got %s", inst1.Op)
-	}
-	if inst1.Assign != "" {
-		t.Errorf("expected no assign, got %s", inst1.Assign)
+	if inst1.Op != "file.exists" || inst1.Assign != "" {
+		t.Errorf("inst1: %+v", inst1)
 	}
 	if path, ok := inst1.Args["path"]; !ok || path != "/tmp/test" {
 		t.Errorf("expected path=/tmp/test, got %v", path)
 	}
 }
 
-func TestGenerate_DryRunFlag(t *testing.T) {
-	source := `task "test" on "host1" {
-		sys.cpu.usage()
-	}`
-	prog := mustParse(t, source)
-	task := findTask(t, prog)
+func TestGenerate_ArgumentNamesAreCanonical(t *testing.T) {
+	// The generated arg keys must match the op signatures the registry
+	// validates — "arg0"-style keys silently produced empty paths before.
+	pkg := generate(t, `task "t" on "h" {
+		file.copy("/src", "/dst")
+		net.tcp_check("localhost", 22)
+		file.checksum("/etc/hosts", "md5")
+	}`)
 
+	if pkg.Instructions[0].Args["src"] != "/src" || pkg.Instructions[0].Args["dst"] != "/dst" {
+		t.Errorf("file.copy args: %+v", pkg.Instructions[0].Args)
+	}
+	tcp := pkg.Instructions[1].Args
+	if tcp["host"] != "localhost" || tcp["port"] != int64(22) {
+		t.Errorf("net.tcp_check args: %+v", tcp)
+	}
+	sum := pkg.Instructions[2].Args
+	if sum["path"] != "/etc/hosts" || sum["algo"] != "md5" {
+		t.Errorf("file.checksum args: %+v", sum)
+	}
+}
+
+func TestGenerate_UnknownFunctionFails(t *testing.T) {
+	generateErr(t, `task "t" on "h" {
+		sys.nonexistent_function()
+	}`, "unknown function")
+}
+
+func TestGenerate_TooManyArgumentsFails(t *testing.T) {
+	generateErr(t, `task "t" on "h" {
+		file.read("/a", "/b", "/c")
+	}`, "at most")
+}
+
+func TestGenerate_DryRunFlag(t *testing.T) {
+	task := findTask(t, mustParse(t, `task "test" on "host1" {
+		sys.cpu.usage()
+	}`))
 	gen := &InstructionGenerator{}
 	pkg, err := gen.Generate(task, true)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
-
 	if !pkg.DryRun {
 		t.Error("expected dry_run to be true")
 	}
 }
 
 func TestGenerate_ReportWithSubCalls(t *testing.T) {
-	source := `task "test" on "host1" {
+	pkg := generate(t, `task "test" on "host1" {
 		report { host: sys.hostname(), cpu: sys.cpu.usage() }
-	}`
-	prog := mustParse(t, source)
-	task := findTask(t, prog)
+	}`)
 
-	gen := &InstructionGenerator{}
-	pkg, err := gen.Generate(task, false)
-	if err != nil {
-		t.Fatalf("Generate failed: %v", err)
-	}
-
-	// Should generate: temp call for sys.hostname(), temp call for sys.cpu.usage(), then report.
 	if len(pkg.Instructions) != 3 {
 		t.Fatalf("expected 3 instructions, got %d", len(pkg.Instructions))
 	}
 
-	// First: sys.hostname -> __tmp_0
-	inst0 := pkg.Instructions[0]
-	if inst0.Op != "sys.hostname" {
-		t.Errorf("inst0: expected op sys.hostname, got %s", inst0.Op)
+	if pkg.Instructions[0].Op != "sys.hostname" || pkg.Instructions[0].Assign != "__tmp_0" {
+		t.Errorf("inst0: %+v", pkg.Instructions[0])
 	}
-	if inst0.Assign != "__tmp_0" {
-		t.Errorf("inst0: expected assign __tmp_0, got %s", inst0.Assign)
+	if pkg.Instructions[1].Op != "sys.cpu.usage" || pkg.Instructions[1].Assign != "__tmp_1" {
+		t.Errorf("inst1: %+v", pkg.Instructions[1])
 	}
 
-	// Second: sys.cpu.usage -> __tmp_1
-	inst1 := pkg.Instructions[1]
-	if inst1.Op != "sys.cpu.usage" {
-		t.Errorf("inst1: expected op sys.cpu.usage, got %s", inst1.Op)
+	report := pkg.Instructions[2]
+	if report.Op != "report" {
+		t.Fatalf("inst2: expected report, got %s", report.Op)
 	}
-	if inst1.Assign != "__tmp_1" {
-		t.Errorf("inst1: expected assign __tmp_1, got %s", inst1.Assign)
+	if report.Args["host"] != "$__tmp_0" {
+		t.Errorf("expected host=$__tmp_0, got %v", report.Args["host"])
 	}
-
-	// Third: report referencing temps
-	inst2 := pkg.Instructions[2]
-	if inst2.Op != "report" {
-		t.Errorf("inst2: expected op report, got %s", inst2.Op)
-	}
-	if hostRef, ok := inst2.Args["host"]; !ok || hostRef != "__tmp_0" {
-		t.Errorf("inst2: expected host=__tmp_0, got %v", inst2.Args["host"])
-	}
-	if cpuRef, ok := inst2.Args["cpu"]; !ok || cpuRef != "__tmp_1" {
-		t.Errorf("inst2: expected cpu=__tmp_1, got %v", inst2.Args["cpu"])
+	if report.Args["cpu"] != "$__tmp_1" {
+		t.Errorf("expected cpu=$__tmp_1, got %v", report.Args["cpu"])
 	}
 }
 
 func TestGenerate_AlertStatement(t *testing.T) {
-	source := `task "test" on "host1" {
+	pkg := generate(t, `task "test" on "host1" {
 		alert("something went wrong")
-	}`
-	prog := mustParse(t, source)
-	task := findTask(t, prog)
-
-	gen := &InstructionGenerator{}
-	pkg, err := gen.Generate(task, false)
-	if err != nil {
-		t.Fatalf("Generate failed: %v", err)
-	}
+	}`)
 
 	if len(pkg.Instructions) != 1 {
 		t.Fatalf("expected 1 instruction, got %d", len(pkg.Instructions))
 	}
-
 	inst := pkg.Instructions[0]
-	if inst.Op != "alert" {
-		t.Errorf("expected op alert, got %s", inst.Op)
-	}
-	if msg, ok := inst.Args["message"]; !ok || msg != "something went wrong" {
-		t.Errorf("expected message=something went wrong, got %v", msg)
+	if inst.Op != "alert" || inst.Args["message"] != "something went wrong" {
+		t.Errorf("got %+v", inst)
 	}
 }
 
 func TestGenerate_PrintBuiltin(t *testing.T) {
-	source := `task "test" on "host1" {
+	pkg := generate(t, `task "test" on "host1" {
 		print("hello world")
-	}`
-	prog := mustParse(t, source)
-	task := findTask(t, prog)
-
-	gen := &InstructionGenerator{}
-	pkg, err := gen.Generate(task, false)
-	if err != nil {
-		t.Fatalf("Generate failed: %v", err)
-	}
+	}`)
 
 	if len(pkg.Instructions) != 1 {
 		t.Fatalf("expected 1 instruction, got %d", len(pkg.Instructions))
 	}
-
 	inst := pkg.Instructions[0]
-	if inst.Op != "log" {
-		t.Errorf("expected op log, got %s", inst.Op)
-	}
-	if msg, ok := inst.Args["message"]; !ok || msg != "hello world" {
-		t.Errorf("expected message=hello world, got %v", msg)
+	if inst.Op != "log" || inst.Args["message"] != "hello world" {
+		t.Errorf("got %+v", inst)
 	}
 }
 
-func TestGenerate_ForLoopWarning(t *testing.T) {
-	source := `task "test" on "host1" {
-		for let i = 0; i < 10; i = i + 1 {
-			print("loop")
-		}
-	}`
-	prog := mustParse(t, source)
-	task := findTask(t, prog)
+// Control flow must HARD FAIL, not silently degrade. The old generator
+// executed if-bodies unconditionally and logged ensure as "check done".
+func TestGenerate_ControlFlowFails(t *testing.T) {
+	generateErr(t, `task "t" on "h" {
+		if true { print("x") }
+	}`, "if statement")
 
-	gen := &InstructionGenerator{}
-	pkg, err := gen.Generate(task, false)
-	if err != nil {
-		t.Fatalf("Generate failed: %v", err)
-	}
+	generateErr(t, `task "t" on "h" {
+		for let i = 0; i < 10; i = i + 1 { print("loop") }
+	}`, "for loop")
 
-	// Should produce a warning instruction
-	if len(pkg.Instructions) == 0 {
-		t.Fatal("expected at least one instruction (warning)")
-	}
+	generateErr(t, `task "t" on "h" {
+		while false { print("loop") }
+	}`, "while loop")
 
-	found := false
-	for _, inst := range pkg.Instructions {
-		if inst.Op == "log" {
-			if msg, ok := inst.Args["message"].(string); ok {
-				if contains(msg, "for loops") {
-					found = true
-				}
-			}
-		}
-	}
-	if !found {
-		t.Error("expected a warning about for loops")
-	}
+	generateErr(t, `task "t" on "h" {
+		fn helper() { print("hi") }
+	}`, "function definition")
+
+	generateErr(t, `task "t" on "h" {
+		ensure file.exists("/tmp/x").exists { file.mkdir("/tmp/x") }
+	}`, "ensure statement")
+
+	generateErr(t, `task "t" on "h" {
+		parallel { sys.cpu.usage() }
+	}`, "parallel block")
+}
+
+// Binary/unary/member expressions cannot be evaluated by the linear runner.
+func TestGenerate_ComputedExpressionFails(t *testing.T) {
+	generateErr(t, `task "t" on "h" {
+		let x = 1 + 2
+	}`, "cannot evaluate")
+
+	generateErr(t, `task "t" on "h" {
+		let name = sys.hostname().hostname
+	}`, "cannot dereference")
 }
 
 func TestGenerateFromStatements(t *testing.T) {
-	source := `task "test" on "host1" {
-		let x = sys.cpu.usage()
-		report { x: x }
-	}`
-	prog := mustParse(t, source)
-	task := findTask(t, prog)
+	prog := mustParse(t, `let x = sys.cpu.usage()
+report { x: x }`)
 
 	gen := &InstructionGenerator{}
-	pkg, err := gen.GenerateFromStatements(task.Body.Statements, false)
+	pkg, err := gen.GenerateFromStatements(prog.Statements, false)
 	if err != nil {
 		t.Fatalf("GenerateFromStatements failed: %v", err)
 	}
-
 	if len(pkg.Instructions) != 2 {
 		t.Fatalf("expected 2 instructions, got %d", len(pkg.Instructions))
 	}
 }
 
 func TestGenerate_EmptyTask(t *testing.T) {
-	source := `task "test" on "host1" {
-	}`
-	prog := mustParse(t, source)
-	task := findTask(t, prog)
-
-	gen := &InstructionGenerator{}
-	pkg, err := gen.Generate(task, false)
-	if err != nil {
-		t.Fatalf("Generate failed: %v", err)
-	}
-
+	pkg := generate(t, `task "test" on "host1" {}`)
 	if len(pkg.Instructions) != 0 {
 		t.Errorf("expected 0 instructions, got %d", len(pkg.Instructions))
 	}
 }
 
 func TestGenerate_TaskIDUniqueness(t *testing.T) {
-	source := `task "test" on "host1" {
-		sys.cpu.usage()
-	}`
-	prog := mustParse(t, source)
-	task := findTask(t, prog)
-
-	gen1 := &InstructionGenerator{}
-	pkg1, _ := gen1.Generate(task, false)
-
-	gen2 := &InstructionGenerator{}
-	pkg2, _ := gen2.Generate(task, false)
-
+	pkg1 := generate(t, `task "test" on "host1" { sys.cpu.usage() }`)
+	pkg2 := generate(t, `task "test" on "host1" { sys.cpu.usage() }`)
 	if pkg1.TaskID == pkg2.TaskID {
 		t.Error("expected unique task IDs across generations")
 	}
 }
 
 func TestGenerate_CopyFileOperation(t *testing.T) {
-	source := `task "test" on "host1" {
+	pkg := generate(t, `task "test" on "host1" {
 		file.copy("/src/file", "/dst/file")
-	}`
-	prog := mustParse(t, source)
-	task := findTask(t, prog)
-
-	gen := &InstructionGenerator{}
-	pkg, err := gen.Generate(task, false)
-	if err != nil {
-		t.Fatalf("Generate failed: %v", err)
-	}
+	}`)
 
 	if len(pkg.Instructions) != 1 {
 		t.Fatalf("expected 1 instruction, got %d", len(pkg.Instructions))
 	}
-
 	inst := pkg.Instructions[0]
 	if inst.Op != "file.copy" {
 		t.Errorf("expected op file.copy, got %s", inst.Op)
 	}
-	if src, ok := inst.Args["src"]; !ok || src != "/src/file" {
-		t.Errorf("expected src=/src/file, got %v", src)
-	}
-	if dst, ok := inst.Args["dst"]; !ok || dst != "/dst/file" {
-		t.Errorf("expected dst=/dst/file, got %v", dst)
+	if inst.Args["src"] != "/src/file" || inst.Args["dst"] != "/dst/file" {
+		t.Errorf("args: %+v", inst.Args)
 	}
 }
 
-// contains checks if s contains substr.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsSubstring(s, substr))
+// The generated package must pass registry validation end to end: every
+// emitted op must exist and every instruction must be executable.
+func TestGenerate_PackageValidatesAgainstRegistry(t *testing.T) {
+	pkg := generate(t, `task "t" on "h" {
+		let info = sys.os()
+		let hosts = file.read("/etc/hosts")
+		print("done")
+		alert("check")
+		report { os: info, hosts: hosts }
+	}`)
+	if err := ValidatePackage(pkg); err != nil {
+		t.Fatalf("generated package failed validation: %v", err)
+	}
 }
 
-func containsSubstring(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
+// A script with a dry-run-safe pipeline executed through Run() must
+// actually resolve variable references between instructions.
+func TestGenerateAndRun_VariableFlow(t *testing.T) {
+	pkg := generate(t, `task "t" on "h" {
+		let data = json.encode([1, 2, 3])
+		report { encoded: data }
+	}`)
+
+	out := Run(pkg, NewRegistry())
+	if out.Status != "ok" {
+		t.Fatalf("status = %q, errors = %v", out.Status, out.Errors)
 	}
-	return false
+	encoded, ok := out.Data["encoded"]
+	if !ok {
+		t.Fatalf("report data missing 'encoded': %+v", out.Data)
+	}
+	// json.encode returns a map with the encoded string under a field.
+	if encoded == nil {
+		t.Fatal("encoded is nil: variable reference not resolved")
+	}
 }

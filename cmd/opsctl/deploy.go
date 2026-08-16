@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -39,9 +41,14 @@ var deployCmd = &cobra.Command{
 	Long: `Parse an OpsLang script, compile or interpret it, and deploy to remote hosts.
 
 Supports two execution modes:
-  - runner: Generate JSON instruction packages, send to remote runner (fast, limited)
-  - aot:    Compile to static binary, upload and execute (flexible, slower first run)
-  - auto:   Choose mode based on script complexity (default)
+  - runner: Generate JSON instruction packages, send to remote runner.
+            Fast, zero compile on the target, supports linear scripts
+            (calls, let, report, alert, log). Control flow is rejected
+            with an explicit error rather than mistranslated.
+  - aot:    Compile the script to a static binary for each target
+            architecture, upload it, and execute it. Supports the full
+            language (if/for/while/fn/ensure/parallel).
+  - auto:   Choose runner unless the script uses control flow (default).
 
 Results are aggregated and output as JSON.`,
 	Args: cobra.ExactArgs(1),
@@ -62,53 +69,52 @@ func init() {
 	deployCmd.Flags().StringVarP(&deployOutput, "output", "o", "", "Output file path (default: stdout)")
 }
 
+// deployStep is one instruction package to run on one subset of targets.
+// Statements outside any task form the "all targets" step; each task
+// statement routes its body to the targets its on-clause selects.
+type deployStep struct {
+	name    string
+	targets []opsexec.Target
+	pkg     *runner.InstructionPackage
+}
+
 func runDeployCommand(scriptPath string) error {
-	// Validate targets.
 	if deployTargets == "" && deployInventory == "" {
 		return fmt.Errorf("either --targets or --inventory must be specified")
 	}
 
-	// Read source.
 	source, err := os.ReadFile(scriptPath)
 	if err != nil {
 		return fmt.Errorf("failed to read script %s: %w", scriptPath, err)
 	}
 
-	// Parse.
 	p := parser.New(string(source), scriptPath)
 	prog, err := p.Parse()
 	if err != nil {
 		return fmt.Errorf("parse error: %w", err)
 	}
 
-	// Check privilege level.
+	// Third-party Go imports are not implemented in any engine; fail now
+	// instead of generating code that cannot compile.
+	for _, stmt := range prog.Statements {
+		if imp, ok := stmt.(*ast.ImportStatement); ok {
+			if strings.HasPrefix(imp.Path, "go ") || strings.HasPrefix(imp.Path, "go:") {
+				return fmt.Errorf("import %q: third-party Go imports are not supported yet", imp.Path)
+			}
+		}
+	}
+
 	scriptPriv := security.GetScriptPrivilege(prog)
 	fmt.Fprintf(os.Stderr, "Script privilege: %s\n", scriptPriv)
 
-	// Determine execution mode.
 	mode := resolveDeployMode(deployMode, prog)
+	fmt.Fprintf(os.Stderr, "Deploy mode: %s\n", mode)
 
-	// Build target list.
-	var targets []opsexec.Target
-	if deployTargets != "" {
-		hosts := strings.Split(deployTargets, ",")
-		for i := range hosts {
-			hosts[i] = strings.TrimSpace(hosts[i])
-		}
-		targets = append(targets, opsexec.ParseTargets(hosts, deployUser)...)
-	}
-	if deployInventory != "" {
-		inv, err := inventory.ParseFile(deployInventory)
-		if err != nil {
-			return fmt.Errorf("failed to parse inventory: %w", err)
-		}
-		targets = append(targets, opsexec.TargetsFromInventory(inv)...)
-	}
+	targets := buildDeployTargets()
 	if len(targets) == 0 {
 		return fmt.Errorf("no targets specified")
 	}
 
-	// Set up context with signal handling.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -120,124 +126,315 @@ func runDeployCommand(scriptPath string) error {
 	}()
 
 	startedAt := time.Now().UTC()
+	taskID := generateTaskID(scriptPath)
 
-	// Create audit entry
-	auditEntry := security.NewAuditEntry(
-		generateTaskID(scriptPath),
-		scriptPath,
-		string(scriptPriv),
-		func() []string {
-			names := make([]string, len(targets))
-			for i, t := range targets {
-				names[i] = fmt.Sprintf("%s@%s", t.User, t.Host)
-			}
-			return names
-		}(),
-		deployUser,
-		mode,
-		deployDryRun,
-	)
-
-	// Create audit logger
-	auditLogger := security.NewAuditLogger("")
-
+	var result *deployAggregate
 	switch mode {
 	case "runner":
-		err = deployRunnerMode(ctx, scriptPath, prog, targets, startedAt)
+		result, err = deployRunnerMode(ctx, scriptPath, prog, targets, taskID)
 	case "aot":
-		err = deployAOTMode(ctx, scriptPath, targets, startedAt)
+		result, err = deployAOTMode(ctx, scriptPath, prog, targets, taskID)
 	default:
 		err = fmt.Errorf("unknown mode: %s", mode)
 	}
 
-	// Record audit
-	durationMs := time.Since(startedAt).Milliseconds()
+	recordDeployAudit(auditParams{
+		taskID:     taskID,
+		scriptPath: scriptPath,
+		privilege:  string(scriptPriv),
+		targets:    targets,
+		user:       deployUser,
+		mode:       mode,
+		dryRun:     deployDryRun,
+		startedAt:  startedAt,
+		runErr:     err,
+	})
+
 	if err != nil {
-		auditEntry.SetError(err)
-	} else {
-		auditEntry.SetStatus("success", durationMs)
-	}
-	if logErr := auditLogger.Log(auditEntry); logErr != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to write audit log: %v\n", logErr)
+		return err
 	}
 
-	return err
+	return outputDeployResult(result, startedAt, scriptPath)
 }
 
-// resolveDeployMode decides between runner and aot based on script features.
+// resolveDeployMode picks the execution mode. Runner mode can only express
+// linear scripts, so anything with control flow goes to AOT.
 func resolveDeployMode(mode string, prog *ast.Program) string {
 	if mode == "runner" || mode == "aot" {
 		return mode
 	}
-	// Auto: default to runner unless script uses import or complex features.
-	for _, stmt := range prog.Statements {
-		if _, ok := stmt.(*ast.ImportStatement); ok {
-			return "aot"
-		}
+	if compiler.RequiresAOT(prog) {
+		return "aot"
 	}
 	return "runner"
 }
 
-// deployRunnerMode generates instruction packages and executes via runner.
-func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program, targets []opsexec.Target, startedAt time.Time) error {
-	// Convert AST to instruction package.
-	pkg, err := astToInstructions(scriptPath, prog)
-	if err != nil {
-		return fmt.Errorf("failed to generate instructions: %w", err)
+// buildDeployTargets assembles the target list from flags and inventory.
+func buildDeployTargets() []opsexec.Target {
+	var targets []opsexec.Target
+	if deployTargets != "" {
+		hosts := strings.Split(deployTargets, ",")
+		for i := range hosts {
+			hosts[i] = strings.TrimSpace(hosts[i])
+		}
+		targets = append(targets, opsexec.ParseTargets(hosts, deployUser)...)
 	}
-
-	if deployDryRun {
-		fmt.Fprintf(os.Stderr, "Dry-run mode: would execute %d instructions on %d hosts\n",
-			len(pkg.Instructions), len(targets))
-		pkg.DryRun = true
+	if deployInventory != "" {
+		inv, err := inventory.ParseFile(deployInventory)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: failed to parse inventory: %v\n", err)
+			return targets
+		}
+		targets = append(targets, opsexec.TargetsFromInventory(inv)...)
 	}
-
-	// Create executor.
-	executor := &opsexec.Executor{
-		Targets:      targets,
-		Instructions: pkg,
-		User:         deployUser,
-		KeyFile:      deployKey,
-		Password:     deployPassword,
-		Parallel:     deployParallel,
-		DryRun:       deployDryRun,
-	}
-
-	summary := executor.Execute(ctx)
-
-	return outputDeployResult(summary, startedAt, scriptPath)
+	return targets
 }
 
-// deployAOTMode compiles the script and deploys the binary.
-func deployAOTMode(ctx context.Context, scriptPath string, targets []opsexec.Target, startedAt time.Time) error {
-	// Compile for linux/amd64 (most common target)
-	// The executor will detect the actual target architecture and handle accordingly
+// ============================================================
+// Runner mode
+// ============================================================
+
+// deployAggregate merges the per-step execution summaries.
+type deployAggregate struct {
+	TaskID  string
+	Status  string
+	Targets []string
+	Results map[string]*opsexec.HostResult
+}
+
+func (a *deployAggregate) add(summary *opsexec.Summary) {
+	if a.Results == nil {
+		a.Results = make(map[string]*opsexec.HostResult)
+	}
+	for name, r := range summary.Results {
+		// Earlier steps win the slot; later failures still downgrade status.
+		if existing, ok := a.Results[name]; ok && existing.Status == "failed" {
+			continue
+		}
+		a.Results[name] = r
+	}
+	switch summary.Status {
+	case "failed":
+		a.Status = "failed"
+	case "partial":
+		if a.Status != "failed" {
+			a.Status = "partial"
+		}
+	case "success":
+		if a.Status == "" {
+			a.Status = "success"
+		}
+	}
+}
+
+func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program, targets []opsexec.Target, taskID string) (*deployAggregate, error) {
+	steps, err := buildDeploySteps(prog, targets, taskID)
+	if err != nil {
+		return nil, err
+	}
+
+	agg := &deployAggregate{TaskID: taskID, Targets: targetNames(targets)}
+	for _, step := range steps {
+		fmt.Fprintf(os.Stderr, "Step %q: %d instruction(s) on %d host(s)\n",
+			step.name, len(step.pkg.Instructions), len(step.targets))
+
+		if deployDryRun {
+			step.pkg.DryRun = true
+		}
+
+		executor := &opsexec.Executor{
+			Targets:      step.targets,
+			Instructions: step.pkg,
+			User:         deployUser,
+			KeyFile:      deployKey,
+			Password:     deployPassword,
+			Parallel:     deployParallel,
+			DryRun:       deployDryRun,
+			TaskID:       taskID + "-" + step.name,
+		}
+
+		summary := executor.Execute(ctx)
+		agg.add(summary)
+	}
+
+	return agg, nil
+}
+
+// buildDeploySteps converts the program into per-task instruction packages
+// with their target subsets. Statements outside tasks run on all targets.
+func buildDeploySteps(prog *ast.Program, targets []opsexec.Target, taskID string) ([]deployStep, error) {
+	var steps []deployStep
+
+	var prelude []ast.Statement
+	for _, stmt := range prog.Statements {
+		task, ok := stmt.(*ast.TaskStatement)
+		if !ok {
+			prelude = append(prelude, stmt)
+			continue
+		}
+
+		subset, err := selectTaskTargets(task, targets)
+		if err != nil {
+			return nil, fmt.Errorf("task %q: %w", task.Name, err)
+		}
+		if len(subset) == 0 {
+			return nil, fmt.Errorf("task %q: its on-clause selects none of the deploy targets %v",
+				task.Name, targetNames(targets))
+		}
+
+		gen := &runner.InstructionGenerator{}
+		pkg, err := gen.Generate(task, deployDryRun)
+		if err != nil {
+			return nil, fmt.Errorf("task %q: %w", task.Name, err)
+		}
+		pkg.TaskID = taskID + "-" + sanitizeStepName(task.Name)
+		if err := runner.ValidatePackage(pkg); err != nil {
+			return nil, fmt.Errorf("task %q: invalid instruction package: %w", task.Name, err)
+		}
+		steps = append(steps, deployStep{
+			name:    sanitizeStepName(task.Name),
+			targets: subset,
+			pkg:     pkg,
+		})
+	}
+
+	if len(prelude) > 0 {
+		gen := &runner.InstructionGenerator{}
+		pkg, err := gen.GenerateFromStatements(prelude, deployDryRun)
+		if err != nil {
+			return nil, err
+		}
+		pkg.TaskID = taskID + "-main"
+		if err := runner.ValidatePackage(pkg); err != nil {
+			return nil, fmt.Errorf("invalid instruction package: %w", err)
+		}
+		// Prelude runs first, on every target.
+		steps = append([]deployStep{{
+			name:    "main",
+			targets: targets,
+			pkg:     pkg,
+		}}, steps...)
+	}
+
+	if len(steps) == 0 {
+		return nil, fmt.Errorf("script contains no runnable statements")
+	}
+	return steps, nil
+}
+
+// selectTaskTargets resolves a task's on-clause against the deploy targets.
+// Accepted selectors: exact target name, glob (path.Match syntax), or an
+// exact host address. Anything dynamic fails loudly.
+func selectTaskTargets(task *ast.TaskStatement, targets []opsexec.Target) ([]opsexec.Target, error) {
+	if task.Targets == nil {
+		return targets, nil
+	}
+	if task.Targets.Var != nil {
+		return nil, fmt.Errorf("variable target %q cannot be resolved at deploy time; use literal host selectors", task.Targets.Var.Name)
+	}
+
+	var selected []opsexec.Target
+	for _, expr := range task.Targets.Hosts {
+		switch e := expr.(type) {
+		case *ast.StringLiteral:
+			for _, t := range targets {
+				if targetMatchesSelector(t, e.Value) && !containsTarget(selected, t) {
+					selected = append(selected, t)
+				}
+			}
+		case *ast.CallExpression:
+			return nil, fmt.Errorf("dynamic selectors like %s are not supported in deploy yet; list hosts literally", expr.String())
+		default:
+			return nil, fmt.Errorf("unsupported target selector: %s", expr.String())
+		}
+	}
+	return selected, nil
+}
+
+// targetMatchesSelector matches a selector against the target's name,
+// host address, or user@host form. Globbing via path.Match is allowed.
+func targetMatchesSelector(t opsexec.Target, selector string) bool {
+	candidates := []string{t.Name, t.Host, t.User + "@" + t.Host}
+	for _, c := range candidates {
+		if c == selector {
+			return true
+		}
+		if ok, err := path.Match(selector, c); err == nil && ok {
+			return true
+		}
+	}
+	return false
+}
+
+func containsTarget(list []opsexec.Target, t opsexec.Target) bool {
+	for _, x := range list {
+		if x.Name == t.Name && x.Host == t.Host {
+			return true
+		}
+	}
+	return false
+}
+
+func targetNames(targets []opsexec.Target) []string {
+	names := make([]string, len(targets))
+	for i, t := range targets {
+		names[i] = t.Name
+	}
+	return names
+}
+
+func sanitizeStepName(name string) string {
+	r := strings.NewReplacer(" ", "_", "/", "_", "\\", "_", ":", "_", "\"", "")
+	return r.Replace(name)
+}
+
+// ============================================================
+// AOT mode
+// ============================================================
+
+func deployAOTMode(ctx context.Context, scriptPath string, prog *ast.Program, targets []opsexec.Target, taskID string) (*deployAggregate, error) {
+	// Task routing happens inside the compiled binary on each host — but a
+	// self-contained binary cannot know which host it lands on, so routed
+	// tasks would silently run on EVERY target. Reject instead of misroute.
+	for _, stmt := range prog.Statements {
+		if task, ok := stmt.(*ast.TaskStatement); ok && task.Targets != nil {
+			return nil, fmt.Errorf("task %q: task-level \"on\" routing requires runner mode (linear task bodies); AOT runs the whole script on every target", task.Name)
+		}
+	}
+
 	c, err := compiler.NewCompiler()
 	if err != nil {
-		return fmt.Errorf("failed to initialize compiler: %w", err)
+		return nil, fmt.Errorf("failed to initialize compiler: %w", err)
 	}
 
-	tmpOutput := fmt.Sprintf("/tmp/ops-deploy-%d", time.Now().UnixNano())
-
-	// Set environment for cross-compilation
-	os.Setenv("GOOS", "linux")
-	os.Setenv("GOARCH", "amd64")
-	os.Setenv("CGO_ENABLED", "0")
-
-	if err := c.Compile(scriptPath, "", tmpOutput); err != nil {
-		return fmt.Errorf("compilation failed: %w", err)
+	// One shared output directory; one binary per target architecture.
+	outDir, err := os.MkdirTemp("", "ops-deploy-")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp dir: %w", err)
 	}
-	defer os.Remove(tmpOutput)
+	defer os.RemoveAll(outDir)
 
-	// Create instruction package to execute the binary
+	appBinary := func(goos, goarch string) (string, error) {
+		binPath := filepath.Join(outDir, "ops-app-"+goos+"-"+goarch)
+		if _, err := os.Stat(binPath); err == nil {
+			return binPath, nil
+		}
+		if err := c.Compile(scriptPath, goos+"/"+goarch, binPath); err != nil {
+			return "", fmt.Errorf("compilation for %s/%s failed: %w", goos, goarch, err)
+		}
+		return binPath, nil
+	}
+
+	// The runner executes the uploaded binary; the executor rewrites the
+	// placeholder to the per-host remote path after upload.
 	pkg := &runner.InstructionPackage{
 		Version: "1.0",
-		TaskID:  generateTaskID(scriptPath),
+		TaskID:  taskID,
 		DryRun:  deployDryRun,
 		Instructions: []runner.Instruction{
 			{
 				Op:   "binary.exec",
-				Args: map[string]interface{}{"path": "/tmp/ops-binary"},
+				Args: map[string]interface{}{"path": opsexec.AppBinaryPlaceholder},
 			},
 		},
 	}
@@ -250,240 +447,82 @@ func deployAOTMode(ctx context.Context, scriptPath string, targets []opsexec.Tar
 		Password:     deployPassword,
 		Parallel:     deployParallel,
 		DryRun:       deployDryRun,
+		TaskID:       taskID,
+		AppBinary:    appBinary,
 	}
 
 	summary := executor.Execute(ctx)
-	return outputDeployResult(summary, startedAt, scriptPath)
+
+	agg := &deployAggregate{TaskID: taskID, Targets: targetNames(targets)}
+	agg.add(summary)
+	return agg, nil
 }
 
-// astToInstructions converts an AST program to a runner instruction package.
-func astToInstructions(scriptPath string, prog *ast.Program) (*runner.InstructionPackage, error) {
-	pkg := &runner.InstructionPackage{
-		Version: "1.0",
-		TaskID:  generateTaskID(scriptPath),
-	}
+// ============================================================
+// Result output and audit
+// ============================================================
 
-	gen := &instructionGen{}
-	for _, stmt := range prog.Statements {
-		if err := gen.walkStatement(stmt); err != nil {
-			return nil, err
-		}
-	}
-
-	pkg.Instructions = gen.instructions
-	if len(pkg.Instructions) == 0 {
-		// Add a no-op to ensure valid package.
-		pkg.Instructions = append(pkg.Instructions, runner.Instruction{
-			Op:   "report",
-			Args: map[string]interface{}{"status": "empty_script"},
-		})
-	}
-
-	return pkg, nil
+// auditParams carries everything the audit entry needs.
+type auditParams struct {
+	taskID     string
+	scriptPath string
+	privilege  string
+	targets    []opsexec.Target
+	user       string
+	mode       string
+	dryRun     bool
+	startedAt  time.Time
+	runErr     error
 }
 
-// instructionGen walks AST and generates runner instructions.
-type instructionGen struct {
-	instructions []runner.Instruction
-}
-
-func (g *instructionGen) walkStatement(stmt ast.Statement) error {
-	switch s := stmt.(type) {
-	case *ast.TaskStatement:
-		// Walk task body statements.
-		for _, inner := range s.Body.Statements {
-			if err := g.walkStatement(inner); err != nil {
-				return err
-			}
-		}
-	case *ast.ExpressionStatement:
-		return g.walkExpression(s.Expr)
-	case *ast.LetStatement:
-		return g.walkLet(s)
-	case *ast.ReportStatement:
-		return g.walkReport(s)
-	case *ast.AlertStatement:
-		return g.walkAlert(s)
-	case *ast.LogStatement:
-		return g.walkLog(s)
-	case *ast.EnsureStatement:
-		return g.walkEnsure(s)
-	case *ast.IfStatement:
-		// For simple if/else, we generate conditional instructions.
-		return g.walkIf(s)
-	case *ast.ImportStatement:
-		// No-op for instruction generation.
-		return nil
-	default:
-		// For unsupported statements in runner mode, skip with a warning.
-		return nil
+// recordDeployAudit writes an honest audit entry: only a nil runErr with a
+// successful aggregate is a success. Partial deployments used to be audited
+// as "success".
+func recordDeployAudit(p auditParams) {
+	entry := security.NewAuditEntry(
+		p.taskID,
+		p.scriptPath,
+		p.privilege,
+		targetAddressList(p.targets),
+		p.user,
+		p.mode,
+		p.dryRun,
+	)
+	durationMs := time.Since(p.startedAt).Milliseconds()
+	if p.runErr != nil {
+		entry.SetError(p.runErr)
+	} else {
+		entry.SetStatus("success", durationMs)
 	}
-	return nil
-}
-
-func (g *instructionGen) walkLet(s *ast.LetStatement) error {
-	// If the value is a call expression, convert it to an instruction.
-	if call, ok := s.Value.(*ast.CallExpression); ok {
-		op, args := g.callToInstruction(call)
-		if op != "" {
-			g.instructions = append(g.instructions, runner.Instruction{
-				Op:     op,
-				Args:   args,
-				Assign: s.Name.Name,
-			})
-			return nil
-		}
+	logger := security.NewAuditLogger("")
+	if err := logger.Log(entry); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to write audit log: %v\n", err)
 	}
-	// For literal assignments, use a report instruction with the value.
-	val := g.evalLiteral(s.Value)
-	g.instructions = append(g.instructions, runner.Instruction{
-		Op:     "report",
-		Args:   map[string]interface{}{s.Name.Name: val},
-		Assign: s.Name.Name,
-	})
-	return nil
 }
 
-func (g *instructionGen) walkExpression(expr ast.Expression) error {
-	if call, ok := expr.(*ast.CallExpression); ok {
-		op, args := g.callToInstruction(call)
-		if op != "" {
-			g.instructions = append(g.instructions, runner.Instruction{
-				Op:   op,
-				Args: args,
-			})
-			return nil
-		}
+func targetAddressList(targets []opsexec.Target) []string {
+	names := make([]string, len(targets))
+	for i, t := range targets {
+		names[i] = fmt.Sprintf("%s@%s", t.User, t.Host)
 	}
-	return nil
-}
-
-func (g *instructionGen) walkReport(s *ast.ReportStatement) error {
-	args := make(map[string]interface{})
-	for _, field := range s.Fields {
-		args[field.Key] = g.evalLiteral(field.Value)
-	}
-	g.instructions = append(g.instructions, runner.Instruction{
-		Op:   "report",
-		Args: args,
-	})
-	return nil
-}
-
-func (g *instructionGen) walkAlert(s *ast.AlertStatement) error {
-	msg := g.evalLiteral(s.Message)
-	g.instructions = append(g.instructions, runner.Instruction{
-		Op:   "log",
-		Args: map[string]interface{}{"message": fmt.Sprintf("ALERT: %v", msg)},
-	})
-	return nil
-}
-
-func (g *instructionGen) walkLog(s *ast.LogStatement) error {
-	msg := g.evalLiteral(s.Message)
-	g.instructions = append(g.instructions, runner.Instruction{
-		Op:   "log",
-		Args: map[string]interface{}{"message": msg},
-	})
-	return nil
-}
-
-func (g *instructionGen) walkEnsure(s *ast.EnsureStatement) error {
-	// Ensure is translated as: check condition, then execute body if needed.
-	// For runner mode, we emit a simple check operation.
-	cond := g.evalLiteral(s.Condition)
-	g.instructions = append(g.instructions, runner.Instruction{
-		Op:   "log",
-		Args: map[string]interface{}{"message": fmt.Sprintf("ensure check: %v", cond)},
-	})
-	// Walk body for the apply step.
-	for _, stmt := range s.Body.Statements {
-		if err := g.walkStatement(stmt); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (g *instructionGen) walkIf(s *ast.IfStatement) error {
-	// Simple approach: walk body statements (condition evaluation happens at runtime).
-	for _, stmt := range s.Body.Statements {
-		if err := g.walkStatement(stmt); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// callToInstruction converts a call expression to an instruction op and args.
-func (g *instructionGen) callToInstruction(call *ast.CallExpression) (string, map[string]interface{}) {
-	name := resolveCallName(call.Function)
-	if name == "" {
-		return "", nil
-	}
-
-	args := make(map[string]interface{})
-	for i, arg := range call.Args {
-		key := fmt.Sprintf("arg%d", i)
-		args[key] = g.evalLiteral(arg)
-	}
-
-	return name, args
-}
-
-// resolveCallName builds a dotted name from a call expression.
-func resolveCallName(expr ast.Expression) string {
-	switch e := expr.(type) {
-	case *ast.Identifier:
-		return e.Name
-	case *ast.MemberExpression:
-		prefix := resolveCallName(e.Object)
-		if prefix != "" {
-			return prefix + "." + e.Member.Name
-		}
-	}
-	return ""
-}
-
-// evalLiteral extracts a literal value from an expression for instruction args.
-func (g *instructionGen) evalLiteral(expr ast.Expression) interface{} {
-	switch e := expr.(type) {
-	case *ast.IntegerLiteral:
-		return e.Value
-	case *ast.FloatLiteral:
-		return e.Value
-	case *ast.StringLiteral:
-		return e.Value
-	case *ast.BoolLiteral:
-		return e.Value
-	case *ast.Identifier:
-		return "$" + e.Name // Variable reference marker.
-	case *ast.MemberExpression:
-		return resolveCallName(expr)
-	case *ast.CallExpression:
-		return resolveCallName(e.Function)
-	default:
-		return fmt.Sprintf("%v", expr)
-	}
+	return names
 }
 
 func generateTaskID(scriptPath string) string {
-	// Use a combination of timestamp and script name.
 	name := strings.TrimSuffix(scriptPath, ".ops")
 	name = strings.ReplaceAll(name, "/", "_")
-	return fmt.Sprintf("%s-%d", name, time.Now().Unix())
+	return fmt.Sprintf("%s-%d", name, time.Now().UnixNano())
 }
 
-func outputDeployResult(summary *opsexec.Summary, startedAt time.Time, scriptPath string) error {
-	// Add script info to summary.
+func outputDeployResult(agg *deployAggregate, startedAt time.Time, scriptPath string) error {
 	deployResult := map[string]interface{}{
-		"task_id":     summary.TaskID,
+		"task_id":     agg.TaskID,
 		"script":      scriptPath,
 		"started_at":  startedAt.Format(time.RFC3339),
 		"finished_at": time.Now().UTC().Format(time.RFC3339),
-		"status":      summary.Status,
-		"targets":     summary.Targets,
-		"results":     summary.Results,
+		"status":      agg.Status,
+		"targets":     agg.Targets,
+		"results":     agg.Results,
 	}
 
 	result, err := json.MarshalIndent(deployResult, "", "  ")
@@ -500,10 +539,13 @@ func outputDeployResult(summary *opsexec.Summary, startedAt time.Time, scriptPat
 		fmt.Println(string(result))
 	}
 
-	// Return error instead of os.Exit to allow audit logging
-	if summary.Status == "failed" {
+	// partial is a failure from the operator's point of view: some hosts
+	// did not reach the desired state.
+	switch agg.Status {
+	case "failed":
 		return fmt.Errorf("deployment failed")
+	case "partial":
+		return fmt.Errorf("deployment partially failed: some hosts did not complete successfully")
 	}
-
 	return nil
 }

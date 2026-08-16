@@ -2,6 +2,7 @@ package runner
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -52,8 +53,14 @@ func TestValidatePackage(t *testing.T) {
 	}{
 		{
 			name:    "valid package",
-			pkg:     InstructionPackage{Version: "1.0", Instructions: []Instruction{{Op: "test"}}},
+			pkg:     InstructionPackage{Version: "1.0", Instructions: []Instruction{{Op: "sys.cpu.usage"}}},
 			wantErr: false,
+		},
+		{
+			name:    "unknown operation",
+			pkg:     InstructionPackage{Version: "1.0", Instructions: []Instruction{{Op: "not.a.real.op"}}},
+			wantErr: true,
+			errMsg:  "unknown operation",
 		},
 		{
 			name:    "missing version",
@@ -146,7 +153,7 @@ func TestRegistryListOperations(t *testing.T) {
 		"sys.cpu.usage",
 		"sys.memory.info",
 		"file.read",
-		"net.http.get",
+		"net.http_get",
 		"process.list",
 		"service.status",
 		"time.now",
@@ -297,8 +304,8 @@ func TestExecutorUnknownOp(t *testing.T) {
 	}
 
 	output := Run(pkg, r)
-	if output.Status != "partial" {
-		t.Errorf("expected status partial, got %s", output.Status)
+	if output.Status != "failed" {
+		t.Errorf("expected status failed (nothing succeeded), got %s", output.Status)
 	}
 	if len(output.Errors) == 0 {
 		t.Error("expected at least one error")
@@ -357,7 +364,7 @@ func TestReportOperation(t *testing.T) {
 		Version: "1.0",
 		Instructions: []Instruction{
 			{Op: "test.value", Assign: "mydata"},
-			{Op: "report", Args: map[string]interface{}{"data": "mydata"}},
+			{Op: "report", Args: map[string]interface{}{"data": "$mydata"}},
 		},
 	}
 
@@ -427,7 +434,7 @@ func TestGetStringArg(t *testing.T) {
 	}
 }
 
-func TestRequireIntArg(t *testing.T) {
+func TestArgInt(t *testing.T) {
 	args := map[string]interface{}{
 		"float":  42.0,
 		"int":    42,
@@ -435,26 +442,127 @@ func TestRequireIntArg(t *testing.T) {
 		"string": "not a number",
 	}
 
-	if got := requireIntArg(args, "float"); got != 42 {
-		t.Errorf("expected 42 from float64, got %d", got)
+	if got, err := argInt(args, "float"); err != nil || got != 42 {
+		t.Errorf("float64: got (%d, %v), want (42, nil)", got, err)
 	}
-	if got := requireIntArg(args, "int"); got != 42 {
-		t.Errorf("expected 42 from int, got %d", got)
+	if got, err := argInt(args, "int"); err != nil || got != 42 {
+		t.Errorf("int: got (%d, %v), want (42, nil)", got, err)
 	}
-	if got := requireIntArg(args, "int64"); got != 42 {
-		t.Errorf("expected 42 from int64, got %d", got)
+	if got, err := argInt(args, "int64"); err != nil || got != 42 {
+		t.Errorf("int64: got (%d, %v), want (42, nil)", got, err)
 	}
-	if got := requireIntArg(args, "missing"); got != 0 {
-		t.Errorf("expected 0 for missing, got %d", got)
+	if _, err := argInt(args, "missing"); err == nil {
+		t.Error("missing arg must return an error, not a silent 0")
+	}
+	if _, err := argInt(args, "string"); err == nil {
+		t.Error("non-number arg must return an error")
 	}
 }
 
-func TestRequireInt64Arg(t *testing.T) {
+func TestArgInt64(t *testing.T) {
 	args := map[string]interface{}{
 		"float": 42.0,
 	}
-	if got := requireInt64Arg(args, "float"); got != 42 {
-		t.Errorf("expected 42, got %d", got)
+	if got, err := argInt64(args, "float"); err != nil || got != 42 {
+		t.Errorf("got (%d, %v), want (42, nil)", got, err)
+	}
+	if _, err := argInt64(args, "missing"); err == nil {
+		t.Error("missing arg must return an error")
+	}
+}
+
+func TestArgString(t *testing.T) {
+	args := map[string]interface{}{
+		"path": "/etc/hosts",
+		"num":  42,
+	}
+	if got, err := argString(args, "path"); err != nil || got != "/etc/hosts" {
+		t.Errorf("got (%q, %v)", got, err)
+	}
+	if _, err := argString(args, "missing"); err == nil {
+		t.Error("missing arg must return an error, not a silent \"\"")
+	}
+	if _, err := argString(args, "num"); err == nil {
+		t.Error("non-string arg must return an error")
+	}
+}
+
+// A registered op receiving a missing required argument must fail the
+// instruction (the old behavior silently operated on "" / 0).
+func TestRegistryOpMissingArgFails(t *testing.T) {
+	r := NewRegistry()
+	fn, ok := r.Get("file.read")
+	if !ok {
+		t.Fatal("file.read not registered")
+	}
+	if _, err := fn(map[string]interface{}{}); err == nil {
+		t.Error("file.read with no path must fail")
+	}
+}
+
+// Canonical names must all resolve; aliases must map to the same function.
+func TestRegistryCanonicalAndAliases(t *testing.T) {
+	r := NewRegistry()
+	for _, name := range []string{
+		"sys.load", "sys.os", "net.http_get", "net.tcp_check",
+		"process.find_by_name", "file.stat", "pkg.info",
+	} {
+		if !r.Has(name) {
+			t.Errorf("canonical op %q not registered", name)
+		}
+	}
+	for alias, canonical := range map[string]string{
+		"sys.load.avg":         "sys.load",
+		"sys.host.info":        "sys.os",
+		"net.http.get":         "net.http_get",
+		"net.tcp.ping":         "net.tcp_check",
+		"process.find.by_name": "process.find_by_name",
+		"file.info":            "file.stat",
+		"pkg.search":           "pkg.info",
+	} {
+		fnA, okA := r.Get(alias)
+		fnB, _ := r.Get(canonical)
+		if !okA {
+			t.Errorf("alias %q not resolvable", alias)
+			continue
+		}
+		// Compare via fmt pointer string (func values are not comparable).
+		if fmt.Sprintf("%p", fnA) != fmt.Sprintf("%p", fnB) {
+			t.Errorf("alias %q does not resolve to the same op as %q", alias, canonical)
+		}
+	}
+}
+
+// Controller-only functions must NOT run on remote runners.
+func TestRegistryExcludesControllerOnlyOps(t *testing.T) {
+	r := NewRegistry()
+	if r.Has("file.distribute") {
+		t.Error("file.distribute must not be available on remote runners")
+	}
+	if r.Has("file.collect") {
+		t.Error("file.collect must not be available on remote runners")
+	}
+}
+
+func TestBinaryExecPropagatesFailure(t *testing.T) {
+	r := NewRegistry()
+	if _, ok := r.Get("binary.exec"); !ok {
+		t.Fatal("binary.exec not registered")
+	}
+
+	pkgExec := &InstructionPackage{
+		Version: "1.0",
+		Instructions: []Instruction{{
+			Op:   "binary.exec",
+			Args: map[string]interface{}{"path": "/nonexistent/ops-binary"},
+		}},
+	}
+	out := Run(pkgExec, r)
+	if out.Status == "ok" {
+		t.Fatalf("binary.exec on a missing binary must fail, got status %q", out.Status)
+	}
+	if len(out.Errors) == 0 {
+		t.Error("expected error details in output.Errors")
 	}
 }
 

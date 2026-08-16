@@ -2,6 +2,8 @@ package sshx
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -134,4 +136,39 @@ func (c *Client) Download(ctx context.Context, remotePath, localPath string) err
 	defer sftpClient.Close()
 
 	return sftpClient.Download(ctx, remotePath, localPath)
+}
+
+// RemoteFileChecksum streams the remote file through SHA-256 without
+// materializing it locally.
+func (s *SFTPClient) RemoteFileChecksum(ctx context.Context, remotePath string) (string, error) {
+	remoteFile, err := s.client.Open(remotePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to open remote file %s: %w", remotePath, err)
+	}
+	defer remoteFile.Close()
+
+	h := sha256.New()
+	done := make(chan error, 1)
+	go func() {
+		_, err := io.Copy(h, remoteFile)
+		done <- err
+	}()
+
+	select {
+	case <-ctx.Done():
+		return "", ctx.Err()
+	case err := <-done:
+		if err != nil {
+			return "", fmt.Errorf("failed to read remote file %s: %w", remotePath, err)
+		}
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// Chmod changes the permissions of a remote file.
+func (s *SFTPClient) Chmod(remotePath string, mode os.FileMode) error {
+	if err := s.client.Chmod(remotePath, mode); err != nil {
+		return fmt.Errorf("failed to chmod remote file %s: %w", remotePath, err)
+	}
+	return nil
 }

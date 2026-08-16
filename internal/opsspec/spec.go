@@ -1,0 +1,179 @@
+// Package opsspec defines the canonical registry of every OpsLang atomic
+// operation: its dotted DSL name, its positional argument names, and where
+// it can run. This table is the single source of truth shared by the three
+// execution engines (interpreter, runner registry, AOT code generator).
+// A cross-engine consistency test enforces that all engines agree with it.
+package opsspec
+
+// Availability describes which engines expose a function.
+type Availability int
+
+const (
+	// All means the function is available in the interpreter (controller),
+	// the remote runner registry, and the AOT code generator.
+	All Availability = iota
+	// ControllerOnly means the function only makes sense on the controller
+	// machine (e.g. it fans out over SSH itself); the remote runner and the
+	// AOT code generator must not expose it.
+	ControllerOnly
+)
+
+// Func describes one atomic operation.
+type Func struct {
+	// Name is the canonical dotted DSL name, e.g. "sys.cpu.usage".
+	// All engines must resolve exactly this name; historical aliases are
+	// tolerated at lookup time but never generated.
+	Name string
+	// Args lists positional argument names in call order, e.g. ["path"].
+	// Engines use these names when building instruction argument maps.
+	Args []string
+	// Avail restricts which engines expose the function.
+	Avail Availability
+}
+
+// Funcs is the canonical table. Keep sorted by category then name.
+var Funcs = []Func{
+	// ── sys ───────────────────────────────────────────────────────────
+	{Name: "sys.cpu.count"},
+	{Name: "sys.cpu.info"},
+	{Name: "sys.cpu.usage"},
+	{Name: "sys.disk.partitions"},
+	{Name: "sys.disk.usage", Args: []string{"path"}},
+	{Name: "sys.hostname"},
+	{Name: "sys.load"},
+	{Name: "sys.memory.info"},
+	{Name: "sys.net.interfaces"},
+	{Name: "sys.os"},
+	{Name: "sys.uptime"},
+	{Name: "sys.users"},
+
+	// ── file ──────────────────────────────────────────────────────────
+	{Name: "file.append", Args: []string{"path", "content"}},
+	{Name: "file.checksum", Args: []string{"path", "algo"}},
+	{Name: "file.chmod", Args: []string{"path", "mode"}},
+	{Name: "file.copy", Args: []string{"src", "dst"}},
+	{Name: "file.delete", Args: []string{"path"}},
+	{Name: "file.exists", Args: []string{"path"}},
+	{Name: "file.list", Args: []string{"dir"}},
+	{Name: "file.mkdir", Args: []string{"path"}},
+	{Name: "file.move", Args: []string{"src", "dst"}},
+	{Name: "file.read", Args: []string{"path"}},
+	{Name: "file.stat", Args: []string{"path"}},
+	{Name: "file.template", Args: []string{"path", "vars"}},
+	{Name: "file.write", Args: []string{"path", "content"}},
+	// distribute/collect fan out from the controller over SSH; a remote
+	// runner executing them would need controller credentials.
+	{Name: "file.distribute", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly},
+	{Name: "file.collect", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly},
+
+	// ── net ───────────────────────────────────────────────────────────
+	{Name: "net.dns_lookup", Args: []string{"host"}},
+	{Name: "net.http_get", Args: []string{"url"}},
+	{Name: "net.http_post", Args: []string{"url", "body"}},
+	{Name: "net.interfaces"},
+	{Name: "net.tcp_check", Args: []string{"host", "port"}},
+
+	// ── process ───────────────────────────────────────────────────────
+	{Name: "process.exec", Args: []string{"command", "args"}},
+	{Name: "process.find_by_name", Args: []string{"name"}},
+	{Name: "process.find_by_port", Args: []string{"port"}},
+	{Name: "process.kill", Args: []string{"pid", "signal"}},
+	{Name: "process.list"},
+
+	// ── service ───────────────────────────────────────────────────────
+	{Name: "service.disable", Args: []string{"name"}},
+	{Name: "service.enable", Args: []string{"name"}},
+	{Name: "service.restart", Args: []string{"name"}},
+	{Name: "service.start", Args: []string{"name"}},
+	{Name: "service.status", Args: []string{"name"}},
+	{Name: "service.stop", Args: []string{"name"}},
+
+	// ── pkg ───────────────────────────────────────────────────────────
+	{Name: "pkg.info", Args: []string{"name"}},
+	{Name: "pkg.install", Args: []string{"name"}},
+	{Name: "pkg.list"},
+	{Name: "pkg.remove", Args: []string{"name"}},
+
+	// ── time ──────────────────────────────────────────────────────────
+	{Name: "time.diff", Args: []string{"t1", "t2"}},
+	{Name: "time.format", Args: []string{"ts", "layout"}},
+	{Name: "time.now"},
+	{Name: "time.parse", Args: []string{"layout", "value"}},
+	{Name: "time.since", Args: []string{"ts"}},
+	{Name: "time.sleep", Args: []string{"ms"}},
+
+	// ── json / yaml ───────────────────────────────────────────────────
+	{Name: "json.decode", Args: []string{"input"}},
+	{Name: "json.encode", Args: []string{"value"}},
+	{Name: "yaml.decode", Args: []string{"input"}},
+	{Name: "yaml.encode", Args: []string{"value"}},
+}
+
+// BuiltinOps are runner instruction ops that are not SDK calls.
+var BuiltinOps = []string{"log", "alert", "set", "report", "binary.exec"}
+
+// byName indexes Funcs by canonical name.
+var byName = func() map[string]Func {
+	m := make(map[string]Func, len(Funcs))
+	for _, f := range Funcs {
+		m[f.Name] = f
+	}
+	return m
+}()
+
+// Lookup returns the spec for a canonical function name.
+func Lookup(name string) (Func, bool) {
+	f, ok := byName[name]
+	return f, ok
+}
+
+// ArgNames returns the positional argument names for an op (SDK call or
+// builtin). The second return is false when the op is unknown, in which
+// case callers must reject the call rather than guess.
+func ArgNames(op string) ([]string, bool) {
+	if f, ok := byName[op]; ok {
+		return f.Args, true
+	}
+	for _, b := range BuiltinOps {
+		if op == b {
+			switch op {
+			case "log", "alert":
+				return []string{"message"}, true
+			case "set":
+				return []string{"value"}, true
+			case "binary.exec":
+				return []string{"path", "args"}, true
+			}
+		}
+	}
+	return nil, false
+}
+
+// Names returns all canonical function names, optionally filtered by
+// availability.
+func Names(avail *Availability) []string {
+	out := make([]string, 0, len(Funcs))
+	for _, f := range Funcs {
+		if avail != nil && f.Avail != *avail {
+			continue
+		}
+		out = append(out, f.Name)
+	}
+	return out
+}
+
+// Aliases maps historical runner-registry names to canonical names. Engines
+// accept these at lookup time for backward compatibility with existing
+// instruction packages, but generators only emit canonical names.
+var Aliases = map[string]string{
+	"sys.load.avg":        "sys.load",
+	"sys.host.info":       "sys.os",
+	"net.http.get":        "net.http_get",
+	"net.http.post":       "net.http_post",
+	"net.tcp.ping":        "net.tcp_check",
+	"net.dns.resolve":     "net.dns_lookup",
+	"process.find.by_name": "process.find_by_name",
+	"process.find.by_port": "process.find_by_port",
+	"file.info":           "file.stat",
+	"pkg.search":          "pkg.info",
+}

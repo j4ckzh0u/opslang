@@ -5,15 +5,29 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/opslang/opslang/internal/opsspec"
 	sdkfile "github.com/opslang/opslang/pkg/ops-core-sdk/file"
 	sdkjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
 	sdknet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
+	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	sdkprocess "github.com/opslang/opslang/pkg/ops-core-sdk/process"
 	sdkservice "github.com/opslang/opslang/pkg/ops-core-sdk/service"
 	sdksys "github.com/opslang/opslang/pkg/ops-core-sdk/sys"
 	sdktime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
 	sdkyaml "github.com/opslang/opslang/pkg/ops-core-sdk/yaml"
 )
+
+// SDKBuiltinNames returns every SDK function name registered by
+// RegisterSDKBuiltins. Used by cross-engine consistency tests.
+func SDKBuiltinNames() []string {
+	interp := New(nil)
+	RegisterSDKBuiltins(interp)
+	names := make([]string, 0, len(interp.builtins))
+	for name := range interp.builtins {
+		names = append(names, name)
+	}
+	return names
+}
 
 // structToMap converts any struct to map[string]interface{} via JSON roundtrip.
 // This is needed because the interpreter's member access only supports map[string]interface{}.
@@ -342,19 +356,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		opts := sdkfile.DistributeOptions{}
 		if len(args) >= 3 {
 			if optsMap, ok := args[2].(map[string]interface{}); ok {
-				if v, ok := optsMap["compress"].(bool); ok {
-					opts.Compress = v
-				}
-				if v, ok := optsMap["checksum"].(bool); ok {
+	if v, ok := optsMap["checksum"].(bool); ok {
 					opts.Checksum = v
 				}
 				if v, ok := optsMap["mode"].(string); ok {
 					opts.Mode = v
 				}
-				if v, ok := optsMap["owner"].(string); ok {
-					opts.Owner = v
-				}
-				if v, ok := optsMap["parallel"].(float64); ok {
+	if v, ok := optsMap["parallel"].(float64); ok {
 					opts.Parallel = int(v)
 				}
 				if v, ok := optsMap["retries"].(float64); ok {
@@ -407,9 +415,6 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		opts := sdkfile.CollectOptions{}
 		if len(args) >= 3 {
 			if optsMap, ok := args[2].(map[string]interface{}); ok {
-				if v, ok := optsMap["compress"].(bool); ok {
-					opts.Compress = v
-				}
 				if v, ok := optsMap["dest_dir"].(string); ok {
 					opts.DestDir = v
 				}
@@ -744,5 +749,203 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return structToMap(r)
+	}
+
+	// ── file.* (additions) ────────────────────────────────────────────
+	interp.builtins["file.append"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("file.append() requires 2 arguments (path, content)")
+		}
+		path, _ := args[0].(string)
+		content, _ := args[1].(string)
+		if path == "" {
+			return nil, fmt.Errorf("file.append(): path must be string")
+		}
+		r, err := sdkfile.Append(path, content)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	interp.builtins["file.chmod"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("file.chmod() requires 2 arguments (path, mode)")
+		}
+		path, _ := args[0].(string)
+		modeStr, _ := args[1].(string)
+		var mode uint64
+		if _, err := fmt.Sscanf(modeStr, "%o", &mode); err != nil {
+			return nil, fmt.Errorf("file.chmod(): mode must be an octal string like \"0755\"")
+		}
+		r, err := sdkfile.Chmod(path, uint32(mode))
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	interp.builtins["file.template"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("file.template() requires at least 1 argument (path)")
+		}
+		path, _ := args[0].(string)
+		vars := map[string]interface{}{}
+		if len(args) >= 2 {
+			m, ok := args[1].(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("file.template(): vars must be a dict")
+			}
+			vars = m
+		}
+		r, err := sdkfile.Template(path, vars)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── process.kill ─────────────────────────────────────────────────
+	interp.builtins["process.kill"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("process.kill() requires at least 1 argument (pid)")
+		}
+		pidF, err := toFloat(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("process.kill(): pid must be number")
+		}
+		signal := "TERM"
+		if len(args) >= 2 {
+			if s, ok := args[1].(string); ok && s != "" {
+				signal = s
+			}
+		}
+		r, err := sdkprocess.Kill(int(pidF), signal)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── service.disable ──────────────────────────────────────────────
+	interp.builtins["service.disable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("service.disable() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("service.disable(): argument must be string")
+		}
+		r, err := sdkservice.Disable(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── pkg.* ────────────────────────────────────────────────────────
+	interp.builtins["pkg.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pkg.install() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("pkg.install(): argument must be string")
+		}
+		r, err := opspkg.Install(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	interp.builtins["pkg.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pkg.remove() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("pkg.remove(): argument must be string")
+		}
+		r, err := opspkg.Remove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	interp.builtins["pkg.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pkg.info() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("pkg.info(): argument must be string")
+		}
+		r, err := opspkg.Info(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	interp.builtins["pkg.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := opspkg.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── time.parse / time.diff ───────────────────────────────────────
+	interp.builtins["time.parse"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("time.parse() requires 2 arguments (layout, value)")
+		}
+		layout, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("time.parse(): layout must be string")
+		}
+		value, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("time.parse(): value must be string")
+		}
+		r, err := sdktime.Parse(layout, value)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	interp.builtins["time.diff"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("time.diff() requires 2 arguments (t1, t2)")
+		}
+		t1F, err := toFloat(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("time.diff(): t1 must be number")
+		}
+		t2F, err := toFloat(args[1])
+		if err != nil {
+			return nil, fmt.Errorf("time.diff(): t2 must be number")
+		}
+		r := sdktime.Diff(int64(t1F), int64(t2F))
+		return structToMap(r)
+	}
+}
+
+// verifyBridgeCoverage is a self-check that every function the canonical
+// opsspec table promises for the controller (interpreter) is registered.
+// It panics at init if the bridge and the spec drift apart — the two used
+// to disagree silently, which made docs lie.
+func init() {
+	registered := make(map[string]bool)
+	for _, name := range SDKBuiltinNames() {
+		registered[name] = true
+	}
+	for _, f := range opsspec.Funcs {
+		if !registered[f.Name] {
+			panic(fmt.Sprintf("opsspec/interpreter mismatch: %s is in the spec but not registered in the interpreter bridge", f.Name))
+		}
 	}
 }

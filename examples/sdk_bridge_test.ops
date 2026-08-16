@@ -22,7 +22,7 @@ let load = sys.load()
 print("Load Average: " + str(load.load1) + " " + str(load.load5) + " " + str(load.load15))
 
 let up = sys.uptime()
-print("Uptime (seconds): " + str(up.seconds))
+print("Uptime (seconds): " + str(up.uptime))
 
 // File Operations
 print("")

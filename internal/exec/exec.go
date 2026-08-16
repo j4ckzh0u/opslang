@@ -52,6 +52,11 @@ type Summary struct {
 	Results    map[string]*HostResult `json:"results"`
 }
 
+// AppBinaryPlaceholder is the instruction argument value that deploy uses to
+// reference the uploaded AOT script binary. The executor replaces it with the
+// real per-host remote path before sending the instruction package.
+const AppBinaryPlaceholder = "@opslang-app-binary@"
+
 // Executor runs instructions on remote hosts via SSH.
 type Executor struct {
 	Targets      []Target
@@ -63,7 +68,18 @@ type Executor struct {
 	DryRun       bool
 	RunnerPath   string // explicit path to a pre-built runner binary (optional)
 	ProjectRoot  string // root of the OpsLang project (for building runner)
+	// AppBinary, when set, is called per host with the detected target
+	// GOOS/GOARCH and must return a local binary path to upload alongside
+	// the runner (AOT deploy mode). Instructions reference it via
+	// AppBinaryPlaceholder.
+	AppBinary func(goos, goarch string) (string, error)
+
+	TaskID string
+
 	runnerCache  *runnerCache
+	buildMu      sync.Mutex // serializes runner/app binary builds
+	buildInFlight map[string]*sync.Once
+	buildResults  map[string]error
 }
 
 // SSHClientFactory creates SSH clients. Can be overridden for testing.
@@ -74,6 +90,7 @@ var SSHClientFactory = func(cfg *sshx.Config) (*sshx.Client, error) {
 // Execute runs instructions on all targets concurrently and returns a summary.
 func (e *Executor) Execute(ctx context.Context) *Summary {
 	summary := &Summary{
+		TaskID:    e.TaskID,
 		StartedAt: time.Now().UTC(),
 		Results:   make(map[string]*HostResult),
 	}
@@ -84,6 +101,10 @@ func (e *Executor) Execute(ctx context.Context) *Summary {
 
 	if e.runnerCache == nil {
 		e.runnerCache = newRunnerCache(e.ProjectRoot)
+	}
+	if e.buildInFlight == nil {
+		e.buildInFlight = make(map[string]*sync.Once)
+		e.buildResults = make(map[string]error)
 	}
 
 	parallel := e.Parallel
@@ -96,7 +117,22 @@ func (e *Executor) Execute(ctx context.Context) *Summary {
 
 	for _, target := range e.Targets {
 		wg.Add(1)
-		sem <- struct{}{}
+		// Acquire the semaphore with ctx awareness so cancellation stops
+		// queued hosts from starting new connections.
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			wg.Done()
+			mu.Lock()
+			summary.Results[target.Name] = &HostResult{
+				Status:     "failed",
+				Error:      fmt.Sprintf("cancelled before execution: %v", ctx.Err()),
+				StartedAt:  time.Now().UTC(),
+				FinishedAt: time.Now().UTC(),
+			}
+			mu.Unlock()
+			continue
+		}
 		go func(t Target) {
 			defer wg.Done()
 			defer func() { <-sem }()
@@ -207,6 +243,19 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 		return result
 	}
 
+	// AOT mode: build/fetch the compiled script binary for the detected
+	// architecture and remember its local path for upload below.
+	var localAppBinary string
+	if e.AppBinary != nil {
+		localAppBinary, err = e.getAppBinary("linux", goarch)
+		if err != nil {
+			result.Status = "failed"
+			result.Error = fmt.Sprintf("failed to build script binary for %s/%s: %v", "linux", goarch, err)
+			result.FinishedAt = time.Now().UTC()
+			return result
+		}
+	}
+
 	// Prepare remote directory.
 	remoteDir := fmt.Sprintf("/tmp/ops-%d", time.Now().UnixNano())
 	if _, err := client.Exec(ctx, "mkdir -p "+remoteDir); err != nil {
@@ -225,16 +274,34 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 		return result
 	}
 
-	// Make executable.
-	if _, err := client.Exec(ctx, "chmod +x "+remoteRunner); err != nil {
+	// Upload the compiled script binary (AOT mode) and reference it from
+	// instructions via the placeholder.
+	remoteApp := ""
+	if localAppBinary != "" {
+		remoteApp = remoteDir + "/ops-app"
+		if err := client.Upload(ctx, localAppBinary, remoteApp); err != nil {
+			result.Status = "failed"
+			result.Error = fmt.Sprintf("failed to upload script binary: %v", err)
+			result.FinishedAt = time.Now().UTC()
+			return result
+		}
+	}
+
+	// Make uploaded binaries executable.
+	chmodCmd := "chmod +x " + remoteRunner
+	if remoteApp != "" {
+		chmodCmd += " " + remoteApp
+	}
+	if _, err := client.Exec(ctx, chmodCmd); err != nil {
 		result.Status = "failed"
-		result.Error = fmt.Sprintf("failed to chmod runner: %v", err)
+		result.Error = fmt.Sprintf("failed to chmod binaries: %v", err)
 		result.FinishedAt = time.Now().UTC()
 		return result
 	}
 
-	// Marshal instruction package to JSON.
-	instrJSON, err := json.Marshal(e.Instructions)
+	// Marshal instruction package to JSON, resolving the app-binary
+	// placeholder to this host's remote path.
+	instrJSON, err := marshalInstructions(e.Instructions, remoteApp)
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Sprintf("failed to marshal instructions: %v", err)
@@ -261,6 +328,31 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 		return result
 	}
 
+	// Parse runner output. The runner exits non-zero on partial/total
+	// failure but still prints its JSON report on stdout; prefer the
+	// structured status when it is available.
+	var output runner.Output
+	parseErr := json.Unmarshal([]byte(execResult.Stdout), &output)
+
+	if parseErr == nil && output.Status != "" {
+		result.ExitCode = execResult.ExitCode
+		result.Data = output.Data
+		result.Errors = output.Errors
+		result.Warnings = output.Warnings
+		switch output.Status {
+		case "ok":
+			result.Status = "success"
+		default:
+			// partial / failed / anything else is not success.
+			result.Status = output.Status
+			if result.Error == "" && len(output.Errors) > 0 {
+				result.Error = strings.Join(output.Errors, "; ")
+			}
+		}
+		result.FinishedAt = time.Now().UTC()
+		return result
+	}
+
 	if execResult.ExitCode != 0 {
 		result.Status = "failed"
 		result.ExitCode = execResult.ExitCode
@@ -269,26 +361,52 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 		return result
 	}
 
-	// Parse runner output.
-	var output runner.Output
-	if err := json.Unmarshal([]byte(execResult.Stdout), &output); err != nil {
-		result.Status = "failed"
-		result.Error = fmt.Sprintf("failed to parse runner output: %v", err)
-		result.FinishedAt = time.Now().UTC()
-		return result
-	}
-
-	result.ExitCode = 0
-	result.Data = output.Data
-	result.Errors = output.Errors
-	result.Warnings = output.Warnings
-	if output.Status == "ok" {
-		result.Status = "success"
-	} else {
-		result.Status = output.Status
-	}
+	result.Status = "failed"
+	result.Error = fmt.Sprintf("failed to parse runner output: %v", parseErr)
 	result.FinishedAt = time.Now().UTC()
 	return result
+}
+
+// marshalInstructions serializes the instruction package, replacing the
+// app-binary placeholder with the host-specific remote path.
+func marshalInstructions(pkg *runner.InstructionPackage, remoteApp string) ([]byte, error) {
+	if pkg == nil {
+		return nil, fmt.Errorf("instruction package is nil")
+	}
+	if remoteApp == "" || !strings.Contains(fmt.Sprint(pkg.Instructions), AppBinaryPlaceholder) {
+		return json.Marshal(pkg)
+	}
+
+	// Deep-copy via JSON, then rewrite placeholder values.
+	data, err := json.Marshal(pkg)
+	if err != nil {
+		return nil, err
+	}
+	var generic interface{}
+	if err := json.Unmarshal(data, &generic); err != nil {
+		return nil, err
+	}
+	replacePlaceholder(&generic, remoteApp)
+	return json.Marshal(generic)
+}
+
+// replacePlaceholder recursively rewrites placeholder strings in place.
+func replacePlaceholder(v *interface{}, remoteApp string) {
+	switch node := (*v).(type) {
+	case string:
+		if node == AppBinaryPlaceholder {
+			*v = remoteApp
+		}
+	case map[string]interface{}:
+		for key, elem := range node {
+			replacePlaceholder(&elem, remoteApp)
+			node[key] = elem
+		}
+	case []interface{}:
+		for i := range node {
+			replacePlaceholder(&node[i], remoteApp)
+		}
+	}
 }
 
 // getRunnerBinary returns the path to a runner binary for the given GOOS/GOARCH.
@@ -302,17 +420,68 @@ func (e *Executor) getRunnerBinary(goos, goarch string) (string, error) {
 		return e.RunnerPath, nil
 	}
 
-	// Check cache.
 	cached := e.runnerCache.getCachedPath(goos, goarch)
 	if _, err := os.Stat(cached); err == nil {
 		return cached, nil
 	}
 
-	// Build and cache.
-	if err := e.runnerCache.build(goos, goarch); err != nil {
+	if err := e.buildOnce("runner:"+goos+"/"+goarch, func() error {
+		return e.runnerCache.build(goos, goarch)
+	}); err != nil {
 		return "", fmt.Errorf("failed to build runner: %w", err)
 	}
 	return cached, nil
+}
+
+// getAppBinary resolves the AOT script binary for a target architecture,
+// building it at most once per (goos, goarch) across all host goroutines.
+func (e *Executor) getAppBinary(goos, goarch string) (string, error) {
+	var path string
+	err := e.buildOnce("app:"+goos+"/"+goarch, func() error {
+		p, err := e.AppBinary(goos, goarch)
+		path = p
+		return err
+	})
+	if err != nil {
+		return "", err
+	}
+	if path == "" {
+		return "", fmt.Errorf("app binary callback returned an empty path")
+	}
+	if _, err := os.Stat(path); err != nil {
+		return "", fmt.Errorf("app binary %s not found: %w", path, err)
+	}
+	return path, nil
+}
+
+// buildOnce runs build exactly once for the given key no matter how many
+// goroutines race on it; every caller observes the same result. Concurrent
+// `go build` invocations writing the same output path used to corrupt
+// binaries.
+func (e *Executor) buildOnce(key string, build func() error) error {
+	e.buildMu.Lock()
+	if e.buildInFlight == nil {
+		e.buildInFlight = make(map[string]*sync.Once)
+		e.buildResults = make(map[string]error)
+	}
+	once, exists := e.buildInFlight[key]
+	if !exists {
+		once = &sync.Once{}
+		e.buildInFlight[key] = once
+	}
+	e.buildMu.Unlock()
+
+	once.Do(func() {
+		err := build()
+		e.buildMu.Lock()
+		e.buildResults[key] = err
+		e.buildMu.Unlock()
+	})
+
+	e.buildMu.Lock()
+	err := e.buildResults[key]
+	e.buildMu.Unlock()
+	return err
 }
 
 // ============================================================

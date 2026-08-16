@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
@@ -117,36 +118,94 @@ type NetInterface struct {
 	Addresses    []string `json:"addresses"`
 }
 
-// GetCPUUsage returns overall CPU utilization percentages.
-//
-// It uses cpu.Times(false) to get aggregate CPU times since boot and computes
-// User/System/Idle/Percent breakdowns directly from those cumulative times.
-// This ensures User+System+Idle ~ 100 and User+System ~ Percent.
+// sampleInterval is the delay between the two CPU samples taken by
+// GetCPUUsage. 500ms gives a meaningful "current utilization" window
+// (about 50 scheduler ticks on a typical 100Hz kernel) without making
+// scripts noticeably slow.
+const sampleInterval = 500 * time.Millisecond
+
+// GetCPUUsage returns current CPU utilization percentages measured over a
+// short sampling window (two cpu.Times snapshots delta). Computing from
+// cumulative since-boot counters would report a lifetime average that
+// barely moves on long-running servers and never triggers alerts.
 func GetCPUUsage() (CPUUsage, error) {
-	// Aggregate CPU times since boot
-	times, err := cpu.Times(false)
-	if err != nil {
+	return GetCPUUsageInterval(sampleInterval)
+}
+
+// GetCPUUsageInterval is GetCPUUsage with an explicit sampling window.
+// A zero or negative interval yields the since-boot average (single sample).
+func GetCPUUsageInterval(interval time.Duration) (CPUUsage, error) {
+	first, err := cpu.Times(false)
+	if err != nil || len(first) == 0 {
 		return CPUUsage{}, fmt.Errorf("failed to get CPU times: %w", err)
 	}
 
-	var result CPUUsage
-
-	if len(times) > 0 {
-		t := times[0]
-		total := t.User + t.System + t.Idle + t.Nice + t.Iowait + t.Irq +
-			t.Softirq + t.Steal + t.Guest + t.GuestNice
-		if total > 0 {
-			idle := t.Idle + t.Iowait
-			active := total - idle
-
-			result.Idle = math.Round(idle/total*100*100) / 100
-			result.User = math.Round((t.User+t.Guest)/total*100*100) / 100
-			result.System = math.Round((t.System+t.Irq+t.Softirq)/total*100*100) / 100
-			result.Percent = math.Round(active/total*100*100) / 100
-		}
+	if interval <= 0 {
+		return computeUsageSinceBoot(first[0]), nil
 	}
 
-	return result, nil
+	time.Sleep(interval)
+
+	second, err := cpu.Times(false)
+	if err != nil || len(second) == 0 {
+		return CPUUsage{}, fmt.Errorf("failed to get CPU times: %w", err)
+	}
+
+	usage, ok := computeUsageDelta(first[0], second[0])
+	if !ok {
+		// No measurable delta (clock resolution smaller than the window);
+		// fall back to the cumulative average rather than reporting 0.
+		return computeUsageSinceBoot(second[0]), nil
+	}
+	return usage, nil
+}
+
+// totalTimes sums all CPU time fields.
+func totalTimes(t cpu.TimesStat) float64 {
+	return t.User + t.System + t.Idle + t.Nice + t.Iowait + t.Irq +
+		t.Softirq + t.Steal + t.Guest + t.GuestNice
+}
+
+// computeUsageDelta derives utilization from two snapshots.
+// Returns ok=false when the elapsed total is not measurably positive.
+func computeUsageDelta(t1, t2 cpu.TimesStat) (CPUUsage, bool) {
+	dTotal := totalTimes(t2) - totalTimes(t1)
+	if dTotal <= 0 {
+		return CPUUsage{}, false
+	}
+
+	pct := func(v float64) float64 {
+		return math.Round(v/dTotal*100*100) / 100
+	}
+
+	dIdle := (t2.Idle - t1.Idle) + (t2.Iowait - t1.Iowait)
+
+	return CPUUsage{
+		Idle:   pct(dIdle),
+		User:   pct((t2.User - t1.User) + (t2.Guest - t1.Guest)),
+		System: pct((t2.System - t1.System) + (t2.Irq - t1.Irq) + (t2.Softirq - t1.Softirq)),
+		Percent: math.Round((dTotal-dIdle)/dTotal*100*100) / 100,
+	}, true
+}
+
+// computeUsageSinceBoot derives utilization from cumulative counters.
+func computeUsageSinceBoot(t cpu.TimesStat) CPUUsage {
+	total := totalTimes(t)
+	if total <= 0 {
+		return CPUUsage{}
+	}
+	idle := t.Idle + t.Iowait
+
+	pct := func(v float64) float64 {
+		return math.Round(v/total*100*100) / 100
+	}
+
+	return CPUUsage{
+		Idle:    pct(idle),
+		User:    pct(t.User + t.Guest),
+		System:  pct(t.System + t.Irq + t.Softirq),
+		Percent: pct(total - idle),
+	}
 }
 
 // GetMemoryInfo returns virtual memory statistics.

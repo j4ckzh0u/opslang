@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -27,13 +28,27 @@ type DistributeTarget struct {
 
 // DistributeOptions controls the behaviour of a Distribute call.
 type DistributeOptions struct {
-	Compress bool          `json:"compress"`
-	Checksum bool          `json:"checksum"`    // verify after transfer
-	Mode     string        `json:"mode"`        // file permissions e.g. "0644"
-	Owner    string        `json:"owner"`
-	Parallel int           `json:"parallel"`    // max concurrent transfers
+	Checksum bool          `json:"checksum"` // verify remote content hash after transfer
+	Mode     string        `json:"mode"`     // optional octal mode applied remotely, e.g. "0644"
+	Parallel int           `json:"parallel"` // max concurrent transfers
 	Timeout  time.Duration `json:"timeout"`
-	Retries  int           `json:"retries"`
+	Retries  int           `json:"retries"` // total attempts per host
+}
+
+// VerifyFunc compares the remote file against an expected SHA-256 digest.
+type VerifyFunc func(ctx context.Context, endpoint, wantSHA256 string) error
+
+// ChmodFunc applies a permission mode to the remote file.
+type ChmodFunc func(ctx context.Context, endpoint, mode string) error
+
+// DefaultVerifyFunc and DefaultChmodFunc are the remote-side hooks; the
+// package wires real SFTP implementations (see ssh_transfer.go).
+var DefaultVerifyFunc VerifyFunc = func(_ context.Context, _, _ string) error {
+	return fmt.Errorf("no verify function configured; set file.DefaultVerifyFunc")
+}
+
+var DefaultChmodFunc ChmodFunc = func(_ context.Context, _, _ string) error {
+	return fmt.Errorf("no chmod function configured; set file.DefaultChmodFunc")
 }
 
 // DistributeResult is the aggregate outcome of a Distribute call.
@@ -62,8 +77,9 @@ type HostDistributeResult struct {
 // real SSH/SFTP transfer; tests use mocks.
 type TransferFunc func(ctx context.Context, src, dst string) error
 
-// DefaultTransferFunc is used by Distribute and Collect when no explicit
-// transfer function is provided. Applications should set this at startup.
+// DefaultTransferFunc is used by Distribute when no explicit transfer
+// function is provided. The package wires a real SSH/SFTP implementation
+// (see ssh_transfer.go); tests may override it.
 var DefaultTransferFunc TransferFunc = func(_ context.Context, _, _ string) error {
 	return fmt.Errorf("no transfer function configured; set file.DefaultTransferFunc")
 }
@@ -147,22 +163,43 @@ func DistributeWith(source string, targets []DistributeTarget, opts DistributeOp
 			}
 			transferStart := time.Now()
 
-			// Determine remote path.
+			// Determine the remote path: Dest is used verbatim; a trailing
+			// "/" means "directory, keep the source basename". A path with
+			// no extension is NOT guessed to be a directory any more -
+			// guessing sent /usr/local/bin/mytool to .../mytool/mytool.
 			remotePath := t.Dest
 			if remotePath == "" {
-				remotePath = filepath.Join("/tmp", filepath.Base(source))
-			} else if isDir(remotePath) {
-				remotePath = filepath.Join(remotePath, filepath.Base(source))
+				remotePath = "/tmp/" + filepath.Base(source)
+			} else if strings.HasSuffix(remotePath, "/") {
+				remotePath += filepath.Base(source)
 			}
 
+			user := t.User
+			if user == "" {
+				user = "root"
+			}
+			port := t.Port
+			if port == 0 {
+				port = 22
+			}
+			endpoint := formatEndpoint(user, t.Host, port, remotePath)
+
 			var lastErr error
-			for attempt := 0; attempt <= retries; attempt++ {
+			for attempt := 0; attempt < retries; attempt++ {
 				if attempt > 0 {
 					time.Sleep(time.Duration(attempt*100) * time.Millisecond)
 				}
 
 				ctx, cancel := context.WithTimeout(context.Background(), timeout)
-				err := transferFn(ctx, source, remotePath)
+				err := transferFn(ctx, source, endpoint)
+				if err == nil && opts.Checksum && srcChecksum != "" {
+					// Verify the remote content really matches: a reported
+					// "checksum" copied from the local file proved nothing.
+					err = DefaultVerifyFunc(ctx, endpoint, srcChecksum)
+				}
+				if err == nil && opts.Mode != "" {
+					err = DefaultChmodFunc(ctx, endpoint, opts.Mode)
+				}
 				cancel()
 
 				if err == nil {
@@ -220,15 +257,3 @@ func computeFileChecksum(path string) (string, error) {
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
-// isDir reports whether the given path looks like a directory
-// (no file extension and ends without a dot-separated suffix).
-// This is a heuristic used to decide if we need to append the basename.
-func isDir(path string) bool {
-	// If it ends with a slash, it is definitely a directory.
-	if len(path) > 0 && path[len(path)-1] == '/' {
-		return true
-	}
-	// If there is no dot in the last component, treat as directory.
-	base := filepath.Base(path)
-	return filepath.Ext(base) == ""
-}

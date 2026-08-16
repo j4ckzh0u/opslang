@@ -2,7 +2,6 @@ package compiler
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/opslang/opslang/internal/ast"
 )
@@ -19,46 +18,66 @@ const (
 	ModeAOT ExecutionMode = "aot"
 )
 
+// RequiresAOT reports whether the program contains statements the linear
+// runner instruction VM cannot express exactly (control flow, functions,
+// ensure, parallel). Such scripts must be compiled to preserve semantics.
+func RequiresAOT(prog *ast.Program) bool {
+	if prog == nil {
+		return false
+	}
+	var requires bool
+	walk := func(stmts []ast.Statement) {}
+	var visit func(stmt ast.Statement) bool // returns true -> stop
+	visit = func(stmt ast.Statement) bool {
+		switch s := stmt.(type) {
+		case *ast.IfStatement, *ast.ForStatement, *ast.WhileStatement,
+			*ast.FnStatement, *ast.EnsureStatement, *ast.ParallelStatement,
+			*ast.ReturnStatement:
+			requires = true
+			return true
+		case *ast.TaskStatement:
+			for _, inner := range s.Body.Statements {
+				if visit(inner) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	walk = func(stmts []ast.Statement) {
+		for _, stmt := range stmts {
+			if visit(stmt) {
+				return
+			}
+		}
+	}
+	walk(prog.Statements)
+	return requires
+}
+
 // SelectMode determines the execution mode based on script characteristics.
-// Rules:
-//   - If the mode is explicitly set (not "auto" or ""), use that mode.
-//   - If source has "import go" or "import go:" statements -> AOT.
-//   - If source has fewer than 100 lines -> Runner.
-//   - Otherwise -> AOT.
+// The runner mode only supports linear scripts, so anything requiring AOT
+// semantics is routed there.
 func SelectMode(prog *ast.Program, source string, mode ExecutionMode) ExecutionMode {
 	// Explicit mode override.
 	if mode != ModeAuto && mode != "" {
 		return mode
 	}
 
-	// Check for Go imports that require AOT compilation.
-	if prog != nil {
-		for _, stmt := range prog.Statements {
-			if imp, ok := stmt.(*ast.ImportStatement); ok {
-				if strings.HasPrefix(imp.Path, "go ") || strings.HasPrefix(imp.Path, "go:") {
-					return ModeAOT
-				}
-			}
-		}
+	if RequiresAOT(prog) {
+		return ModeAOT
 	}
-
-	// Count source lines.
-	lineCount := strings.Count(source, "\n") + 1
-	if lineCount < 100 {
-		return ModeRunner
-	}
-
-	return ModeAOT
+	return ModeRunner
 }
 
 // ParseMode parses a mode string into an ExecutionMode.
 func ParseMode(s string) (ExecutionMode, error) {
-	switch strings.ToLower(s) {
-	case "auto", "":
+	switch s {
+	case "auto", "Auto", "AUTO", "":
 		return ModeAuto, nil
-	case "runner":
+	case "runner", "Runner", "RUNNER":
 		return ModeRunner, nil
-	case "aot":
+	case "aot", "Aot", "AOT":
 		return ModeAOT, nil
 	default:
 		return "", fmt.Errorf("unknown execution mode: %q (valid: auto, runner, aot)", s)
