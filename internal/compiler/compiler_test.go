@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -155,5 +156,218 @@ func TestCopyFile(t *testing.T) {
 	}
 	if string(data) != "test content" {
 		t.Errorf("expected 'test content', got %q", string(data))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// findProjectRoot
+// ---------------------------------------------------------------------------
+
+func TestFindProjectRoot(t *testing.T) {
+	// Use this test file itself to find the project root
+	_, testFile, _, _ := runtime.Caller(0)
+	root, err := findProjectRoot(testFile)
+	if err != nil {
+		t.Fatalf("findProjectRoot failed: %v", err)
+	}
+	// The project root should contain go.mod
+	if _, err := os.Stat(filepath.Join(root, "go.mod")); err != nil {
+		t.Errorf("expected go.mod in project root %s", root)
+	}
+}
+
+func TestFindProjectRootFromFileInSubdir(t *testing.T) {
+	// Create a temp directory structure with go.mod
+	tmpDir := t.TempDir()
+	goMod := filepath.Join(tmpDir, "go.mod")
+	if err := os.WriteFile(goMod, []byte("module test"), 0644); err != nil {
+		t.Fatalf("failed to write go.mod: %v", err)
+	}
+
+	// Create nested directory
+	subDir := filepath.Join(tmpDir, "a", "b", "c")
+	if err := os.MkdirAll(subDir, 0755); err != nil {
+		t.Fatalf("failed to create subdirs: %v", err)
+	}
+
+	// Create a file in the nested directory
+	testFile := filepath.Join(subDir, "test.ops")
+	if err := os.WriteFile(testFile, []byte("let x = 1"), 0644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	root, err := findProjectRoot(testFile)
+	if err != nil {
+		t.Fatalf("findProjectRoot failed: %v", err)
+	}
+	if root != tmpDir {
+		t.Errorf("expected root %s, got %s", tmpDir, root)
+	}
+}
+
+func TestFindProjectRootFallbackToCwd(t *testing.T) {
+	// Create a temp file outside any go.mod hierarchy
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "isolated.ops")
+	if err := os.WriteFile(testFile, []byte("let x = 1"), 0644); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	root, err := findProjectRoot(testFile)
+	if err != nil {
+		t.Fatalf("findProjectRoot failed: %v", err)
+	}
+	// Should fall back to cwd (which contains go.mod for this project)
+	if root == "" {
+		t.Error("expected non-empty fallback root")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Compile error paths
+// ---------------------------------------------------------------------------
+
+func TestCompileMissingSourceFile(t *testing.T) {
+	c, err := NewCompiler()
+	if err != nil {
+		t.Fatalf("NewCompiler failed: %v", err)
+	}
+	err = c.Compile("/nonexistent/path/test.ops", "", "/tmp/output")
+	if err == nil {
+		t.Fatal("expected error for missing source file")
+	}
+	if !strings.Contains(err.Error(), "failed to read source file") {
+		t.Errorf("expected 'failed to read source file' error, got: %v", err)
+	}
+}
+
+func TestCompileInvalidTargetArch(t *testing.T) {
+	// Create a temporary source file
+	tmpDir := t.TempDir()
+	src := filepath.Join(tmpDir, "test.ops")
+	if err := os.WriteFile(src, []byte("let x = 1"), 0644); err != nil {
+		t.Fatalf("failed to write source: %v", err)
+	}
+
+	c, err := NewCompiler()
+	if err != nil {
+		t.Fatalf("NewCompiler failed: %v", err)
+	}
+	err = c.Compile(src, "invalid-arch", filepath.Join(tmpDir, "output"))
+	if err == nil {
+		t.Fatal("expected error for invalid target arch")
+	}
+	if !strings.Contains(err.Error(), "invalid target architecture") {
+		t.Errorf("expected 'invalid target architecture' error, got: %v", err)
+	}
+}
+
+func TestCompileParseError(t *testing.T) {
+	// Create a source file with syntax error
+	tmpDir := t.TempDir()
+	src := filepath.Join(tmpDir, "bad.ops")
+	if err := os.WriteFile(src, []byte("let = invalid"), 0644); err != nil {
+		t.Fatalf("failed to write source: %v", err)
+	}
+
+	c, err := NewCompiler()
+	if err != nil {
+		t.Fatalf("NewCompiler failed: %v", err)
+	}
+	err = c.Compile(src, "", filepath.Join(tmpDir, "output"))
+	if err == nil {
+		t.Fatal("expected parse error")
+	}
+	if !strings.Contains(err.Error(), "parse error") {
+		t.Errorf("expected 'parse error', got: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// copyFile edge cases
+// ---------------------------------------------------------------------------
+
+func TestCopyFileCreatesDestDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	src := filepath.Join(tmpDir, "src")
+	if err := os.WriteFile(src, []byte("content"), 0644); err != nil {
+		t.Fatalf("failed to write source: %v", err)
+	}
+
+	// Destination in a non-existent subdirectory
+	dst := filepath.Join(tmpDir, "a", "b", "dst")
+	if err := copyFile(src, dst); err != nil {
+		t.Fatalf("copyFile failed: %v", err)
+	}
+
+	data, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatalf("failed to read destination: %v", err)
+	}
+	if string(data) != "content" {
+		t.Errorf("expected 'content', got %q", string(data))
+	}
+}
+
+func TestCopyFileMissingSource(t *testing.T) {
+	tmpDir := t.TempDir()
+	dst := filepath.Join(tmpDir, "dst")
+	err := copyFile("/nonexistent/file", dst)
+	if err == nil {
+		t.Fatal("expected error for missing source file")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Compile cache-hit path
+// ---------------------------------------------------------------------------
+
+func TestCompileCacheHit(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create source file
+	source := `let x = 42`
+	src := filepath.Join(tmpDir, "test.ops")
+	if err := os.WriteFile(src, []byte(source), 0644); err != nil {
+		t.Fatalf("failed to write source: %v", err)
+	}
+
+	// Create a cache and pre-populate it
+	cacheDir := filepath.Join(tmpDir, "cache")
+	cache, err := NewCache(cacheDir)
+	if err != nil {
+		t.Fatalf("NewCache failed: %v", err)
+	}
+
+	// Compute the cache key that Compile will use
+	goos, goarch, _ := parseTargetArch("")
+	key := cache.Key(source, goos+"/"+goarch)
+
+	// Create a fake cached binary
+	fakeBinary := filepath.Join(tmpDir, "fake-binary")
+	if err := os.WriteFile(fakeBinary, []byte("#!/bin/sh\necho cached"), 0755); err != nil {
+		t.Fatalf("failed to write fake binary: %v", err)
+	}
+	if err := cache.Put(key, fakeBinary); err != nil {
+		t.Fatalf("cache.Put failed: %v", err)
+	}
+
+	// Create compiler with the pre-populated cache
+	c := &Compiler{cache: cache}
+
+	outputPath := filepath.Join(tmpDir, "output")
+	err = c.Compile(src, "", outputPath)
+	if err != nil {
+		t.Fatalf("Compile with cache hit failed: %v", err)
+	}
+
+	// Verify the output was copied from cache
+	data, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("failed to read output: %v", err)
+	}
+	if string(data) != "#!/bin/sh\necho cached" {
+		t.Errorf("expected cached content, got: %q", string(data))
 	}
 }
