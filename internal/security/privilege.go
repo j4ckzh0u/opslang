@@ -11,11 +11,11 @@ import (
 type OperationType string
 
 const (
-	OpRead     OperationType = "read"
-	OpWrite    OperationType = "write"
-	OpExec     OperationType = "exec"
-	OpAdmin    OperationType = "admin"
-	OpSystem   OperationType = "system"
+	OpRead   OperationType = "read"
+	OpWrite  OperationType = "write"
+	OpExec   OperationType = "exec"
+	OpAdmin  OperationType = "admin"
+	OpSystem OperationType = "system"
 )
 
 // operationPermissions maps operations to their required privilege levels.
@@ -98,11 +98,13 @@ func isReadOperation(name string) bool {
 	readOps := []string{
 		"sys.cpu", "sys.memory", "sys.disk", "sys.host",
 		"sys.load", "sys.net", "sys.users", "sys.uptime",
-		"sys.hostname", "sys.os", "sys.kernel",
-		"file.read", "file.exists", "file.info", "file.list",
-		"file.checksum", "process.list", "process.find",
-		"net.http.get", "net.tcp", "net.dns", "net.interfaces",
-		"service.status", "pkg.list", "pkg.search",
+		"sys.hostname", "sys.os",
+		"file.read", "file.exists", "file.stat", "file.list",
+		"file.checksum",
+		"process.list", "process.find",
+		"net.http", "net.tcp", "net.dns", "net.interfaces",
+		"service.status", "pkg.list", "pkg.info",
+		"time.", "json.", "yaml.",
 	}
 	for _, op := range readOps {
 		if len(name) >= len(op) && name[:len(op)] == op {
@@ -115,7 +117,9 @@ func isReadOperation(name string) bool {
 func isWriteOperation(name string) bool {
 	writeOps := []string{
 		"file.write", "file.append", "file.copy", "file.move",
-		"file.delete", "file.mkdir", "file.touch", "file.template",
+		"file.delete", "file.mkdir", "file.chmod",
+		// file.template only READS the template and returns rendered text;
+		// it does not modify any file. Keep it out of write ops.
 	}
 	for _, op := range writeOps {
 		if len(name) >= len(op) && name[:len(op)] == op {

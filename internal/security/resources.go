@@ -13,10 +13,10 @@ import (
 
 // ResourceLimits defines CPU and memory limits for task execution.
 type ResourceLimits struct {
-	CPUPercent   int    // CPU usage percentage (0-100 per core)
-	MemoryMB     int    // Memory limit in MB
-	CPUQuota     string // systemd CPU quota (e.g., "50%")
-	MemoryLimit  string // systemd memory limit (e.g., "512M")
+	CPUPercent  int    // CPU usage percentage (0-100 per core)
+	MemoryMB    int    // Memory limit in MB
+	CPUQuota    string // systemd CPU quota (e.g., "50%")
+	MemoryLimit string // systemd memory limit (e.g., "512M")
 }
 
 // DefaultResourceLimits returns default resource limits.
@@ -38,7 +38,10 @@ func ApplyResourceLimits(limits *ResourceLimits) error {
 
 	// Try systemd-run first (Linux only)
 	if runtime.GOOS == "linux" && isSystemdAvailable() {
-		return applySystemdLimits(limits)
+		if err := applySystemdLimits(limits); err == nil {
+			return nil // systemd succeeded
+		}
+		// systemd failed (e.g., no root, CI environment): fall through to ulimit
 	}
 
 	// Fall back to ulimit

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"syscall"
 
-	gopsnet "github.com/shirou/gopsutil/v3/net"
-	"github.com/shirou/gopsutil/v3/process"
+	gopsnet "github.com/shirou/gopsutil/v4/net"
+	"github.com/shirou/gopsutil/v4/process"
 )
 
 // ProcessInfo holds information about a single process.

@@ -33,7 +33,7 @@ func NewCache(dir string) (*Cache, error) {
 // codegenVersion salts the cache key: bump it whenever code generation
 // semantics change, so stale binaries produced by an older compiler are
 // never reused for identical sources.
-const codegenVersion = "v2"
+const codegenVersion = "v4"
 
 // Key computes a cache key from codegen version, source content, and target
 // architecture.

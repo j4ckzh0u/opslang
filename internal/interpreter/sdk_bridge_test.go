@@ -21,7 +21,7 @@ func TestStructToMap(t *testing.T) {
 			input: struct{ Name string }{Name: "test"},
 		},
 		{
-			name:  "struct with multiple fields",
+			name: "struct with multiple fields",
 			input: struct {
 				A int
 				B string
@@ -29,7 +29,7 @@ func TestStructToMap(t *testing.T) {
 			}{A: 1, B: "hello", C: true},
 		},
 		{
-			name:  "nested struct",
+			name: "nested struct",
 			input: struct {
 				Inner struct{ Value int }
 			}{Inner: struct{ Value int }{Value: 42}},

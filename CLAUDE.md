@@ -481,44 +481,50 @@ type CollectResult struct {
 
 ---
 
-## 附录 A：标准库函数列表（Phase 0 需实现）
+## 附录 A：标准库函数列表
+
+> **权威来源**：`internal/opsspec/spec.go` 是全部原子操作的单一事实来源（名称、参数、可用范围），三套执行引擎（解释器、runner registry、AOT codegen）由一致性测试强制对齐。下表与之一致；发现不一致以 opsspec 为准。
 
 ### sys 包
 | 函数 | 返回结构体 | 说明 |
 |------|-----------|------|
 | `sys.hostname()` | `HostnameInfo` | 主机名 |
-| `sys.os()` | `OSInfo` | 操作系统类型/版本 |
-| `sys.kernel()` | `KernelInfo` | 内核版本 |
-| `sys.cpu.usage()` | `CPUUsage` | CPU 使用率 |
-| `sys.cpu.info()` | `CPUInfo` | CPU 核心数/型号 |
+| `sys.os()` | `HostInfoResult` | 操作系统/平台/内核信息（含内核版本字段） |
+| `sys.cpu.usage()` | `CPUUsage` | CPU 使用率（500ms 两次采样，反映当前值） |
+| `sys.cpu.count()` | `CPUCount` | 逻辑/物理核心数 |
+| `sys.cpu.info()` | `[]CPUInfo` | CPU 型号列表 |
 | `sys.memory.info()` | `MemoryInfo` | 内存信息 |
 | `sys.disk.usage(path)` | `DiskUsage` | 磁盘使用率 |
 | `sys.disk.partitions()` | `[]DiskPartition` | 磁盘分区列表 |
 | `sys.load()` | `LoadAvg` | 负载均值 |
-| `sys.users()` | `[]User` | 当前登录用户 |
-| `sys.uptime()` | `Uptime` | 运行时长 |
-| `sys.processes()` | `[]ProcessInfo` | 进程列表 |
-| `sys.process(pid)` | `ProcessInfo` | 指定进程详情 |
+| `sys.users()` | `[]UserInfo` | 当前登录用户 |
+| `sys.uptime()` | `UptimeInfo` | 运行时长 |
+| `sys.net.interfaces()` | `[]NetInterface` | 网络接口 |
 
 ### file 包
 | 函数 | 返回 | 说明 |
 |------|------|------|
 | `file.read(path)` | `FileContent` | 读取文件内容 |
-| `file.write(path, content, mode)` | `FileInfo` | 写入文件 |
-| `file.append(path, content)` | `FileInfo` | 追加内容 |
-| `file.copy(src, dst)` | `FileInfo` | 复制文件 |
-| `file.move(src, dst)` | `FileInfo` | 移动文件 |
+| `file.write(path, content)` | `WriteResult` | 写入文件（0644） |
+| `file.append(path, content)` | `AppendResult` | 追加内容 |
+| `file.copy(src, dst)` | `CopyResult` | 复制文件 |
+| `file.move(src, dst)` | `MoveResult` | 移动文件 |
 | `file.delete(path)` | `DeleteResult` | 删除文件 |
-| `file.exists(path)` | `bool` | 文件是否存在 |
-| `file.checksum(path, algo)` | `ChecksumResult` | 计算校验和 |
-| `file.template(path, vars)` | `RenderedContent` | 模板渲染 |
-| `file.touch(path, mode)` | `FileInfo` | 创建空文件 |
+| `file.exists(path)` | `ExistsResult` | 文件是否存在（.exists 字段） |
+| `file.stat(path)` | `FileInfo` | 文件元信息 |
+| `file.list(dir)` | `ListResult` | 列目录 |
+| `file.mkdir(path)` | `MkdirResult` | 创建目录（幂等） |
+| `file.chmod(path, mode)` | `ChmodResult` | 改权限（mode 为八进制字符串） |
+| `file.checksum(path, algo)` | `ChecksumResult` | 计算校验和（md5/sha1/sha256） |
+| `file.template(path, vars)` | `TemplateResult` | 渲染 {{key}} 占位符，不修改源文件 |
+| `file.distribute(source, targets, options)` | `DistributeResult` | 多主机分发（仅控制器侧，真实 SSH/SFTP） |
+| `file.collect(source, targets, options)` | `CollectResult` | 多主机收集（仅控制器侧） |
 
 ### net 包
 | 函数 | 返回 | 说明 |
 |------|------|------|
-| `net.http_get(url, headers)` | `HTTPResponse` | HTTP GET |
-| `net.http_post(url, body, headers)` | `HTTPResponse` | HTTP POST |
+| `net.http_get(url)` | `HTTPResponse` | HTTP GET |
+| `net.http_post(url, body)` | `HTTPResponse` | HTTP POST（JSON body） |
 | `net.tcp_check(host, port)` | `TCPResult` | TCP 连通性 |
 | `net.dns_lookup(domain)` | `DNSResult` | DNS 解析 |
 | `net.interfaces()` | `[]NetInterface` | 网络接口列表 |
@@ -528,9 +534,9 @@ type CollectResult struct {
 |------|------|------|
 | `process.list()` | `[]ProcessInfo` | 进程列表 |
 | `process.find_by_name(name)` | `[]ProcessInfo` | 按名称查找 |
-| `process.find_by_port(port)` | `ProcessInfo` | 按端口查找 |
-| `process.exec(cmd, args...)` | `ExecResult` | 执行外部命令（不经 shell） |
-| `process.kill(pid)` | `KillResult` | 终止进程 |
+| `process.find_by_port(port)` | `[]ProcessInfo` | 按端口查找 |
+| `process.exec(command, args...)` | `ExecResult` | 执行外部命令（不经 shell） |
+| `process.kill(pid, signal)` | `KillResult` | 发送信号（默认 TERM；TERM/KILL/HUP/INT/USR1/USR2） |
 
 ### service 包
 | 函数 | 返回 | 说明 |
@@ -540,16 +546,27 @@ type CollectResult struct {
 | `service.stop(name)` | `ServiceResult` | 停止服务 |
 | `service.restart(name)` | `ServiceResult` | 重启服务 |
 | `service.enable(name)` | `ServiceResult` | 设置开机启动 |
+| `service.disable(name)` | `ServiceResult` | 取消开机启动 |
 
 ### pkg 包
 | 函数 | 返回 | 说明 |
 |------|------|------|
-| `pkg.install(name, version)` | `PkgResult` | 安装软件包 |
+| `pkg.install(name)` | `PkgResult` | 安装软件包（apt/yum/dnf，仅 Linux） |
 | `pkg.remove(name)` | `PkgResult` | 卸载软件包 |
+| `pkg.info(name)` | `PkgInfo` | 查询软件包 |
 | `pkg.list()` | `[]PkgInfo` | 已安装包列表 |
 
 ### json / yaml / time 包
-基础编解码和时间操作，具体函数名可自定义，但需返回结构化类型。
+| 函数 | 返回 | 说明 |
+|------|------|------|
+| `json.encode(value)` / `json.decode(input)` | `EncodeResult` / 任意值 | JSON 编解码 |
+| `yaml.encode(value)` / `yaml.decode(input)` | `EncodeResult` / 任意值 | YAML 编解码 |
+| `time.now()` | `TimeInfo` | 当前时间 |
+| `time.format(ts, layout)` | `FormatResult` | 格式化时间戳 |
+| `time.parse(layout, value)` | `TimeInfo` | 解析时间字符串 |
+| `time.diff(t1, t2)` | `DiffResult` | 时间差 |
+| `time.since(ts)` | `DurationInfo` | 距今时长 |
+| `time.sleep(ms)` | `SleepResult` | 睡眠 |
 
 ## 附录 B：OpsLang 语法示例
 

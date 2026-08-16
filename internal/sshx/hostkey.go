@@ -46,25 +46,30 @@ func tofuCallback(path string) (ssh.HostKeyCallback, error) {
 		if !os.IsNotExist(err) {
 			return nil, fmt.Errorf("hostkey: reading %s: %w", path, err)
 		}
-		base = func(_ string, _ net.Addr, _ ssh.PublicKey) error { return nil }
+		base = nil // no recorded hosts yet: every host is unknown
 	}
 
 	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-		err := base(hostname, remote, key)
-		if err == nil {
-			return nil // known and matching
+		if base != nil {
+			err := base(hostname, remote, key)
+			if err == nil {
+				return nil // known and matching
+			}
+			var keyErr *knownhosts.KeyError
+			if !asKeyError(err, &keyErr) {
+				return err // e.g. key mismatch: reject hard
+			}
+			if len(keyErr.Want) > 0 {
+				// The host is known with different keys: possible MITM.
+				return fmt.Errorf("hostkey: %s key changed (possible man-in-the-middle); remove the stale entry from %s if this change is intentional", hostname, path)
+			}
+			// Unknown to the file: fall through to first-use recording.
 		}
 
-		var keyErr *knownhosts.KeyError
-		if !asKeyError(err, &keyErr) {
-			return err // e.g. key mismatch: reject hard
-		}
-		if len(keyErr.Want) > 0 {
-			// The host is known with different keys: possible MITM.
-			return fmt.Errorf("hostkey: %s key changed (possible man-in-the-middle); remove the stale entry from %s if this change is intentional", hostname, path)
-		}
-
-		// Unknown host: trust on first use - append and accept.
+		// Unknown host: trust on first use - record and accept. The
+		// recorded entry is what makes the NEXT connection verified; an
+		// earlier version returned nil here without recording, which
+		// silently accepted every key forever.
 		return appendKnownHost(path, hostname, remote, key)
 	}, nil
 }

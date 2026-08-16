@@ -248,3 +248,24 @@ report { num_eq: a == b, num_str: a == c, str_eq: "x" == "x" }
 		t.Errorf(`"x" == "x" should be true, got %v`, data["str_eq"])
 	}
 }
+
+// SDK calls return TYPED slices ([]ProcessInfo); len() and indexing used
+// to silently yield 0/nil because the generated type switch only matched
+// []interface{}. Found by real remote testing (top-process scenario).
+func TestAOTTypedSliceLenAndIndex(t *testing.T) {
+	data := runAndReportJSON(t, `
+let procs = process.list()
+let first = ""
+let count = len(procs)
+if count > 0 {
+    first = procs[0].name
+}
+report { count: count, first: first }
+`)
+	if data["count"].(float64) < 10 {
+		t.Errorf("count = %v, want a real process count (>10)", data["count"])
+	}
+	if data["first"] == "" {
+		t.Error("indexing a typed SDK slice returned empty")
+	}
+}

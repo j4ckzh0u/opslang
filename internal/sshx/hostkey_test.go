@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -104,4 +105,58 @@ func TestTOFUIgnoredWhenInsecure(t *testing.T) {
 		t.Fatalf("connect with insecure flag should succeed: %v", err)
 	}
 	client.Close()
+}
+
+// TestTOFUIFirstConnectRecordsEntry: with NO known-hosts file, the first
+// connection must (a) succeed and (b) WRITE the entry - otherwise TOFU
+// degrades to accept-anything-forever, which is exactly what an earlier
+// version did.
+func TestTOFUIFirstConnectRecordsEntry(t *testing.T) {
+	server, err := newMockSSHServer("testpass")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.listener.Close()
+
+	_, port, _ := net.SplitHostPort(server.Addr())
+	khFile := filepath.Join(t.TempDir(), "known_hosts") // does not exist
+
+	cfg := &Config{
+		Host:           "127.0.0.1",
+		User:           "root",
+		Password:       "testpass",
+		Timeout:        5 * time.Second,
+		Retries:        0,
+		KnownHostsFile: khFile,
+	}
+	if _, err := fmt.Sscanf(port, "%d", &cfg.Port); err != nil {
+		t.Fatal(err)
+	}
+
+	client, err := NewClient(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Connect(context.Background()); err != nil {
+		t.Fatalf("first connect should succeed: %v", err)
+	}
+	client.Close()
+
+	data, err := os.ReadFile(khFile)
+	if err != nil {
+		t.Fatalf("TOFU must record the host key on first connect: %v", err)
+	}
+	if len(strings.TrimSpace(string(data))) == 0 {
+		t.Fatal("known_hosts entry is empty")
+	}
+
+	// Second connect: the recorded key matches -> accepted.
+	client2, err := NewClient(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := client2.Connect(context.Background()); err != nil {
+		t.Fatalf("second connect with recorded key should succeed: %v", err)
+	}
+	client2.Close()
 }

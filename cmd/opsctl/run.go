@@ -14,6 +14,7 @@ import (
 var (
 	runOutputJSON bool
 	runVerbose    bool
+	runDryRun     bool
 )
 
 var runCmd = &cobra.Command{
@@ -32,6 +33,7 @@ Output is printed to stdout; use --json for machine-readable output.`,
 func init() {
 	runCmd.Flags().BoolVar(&runOutputJSON, "json", false, "Output results as JSON")
 	runCmd.Flags().BoolVarP(&runVerbose, "verbose", "v", false, "Print execution details")
+	runCmd.Flags().BoolVar(&runDryRun, "dry-run", false, "Print ensure apply actions without executing them")
 }
 
 func runRunCommand(scriptPath string) error {
@@ -55,6 +57,7 @@ func runRunCommand(scriptPath string) error {
 	// Interpret.
 	interp := interpreter.New(nil)
 	interpreter.RegisterSDKBuiltins(interp)
+	interp.SetDryRun(runDryRun)
 	result, err := interp.Execute(prog)
 	if err != nil {
 		return fmt.Errorf("runtime error: %w", err)

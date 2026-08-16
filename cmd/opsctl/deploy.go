@@ -24,15 +24,16 @@ import (
 )
 
 var (
-	deployTargets   string
-	deployInventory string
-	deployParallel  int
-	deployDryRun    bool
-	deployMode      string
-	deployUser      string
-	deployKey       string
-	deployPassword  string
-	deployOutput    string
+	deployTargets         string
+	deployInventory       string
+	deployParallel        int
+	deployDryRun          bool
+	deployMode            string
+	deployUser            string
+	deployKey             string
+	deployPassword        string
+	deployOutput          string
+	deployInsecureHostKey bool
 )
 
 var deployCmd = &cobra.Command{
@@ -67,6 +68,7 @@ func init() {
 	deployCmd.Flags().StringVarP(&deployKey, "key", "i", "", "SSH private key path")
 	deployCmd.Flags().StringVarP(&deployPassword, "password", "p", "", "SSH password")
 	deployCmd.Flags().StringVarP(&deployOutput, "output", "o", "", "Output file path (default: stdout)")
+	deployCmd.Flags().BoolVar(&deployInsecureHostKey, "insecure-host-key", false, "Skip SSH host key verification (TOFU still applies by default; lab use only)")
 }
 
 // deployStep is one instruction package to run on one subset of targets.
@@ -137,6 +139,24 @@ func runDeployCommand(scriptPath string) error {
 	default:
 		err = fmt.Errorf("unknown mode: %s", mode)
 	}
+	if err != nil {
+		recordDeployAudit(auditParams{
+			taskID: taskID, scriptPath: scriptPath, privilege: string(scriptPriv),
+			targets: targets, user: deployUser, mode: mode, dryRun: deployDryRun,
+			startedAt: startedAt, runErr: err,
+		})
+		return err
+	}
+
+	// A partial deployment is a failure from the operator's point of view;
+	// the audit entry must reflect that, not record "success".
+	statusErr := error(nil)
+	switch result.Status {
+	case "failed":
+		statusErr = fmt.Errorf("deployment failed")
+	case "partial":
+		statusErr = fmt.Errorf("deployment partially failed: some hosts did not complete successfully")
+	}
 
 	recordDeployAudit(auditParams{
 		taskID:     taskID,
@@ -147,23 +167,26 @@ func runDeployCommand(scriptPath string) error {
 		mode:       mode,
 		dryRun:     deployDryRun,
 		startedAt:  startedAt,
-		runErr:     err,
+		runErr:     statusErr,
 	})
-
-	if err != nil {
-		return err
-	}
 
 	return outputDeployResult(result, startedAt, scriptPath)
 }
 
 // resolveDeployMode picks the execution mode. Runner mode can only express
-// linear scripts, so anything with control flow goes to AOT.
+// linear scripts (no control flow, no computed expressions), so auto mode
+// generates a trial instruction package: whatever the real generator
+// rejects goes to AOT. This keeps the mode decision and the generator in
+// lockstep - feature-detection here used to drift from the generator.
 func resolveDeployMode(mode string, prog *ast.Program) string {
 	if mode == "runner" || mode == "aot" {
 		return mode
 	}
 	if compiler.RequiresAOT(prog) {
+		return "aot"
+	}
+	gen := &runner.InstructionGenerator{}
+	if _, err := gen.GenerateFromStatements(prog.Statements, false); err != nil {
 		return "aot"
 	}
 	return "runner"
@@ -243,14 +266,15 @@ func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program,
 		}
 
 		executor := &opsexec.Executor{
-			Targets:      step.targets,
-			Instructions: step.pkg,
-			User:         deployUser,
-			KeyFile:      deployKey,
-			Password:     deployPassword,
-			Parallel:     deployParallel,
-			DryRun:       deployDryRun,
-			TaskID:       taskID + "-" + step.name,
+			Targets:                   step.targets,
+			Instructions:              step.pkg,
+			User:                      deployUser,
+			KeyFile:                   deployKey,
+			Password:                  deployPassword,
+			Parallel:                  deployParallel,
+			DryRun:                    deployDryRun,
+			TaskID:                    taskID + "-" + step.name,
+			InsecureSkipHostKeyVerify: deployInsecureHostKey,
 		}
 
 		summary := executor.Execute(ctx)
@@ -426,29 +450,32 @@ func deployAOTMode(ctx context.Context, scriptPath string, prog *ast.Program, ta
 	}
 
 	// The runner executes the uploaded binary; the executor rewrites the
-	// placeholder to the per-host remote path after upload.
+	// placeholder to the per-host remote path after upload. The binary's
+	// parsed report is assigned to "app" so it lands in the deploy output.
 	pkg := &runner.InstructionPackage{
 		Version: "1.0",
 		TaskID:  taskID,
 		DryRun:  deployDryRun,
 		Instructions: []runner.Instruction{
 			{
-				Op:   "binary.exec",
-				Args: map[string]interface{}{"path": opsexec.AppBinaryPlaceholder},
+				Op:     "binary.exec",
+				Args:   map[string]interface{}{"path": opsexec.AppBinaryPlaceholder},
+				Assign: "app",
 			},
 		},
 	}
 
 	executor := &opsexec.Executor{
-		Targets:      targets,
-		Instructions: pkg,
-		User:         deployUser,
-		KeyFile:      deployKey,
-		Password:     deployPassword,
-		Parallel:     deployParallel,
-		DryRun:       deployDryRun,
-		TaskID:       taskID,
-		AppBinary:    appBinary,
+		Targets:                   targets,
+		Instructions:              pkg,
+		User:                      deployUser,
+		KeyFile:                   deployKey,
+		Password:                  deployPassword,
+		Parallel:                  deployParallel,
+		DryRun:                    deployDryRun,
+		TaskID:                    taskID,
+		AppBinary:                 appBinary,
+		InsecureSkipHostKeyVerify: deployInsecureHostKey,
 	}
 
 	summary := executor.Execute(ctx)

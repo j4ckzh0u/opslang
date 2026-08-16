@@ -851,9 +851,9 @@ func TestMetricCallParsed(t *testing.T) {
 
 func TestParallelStatement(t *testing.T) {
 	tests := []struct {
-		name       string
-		src        string
-		wantStmts  int
+		name      string
+		src       string
+		wantStmts int
 	}{
 		{
 			name: "basic let statements",

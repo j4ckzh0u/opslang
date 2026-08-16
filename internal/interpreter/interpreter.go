@@ -138,7 +138,14 @@ type Interpreter struct {
 	outputMu  sync.Mutex // guards output: parallel blocks append concurrently
 	output    []OutputEntry
 	globalEnv *Environment
+	// DryRun prints the ensure apply steps instead of executing them.
+	dryRun bool
 }
+
+// SetDryRun enables dry-run mode: ensure bodies are reported as planned
+// actions and not executed. Conditions are still evaluated (reads happen);
+// only mutations inside ensure blocks are suppressed.
+func (interp *Interpreter) SetDryRun(v bool) { interp.dryRun = v }
 
 // appendOutput records one output entry. Safe for concurrent use: print
 // builtins run inside parallel blocks on separate goroutines.
@@ -575,6 +582,15 @@ func (interp *Interpreter) execEnsure(s *ast.EnsureStatement, env *Environment) 
 
 	// If condition is true, nothing to do (state is already desired)
 	if isTruthy(cond) {
+		return nil, nil
+	}
+
+	// Dry-run: report the planned apply steps without executing them.
+	if interp.dryRun {
+		interp.appendOutput(OutputEntry{
+			Type: "dry-run",
+			Data: fmt.Sprintf("ensure: would apply %d action(s) (condition is false)", len(s.Body.Statements)),
+		})
 		return nil, nil
 	}
 
@@ -1179,22 +1195,29 @@ func mapKeys(m map[string]interface{}) []string {
 	return keys
 }
 
+// isEqual: numbers compare numerically, strings as strings, bools as
+// bools. Values of different kinds are NOT equal (1 != "1") - cross-type
+// string-coincidence matching hid real bugs. Mirrors the AOT compiler's
+// opsEqual exactly; the two engines must never disagree.
 func isEqual(left, right interface{}) bool {
-	if left == nil && right == nil {
-		return true
-	}
 	if left == nil || right == nil {
-		return false
+		return left == nil && right == nil
 	}
-
-	// Numeric comparison with type coercion
+	if lb, ok := left.(bool); ok {
+		rb, rok := right.(bool)
+		return rok && lb == rb
+	}
 	lNum, lIsNum := toNumber(left)
 	rNum, rIsNum := toNumber(right)
 	if lIsNum && rIsNum {
 		return lNum == rNum
 	}
-
-	return fmt.Sprintf("%v", left) == fmt.Sprintf("%v", right)
+	if ls, lok := left.(string); lok {
+		if rs, rok := right.(string); rok {
+			return ls == rs
+		}
+	}
+	return false
 }
 
 func compareOrdered(left, right interface{}, pos ast.Position, cmp func(a, b float64) bool) (interface{}, error) {

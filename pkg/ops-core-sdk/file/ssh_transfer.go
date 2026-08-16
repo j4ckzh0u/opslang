@@ -54,10 +54,21 @@ func parseEndpoint(endpoint string) (host string, port int, user string, remoteP
 	return host, port, user, remotePath, nil
 }
 
-// sshAuth resolves credentials: per-endpoint fields are already encoded in
-// the endpoint; the password/key come from the environment.
-func sshAuth() (password, keyFile string) {
-	return os.Getenv("OPSLANG_SSH_PASSWORD"), os.Getenv("OPSLANG_SSH_KEY")
+// sshAuth resolves credentials from the environment. Password lookup is
+// per-host first (OPSLANG_SSH_PASSWORD_<HOST with dots as underscores>),
+// then global (OPSLANG_SSH_PASSWORD) - heterogeneous labs have different
+// passwords per machine while scripts stay credential-free.
+func sshAuth(host string) (password, keyFile string) {
+	if host != "" {
+		specific := "OPSLANG_SSH_PASSWORD_" + strings.ToUpper(strings.ReplaceAll(host, ".", "_"))
+		if p := os.Getenv(specific); p != "" {
+			password = p
+		}
+	}
+	if password == "" {
+		password = os.Getenv("OPSLANG_SSH_PASSWORD")
+	}
+	return password, os.Getenv("OPSLANG_SSH_KEY")
 }
 
 // withSSHClient dials the endpoint and runs fn with the connected client.
@@ -66,7 +77,7 @@ func withSSHClient(ctx context.Context, endpoint string, fn func(c *sshx.Client)
 	if err != nil {
 		return err
 	}
-	password, keyFile := sshAuth()
+	password, keyFile := sshAuth(host)
 
 	cfg := &sshx.Config{
 		Host:     host,

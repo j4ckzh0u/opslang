@@ -356,13 +356,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		opts := sdkfile.DistributeOptions{}
 		if len(args) >= 3 {
 			if optsMap, ok := args[2].(map[string]interface{}); ok {
-	if v, ok := optsMap["checksum"].(bool); ok {
+				if v, ok := optsMap["checksum"].(bool); ok {
 					opts.Checksum = v
 				}
 				if v, ok := optsMap["mode"].(string); ok {
 					opts.Mode = v
 				}
-	if v, ok := optsMap["parallel"].(float64); ok {
+				if v, ok := optsMap["parallel"].(float64); ok {
 					opts.Parallel = int(v)
 				}
 				if v, ok := optsMap["retries"].(float64); ok {

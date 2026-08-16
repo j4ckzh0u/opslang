@@ -24,7 +24,6 @@ type CollectTarget struct {
 
 // CollectOptions controls the behaviour of a Collect call.
 type CollectOptions struct {
-	Compress bool          `json:"compress"`
 	DestDir  string        `json:"dest_dir"` // local destination directory
 	Parallel int           `json:"parallel"`
 	Timeout  time.Duration `json:"timeout"`

@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/host"
-	"github.com/shirou/gopsutil/v3/load"
-	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v4/host"
+	"github.com/shirou/gopsutil/v4/load"
+	"github.com/shirou/gopsutil/v4/mem"
 )
 
 // CPUUsage represents CPU utilization percentages.
@@ -181,9 +181,9 @@ func computeUsageDelta(t1, t2 cpu.TimesStat) (CPUUsage, bool) {
 	dIdle := (t2.Idle - t1.Idle) + (t2.Iowait - t1.Iowait)
 
 	return CPUUsage{
-		Idle:   pct(dIdle),
-		User:   pct((t2.User - t1.User) + (t2.Guest - t1.Guest)),
-		System: pct((t2.System - t1.System) + (t2.Irq - t1.Irq) + (t2.Softirq - t1.Softirq)),
+		Idle:    pct(dIdle),
+		User:    pct((t2.User - t1.User) + (t2.Guest - t1.Guest)),
+		System:  pct((t2.System - t1.System) + (t2.Irq - t1.Irq) + (t2.Softirq - t1.Softirq)),
 		Percent: math.Round((dTotal-dIdle)/dTotal*100*100) / 100,
 	}, true
 }

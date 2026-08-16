@@ -4,35 +4,47 @@
 
 ## 核心价值
 
-- **结构化返回**：标准库函数全部返回强类型结构体，支持 JSON 序列化，告别字符串解析
-- **双执行引擎**：Runner 模式（JSON 指令包解释执行，零编译延迟）+ AOT 编译模式（静态二进制，支持第三方 Go 库）
-- **零依赖远程执行**：通过 SSH 下发预编译 Runner，目标机无需安装任何运行时
+- **结构化返回**：标准库函数全部返回带 JSON 标签的结构体，告别字符串解析
+- **双执行引擎**：Runner 模式（JSON 指令包经 SSH 下发，零编译延迟，仅支持线性脚本）+ AOT 模式（按目标机架构编译静态二进制，支持包括 `ensure`/`parallel` 在内的全部语言）
+- **零依赖远程执行**：通过 SSH 下发预编译 Runner 或 AOT 二进制，目标机无需安装任何运行时
 - **异构架构支持**：纯 Go 实现，`CGO_ENABLED=0` 交叉编译覆盖 amd64/arm64
-- **声明式幂等**：内置 `ensure` 语法，支持 dry-run 与状态收敛
-- **大规模文件传输**：分层中继 + 压缩传输 + 断点续传 + 内容哈希去重
-- **企业级安全**：权限分级、审批流、审计日志、Ed25519 签名验证、资源限制
+- **声明式幂等**：内置 `ensure` 语法（check → apply → verify → notify），支持 dry-run 与状态收敛
+- **控制器侧文件分发/收集**：`file.distribute` / `file.collect` 经真实 SSH/SFTP 传输，支持传输后 SHA-256 校验与并发控制
+- **SSH 安全**：主机密钥 TOFU（首次信任）校验，密钥变更即拒绝，防中间人攻击
 
 ## 快速开始
 
-30 秒体验：编写一个采集系统信息的脚本。
+30 秒体验：`examples/check_cpu.ops`（节选）采集真实系统信息（非模拟数据）：
 
 ```ops
-// check_cpu.ops
-let cpu = {"percent": 0, "cores": 4}
-let hostname = "localhost"
+// check_cpu.ops - Collect real CPU usage information
+// Fetch real data from the system
+let hostname_info = sys.hostname()
+let cpu_usage = sys.cpu.usage()
+let cpu_count = sys.cpu.count()
+let load_info = sys.load()
 
 print("=== CPU Information ===")
-print("Hostname: " + hostname)
-print("CPU cores: " + str(cpu.cores))
-print("CPU usage: " + str(cpu.percent) + "%")
+print("Hostname: " + hostname_info.hostname)
+print("Logical cores: " + str(cpu_count.logical))
+print("Physical cores: " + str(cpu_count.physical))
+print("CPU usage: " + str(cpu_usage.percent) + "%")
+print("Load average: " + str(load_info.load1) + " / " + str(load_info.load5) + " / " + str(load_info.load15))
 
-if cpu.percent > 80 {
-    alert("CPU usage is high: " + str(cpu.percent) + "%")
+// Alert if CPU usage is high
+if cpu_usage.percent > 80 {
+    alert("CPU usage is high: " + str(cpu_usage.percent) + "%")
 }
 
+// Structured report with all collected data
 report {
-    host: hostname,
-    cpu: cpu
+    host: hostname_info.hostname,
+    logical_cores: cpu_count.logical,
+    physical_cores: cpu_count.physical,
+    cpu_percent: cpu_usage.percent,
+    load_1m: load_info.load1,
+    load_5m: load_info.load5,
+    load_15m: load_info.load15
 }
 ```
 
@@ -45,7 +57,10 @@ opsctl run examples/check_cpu.ops
 # 编译为静态二进制
 opsctl build --source examples/check_cpu.ops --output check_cpu --target-arch linux/amd64
 
-# 远程执行（SSH 下发 Runner）
+# 远程部署（自动选择 runner/aot 模式）
+opsctl deploy examples/check_cpu.ops --targets user@host1,user@host2
+
+# 直接下发 JSON 指令包
 opsctl exec --hosts user@host1,user@host2 --instructions pkg.json --parallel 10
 ```
 
@@ -151,38 +166,36 @@ report {
 ### 2. 控制流与函数
 
 ```ops
-// control_flow.ops
-let scores = [85, 92, 78, 95, 88]
-let total = 0
-let count = 0
+// control_flow.ops（节选）
+let cpu = sys.cpu.usage()
+let percent = cpu.percent
 
-for score in scores {
-    total = total + score
-    count = count + 1
+if percent >= 90 {
+    print("CPU Status: CRITICAL (" + str(percent) + "%)")
+} else if percent >= 70 {
+    print("CPU Status: WARNING (" + str(percent) + "%)")
+} else {
+    print("CPU Status: NORMAL (" + str(percent) + "%)")
 }
 
-let avg = total / count
-print("Average score: " + str(avg))
-
-if avg >= 90 {
-    print("Excellent")
-} else if avg >= 80 {
-    print("Good")
-} else {
-    print("Need improvement")
+// C 风格 for 循环（唯一支持的循环形式，无 for-in 语法）
+let parts = sys.disk.partitions()
+for let i = 0; i < len(parts); i = i + 1 {
+    let p = parts[i]
+    print("  [" + str(i) + "] " + p.mountpoint + " (" + p.fstype + ")")
 }
 
 fn max_value(lst) {
     let max = lst[0]
-    for v in lst {
-        if v > max {
-            max = v
+    for let i = 1; i < len(lst); i = i + 1 {
+        if lst[i] > max {
+            max = lst[i]
         }
     }
     return max
 }
 
-print("Max score: " + str(max_value(scores)))
+print("Max score: " + str(max_value([85, 92, 78, 95, 88])))
 ```
 
 ### 3. 文件操作
@@ -193,16 +206,19 @@ let path = "/tmp/test.txt"
 let content = "Hello, OpsLang!"
 
 // 写入文件
-file.write(path, content, "0644")
+file.write(path, content)
 
 // 读取文件
 let result = file.read(path)
 print("File content: " + result.content)
 
-// 检查文件是否存在
-if file.exists(path) {
+// 检查文件是否存在（返回结构体，取 .exists 字段）
+if file.exists(path).exists {
     print("File exists")
 }
+
+// 修改权限（mode 为字符串）
+file.chmod(path, "0644")
 
 // 计算校验和
 let checksum = file.checksum(path, "sha256")
@@ -215,34 +231,36 @@ file.delete(path)
 ### 4. 系统信息采集
 
 ```ops
-// check_memory.ops
+// check_memory.ops（节选）
 let mem = sys.memory.info()
+let total_mb = mem.total / 1024 / 1024
+let usage_percent = mem.used_percent
 
-print("=== Memory Information ===")
-print("Total: " + str(mem.total) + " bytes")
-print("Available: " + str(mem.available) + " bytes")
-print("Used: " + str(mem.used) + " bytes")
-print("Used Percent: " + str(mem.used_percent) + "%")
+print("Total: " + str(total_mb) + " MB")
+print("Usage: " + str(usage_percent) + "%")
 
-if mem.used_percent > 90 {
-    alert("Memory usage is critical: " + str(mem.used_percent) + "%")
+if usage_percent > 90 {
+    alert("Memory usage critical: " + str(usage_percent) + "%")
 }
 
 report {
-    memory: mem
+    total_mb: total_mb,
+    usage_percent: usage_percent
 }
 ```
 
 ### 5. 远程任务（task 声明）
 
+`task "名字" on <目标>` 的目标路由只在 `opsctl deploy` 下生效；`opsctl run` 遇到带 `on` 的 task 会报错并提示使用 deploy。
+
 ```ops
 // deploy_app.ops
-task "deploy_config" on targets {
+task "deploy_config" on "web*" {
     let config_path = "/etc/myapp/config.yaml"
     let template_vars = {"env": "production", "port": 8080}
 
     let rendered = file.template("config.yaml.tpl", template_vars)
-    file.write(config_path, rendered.content, "0644")
+    file.write(config_path, rendered.content)
 
     service.restart("myapp")
 
@@ -253,21 +271,24 @@ task "deploy_config" on targets {
 }
 ```
 
+`on` 子句支持精确主机名 / `user@host` / glob 模式（如 `"web*"`），匹配 `opsctl deploy --targets` 提供的目标列表。
+
 ## CLI 命令
 
 | 命令 | 说明 |
 |------|------|
 | `opsctl version` | 打印版本信息 |
-| `opsctl run <script.ops>` | 本地解释执行脚本 |
+| `opsctl run <script.ops>` | 本地解释执行脚本（`--json` / `--verbose` / `--dry-run`） |
 | `opsctl repl` | 交互式 REPL 环境 |
 | `opsctl build --source <script.ops> --output <binary> --target-arch <os/arch>` | AOT 编译为静态二进制 |
-| `opsctl exec --hosts <hosts> --instructions <pkg.json> --parallel <n>` | 远程执行指令包 |
+| `opsctl deploy <script.ops> --targets <hosts>` | 远程部署执行（`--mode auto/runner/aot`） |
+| `opsctl exec --hosts <hosts> --instructions <pkg.json> --parallel <n>` | 直接下发 JSON 指令包远程执行 |
 
 ## 语言特性
 
-### 关键字（16 个）
+OpsLang 是动态类型语言。关键字共 20 个：
 
-`let`, `fn`, `if`, `else`, `for`, `while`, `return`, `task`, `on`, `import`, `true`, `false`, `nil`, `report`, `alert`, `ensure`
+`let`, `fn`, `if`, `else`, `for`, `while`, `return`, `task`, `on`, `import`, `privilege`, `true`, `false`, `nil`, `report`, `alert`, `ensure`, `metric`, `log`, `parallel`
 
 ### 数据类型
 
@@ -281,17 +302,17 @@ task "deploy_config" on targets {
 
 ### 运算符
 
-- 算术：`+`, `-`, `*`, `/`, `%`
-- 比较：`==`, `!=`, `<`, `>`, `<=`, `>=`
+- 算术：`+`, `-`, `*`, `/`, `%`（两个 int 相除为整除，如 `10 / 3 == 3`）
+- 比较：`==`, `!=`, `<`, `>`, `<=`, `>=`（严格比较：`1 != "1"`；数值跨 int/float 可比：`1 == 1.0`）
 - 逻辑：`&&`, `||`, `!`
-- 赋值：`=`
+- 赋值：`=`（`let` 同一作用域不可重复声明，重新赋值用 `=`）
 
 ### 内置函数
 
 - `print(value)` - 打印输出
 - `len(value)` - 获取长度
 - `str(value)` - 转为字符串
-- `int(value)` - 转为整数
+- `int(value)` - 转为整数（严格解析，`int("42abc")` 报错）
 - `float(value)` - 转为浮点数
 - `type(value)` - 获取类型
 - `log(msg)` - 日志输出
@@ -305,12 +326,12 @@ task "deploy_config" on targets {
 
 | 包 | 说明 |
 |----|------|
-| `sys` | CPU、内存、磁盘、负载、主机名、用户、进程等系统信息 |
-| `file` | 文件读写、复制、移动、删除、权限、模板渲染、校验和 |
+| `sys` | CPU、内存、磁盘、负载、主机名、用户、网络接口等系统信息 |
+| `file` | 文件读写、复制、移动、删除、权限、模板渲染、校验和、SSH 分发/收集 |
 | `net` | HTTP GET/POST、TCP 连通性、DNS 解析、网络接口 |
-| `process` | 进程列表、查找、启动/停止外部命令 |
+| `process` | 进程列表、查找、kill、执行外部命令 |
 | `service` | systemd 服务管理 |
-| `pkg` | 包管理封装（apt/yum/dnf） |
+| `pkg` | 包管理封装（仅 Linux，apt/yum/dnf） |
 | `json` | JSON 编解码 |
 | `yaml` | YAML 编解码 |
 | `time` | 时间操作、格式化、时间差 |
@@ -341,8 +362,17 @@ type MemoryInfo struct {
 | Phase 1 | 远程执行通道（SSH + Runner） | ✅ 已完成 |
 | Phase 2 | 语言前端与解释器（Lexer/Parser/Interpreter） | ✅ 已完成 |
 | Phase 3 | AOT 编译管线 | ✅ 已完成 |
-| Phase 4 | 远程编排与声明式特性 | 🚧 进行中（deploy/task/ensure 已完成，分层中继待实现） |
-| Phase 5 | 安全与生产化 | 🚧 进行中（权限/审计/签名/资源限制已完成） |
+| Phase 4 | 远程编排与声明式特性（deploy/task/ensure/parallel） | ✅ 已完成 |
+| Phase 5 | 安全与生产化（权限分级、审计日志、SSH TOFU 校验、资源限制） | ✅ 已完成 |
+
+## Roadmap
+
+以下能力**尚未实现**，文档中不再作为现有功能描述：
+
+- `for ... in ...` 遍历循环语法（当前只支持 C 风格 for 循环）
+- `import "go <包路径>"` 引用第三方 Go 库（当前会报错拒绝）
+- 文件传输的压缩、断点续传、内容哈希去重分发
+- 分层中继（relay）大规模文件分发/收集架构（原 internal/relay 已删除）
 
 ## 项目结构
 
@@ -355,11 +385,15 @@ opslang/
 │   ├── lexer/                  # 词法分析
 │   ├── parser/                 # 语法分析
 │   ├── ast/                    # AST 节点定义
-│   ├── interpreter/            # 解释器
-│   ├── compiler/               # Go 代码生成器
-│   ├── sshx/                   # SSH 客户端封装
+│   ├── interpreter/            # 解释器（含 SDK bridge）
+│   ├── compiler/               # AOT 编译器（Go 代码生成）
+│   ├── opsspec/                # 原子操作单一事实来源（名称+参数+可用范围）
+│   ├── exec/                   # 并行 SSH 编排（架构探测、二进制上传）
+│   ├── sshx/                   # SSH 客户端封装（TOFU 主机密钥校验）
 │   ├── inventory/              # 主机清单
-│   ├── runner/                 # Runner 指令包处理
+│   ├── arch/                   # 远程架构检测
+│   ├── runner/                 # Runner 指令包处理与注册表
+│   ├── output/                 # 结构化输出处理
 │   └── security/               # 安全特性
 ├── pkg/
 │   └── ops-core-sdk/           # 原子操作标准库
@@ -371,12 +405,14 @@ opslang/
 
 ## 文档
 
-详细文档请参考 `docs/` 目录（待补充）：
+详细文档请参考 `docs/` 目录：
 
-- 语言语法参考
-- 标准库 API 文档
-- Runner 指令包协议
-- 远程执行架构
+- `docs/getting-started.md` - 快速开始
+- `docs/language-reference.md` - 语言语法参考
+- `docs/stdlib-reference.md` - 标准库 API 文档
+- `docs/cli-reference.md` - CLI 命令参考（含 Runner 指令包协议）
+- `docs/architecture.md` - 系统架构
+- `docs/examples.md` - 示例教程
 
 ## 贡献
 

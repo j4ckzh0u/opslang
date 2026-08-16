@@ -11,20 +11,20 @@ import (
 
 // AuditEntry represents a single audit log entry.
 type AuditEntry struct {
-	Timestamp   time.Time              `json:"timestamp"`
-	TaskID      string                 `json:"task_id"`
-	Script      string                 `json:"script"`
-	Privilege   string                 `json:"privilege"`
-	Targets     []string               `json:"targets"`
-	User        string                 `json:"user"`
-	Mode        string                 `json:"mode"`
-	DryRun      bool                   `json:"dry_run"`
-	Status      string                 `json:"status"`
-	Results     map[string]interface{} `json:"results,omitempty"`
-	Error       string                 `json:"error,omitempty"`
-	DurationMs  int64                  `json:"duration_ms"`
-	StartedAt   time.Time              `json:"started_at"`
-	FinishedAt  time.Time              `json:"finished_at"`
+	Timestamp  time.Time              `json:"timestamp"`
+	TaskID     string                 `json:"task_id"`
+	Script     string                 `json:"script"`
+	Privilege  string                 `json:"privilege"`
+	Targets    []string               `json:"targets"`
+	User       string                 `json:"user"`
+	Mode       string                 `json:"mode"`
+	DryRun     bool                   `json:"dry_run"`
+	Status     string                 `json:"status"`
+	Results    map[string]interface{} `json:"results,omitempty"`
+	Error      string                 `json:"error,omitempty"`
+	DurationMs int64                  `json:"duration_ms"`
+	StartedAt  time.Time              `json:"started_at"`
+	FinishedAt time.Time              `json:"finished_at"`
 }
 
 // AuditLogger handles audit log writing.
@@ -35,7 +35,13 @@ type AuditLogger struct {
 // NewAuditLogger creates a new audit logger.
 func NewAuditLogger(logDir string) *AuditLogger {
 	if logDir == "" {
-		logDir = "/var/log/opsctl"
+		// OPSLANG_AUDIT_DIR overrides the default location so operators
+		// can keep the trail with their run artifacts.
+		if d := os.Getenv("OPSLANG_AUDIT_DIR"); d != "" {
+			logDir = d
+		} else {
+			logDir = "/var/log/opsctl"
+		}
 	}
 	return &AuditLogger{logDir: logDir}
 }

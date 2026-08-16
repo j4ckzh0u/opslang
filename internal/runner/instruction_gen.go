@@ -276,11 +276,33 @@ func (g *InstructionGenerator) genExpression(expr ast.Expression) (interface{}, 
 	case *ast.IfExpression:
 		return nil, fmt.Errorf("runner mode cannot evaluate conditional expressions; use AOT mode")
 	case *ast.MemberExpression:
+		// A pure identifier-rooted member chain (cpu.percent) becomes a
+		// dotted variable reference the executor resolves at runtime.
+		if ref := memberRef(e); ref != "" {
+			return "$" + ref, nil
+		}
 		return nil, fmt.Errorf("runner mode cannot dereference %s; assign the call result to a variable first or use AOT mode", e.String())
 	case *ast.IndexExpression:
 		return nil, fmt.Errorf("runner mode cannot index into %s; use AOT mode", e.Left.String())
 	default:
 		return nil, fmt.Errorf("unsupported expression type in runner mode: %T", expr)
+	}
+}
+
+// memberRef flattens an identifier-rooted member chain to "a.b.c";
+// returns "" when the chain contains anything but identifiers.
+func memberRef(expr ast.Expression) string {
+	switch e := expr.(type) {
+	case *ast.Identifier:
+		return e.Name
+	case *ast.MemberExpression:
+		prefix := memberRef(e.Object)
+		if prefix == "" {
+			return ""
+		}
+		return prefix + "." + e.Member.Name
+	default:
+		return ""
 	}
 }
 

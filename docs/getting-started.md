@@ -97,6 +97,9 @@ Hello, OpsLang v0.1.0
 
 # 显示详细执行过程
 ./opsctl run --verbose helloworld.ops
+
+# 干运行：ensure 的 apply 步骤只打印不执行
+./opsctl run --dry-run helloworld.ops
 ```
 
 ### 更完整的示例
@@ -243,8 +246,13 @@ darwin/arm64
 | `--instructions` | JSON 指令包路径 | `check_cpu.json` |
 | `--user` | SSH 用户名 | `root` |
 | `--key` | SSH 私钥路径 | `~/.ssh/id_rsa` |
+| `--password` | SSH 密码 | - |
 | `--parallel` | 并发主机数 | `10`（默认） |
 | `--inventory` | 主机清单文件（YAML） | `hosts.yml` |
+| `--dry-run` | 干运行模式，不实际执行变更操作 | - |
+| `--runner-path` | 预构建 Runner 二进制路径（跳过自动构建） | `./ops-runner` |
+| `--output` | 结果输出文件路径（默认 stdout） | `result.json` |
+| `--insecure-host-key` | 跳过 SSH 主机密钥校验（仅限实验室环境） | - |
 
 ### 多主机执行
 
@@ -281,6 +289,24 @@ hosts:
 4. 发送 JSON 指令包到 `ops-runner` 的 stdin
 5. 收集 stdout 的 JSON 结果并汇总
 
+### 部署脚本（opsctl deploy）
+
+更常用的远程执行方式是直接部署 `.ops` 脚本（无需手写指令包）：
+
+```bash
+./opsctl deploy examples/check_cpu.ops --targets root@192.168.1.10
+```
+
+`--mode` 选择执行模式（默认 `auto`）：
+
+| 模式 | 说明 |
+|------|------|
+| `runner` | 生成 JSON 指令包下发 ops-runner；**只支持线性脚本**（调用、`let`、`report`、`alert`、`log`），控制流等会报错拒绝 |
+| `aot` | 按目标机架构交叉编译静态二进制后上传执行，支持全语言（含 `ensure`/`parallel`） |
+| `auto` | 先试 runner 生成，失败自动转 aot |
+
+task 语句的 `on` 子句在 deploy 下生效（精确名 / glob 匹配目标）；`opsctl run` 遇到带 `on` 的 task 会报错提示改用 deploy。
+
 ## 7. REPL 交互环境
 
 启动交互式环境：
@@ -293,7 +319,9 @@ hosts:
 
 ```
 OpsLang REPL v0.1.0
-输入 exit 或 Ctrl+D 退出，输入 help 查看帮助
+Type OpsLang expressions. Ctrl+D to exit, Ctrl+C to cancel line.
+
+SDK builtins loaded: sys.*, file.*, net.*, process.*, service.*, pkg.*, time.*, json.*, yaml.*
 
 ops> let x = 42
 ops> print(x)
@@ -306,7 +334,7 @@ ops> print(double(21))
 ### REPL 支持的功能
 
 - 单行表达式求值
-- 多行代码块（以 `{` 开头自动进入多行模式）
+- 多行代码块（行尾为 `{` 时自动续行，空行触发执行）
 - 变量定义和函数定义
 - `help` — 查看帮助
 - `exit` 或 `quit` — 退出
@@ -354,6 +382,7 @@ go version
 1. 确认目标主机 SSH 端口可达：`ssh root@10.0.0.1`
 2. 确认密钥权限正确：`chmod 600 ~/.ssh/id_rsa`
 3. 如果目标主机使用非默认端口，检查 SSH 配置
+4. 若报主机密钥不匹配：OpsLang 默认做 TOFU 校验（记录在 `~/.ssh/opslang_known_hosts`），目标机重装后密钥变更会被拒绝；确认安全后删除该文件中对应条目，或（仅实验室）加 `--insecure-host-key`
 
 ### Q: 交叉编译后的二进制无法运行
 

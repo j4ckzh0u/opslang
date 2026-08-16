@@ -5,8 +5,11 @@ package exec
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	osexec "os/exec"
 	"path/filepath"
@@ -74,12 +77,17 @@ type Executor struct {
 	// AppBinaryPlaceholder.
 	AppBinary func(goos, goarch string) (string, error)
 
+	// InsecureSkipHostKeyVerify disables TOFU host key verification.
+	// Lab environments only.
+	InsecureSkipHostKeyVerify bool
+
 	TaskID string
 
-	runnerCache  *runnerCache
-	buildMu      sync.Mutex // serializes runner/app binary builds
+	runnerCache   *runnerCache
+	buildMu       sync.Mutex // serializes runner/app binary builds
 	buildInFlight map[string]*sync.Once
 	buildResults  map[string]error
+	appPaths      map[string]string // build key -> resolved local binary path
 }
 
 // SSHClientFactory creates SSH clients. Can be overridden for testing.
@@ -105,6 +113,7 @@ func (e *Executor) Execute(ctx context.Context) *Summary {
 	if e.buildInFlight == nil {
 		e.buildInFlight = make(map[string]*sync.Once)
 		e.buildResults = make(map[string]error)
+		e.appPaths = make(map[string]string)
 	}
 
 	parallel := e.Parallel
@@ -197,13 +206,14 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 
 	// Create SSH client.
 	sshCfg := &sshx.Config{
-		Host:     target.Host,
-		Port:     target.Port,
-		User:     target.User,
-		Password: firstNonEmpty(target.Password, e.Password),
-		KeyFile:  firstNonEmpty(target.KeyFile, e.KeyFile),
-		Timeout:  30 * time.Second,
-		Retries:  3,
+		Host:                      target.Host,
+		Port:                      target.Port,
+		User:                      target.User,
+		Password:                  firstNonEmpty(target.Password, e.Password),
+		KeyFile:                   firstNonEmpty(target.KeyFile, e.KeyFile),
+		Timeout:                   30 * time.Second,
+		Retries:                   3,
+		InsecureSkipHostKeyVerify: e.InsecureSkipHostKeyVerify,
 	}
 
 	client, err := SSHClientFactory(sshCfg)
@@ -256,47 +266,32 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 		}
 	}
 
-	// Prepare remote directory.
-	remoteDir := fmt.Sprintf("/tmp/ops-%d", time.Now().UnixNano())
-	if _, err := client.Exec(ctx, "mkdir -p "+remoteDir); err != nil {
+	// Deploy binaries through the remote content-addressed cache. The
+	// runner is ~7MB; uploading it on every execution used to cost that
+	// much bandwidth per host per run. Binaries are stored under
+	// <cache>/<name>-<sha256[:16]> and reused when the remote checksum
+	// already matches, so repeat runs transfer only a checksum query.
+	remoteRunner, err := ensureRemoteBinary(ctx, client, runnerPath,
+		fmt.Sprintf("ops-runner-%s-linux-%s", runnerProtoVersion, goarch))
+	if err != nil {
 		result.Status = "failed"
-		result.Error = fmt.Sprintf("failed to create remote directory: %v", err)
+		result.Error = fmt.Sprintf("failed to stage runner: %v", err)
 		result.FinishedAt = time.Now().UTC()
 		return result
 	}
 
-	// Upload runner binary.
-	remoteRunner := remoteDir + "/ops-runner"
-	if err := client.Upload(ctx, runnerPath, remoteRunner); err != nil {
-		result.Status = "failed"
-		result.Error = fmt.Sprintf("failed to upload runner: %v", err)
-		result.FinishedAt = time.Now().UTC()
-		return result
-	}
-
-	// Upload the compiled script binary (AOT mode) and reference it from
-	// instructions via the placeholder.
 	remoteApp := ""
 	if localAppBinary != "" {
-		remoteApp = remoteDir + "/ops-app"
-		if err := client.Upload(ctx, localAppBinary, remoteApp); err != nil {
+		appSum, err := fileSHA256(localAppBinary)
+		if err == nil {
+			remoteApp, err = ensureRemoteBinary(ctx, client, localAppBinary, "ops-app-"+appSum[:16])
+		}
+		if err != nil {
 			result.Status = "failed"
-			result.Error = fmt.Sprintf("failed to upload script binary: %v", err)
+			result.Error = fmt.Sprintf("failed to stage script binary: %v", err)
 			result.FinishedAt = time.Now().UTC()
 			return result
 		}
-	}
-
-	// Make uploaded binaries executable.
-	chmodCmd := "chmod +x " + remoteRunner
-	if remoteApp != "" {
-		chmodCmd += " " + remoteApp
-	}
-	if _, err := client.Exec(ctx, chmodCmd); err != nil {
-		result.Status = "failed"
-		result.Error = fmt.Sprintf("failed to chmod binaries: %v", err)
-		result.FinishedAt = time.Now().UTC()
-		return result
 	}
 
 	// Marshal instruction package to JSON, resolving the app-binary
@@ -316,10 +311,9 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	}
 
 	// Execute runner with instruction JSON piped to stdin.
+	// Cached binaries stay on the host deliberately (they are content
+	// addressed; a changed runner version gets a new path).
 	execResult, err := client.ExecWithStdin(ctx, runnerCmd, instrJSON)
-
-	// Cleanup remote temp directory (best effort).
-	_, _ = client.Exec(ctx, "rm -rf "+remoteDir)
 
 	if err != nil {
 		result.Status = "failed"
@@ -435,18 +429,31 @@ func (e *Executor) getRunnerBinary(goos, goarch string) (string, error) {
 
 // getAppBinary resolves the AOT script binary for a target architecture,
 // building it at most once per (goos, goarch) across all host goroutines.
+// The resolved path is shared via appPaths: storing it in a caller-local
+// variable left every goroutine except the builder with an empty path.
 func (e *Executor) getAppBinary(goos, goarch string) (string, error) {
-	var path string
-	err := e.buildOnce("app:"+goos+"/"+goarch, func() error {
+	key := "app:" + goos + "/" + goarch
+	err := e.buildOnce(key, func() error {
 		p, err := e.AppBinary(goos, goarch)
-		path = p
-		return err
+		if err != nil {
+			return err
+		}
+		if p == "" {
+			return fmt.Errorf("app binary callback returned an empty path")
+		}
+		e.buildMu.Lock()
+		e.appPaths[key] = p
+		e.buildMu.Unlock()
+		return nil
 	})
 	if err != nil {
 		return "", err
 	}
+	e.buildMu.Lock()
+	path := e.appPaths[key]
+	e.buildMu.Unlock()
 	if path == "" {
-		return "", fmt.Errorf("app binary callback returned an empty path")
+		return "", fmt.Errorf("app binary path missing for %s", key)
 	}
 	if _, err := os.Stat(path); err != nil {
 		return "", fmt.Errorf("app binary %s not found: %w", path, err)
@@ -462,7 +469,12 @@ func (e *Executor) buildOnce(key string, build func() error) error {
 	e.buildMu.Lock()
 	if e.buildInFlight == nil {
 		e.buildInFlight = make(map[string]*sync.Once)
+	}
+	if e.buildResults == nil {
 		e.buildResults = make(map[string]error)
+	}
+	if e.appPaths == nil {
+		e.appPaths = make(map[string]string)
 	}
 	once, exists := e.buildInFlight[key]
 	if !exists {
@@ -590,9 +602,14 @@ func defaultCacheDir() string {
 	return filepath.Join(home, ".cache", "opslang", "runners")
 }
 
+// runnerProtoVersion salts the runner cache: bump whenever the runner's
+// instruction protocol or registry changes, so stale cached binaries (old
+// operation names) are never uploaded.
+const runnerProtoVersion = "v3"
+
 // getCachedPath returns the path where a cached runner binary would be stored.
 func (c *runnerCache) getCachedPath(goos, goarch string) string {
-	name := fmt.Sprintf("ops-runner-%s-%s", goos, goarch)
+	name := fmt.Sprintf("ops-runner-%s-%s-%s", runnerProtoVersion, goos, goarch)
 	return filepath.Join(c.cacheDir, name)
 }
 
@@ -657,6 +674,88 @@ func findProjectRoot() (string, error) {
 	}
 
 	return "", fmt.Errorf("could not find project root (no go.mod found)")
+}
+
+// ============================================================
+// Remote binary cache
+// ============================================================
+
+// remoteCacheDir is the per-host cache for staged binaries. Content
+// addressing (sha256 in the file name) makes it safe to share between
+// runs; OPSLANG_REMOTE_CACHE_DIR overrides it (used by tests).
+func remoteCacheDir() string {
+	if d := os.Getenv("OPSLANG_REMOTE_CACHE_DIR"); d != "" {
+		return d
+	}
+	return "/tmp/.opslang-cache"
+}
+
+// ensureRemoteBinary makes localPath available on the host at a
+// content-addressed cache path and returns that path. When the remote
+// file already exists with a matching checksum, no file bytes are
+// transferred: the checksum is computed ON the remote host (sha256sum),
+// so a cache-hit probe costs one exec channel round trip (~100 bytes),
+// not a download of the whole binary.
+func ensureRemoteBinary(ctx context.Context, client *sshx.Client, localPath, name string) (string, error) {
+	localSum, err := fileSHA256(localPath)
+	if err != nil {
+		return "", fmt.Errorf("hash %s: %w", localPath, err)
+	}
+	remotePath := remoteCacheDir() + "/" + name + "-" + localSum[:16]
+
+	// Cache hit probe: remote-side hashing. (Reading the file via SFTP to
+	// hash it locally would transfer the full binary - the opposite of
+	// what the cache is for.)
+	if remoteSum, ok := remoteSHA256(ctx, client, remotePath); ok {
+		if strings.EqualFold(remoteSum, localSum) {
+			return remotePath, nil
+		}
+	}
+
+	if _, err := client.Exec(ctx, "mkdir -p "+remoteCacheDir()); err != nil {
+		return "", fmt.Errorf("create remote cache dir: %w", err)
+	}
+	if err := client.Upload(ctx, localPath, remotePath); err != nil {
+		return "", fmt.Errorf("upload: %w", err)
+	}
+	if _, err := client.Exec(ctx, "chmod 0755 "+remotePath); err != nil {
+		return "", fmt.Errorf("chmod: %w", err)
+	}
+
+	// Verify what landed: a truncated upload must not silently execute.
+	if remoteSum, ok := remoteSHA256(ctx, client, remotePath); !ok || !strings.EqualFold(remoteSum, localSum) {
+		return "", fmt.Errorf("post-upload checksum mismatch for %s", remotePath)
+	}
+	return remotePath, nil
+}
+
+// remoteSHA256 hashes a file on the remote host via sha256sum. Returns
+// ok=false when the utility or the file is unavailable - callers then
+// (re)upload, which is always safe.
+func remoteSHA256(ctx context.Context, client *sshx.Client, path string) (string, bool) {
+	res, err := client.Exec(ctx, "sha256sum "+path)
+	if err != nil || res.ExitCode != 0 {
+		return "", false
+	}
+	fields := strings.Fields(res.Stdout)
+	if len(fields) < 1 || len(fields[0]) != 64 {
+		return "", false
+	}
+	return fields[0], true
+}
+
+// fileSHA256 hashes a local file.
+func fileSHA256(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // ============================================================

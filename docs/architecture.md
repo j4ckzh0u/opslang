@@ -7,7 +7,9 @@
 3. [模块说明](#3-模块说明)
 4. [执行模式](#4-执行模式)
 5. [数据流](#5-数据流)
-6. [扩展指南](#6-扩展指南)
+6. [SSH 安全](#6-ssh-安全)
+7. [扩展指南](#7-扩展指南)
+8. [Roadmap（未实现）](#8-roadmap未实现)
 
 ---
 
@@ -20,22 +22,23 @@ OpsLang 是一门面向运维领域的领域特定语言（DSL），旨在通过
 - **纯 Go 生态**：所有依赖支持 `CGO_ENABLED=0` 交叉编译，无 cgo 依赖
 - **结构化返回**：标准库函数一律返回结构体，禁止返回原始字符串
 - **无 Shell 依赖**：所有操作直接使用 Go 库或读取 `/proc`/`/sys`，不依赖 shell
-- **极简语法**：关键字 ≤ 15 个，类 Go + Python 混合风格
-- **双执行引擎**：通用 Runner（解释执行）+ AOT 编译（静态二进制）
-- **零依赖远程执行**：通过 SSH 下发预编译 Runner 或定制二进制
-- **安全内置**：权限分级、审批流、审计日志、签名验证、资源限制
+- **极简语法**：关键字 20 个，类 Go + Python 混合风格，动态类型
+- **双执行引擎**：Runner（JSON 指令包，线性脚本）+ AOT 编译（静态二进制，全语言）
+- **单一事实来源**：`internal/opsspec` 定义全部原子操作的名称、参数与可用范围，三个引擎由一致性测试强制对齐
+- **零依赖远程执行**：通过 SSH 下发预编译 Runner 或 AOT 二进制
+- **安全内置**：权限分级、审计日志、SSH 主机密钥 TOFU 校验
 
 ### 1.2 技术栈
 
 | 组件 | 技术选型 | 说明 |
 |------|---------|------|
-| 实现语言 | Go 1.21+ | 纯 Go，支持交叉编译 |
+| 实现语言 | Go 1.25+ | 纯 Go，支持交叉编译 |
 | CLI 框架 | cobra | 命令行参数解析 |
-| SSH 客户端 | golang.org/x/crypto/ssh | SSH 连接管理 |
+| SSH 客户端 | golang.org/x/crypto/ssh | SSH 连接管理（含 TOFU 主机密钥校验） |
 | SFTP | github.com/pkg/sftp | 文件传输 |
-| 系统信息 | gopsutil | 跨平台系统信息采集 |
+| 系统信息 | gopsutil/v4 | 跨平台系统信息采集 |
 | YAML 解析 | gopkg.in/yaml.v3 | 配置文件解析 |
-| 加密签名 | crypto/ed25519 | Runner 二进制签名 |
+| 加密签名 | crypto/ed25519 | 审计/签名工具（internal/security） |
 
 ---
 
@@ -58,10 +61,10 @@ OpsLang 是一门面向运维领域的领域特定语言（DSL），旨在通过
         │        └── 每个函数返回结构体，支持 JSON 序列化
         │
         └── 远程控制面
-                 ├── SSH 客户端（连接池、超时、重试、架构检测）
+                 ├── opsspec（原子操作单一事实来源，三引擎一致性测试）
+                 ├── SSH 客户端（连接池、超时、重试、TOFU 主机密钥校验、架构检测）
                  ├── 通用 Runner（多架构预编译，缓存复用）
-                 ├── 分层中继引擎（自动选择中继节点，支持大规模文件分发/收集）
-                 ├── 指令包生成（JSON，与架构无关）
+                 ├── 指令包生成（JSON，与架构无关；只支持线性脚本）
                  └── 结果回收（stdout JSON 解析、错误聚合、审计日志）
 ```
 
@@ -74,57 +77,63 @@ opslang/
 │   │   ├── main.go            # 入口，命令注册
 │   │   ├── run.go             # opsctl run - 本地解释执行
 │   │   ├── build.go           # opsctl build - AOT 编译
-│   │   ├── exec.go            # opsctl exec - 远程执行
+│   │   ├── deploy.go          # opsctl deploy - 远程部署（runner/aot/auto）
+│   │   ├── exec.go            # opsctl exec - 远程执行指令包
 │   │   └── repl.go            # opsctl repl - 交互式环境
 │   └── ops-runner/            # 通用 Runner 程序
 │       └── main.go            # 从 stdin 读取 JSON 指令包并执行
 ├── internal/
 │   ├── lexer/                 # 词法分析
 │   │   ├── token/
-│   │   │   └── token.go      # Token 定义（16 个关键字）
+│   │   │   └── token.go      # Token 定义（20 个关键字）
 │   │   └── lexer.go          # 词法分析器
 │   ├── parser/
 │   │   └── parser.go         # 语法分析器（递归下降）
 │   ├── ast/
 │   │   └── ast.go            # AST 节点定义
 │   ├── interpreter/
-│   │   └── interpreter.go    # 解释器（AST 遍历执行）
+│   │   ├── interpreter.go    # 解释器（AST 遍历执行）
+│   │   └── sdk_bridge.go     # SDK 内置函数注册（解释器侧）
 │   ├── compiler/
 │   │   ├── compiler.go       # 编译器主逻辑
 │   │   ├── codegen.go        # Go 代码生成器
 │   │   ├── cache.go          # 编译缓存
-│   │   └── mode_selector.go  # 执行模式自动选择
+│   │   └── mode_selector.go  # 执行模式选择（RequiresAOT）
+│   ├── opsspec/               # 原子操作单一事实来源
+│   │   ├── spec.go           # canonical 名称 + 参数 + 可用范围 + 旧别名
+│   │   └── consistency_test.go # 三引擎一致性测试
 │   ├── sshx/                  # SSH 客户端封装
-│   │   ├── client.go         # SSH 连接管理
+│   │   ├── client.go         # SSH 连接管理（SFTP 上传/下载）
 │   │   ├── pool.go           # 连接池
-│   │   ├── sftp.go           # SFTP 文件传输
+│   │   ├── hostkey.go        # TOFU 主机密钥校验
 │   │   ├── config.go         # 配置管理
 │   │   └── errors.go         # 错误定义
 │   ├── exec/
-│   │   └── exec.go           # 远程执行协调器
+│   │   └── exec.go           # 远程执行协调器（并行编排、架构探测、
+│   │                          #   runner/AOT 二进制上传、buildOnce 去重）
 │   ├── inventory/
 │   │   └── inventory.go      # 主机清单解析
 │   ├── arch/
 │   │   └── arch.go           # 架构检测（uname -m → GOARCH）
 │   ├── runner/                # Runner 指令包处理
 │   │   ├── executor.go       # 指令执行器
-│   │   ├── instruction_gen.go # 指令包生成器
-│   │   ├── registry.go       # 内置函数注册表
+│   │   ├── instruction_gen.go # 指令包生成器（线性脚本，越界即报错）
+│   │   ├── registry.go       # 内置函数注册表（runner 侧）
 │   │   └── types.go          # 类型定义
-│   ├── relay/                 # 分层中继调度（Phase 4）
-│   ├── security/              # 安全特性（Phase 5）
+│   ├── security/              # 安全特性
 │   │   ├── privilege.go      # 权限分级
 │   │   ├── audit.go          # 审计日志
-│   │   ├── signature.go      # 签名验证
+│   │   ├── signature.go      # Ed25519 签名工具
 │   │   ├── resource_limit.go # 资源限制
+│   │   ├── resources.go      # 资源抽象
 │   │   ├── retry.go          # 自动重试
 │   │   └── cleanup.go        # 自清理
 │   └── output/
 │       └── output.go         # 结构化输出处理
 ├── pkg/
-│   └── ops-core-sdk/         # 原子操作标准库（独立 Go module）
+│   └── ops-core-sdk/         # 原子操作标准库
 │       ├── sys/              # 系统信息
-│       ├── file/             # 文件操作
+│       ├── file/             # 文件操作（含 distribute/collect SSH 传输）
 │       ├── net/              # 网络操作
 │       ├── process/          # 进程管理
 │       ├── service/          # 服务管理
@@ -151,8 +160,8 @@ opslang/
 **职责**：将源代码转换为 Token 流
 
 **关键文件**：
-- `token/token.go`：定义 16 个关键字和所有 Token 类型
-  - 关键字：`let`, `fn`, `if`, `else`, `for`, `while`, `return`, `task`, `on`, `ensure`, `report`, `metric`, `log`, `alert`, `import`, `nil`
+- `token/token.go`：定义 20 个关键字和所有 Token 类型
+  - 关键字：`let`, `fn`, `if`, `else`, `for`, `while`, `return`, `task`, `on`, `import`, `privilege`, `true`, `false`, `nil`, `report`, `alert`, `ensure`, `metric`, `log`, `parallel`
   - Token 类型：标识符、字面量（整数/浮点/字符串/布尔）、运算符、分隔符、注释等
 - `lexer.go`：词法分析实现，支持行列号追踪，错误报告包含位置信息
 
@@ -170,11 +179,12 @@ opslang/
 **支持的语法结构**：
 - 变量声明：`let x = 10`
 - 函数定义：`fn add(a, b) { return a + b }`
-- 控制流：`if/else`, `for`, `while`
-- 任务声明：`task "name" on targets { ... }`
-- 幂等声明：`ensure condition { actions }`
+- 控制流：`if/else`，C 风格 `for`，`while`（无 for-in 遍历语法）
+- 任务声明：`task "name" on <目标> { ... }`
+- 幂等声明：`ensure condition { actions } notify <表达式>`
+- 并行块：`parallel { ... }`
 - 输出语句：`report`, `metric`, `log`, `alert`
-- 导入语句：`import go "package"`
+- 导入语句：`import`（声明性；`import "go ..."` 第三方库在执行入口报错拒绝）
 
 #### AST 节点（internal/ast）
 
@@ -236,13 +246,13 @@ AST → Interpreter → 执行结果（结构化）
    - 生成 main() 函数
 
 3. **cache.go**：编译缓存
-   - 缓存键：脚本 hash + 标准库版本 + 目标架构
-   - 缓存目录：`~/.cache/opslang/compilation/`
+   - 缓存键：codegen 版本 + 脚本源码 hash + 目标架构
+   - 缓存目录：`~/.opsctl/cache/`
    - 命中缓存直接返回，避免重复编译
 
-4. **mode_selector.go**：执行模式自动选择
-   - 简单任务（<100行，无第三方 Go 库）→ Runner 模式
-   - 复杂任务（≥100行或有 `import go`）→ AOT 编译模式
+4. **mode_selector.go**：执行模式选择
+   - `RequiresAOT()` 检测线性 runner 指令 VM 无法精确表达的语句（`if`/`for`/`while`/`fn`/`ensure`/`parallel`/`return`），命中即必须 AOT
+   - `opsctl deploy --mode auto`（默认）：先做一次真实指令包生成试验，生成器拒绝的脚本自动转 AOT，保证模式判定与生成器永不漂移
    - 支持手动覆盖：`--mode runner|aot|auto`
 
 **编译流程**：
@@ -250,12 +260,13 @@ AST → Interpreter → 执行结果（结构化）
 AST → CodeGen → Go 源码 → go build → 静态二进制
 ```
 
+codegen 生成的代码由 `codegen_e2e_test.go` 经真实 `go build` 编译并验证。
+
 ### 3.3 标准库（pkg/ops-core-sdk）
 
 **职责**：提供运维原子操作，返回结构化数据
 
 **设计原则**：
-- 独立 Go module，可单独使用
 - 每个函数返回 `(结构体, error)`
 - 结构体带 JSON tag，支持序列化
 - 所有操作不依赖 shell，直接使用 Go 库或系统调用
@@ -264,12 +275,13 @@ AST → CodeGen → Go 源码 → go build → 静态二进制
 
 | 模块 | 功能 | 示例函数 |
 |------|------|---------|
-| sys | 系统信息 | `cpu.usage()`, `memory.info()`, `disk.usage()`, `hostname()` |
-| file | 文件操作 | `read()`, `write()`, `copy()`, `move()`, `delete()`, `exists()`, `checksum()` |
+| sys | 系统信息 | `cpu.usage()`, `cpu.count()`, `memory.info()`, `disk.usage()`, `disk.partitions()`, `hostname()`, `load()`, `os()`, `uptime()`, `users()`, `net.interfaces()` |
+| file | 文件操作 | `read()`, `write()`, `append()`, `copy()`, `move()`, `delete()`, `exists()`, `stat()`, `list()`, `mkdir()`, `chmod()`, `checksum()`, `template()` |
+| file（控制器专用） | SSH 分发/收集 | `distribute()`, `collect()`（真实 SFTP 传输，传输后 SHA-256 校验） |
 | net | 网络操作 | `http_get()`, `http_post()`, `tcp_check()`, `dns_lookup()`, `interfaces()` |
-| process | 进程管理 | `list()`, `find_by_name()`, `find_by_port()`, `exec()`, `kill()` |
-| service | 服务管理 | `status()`, `start()`, `stop()`, `restart()`, `enable()` |
-| pkg | 包管理 | `install()`, `remove()`, `list()` |
+| process | 进程管理 | `list()`, `find_by_name()`, `find_by_port()`, `kill()`, `exec()` |
+| service | 服务管理 | `status()`, `start()`, `stop()`, `restart()`, `enable()`, `disable()` |
+| pkg | 包管理（仅 Linux） | `install()`, `remove()`, `info()`, `list()` |
 | json | JSON 编解码 | `encode()`, `decode()` |
 | yaml | YAML 编解码 | `encode()`, `decode()` |
 | time | 时间操作 | `now()`, `format()`, `parse()`, `since()`, `sleep()`, `diff()` |
@@ -287,14 +299,24 @@ type CPUUsage struct {
 
 // file.ChecksumResult 返回
 type ChecksumResult struct {
-    Path   string `json:"path"`
-    Algo   string `json:"algo"`
-    Value  string `json:"value"`
-    Size   int64  `json:"size"`
+    Path      string `json:"path"`
+    Algorithm string `json:"algorithm"`
+    Checksum  string `json:"checksum"`
+    Size      int64  `json:"size"`
 }
 ```
 
-### 3.4 远程控制面
+### 3.4 原子操作单一事实来源（internal/opsspec）
+
+`opsspec.Funcs` 表定义全部原子操作的 canonical 名称、位置参数名和可用范围（`All` / `ControllerOnly`），是三个执行引擎共同的依据：
+
+- **解释器**（`internal/interpreter/sdk_bridge.go`）— 本地执行时通过 bridge 调用 SDK
+- **Runner 注册表**（`internal/runner/registry.go`）— 远程 runner 按 canonical 名（或旧别名，查询时透明映射）分发
+- **AOT 代码生成器**（`internal/compiler/codegen.go`）— 只生成 canonical 名调用
+
+`internal/opsspec/consistency_test.go` 强制三个引擎与 spec 表完全一致；新增函数必须三处同步注册，否则测试失败。`ControllerOnly` 的函数（如 `file.distribute`/`file.collect`）只在控制器侧暴露，runner 与 codegen 拒绝。
+
+### 3.5 远程控制面
 
 #### SSH 客户端（internal/sshx）
 
@@ -307,11 +329,12 @@ type ChecksumResult struct {
 - 自动重试（可配置次数）
 - 连接池管理（复用连接）
 - 并发限制
+- TOFU 主机密钥校验（见第 6 节）
 
 **关键文件**：
-- `client.go`：SSH 连接创建和管理
+- `client.go`：SSH 连接创建和管理（含 SFTP 上传/下载）
 - `pool.go`：连接池实现
-- `sftp.go`：SFTP 文件传输（支持断点续传、压缩）
+- `hostkey.go`：TOFU 主机密钥校验
 - `config.go`：连接配置
 - `errors.go`：错误定义
 
@@ -391,19 +414,20 @@ make build-runner-linux-arm64
 **职责**：协调远程执行全流程
 
 **工作流程**：
-1. 解析目标主机列表（`--hosts` 或 `--inventory`）
-2. 加载 JSON 指令包
-3. 对每台主机并发执行：
-   - SSH 连接
-   - 架构检测
-   - 上传/复用 Runner
+1. 解析目标主机列表（`--hosts`/`--targets` 或 `--inventory`）
+2. 加载 JSON 指令包（exec）或按 deploy 步骤生成指令包
+3. 对每台主机并发执行（goroutine + 信号量限流）：
+   - SSH 连接（TOFU 主机密钥校验）
+   - 架构检测（`uname -m` → GOARCH）
+   - 按架构构建并上传 Runner / AOT 应用二进制（首次上传后本地缓存复用）
    - 发送指令包
-   - 收集输出
+   - 收集输出与退出码
 4. 汇总结果，输出 JSON 摘要
 
-**并发控制**：
-- `--parallel` 参数限制并发数
-- 默认并发数：10
+**并发与构建去重**：
+- `--parallel` 参数限制并发主机数（默认 10），实现为信号量
+- `buildOnce`（sync.Once 按构建键去重，singleflight 模式）保证同一架构的二进制在并发主机间只编译一次
+- AOT 模式下 `binary.exec` 指令的失败会如实上报；deploy 汇总为 `partial`/`failed` 时返回非零退出码，审计日志不记成功
 
 **结果汇总格式**：
 ```json
@@ -425,72 +449,70 @@ make build-runner-linux-arm64
 
 ## 4. 执行模式
 
-### 4.1 Runner 模式（解释执行）
+### 4.1 本地解释执行（opsctl run）
 
-**适用场景**：
-- 简单任务（<100行，无第三方 Go 库）
-- 紧急故障处理（零编译延迟）
-- 本地调试和 REPL
+**适用场景**：本地调试、REPL、快速验证
 
 **工作流程**：
 ```
 脚本源码 → Lexer → Parser → AST → Interpreter → 执行结果
 ```
 
-**特点**：
-- 无需编译，即时执行
-- 通过 SSH 下发预编译 Runner 二进制
-- 发送 JSON 指令包，Runner 解释执行
-- 适合快速迭代和调试
+**能力边界**：全语言支持（`if`/`for`/`while`/`fn`/`ensure`/`parallel`）。但带 `on` 子句的 `task` 会报错，提示改用 `opsctl deploy`（本地执行无法路由远程主机）。
 
-**命令示例**：
 ```bash
-# 本地解释执行
-opsctl run script.ops
-
-# 远程解释执行
-opsctl exec --hosts host1,host2 --instructions script.ops
+opsctl run script.ops [--dry-run]
 ```
 
-### 4.2 AOT 编译模式
+`--dry-run` 下 `ensure` 的 apply 步骤只打印不执行。
 
-**适用场景**：
-- 复杂业务逻辑
-- 需要第三方 Go 库（`import go "..."`）
-- 生产环境部署（需要高性能）
+### 4.2 Runner 模式（opsctl deploy --mode runner）
+
+**适用场景**：线性脚本的零编译远程执行
 
 **工作流程**：
 ```
-脚本源码 → Lexer → Parser → AST → CodeGen → Go 源码 → go build → 静态二进制
+脚本源码 → Lexer → Parser → AST → 指令包生成（JSON）→ SSH 下发 → ops-runner 执行
+```
+
+**能力边界（重要）**：
+- 只支持**线性脚本**：调用、`let`、`report`、`alert`、`log`
+- `if`/`for`/`while`/`fn`/`ensure`/`parallel` 和运行期计算表达式会**报错拒绝**——不会静默降级或误翻译
+- task 的 `on` 子句在此模式下生效：支持精确名 / `user@host` / glob（`path.Match`）匹配 `--targets` 目标；变量与动态选择器报错
+- 旧指令包中的历史别名（`sys.load.avg`、`net.http.get` 等）在 runner 侧透明解析为 canonical 名
+
+**退出码**（ops-runner）：0=全部成功，1=部分失败，2=全部失败，3=协议错误。
+
+### 4.3 AOT 编译模式（opsctl deploy --mode aot / opsctl build）
+
+**适用场景**：完整语言（含 `ensure`/`parallel`）的远程执行、生产部署
+
+**工作流程**：
+```
+脚本源码 → Lexer → Parser → AST → CodeGen → Go 源码 → go build（按目标架构交叉编译）
+→ SSH 上传 → 远程执行 → 结果回收（binary.exec 失败如实上报）
 ```
 
 **特点**：
-- 编译为静态二进制，零依赖
-- 支持交叉编译（amd64 → arm64）
+- 按目标机架构（`uname -m` 探测）交叉编译，真实上传执行
+- 支持全语言（`if`/`for`/`while`/`fn`/`ensure`/`parallel`）
 - 编译缓存加速重复构建
-- 适合生产环境
+- **task 级 `on` 路由不支持**（会报错）：自包含二进制无法知道自己落在哪台主机，为避免误路由到全部目标而拒绝
+- 不支持第三方 Go 库（`import "go ..."` 直接报错）
 
-**命令示例**：
 ```bash
-# 本地编译执行
-opsctl build --input script.ops --output binary
-./binary
-
-# 交叉编译
-opsctl build --input script.ops --output binary --target-arch linux/arm64
+# 手动编译
+opsctl build --source script.ops --output binary --target-arch linux/arm64
 ```
 
-### 4.3 模式自动选择
-
-**选择策略**（`mode_selector.go`）：
+### 4.4 模式自动选择（--mode auto，默认）
 
 | 条件 | 选择模式 | 原因 |
 |------|---------|------|
-| 脚本 < 100 行，无 `import go` | Runner | 逻辑简单，指令包分发高效 |
-| 脚本 ≥ 100 行，或有 `import go` | AOT | 需要 Go 生态支持 |
+| 脚本含控制流/函数/ensure/parallel（`RequiresAOT` 命中） | AOT | 线性指令 VM 无法精确表达 |
+| 指令包生成试验成功 | Runner | 线性脚本，指令包分发最高效 |
+| 指令包生成试验失败（生成器拒绝） | AOT | 与生成器保持一致，永不漂移 |
 | 用户强制指定 | 按用户选择 | `--mode runner|aot|auto` |
-
-**默认行为**：`--mode auto`（自动选择）
 
 ---
 
@@ -638,7 +660,7 @@ opsctl build --input script.ops --output binary --target-arch linux/arm64
        │
        ▼
 ┌─────────────┐
-│  写入缓存   │  存储到 ~/.cache/opslang/compilation/
+│  写入缓存   │  存储到 ~/.opsctl/cache/（编译缓存）
 └──────┬──────┘
        │
        ▼
@@ -647,11 +669,39 @@ opsctl build --input script.ops --output binary --target-arch linux/arm64
 └─────────────┘
 ```
 
+> Runner 二进制缓存目录为 `~/.cache/opslang/runners/`（可用 `OPSLANG_CACHE_DIR` 覆盖）。
+
 ---
 
-## 6. 扩展指南
+## 6. SSH 安全
 
-### 6.1 添加新的标准库函数
+### 6.1 主机密钥 TOFU 校验
+
+默认对每条 SSH 连接执行 **TOFU（Trust On First Use，首次信任）** 主机密钥校验（`internal/sshx/hostkey.go`）：
+
+- 已知主机 + 密钥匹配 → 通过
+- 已知主机 + **密钥不一致 → 拒绝连接**（可能存在中间人攻击）
+- 未知主机 → 记录密钥后放行（首次信任）
+
+已知主机文件独立维护，不污染用户 OpenSSH 状态：
+
+- 默认：`~/.ssh/opslang_known_hosts`
+- 可用环境变量 `OPSLANG_KNOWN_HOSTS` 覆盖
+
+历史版本使用 `InsecureIgnoreHostKey` 完全跳过校验，现已移除；仅当显式传入 `--insecure-host-key` 逃生开关（仅限实验室环境）时才跳过校验。
+
+### 6.2 分发/收集凭据
+
+`file.distribute` / `file.collect` 的 SSH 凭据从环境变量读取：
+
+- `OPSLANG_SSH_PASSWORD` — 密码认证
+- `OPSLANG_SSH_KEY` — 私钥路径
+
+---
+
+## 7. 扩展指南
+
+### 7.1 添加新的标准库函数
 
 **步骤**：
 
@@ -690,31 +740,36 @@ func TestSwap(t *testing.T) {
 }
 ```
 
-3. **在 Runner 中注册**（`internal/runner/registry.go`）
+3. **在 opsspec 表中登记**（`internal/opsspec/spec.go`）——canonical 名称、参数名、可用范围，这是一致性测试的依据
 
 ```go
-func init() {
-    Registry["sys.swap"] = func(args map[string]interface{}) (interface{}, error) {
-        return sys.Swap()
+// internal/opsspec/spec.go
+{Name: "sys.swap"},
+```
+
+4. **在 Runner 中注册**（`internal/runner/registry.go`）
+
+```go
+r.Register("sys.swap", func(args map[string]interface{}) (interface{}, error) {
+    return sys.Swap()
+})
+```
+
+5. **在解释器 bridge 中注册**（`internal/interpreter/sdk_bridge.go`）
+
+```go
+interp.builtins["sys.swap"] = func(args ...interface{}) (interface{}, error) {
+    r, err := sys.Swap()
+    if err != nil {
+        return nil, err
     }
+    return structToMap(r)
 }
 ```
 
-4. **在解释器中注册**（`internal/interpreter/interpreter.go`）
+6. **在 AOT codegen 中支持**（`internal/compiler/codegen.go`）——三引擎一致性测试会强制上述注册与 opsspec 表对齐，缺一处即测试失败
 
-```go
-func (i *Interpreter) registerDefaults() {
-    i.registerBuiltin("sys.swap", func(args ...Object) (Object, error) {
-        result, err := sys.Swap()
-        if err != nil {
-            return nil, err
-        }
-        return structToObject(result), nil
-    })
-}
-```
-
-### 6.2 添加新的 AST 节点类型
+### 7.2 添加新的 AST 节点类型
 
 **步骤**：
 
@@ -756,7 +811,7 @@ func (g *Generator) genCustomStmt(stmt *ast.CustomStmt) {
 }
 ```
 
-### 6.3 添加新的 CLI 命令
+### 7.3 添加新的 CLI 命令
 
 **步骤**：
 
@@ -795,7 +850,7 @@ func runCustom(args []string, flag string) error {
 }
 ```
 
-### 6.4 添加新的安全特性
+### 7.4 添加新的安全特性
 
 **权限分级扩展**（`internal/security/privilege.go`）：
 
@@ -834,7 +889,7 @@ func LogCustomEvent(event *AuditEvent) error {
 }
 ```
 
-### 6.5 测试指南
+### 7.5 测试指南
 
 **单元测试**：
 ```bash
@@ -866,7 +921,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build ./...
 CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...
 ```
 
-### 6.6 贡献流程
+### 7.6 贡献流程
 
 1. Fork 项目仓库
 2. 创建功能分支：`git checkout -b feature/new-feature`
@@ -888,6 +943,15 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...
 
 ---
 
+## 8. Roadmap（未实现）
+
+以下能力**尚未实现**，架构文档不以现有功能描述它们：
+
+- **`for ... in ...` 遍历循环语法** — 只支持 C 风格 for 循环
+- **`import "go <包路径>"` 第三方 Go 库** — 所有引擎报错拒绝
+- **分层中继（relay）架构** — 原 `internal/relay` 已删除
+- **文件传输压缩、断点续传、内容哈希去重分发** — `file.distribute`/`file.collect` 为直接 SFTP 传输
+
 ## 附录
 
 ### A. 关键字列表
@@ -898,18 +962,21 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...
 | `fn` | 函数定义 | `fn add(a, b) { return a + b }` |
 | `if` | 条件语句 | `if x > 0 { ... }` |
 | `else` | 条件分支 | `else { ... }` |
-| `for` | 循环语句 | `for i in list { ... }` |
+| `for` | C 风格循环 | `for let i = 0; i < 10; i = i + 1 { ... }` |
 | `while` | 循环语句 | `while x > 0 { ... }` |
 | `return` | 返回语句 | `return result` |
-| `task` | 任务声明 | `task "name" on targets { ... }` |
-| `on` | 目标声明 | `on ["host1", "host2"]` |
-| `ensure` | 幂等声明 | `ensure condition { actions }` |
+| `task` | 任务声明 | `task "name" on "web*" { ... }` |
+| `on` | 目标声明 | `on "host1"` |
+| `ensure` | 幂等声明 | `ensure cond { actions } notify expr` |
 | `report` | 报告输出 | `report { key: value }` |
 | `metric` | 指标输出 | `metric(name, value, labels)` |
 | `log` | 日志输出 | `log("message")` |
 | `alert` | 告警输出 | `alert("warning")` |
-| `import` | 导入语句 | `import go "package"` |
+| `parallel` | 并行块 | `parallel { ... }` |
+| `privilege` | 权限声明 | `privilege: admin` |
+| `import` | 导入（声明性） | `import sys` |
 | `nil` | 空值 | `let x = nil` |
+| `true` / `false` | 布尔字面量 | `let ok = true` |
 
 ### B. 标准库函数完整列表
 

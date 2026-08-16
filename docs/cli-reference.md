@@ -9,11 +9,12 @@
 1. [opsctl version](#opsctl-version)
 2. [opsctl run](#opsctl-run)
 3. [opsctl build](#opsctl-build)
-4. [opsctl exec](#opsctl-exec)
-5. [opsctl repl](#opsctl-repl)
-6. [退出码](#退出码)
-7. [环境变量](#环境变量)
-8. [附录：配置文件格式](#附录配置文件格式)
+4. [opsctl deploy](#opsctl-deploy)
+5. [opsctl exec](#opsctl-exec)
+6. [opsctl repl](#opsctl-repl)
+7. [退出码](#退出码)
+8. [环境变量](#环境变量)
+9. [附录：配置文件格式](#附录配置文件格式)
 
 ---
 
@@ -60,6 +61,7 @@ opsctl run [flags] <script.ops>
 |------|--------|------|--------|------|
 | `--json` | - | bool | `false` | 以 JSON 格式输出结果 |
 | `-v` | `--verbose` | bool | `false` | 打印执行细节（如解析的语句数量） |
+| `--dry-run` | - | bool | `false` | 干运行模式：`ensure` 的 apply 步骤只打印将执行的动作，不实际执行 |
 
 ### 输出模式
 
@@ -180,6 +182,85 @@ Build successful!
 - 交叉编译使用 `CGO_ENABLED=0`，生成的二进制为纯静态链接，可直接在目标机器运行。
 - 相同脚本 + 相同目标架构，第二次编译 < 5 秒（缓存命中）。
 - 编译产物大小已通过 `-ldflags "-s -w"` 优化。
+- 含 `import "go <包路径>"`（第三方 Go 库）的脚本会编译报错——该能力未实现。
+
+---
+
+## opsctl deploy
+
+解析 OpsLang 脚本，按所选模式编译或生成指令包，部署到远程主机执行并汇总结果。
+
+### 用法
+
+```bash
+opsctl deploy [flags] <script.ops>
+```
+
+必须提供 `--targets` 或 `--inventory`（至少一个）。
+
+### 参数
+
+| 参数 | 短选项 | 类型 | 默认值 | 说明 |
+|------|--------|------|--------|------|
+| `--targets` | - | string | - | 目标主机列表（逗号分隔 `user@host`） |
+| `--inventory` | - | string | - | Inventory 文件路径（YAML） |
+| `--parallel` | - | int | `10` | 最大并发主机数 |
+| `--dry-run` | - | bool | `false` | 干运行模式，不实际执行变更操作 |
+| `--mode` | - | string | `auto` | 执行模式：`auto` / `runner` / `aot` |
+| `--user` | `-u` | string | `root` | 默认 SSH 用户名 |
+| `--key` | `-i` | string | - | SSH 私钥文件路径 |
+| `--password` | `-p` | string | - | SSH 密码 |
+| `--output` | `-o` | string | stdout | 结果输出文件路径 |
+| `--insecure-host-key` | - | bool | `false` | 跳过 SSH 主机密钥校验（默认启用 TOFU 校验；仅限实验室环境） |
+
+### 执行模式
+
+| 模式 | 说明 |
+|------|------|
+| `runner` | 生成 JSON 指令包经 SSH 下发 ops-runner 执行。**只支持线性脚本**（调用、`let`、`report`、`alert`、`log`）；遇到 `if`/`for`/`while`/`fn`/`ensure`/`parallel` 或运行期计算表达式会**报错拒绝**（不会静默降级）。task 的 `on` 子句支持精确名 / `user@host` / glob 匹配路由主机 |
+| `aot` | 编译成静态二进制，按目标机架构（`uname -m` 探测）交叉编译、真实上传并执行，失败如实报错。支持全语言（含 `ensure`/`parallel`）。**task 级 `on` 路由在 aot 模式不支持**（会报错）：自包含二进制无法知道自己落在哪台主机上，避免误路由 |
+| `auto`（默认） | 先尝试 runner 指令包生成，生成失败自动转 aot |
+
+### 输出
+
+JSON 格式的执行汇总：
+
+```json
+{
+  "task_id": "examples_check_cpu-1755330000000000000",
+  "script": "check_cpu.ops",
+  "started_at": "2026-08-16T10:00:00Z",
+  "finished_at": "2026-08-16T10:00:12Z",
+  "status": "success",
+  "targets": ["host1", "host2"],
+  "results": {
+    "host1": {"status": "success", "exit_code": 0},
+    "host2": {"status": "failed", "exit_code": 1, "error": "timeout"}
+  }
+}
+```
+
+### 示例
+
+```bash
+# 自动模式部署到两台主机
+opsctl deploy deploy_app.ops --targets root@web1,root@web2
+
+# 强制 runner 模式（线性脚本）
+opsctl deploy collect.ops --targets web1,web2 --mode runner --key ~/.ssh/id_rsa
+
+# 强制 AOT 模式（含 ensure/parallel 的完整语言）
+opsctl deploy ensure_service.ops --inventory hosts.yaml --mode aot
+
+# 干运行
+opsctl deploy deploy_app.ops --targets web1 --dry-run
+```
+
+### 注意事项
+
+- `status` 为 `failed` 或 `partial` 时命令返回非零退出码，且审计日志不会记录为成功。
+- 脚本含 `import "go <包路径>"` 时直接报错拒绝。
+- task 的 `on` 子句选不中任何 deploy 目标时报错。
 
 ---
 
@@ -210,6 +291,7 @@ opsctl exec [flags]
 | `--parallel` | - | int | `10` | 最大并发主机数 |
 | `--dry-run` | - | bool | `false` | 干运行模式，不实际执行变更操作 |
 | `--runner-path` | - | string | - | 预构建 Runner 二进制路径（跳过自动构建） |
+| `--insecure-host-key` | - | bool | `false` | 跳过 SSH 主机密钥校验（默认启用 TOFU 校验；仅限实验室环境） |
 | `--output` | `-o` | string | stdout | 结果输出文件路径 |
 
 ### 输出
@@ -258,7 +340,7 @@ $ opsctl exec --hosts root@web1 --instructions tasks.json -o result.json
 
 - Runner 二进制在同一架构下只上传一次，后续复用缓存。
 - 按 Ctrl+C 或发送 SIGTERM 信号可优雅中断，已启动的远程任务会尝试清理。
-- 任意一台主机执行失败，整体退出码为 1。
+- 部分失败（`partial`，部分主机未完成）退出码为 1；全部失败（`failed`）退出码为 2；全部成功退出码为 0。具体结果见 JSON 输出。
 - `--hosts` 格式支持 `user@host` 或纯 `host`（纯 host 时使用 `--user` 指定的用户）。
 
 ---
@@ -279,7 +361,9 @@ opsctl repl
 
 ```
 OpsLang REPL v0.1.0
-Type 'help' for help, 'exit' or 'quit' to leave.
+Type OpsLang expressions. Ctrl+D to exit, Ctrl+C to cancel line.
+
+SDK builtins loaded: sys.*, file.*, net.*, process.*, service.*, pkg.*, time.*, json.*, yaml.*
 ops>
 ```
 
@@ -339,12 +423,25 @@ ops> if true {
 
 ## 退出码
 
+### opsctl 退出码
+
 | 退出码 | 含义 |
 |--------|------|
 | `0` | 执行成功 |
-| `1` | 执行失败（脚本错误、远程主机部分失败等） |
+| `1` | 部分失败：`opsctl deploy` 部分主机未完成、`opsctl exec` 部分主机失败 |
+| `2` | 全部失败：`opsctl exec` 所有主机失败 |
+| 其他非零 | 参数错误、脚本解析/运行错误、`opsctl deploy` 部署失败等 |
 
-`opsctl exec` 只要有一台主机执行失败，整体返回 1。
+### ops-runner 退出码
+
+远程主机上的 ops-runner 进程按指令执行结果返回：
+
+| 退出码 | 含义 |
+|--------|------|
+| `0` | 全部指令成功（status "ok"） |
+| `1` | 部分指令失败（status "partial"） |
+| `2` | 全部指令失败（status "failed"） |
+| `3` | 协议/用法错误（输入损坏、不支持的版本） |
 
 ---
 
@@ -352,10 +449,11 @@ ops> if true {
 
 | 变量 | 说明 |
 |------|------|
-| `OPS_SSH_KEY` | SSH 私钥路径（`--key` 未指定时使用） |
-| `OPS_SSH_USER` | 默认 SSH 用户（覆盖 `--user` 默认值 `root`） |
-| `OPS_RUNNER_PATH` | 预构建 Runner 路径（`--runner-path` 未指定时使用） |
-| `OPS_CACHE_DIR` | 编译缓存目录（默认 `$HOME/.opsctl/cache`） |
+| `OPSLANG_KNOWN_HOSTS` | SSH 主机密钥 TOFU 已知主机文件路径（默认 `~/.ssh/opslang_known_hosts`） |
+| `OPSLANG_SSH_PASSWORD` | `file.distribute` / `file.collect` 传输使用的 SSH 密码 |
+| `OPSLANG_SSH_KEY` | `file.distribute` / `file.collect` 传输使用的 SSH 私钥路径 |
+| `OPSLANG_CACHE_DIR` | Runner 编译缓存目录（默认 `~/.cache/opslang/runners/`） |
+| `OPSLANG_PROJECT_ROOT` | 覆盖项目根目录探测（开发调试用） |
 
 ---
 

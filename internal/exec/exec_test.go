@@ -286,7 +286,7 @@ func TestRunnerCachePath(t *testing.T) {
 	if !filepath.IsAbs(path) {
 		t.Errorf("expected absolute path, got %q", path)
 	}
-	expected := filepath.Join(rc.cacheDir, "ops-runner-linux-amd64")
+	expected := filepath.Join(rc.cacheDir, "ops-runner-v3-linux-amd64")
 	if path != expected {
 		t.Errorf("path = %q, want %q", path, expected)
 	}
@@ -295,7 +295,7 @@ func TestRunnerCachePath(t *testing.T) {
 func TestRunnerCachePathArm64(t *testing.T) {
 	rc := newRunnerCache("/project")
 	path := rc.getCachedPath("linux", "arm64")
-	expected := filepath.Join(rc.cacheDir, "ops-runner-linux-arm64")
+	expected := filepath.Join(rc.cacheDir, "ops-runner-v3-linux-arm64")
 	if path != expected {
 		t.Errorf("path = %q, want %q", path, expected)
 	}
@@ -491,7 +491,7 @@ func TestGetRunnerBinaryCachedHit(t *testing.T) {
 	}
 
 	// Create a fake cached runner.
-	cachedPath := filepath.Join(cacheDir, "ops-runner-linux-amd64")
+	cachedPath := filepath.Join(cacheDir, "ops-runner-v3-linux-amd64")
 	if err := os.WriteFile(cachedPath, []byte("fake"), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1063,7 +1063,7 @@ func TestExecuteOnHostWithMockSSHServer(t *testing.T) {
 
 	// Create a fake runner binary for upload.
 	runnerDir := t.TempDir()
-	runnerPath := filepath.Join(runnerDir, "ops-runner-linux-amd64")
+	runnerPath := filepath.Join(runnerDir, "ops-runner-v3-linux-amd64")
 	if err := os.WriteFile(runnerPath, []byte("fake binary"), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1139,7 +1139,7 @@ func TestExecuteOnHostArchDetectionFailure(t *testing.T) {
 	}
 
 	runnerDir := t.TempDir()
-	runnerPath := filepath.Join(runnerDir, "ops-runner-linux-amd64")
+	runnerPath := filepath.Join(runnerDir, "ops-runner-v3-linux-amd64")
 	if err := os.WriteFile(runnerPath, []byte("fake binary"), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1320,7 +1320,7 @@ func TestExecuteWithMockSSHServer(t *testing.T) {
 
 	// Create a fake runner binary.
 	runnerDir := t.TempDir()
-	runnerPath := filepath.Join(runnerDir, "ops-runner-linux-amd64")
+	runnerPath := filepath.Join(runnerDir, "ops-runner-v3-linux-amd64")
 	if err := os.WriteFile(runnerPath, []byte("fake binary"), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -1747,5 +1747,51 @@ func TestGetRunnerBinaryNoCacheNoBuild(t *testing.T) {
 	_, err := e.getRunnerBinary("linux", "amd64")
 	if err == nil {
 		t.Error("expected error when build fails")
+	}
+}
+
+// The AOT deploy path references the uploaded binary via a placeholder;
+// the executor must rewrite it to the per-host remote path and leave all
+// other values untouched.
+func TestMarshalInstructionsPlaceholderReplacement(t *testing.T) {
+	pkg := &runner.InstructionPackage{
+		Version: "1.0",
+		Instructions: []runner.Instruction{
+			{
+				Op:   "binary.exec",
+				Args: map[string]interface{}{"path": AppBinaryPlaceholder, "args": []interface{}{"--flag", AppBinaryPlaceholder}},
+			},
+			{Op: "log", Args: map[string]interface{}{"message": "keep " + AppBinaryPlaceholder + " literal?"}},
+		},
+	}
+
+	data, err := marshalInstructions(pkg, "/tmp/ops-123/app")
+	if err != nil {
+		t.Fatalf("marshalInstructions: %v", err)
+	}
+
+	var decoded runner.InstructionPackage
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatal(err)
+	}
+
+	if decoded.Instructions[0].Args["path"] != "/tmp/ops-123/app" {
+		t.Errorf("path = %v", decoded.Instructions[0].Args["path"])
+	}
+	args := decoded.Instructions[0].Args["args"].([]interface{})
+	if args[1] != "/tmp/ops-123/app" {
+		t.Errorf("nested placeholder not rewritten: %v", args)
+	}
+
+	// No placeholder == no rewrite pass needed; output still valid.
+	data2, err := marshalInstructions(&runner.InstructionPackage{
+		Version:      "1.0",
+		Instructions: []runner.Instruction{{Op: "sys.cpu.usage"}},
+	}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data2), "sys.cpu.usage") {
+		t.Error("placeholder-free package corrupted")
 	}
 }

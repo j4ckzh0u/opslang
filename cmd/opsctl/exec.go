@@ -8,23 +8,26 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	opsexec "github.com/opslang/opslang/internal/exec"
 	"github.com/opslang/opslang/internal/inventory"
+	"github.com/opslang/opslang/internal/security"
 	"github.com/spf13/cobra"
 )
 
 var (
-	execHosts        []string
-	execUser         string
-	execKey          string
-	execPassword     string
-	execInventory    string
-	execInstructions string
-	execParallel     int
-	execDryRun       bool
-	execRunnerPath   string
-	execOutputFile   string
+	execHosts           []string
+	execUser            string
+	execKey             string
+	execPassword        string
+	execInventory       string
+	execInstructions    string
+	execParallel        int
+	execDryRun          bool
+	execRunnerPath      string
+	execOutputFile      string
+	execInsecureHostKey bool
 )
 
 var execCmd = &cobra.Command{
@@ -52,6 +55,7 @@ func init() {
 	execCmd.Flags().IntVar(&execParallel, "parallel", 10, "Maximum concurrent hosts")
 	execCmd.Flags().BoolVar(&execDryRun, "dry-run", false, "Execute in dry-run mode")
 	execCmd.Flags().StringVar(&execRunnerPath, "runner-path", "", "Path to pre-built runner binary")
+	execCmd.Flags().BoolVar(&execInsecureHostKey, "insecure-host-key", false, "Skip SSH host key verification (lab use only)")
 	execCmd.Flags().StringVarP(&execOutputFile, "output", "o", "", "Output file path (default: stdout)")
 }
 
@@ -103,17 +107,38 @@ func runExecCommand() error {
 
 	// Create and run executor.
 	executor := &opsexec.Executor{
-		Targets:      targets,
-		Instructions: pkg,
-		User:         execUser,
-		KeyFile:      execKey,
-		Password:     execPassword,
-		Parallel:     execParallel,
-		DryRun:       execDryRun,
-		RunnerPath:   execRunnerPath,
+		Targets:                   targets,
+		Instructions:              pkg,
+		User:                      execUser,
+		KeyFile:                   execKey,
+		Password:                  execPassword,
+		Parallel:                  execParallel,
+		DryRun:                    execDryRun,
+		RunnerPath:                execRunnerPath,
+		InsecureSkipHostKeyVerify: execInsecureHostKey,
+		TaskID:                    fmt.Sprintf("exec-%d", time.Now().UnixNano()),
 	}
 
 	summary := executor.Execute(ctx)
+
+	// Audit every remote execution: operator, targets, outcome.
+	auditEntry := security.NewAuditEntry(
+		summary.TaskID,
+		execInstructions,
+		"system",
+		append([]string(nil), execHosts...),
+		execUser,
+		"instruction-exec",
+		execDryRun,
+	)
+	if summary.Status == "success" {
+		auditEntry.SetStatus("success", summary.FinishedAt.Sub(summary.StartedAt).Milliseconds())
+	} else {
+		auditEntry.SetError(fmt.Errorf("execution status: %s", summary.Status))
+	}
+	if err := security.NewAuditLogger("").Log(auditEntry); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to write audit log: %v\n", err)
+	}
 
 	// Marshal result to JSON.
 	result, err := json.MarshalIndent(summary, "", "  ")
@@ -131,7 +156,11 @@ func runExecCommand() error {
 	}
 
 	// Exit with non-zero code if any host failed.
-	if summary.Status == "failed" {
+	switch summary.Status {
+	case "failed":
+		os.Exit(2)
+	case "partial":
+		// Some hosts succeeded, some did not: the operator must notice.
 		os.Exit(1)
 	}
 

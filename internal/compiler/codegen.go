@@ -44,18 +44,18 @@ var sdkMapping = map[string]sdkFunc{
 	"file.template": {pkg: "file", goName: "Template", args: true, params: []string{"s", "d"}},
 
 	// net
-	"net.http_get":  {pkg: "net", goName: "HTTPGet", args: true, params: []string{"s"}},
-	"net.http_post": {pkg: "net", goName: "HTTPPost", args: true, params: []string{"s", "s"}},
-	"net.tcp_check": {pkg: "net", goName: "TCPConnect", args: true, params: []string{"s", "i"}},
+	"net.http_get":   {pkg: "net", goName: "HTTPGet", args: true, params: []string{"s"}},
+	"net.http_post":  {pkg: "net", goName: "HTTPPost", args: true, params: []string{"s", "s"}},
+	"net.tcp_check":  {pkg: "net", goName: "TCPConnect", args: true, params: []string{"s", "i"}},
 	"net.dns_lookup": {pkg: "net", goName: "DNSLookup", args: true, params: []string{"s"}},
 	"net.interfaces": {pkg: "net", goName: "Interfaces"},
 
 	// process
-	"process.list":          {pkg: "process", goName: "List"},
-	"process.find_by_name":  {pkg: "process", goName: "FindByName", args: true, params: []string{"s"}},
-	"process.find_by_port":  {pkg: "process", goName: "FindByPort", args: true, params: []string{"i"}},
-	"process.kill":          {pkg: "process", goName: "Kill", args: true, params: []string{"i", "s"}},
-	"process.exec":          {pkg: "process", goName: "Exec", args: true, params: []string{"s", "l"}},
+	"process.list":         {pkg: "process", goName: "List"},
+	"process.find_by_name": {pkg: "process", goName: "FindByName", args: true, params: []string{"s"}},
+	"process.find_by_port": {pkg: "process", goName: "FindByPort", args: true, params: []string{"i"}},
+	"process.kill":         {pkg: "process", goName: "Kill", args: true, params: []string{"i", "s"}},
+	"process.exec":         {pkg: "process", goName: "Exec", args: true, params: []string{"s", "l"}},
 
 	// service
 	"service.status":  {pkg: "service", goName: "Status", args: true, params: []string{"s"}},
@@ -72,7 +72,7 @@ var sdkMapping = map[string]sdkFunc{
 	"pkg.list":    {pkg: "pkg", goName: "List"},
 
 	// time
-	"time.now":    {pkg: "time", goName: "Now"},
+	"time.now":    {pkg: "time", goName: "Now", noErr: true},
 	"time.format": {pkg: "time", goName: "Format", args: true, params: []string{"i64", "s"}},
 	"time.parse":  {pkg: "time", goName: "Parse", args: true, params: []string{"s", "s"}},
 	"time.since":  {pkg: "time", goName: "Since", args: true, params: []string{"i64"}},
@@ -113,6 +113,9 @@ type sdkFunc struct {
 	// A nil params (with args true) means all-string convention and is
 	// only allowed where the SDK really takes strings.
 	params []string
+	// noErr: the SDK function returns only a value (no error), e.g.
+	// time.Now(). Generated code must not unpack two returns from it.
+	noErr bool
 }
 
 // generateSDKCall renders the converted Go call for an SDK function.
@@ -406,6 +409,40 @@ func opsToMap(v interface{}) map[string]interface{} {
 		return m
 	}
 	return map[string]interface{}{}
+}
+
+// opsNormalize converts SDK typed values (structs, typed slices) into
+// generic interface{} shapes via a JSON round-trip. DSL list indexing and
+// len() operate on []interface{}; a []ProcessInfo failed both silently.
+func opsNormalize(v interface{}) interface{} {
+	switch v.(type) {
+	case nil, bool, string, int64, float64, int, []interface{}, map[string]interface{}:
+		return v
+	default:
+		data, err := json.Marshal(v)
+		if err != nil {
+			return v
+		}
+		var out interface{}
+		if json.Unmarshal(data, &out) == nil {
+			return out
+		}
+		return v
+	}
+}
+
+// opsLen is len() over normalized dynamic values.
+func opsLen(v interface{}) int64 {
+	switch c := opsNormalize(v).(type) {
+	case string:
+		return int64(len(c))
+	case []interface{}:
+		return int64(len(c))
+	case map[string]interface{}:
+		return int64(len(c))
+	default:
+		return int64(0)
+	}
 }
 
 // opsToMapDeep converts SDK result structs into generic maps via a JSON
@@ -911,7 +948,7 @@ func (g *CodeGenerator) genExpr(expr ast.Expression) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("func() interface{} { l := %s; i := %s; if v, ok := l.([]interface{}); ok { idx := int(toFloat(i)); if idx >= 0 && idx < len(v) { return v[idx] }; return nil }; return opsToMapDeep(l)[opsStr(i)] }()", left, idx), nil
+		return fmt.Sprintf("func() interface{} { l := opsNormalize(%s); i := %s; if v, ok := l.([]interface{}); ok { idx := int(toFloat(i)); if idx >= 0 && idx < len(v) { return v[idx] }; return nil }; return opsToMapDeep(l)[opsStr(i)] }()", left, idx), nil
 
 	case *ast.MemberExpression:
 		obj, err := g.genExpr(e.Object)
@@ -1003,7 +1040,7 @@ func (g *CodeGenerator) genCall(e *ast.CallExpression) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("func() interface{} { v := %s; switch c := v.(type) { case string: return int64(len(c)); case []interface{}: return int64(len(c)); case map[string]interface{}: return int64(len(c)); default: return int64(0) } }()", arg), nil
+		return fmt.Sprintf("opsLen(%s)", arg), nil
 
 	case "str":
 		if len(e.Args) != 1 {
@@ -1084,6 +1121,9 @@ func (g *CodeGenerator) genCall(e *ast.CallExpression) (string, error) {
 		}
 
 		call := sdk.generateSDKCall(alias, args)
+		if sdk.noErr {
+			return fmt.Sprintf("func() interface{} { return %s }()", call), nil
+		}
 		// A runtime SDK error aborts the binary with a non-zero exit code.
 		// Turning errors into strings used to let failed deploys "succeed".
 		return fmt.Sprintf("func() interface{} { v, err := %s; if err != nil { opsFatal(err) }; return v }()", call), nil

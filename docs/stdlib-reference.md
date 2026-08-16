@@ -26,6 +26,25 @@ OpsLang 标准库（`ops-core-sdk`）提供一组面向运维场景的原子操�
 - **统一错误处理**：函数签名统一为 `(T, error)` 模式，错误包含明确的错误码和消息
 - **异构架构**：所有包支持 `linux/amd64` 和 `linux/arm64` 交叉编译
 
+### 规范名称（canonical）与旧别名
+
+每个原子操作的规范名称、参数与可用范围定义在 `internal/opsspec`（单一事实来源），三个执行引擎（解释器 bridge、runner registry、AOT codegen）由一致性测试强制对齐。本文档中的函数名均为规范名称。
+
+Runner 指令包中仍可使用以下旧别名，查询时会透明映射到规范名称，但新生成的指令包只输出规范名称：
+
+| 旧别名 | 规范名称 |
+|---|---|
+| `sys.load.avg` | `sys.load` |
+| `sys.host.info` | `sys.os` |
+| `net.http.get` | `net.http_get` |
+| `net.http.post` | `net.http_post` |
+| `net.tcp.ping` | `net.tcp_check` |
+| `net.dns.resolve` | `net.dns_lookup` |
+| `process.find.by_name` | `process.find_by_name` |
+| `process.find.by_port` | `process.find_by_port` |
+| `file.info` | `file.stat` |
+| `pkg.search` | `pkg.info` |
+
 ### OpsLang 调用语法
 
 在 OpsLang 脚本中，通过点号（`.`）表示法调用标准库函数，映射规则如下：
@@ -42,12 +61,12 @@ OpsLang 标准库（`ops-core-sdk`）提供一组面向运维场景的原子操�
 ## 2. sys 包 - 系统信息
 
 > Go 包路径：`pkg/ops-core-sdk/sys`
-> 依赖：`gopsutil`（纯 Go）
+> 依赖：`gopsutil/v4`（纯 Go）
 > 所有函数不依赖 shell。
 
 ### 2.1 sys.cpu.usage()
 
-获取 CPU 使用率。
+获取 CPU 使用率。以 500ms 窗口两次采样计算，反映**当前负载**而非开机以来的平均值（调用约耗时 500ms）。
 
 **参数**：无
 
@@ -89,8 +108,8 @@ print("CPU 使用率: " + str(cpu.percent) + "%")
 
 ```ops
 let cpus = sys.cpu.info()
-for cpu in cpus {
-    print("型号: " + cpu.model_name + ", 核心: " + str(cpu.cores))
+for let i = 0; i < len(cpus); i = i + 1 {
+    print("型号: " + cpus[i].model_name + ", 核心: " + str(cpus[i].cores))
 }
 ```
 
@@ -190,8 +209,8 @@ print("根分区使用率: " + str(disk.used_percent) + "%")
 
 ```ops
 let parts = sys.disk.partitions()
-for p in parts {
-    print(p.device + " -> " + p.mountpoint + " (" + p.fstype + ")")
+for let i = 0; i < len(parts); i = i + 1 {
+    print(parts[i].device + " -> " + parts[i].mountpoint + " (" + parts[i].fstype + ")")
 }
 ```
 
@@ -264,9 +283,9 @@ print("已运行 " + str(up.uptime) + " 秒")
 
 ---
 
-### 2.10 sys.host.info()
+### 2.10 sys.os()
 
-获取综合主机信息。
+获取综合主机/操作系统信息。（Runner 指令包中的旧别名 `sys.host.info` 映射到本函数。）
 
 **参数**：无
 
@@ -287,7 +306,7 @@ print("已运行 " + str(up.uptime) + " 秒")
 **示例**：
 
 ```ops
-let info = sys.host.info()
+let info = sys.os()
 print("系统: " + info.platform + " " + info.platform_version)
 print("内核: " + info.kernel_version + " (" + info.kernel_arch + ")")
 ```
@@ -313,8 +332,8 @@ print("内核: " + info.kernel_version + " (" + info.kernel_arch + ")")
 
 ```ops
 let users = sys.users()
-for u in users {
-    print(u.user + " 从 " + u.host + " 登录")
+for let i = 0; i < len(users); i = i + 1 {
+    print(users[i].user + " 从 " + users[i].host + " 登录")
 }
 ```
 
@@ -322,7 +341,7 @@ for u in users {
 
 ### 2.12 sys.net.interfaces()
 
-获取网络接口列表。
+获取网络接口列表（与 `net.interfaces()` 等价，返回相同结构）。
 
 **参数**：无
 
@@ -340,8 +359,8 @@ for u in users {
 
 ```ops
 let ifaces = sys.net.interfaces()
-for iface in ifaces {
-    print(iface.name + ": " + iface.hardware_addr)
+for let i = 0; i < len(ifaces); i = i + 1 {
+    print(ifaces[i].name + ": " + ifaces[i].hardware_addr)
 }
 ```
 
@@ -592,7 +611,8 @@ file.chmod("/opt/app/run.sh", "0755")
 
 ```ops
 let listing = file.list("/etc/nginx/conf.d")
-for f in listing.files {
+for let i = 0; i < len(listing.files); i = i + 1 {
+    let f = listing.files[i]
     print(f.name + " (" + str(f.size) + " bytes)")
 }
 ```
@@ -655,6 +675,167 @@ print("SHA256: " + hash.checksum)
 
 let md5 = file.checksum("/opt/app/release.tar.gz", "md5")
 print("MD5: " + md5.checksum)
+```
+
+---
+
+### 3.12 file.append(path, content)
+
+向文件末尾追加内容；文件不存在时以 0644 创建，绝不截断已有内容。
+
+**参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `path` | `string` | 是 | 文件路径 |
+| `content` | `string` | 是 | 追加内容 |
+
+**返回类型**：`AppendResult`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `path` | `string` | 文件路径 |
+| `size` | `int64` | 追加后文件总大小（字节） |
+
+**示例**：
+
+```ops
+file.append("/var/log/app.log", "service restarted\n")
+```
+
+---
+
+### 3.13 file.template(path, vars)
+
+读取模板文件并渲染 `{{key}}` 占位符（用 `vars` 字典中的同名键替换；未知占位符原样保留；原文件不被修改）。
+
+**参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `path` | `string` | 是 | 模板文件路径 |
+| `vars` | `dict` | 是 | 占位符键值字典 |
+
+**返回类型**：`TemplateResult`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `path` | `string` | 模板文件路径 |
+| `content` | `string` | 渲染后的内容 |
+| `size` | `int64` | 渲染结果长度（字节） |
+
+**示例**：
+
+```ops
+// config.yaml.tpl 内容：listen {{port}}\nenv {{env}}
+let rendered = file.template("config.yaml.tpl", {"env": "prod", "port": 8080})
+file.write("/etc/myapp/config.yaml", rendered.content)
+```
+
+---
+
+### 3.14 file.distribute(source, targets, options)
+
+将本地文件经真实 SSH/SFTP 分发到多台远程主机。**仅控制器侧可用**（远程 runner 与 AOT 代码生成器不暴露此函数）。
+
+**参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `source` | `string` | 是 | 本地源文件路径 |
+| `targets` | `list` | 是 | 目标列表，每项为 `{host, port, user, dest}` |
+| `options` | `dict` | 是 | 选项字典（见下） |
+
+`targets[].dest` 远程目标路径**按字面使用**：结尾带 `/` 表示目录（保留源文件名），否则视为完整目标文件路径，不做目录猜测。
+
+**options 字段**：
+
+| 字段 | 类型 | 默认 | 说明 |
+|---|---|---|---|
+| `checksum` | `bool` | `false` | 传输后计算远端 SHA-256 并与本地比对（真校验） |
+| `mode` | `string` | - | 传输后在远端 chmod 的八进制权限（如 `"0644"`） |
+| `parallel` | `int` | `5` | 最大并发传输数 |
+| `retries` | `int` | `3` | 每台主机的总尝试次数 |
+
+**SSH 凭据**：从环境变量 `OPSLANG_SSH_PASSWORD`（密码认证）或 `OPSLANG_SSH_KEY`（私钥路径）读取。
+
+**返回类型**：`DistributeResult`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `total` | `int` | 目标主机总数 |
+| `succeeded` | `int` | 成功数 |
+| `failed` | `int` | 失败数 |
+| `skipped` | `int` | 跳过数 |
+| `results` | `[]HostDistributeResult` | 每台主机的结果（`host`, `status`, `changed`, `checksum`, `size` 等） |
+| `duration_ms` | `int64` | 总耗时（毫秒） |
+
+**示例**：
+
+```ops
+let result = file.distribute(
+    "/opt/release/app.tar.gz",
+    [
+        {"host": "web1", "port": 22, "user": "root", "dest": "/opt/app/"},
+        {"host": "web2", "port": 22, "user": "root", "dest": "/opt/app/"}
+    ],
+    {"checksum": true, "mode": "0644", "parallel": 10, "retries": 3}
+)
+if result.failed > 0 {
+    alert("分发有失败主机: " + str(result.failed) + " 台")
+}
+```
+
+---
+
+### 3.15 file.collect(source, targets, options)
+
+从多台远程主机收集文件到本地目录（真实 SSH/SFTP 下载）。**仅控制器侧可用**。
+
+**参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `source` | `string` | 是 | 远程源文件路径（逐台收集同一路径） |
+| `targets` | `list` | 是 | 目标列表，每项为 `{host, port, user}` |
+| `options` | `dict` | 是 | 选项字典（见下） |
+
+**options 字段**：
+
+| 字段 | 类型 | 默认 | 说明 |
+|---|---|---|---|
+| `dest_dir` | `string` | - | 本地目标目录 |
+| `parallel` | `int` | `5` | 最大并发数 |
+| `retries` | `int` | `3` | 每台主机的总尝试次数 |
+
+**SSH 凭据**：同 `file.distribute`，读取 `OPSLANG_SSH_PASSWORD` / `OPSLANG_SSH_KEY`。
+
+**返回类型**：`CollectResult`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `total` | `int` | 目标主机总数 |
+| `succeeded` | `int` | 成功数 |
+| `failed` | `int` | 失败数 |
+| `results` | `[]HostCollectResult` | 每台主机的结果 |
+| `dest_dir` | `string` | 本地目标目录 |
+| `duration_ms` | `int64` | 总耗时（毫秒） |
+
+**示例**：
+
+```ops
+let result = file.collect(
+    "/var/log/app/error.log",
+    [
+        {"host": "web1", "port": 22, "user": "root"},
+        {"host": "web2", "port": 22, "user": "root"}
+    ],
+    {"dest_dir": "/tmp/collected", "parallel": 10}
+)
+report {
+    succeeded: result.succeeded,
+    failed: result.failed
+}
 ```
 
 ---
@@ -760,7 +941,7 @@ if check.connected {
 
 ---
 
-### 4.4 net.dns_lookup(domain)
+### 4.4 net.dns_lookup(host)
 
 执行 DNS 解析。
 
@@ -768,7 +949,7 @@ if check.connected {
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `domain` | `string` | 是 | 域名 |
+| `host` | `string` | 是 | 域名 |
 
 **返回类型**：`DNSResult`
 
@@ -782,8 +963,8 @@ if check.connected {
 
 ```ops
 let dns = net.dns_lookup("example.com")
-for addr in dns.addresses {
-    print("IP: " + addr)
+for let i = 0; i < len(dns.addresses); i = i + 1 {
+    print("IP: " + dns.addresses[i])
 }
 ```
 
@@ -791,7 +972,7 @@ for addr in dns.addresses {
 
 ### 4.5 net.interfaces()
 
-获取网络接口信息。
+获取网络接口信息（与 `sys.net.interfaces()` 等价）。
 
 **参数**：无
 
@@ -809,9 +990,9 @@ for addr in dns.addresses {
 
 ```ops
 let ifaces = net.interfaces()
-for iface in ifaces {
-    if iface.up {
-        print(iface.name + ": " + iface.hardware_addr)
+for let i = 0; i < len(ifaces); i = i + 1 {
+    if ifaces[i].up {
+        print(ifaces[i].name + ": " + ifaces[i].hardware_addr)
     }
 }
 ```
@@ -847,9 +1028,9 @@ for iface in ifaces {
 
 ```ops
 let procs = process.list()
-for p in procs {
-    if p.cpu_percent > 50.0 {
-        alert("高 CPU 进程: " + p.name + " (" + str(p.cpu_percent) + "%)")
+for let i = 0; i < len(procs); i = i + 1 {
+    if procs[i].cpu_percent > 50.0 {
+        alert("高 CPU 进程: " + procs[i].name + " (" + str(procs[i].cpu_percent) + "%)")
     }
 }
 ```
@@ -904,16 +1085,16 @@ if len(procs) > 0 {
 
 ---
 
-### 5.4 process.exec(command, args)
+### 5.4 process.exec(command, args...)
 
-执行外部命令（不经过 shell）。
+执行外部命令（不经过 shell）。参数为可变参数，逐个传入。
 
 **参数**：
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `command` | `string` | 是 | 可执行文件路径 |
-| `args` | `[]string` | 否 | 命令参数列表 |
+| `command` | `string` | 是 | 可执行文件路径或命令名 |
+| `args...` | `string` | 否 | 命令参数（逐个传入，不是列表） |
 
 **返回类型**：`ExecResult`
 
@@ -929,9 +1110,42 @@ if len(procs) > 0 {
 **示例**：
 
 ```ops
-let result = process.exec("/usr/bin/df", ["-h", "/"])
+let result = process.exec("ps", "-eo", "pid,comm")
 if result.exit_code == 0 {
     print(result.stdout)
+}
+```
+
+---
+
+### 5.5 process.kill(pid, signal)
+
+向进程发送信号（不经过 shell）。
+
+**参数**：
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|---|---|---|---|---|
+| `pid` | `int` | 是 | - | 进程 ID |
+| `signal` | `string` | 否 | `"TERM"` | 信号名（如 `"TERM"`, `"KILL"`, `"HUP"`） |
+
+**返回类型**：`KillResult`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `pid` | `int` | 进程 ID |
+| `signal` | `string` | 实际发送的信号名 |
+| `sent` | `bool` | 是否发送成功 |
+
+**示例**：
+
+```ops
+let procs = process.find_by_name("rogue-agent")
+for let i = 0; i < len(procs); i = i + 1 {
+    let r = process.kill(procs[i].pid, "TERM")
+    if !r.sent {
+        alert("kill 失败: PID " + str(procs[i].pid))
+    }
 }
 ```
 
@@ -1102,7 +1316,7 @@ service.disable("apache2")
 ## 7. pkg 包 - 包管理
 
 > Go 包路径：`pkg/ops-core-sdk/pkg`（Go 包名：`opspkg`）
-> 自动检测 apt / yum / dnf 包管理器
+> **仅支持 Linux**：通过检测 apt-get / yum / dnf 二进制工作；未检测到受支持的包管理器时（如 macOS）调用会报错
 
 ### 7.1 pkg.install(name)
 
@@ -1210,7 +1424,7 @@ print("已安装 " + str(len(pkgs)) + " 个软件包")
 
 > Go 包路径：`pkg/ops-core-sdk/json`（Go 包名：`opsjson`）
 
-### 8.1 json.encode(data)
+### 8.1 json.encode(value)
 
 将数据编码为 JSON 字符串（带缩进格式化）。
 
@@ -1218,7 +1432,7 @@ print("已安装 " + str(len(pkgs)) + " 个软件包")
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `data` | `interface{}` | 是 | 待编码的数据 |
+| `value` | `interface{}` | 是 | 待编码的数据 |
 
 **返回类型**：`EncodeResult`
 
@@ -1267,7 +1481,7 @@ print("主机: " + decoded.data.host)
 
 > Go 包路径：`pkg/ops-core-sdk/yaml`（Go 包名：`opsyaml`）
 
-### 9.1 yaml.encode(data)
+### 9.1 yaml.encode(value)
 
 将数据编码为 YAML 字符串。
 
@@ -1275,7 +1489,7 @@ print("主机: " + decoded.data.host)
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `data` | `interface{}` | 是 | 待编码的数据 |
+| `value` | `interface{}` | 是 | 待编码的数据 |
 
 **返回类型**：`EncodeResult`
 
@@ -1350,7 +1564,7 @@ print("Unix 时间戳: " + str(now.unix))
 
 ---
 
-### 10.2 time.format(unix, layout)
+### 10.2 time.format(ts, layout)
 
 格式化 Unix 时间戳。
 
@@ -1358,7 +1572,7 @@ print("Unix 时间戳: " + str(now.unix))
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |---|---|---|---|---|
-| `unix` | `int64` | 是 | - | Unix 时间戳（秒） |
+| `ts` | `int64` | 是 | - | Unix 时间戳（秒） |
 | `layout` | `string` | 否 | `"2006-01-02 15:04:05"` | Go 风格时间格式 |
 
 **返回类型**：`FormatResult`
@@ -1509,12 +1723,13 @@ sys.LoadAvg         → { load1, load5, load15 }
 sys.HostnameInfo    → { hostname, fqdn }
 sys.UptimeInfo      → { uptime, boot_time }
 sys.HostInfoResult  → { hostname, uptime, boot_time, os, platform, platform_family,
-                        platform_version, kernel_version, kernel_arch }
+                        platform_version, kernel_version, kernel_arch }   // sys.os()
 sys.UserInfo        → { user, terminal, host, start_time }
-sys.NetInterface    → { name, hardware_addr, mtu, up, addresses }
+sys.NetInterface    → { name, hardware_addr, mtu, up, addresses }        // sys.net.interfaces()
 
 file.FileContent    → { path, content, size }
 file.WriteResult    → { path, size }
+file.AppendResult   → { path, size }
 file.CopyResult     → { src, dst, size }
 file.MoveResult     → { src, dst }
 file.DeleteResult   → { path, existed }
@@ -1524,6 +1739,9 @@ file.ChmodResult    → { path, mode }
 file.ListResult     → { path, files }
 file.MkdirResult    → { path, created }
 file.ChecksumResult → { path, algorithm, checksum, size }
+file.TemplateResult → { path, content, size }
+file.DistributeResult → { total, succeeded, failed, skipped, results, duration_ms }
+file.CollectResult    → { total, succeeded, failed, results, dest_dir, duration_ms }
 
 net.HTTPResponse    → { status_code, status, body, headers, content_length }
 net.TCPResult       → { host, port, connected, latency_ms }
@@ -1533,6 +1751,7 @@ net.InterfaceInfo   → { name, hardware_addr, mtu, up, addresses }
 process.ProcessInfo → { pid, name, exe, cwd, status, username,
                         cpu_percent, memory_percent, create_time }
 process.ExecResult  → { command, args, stdout, stderr, exit_code, pid }
+process.KillResult  → { pid, signal, sent }
 
 service.ServiceStatus → { name, active_state, sub_state, load_state, description,
                           main_pid, enabled, active }
@@ -1554,3 +1773,11 @@ time.DurationResult → { seconds, minutes, hours, human_readable }
 time.SleepResult    → { milliseconds }
 time.DiffResult     → { seconds, minutes, hours, human_readable }
 ```
+
+## 附录：Roadmap（未实现）
+
+以下传输优化能力**尚未实现**，当前 `file.distribute` / `file.collect` 为直接 SSH/SFTP 传输：
+
+- 传输压缩
+- 断点续传
+- 内容哈希去重分发（相同内容只传一次）

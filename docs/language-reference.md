@@ -15,12 +15,13 @@
 11. [任务声明](#11-任务声明)
 12. [导入](#12-导入)
 13. [完整语法示例](#13-完整语法示例)
+14. [Roadmap（未实现特性）](#14-roadmap未实现特性)
 
 ---
 
 ## 1. 概述
 
-OpsLang 是一门面向运维领域的领域特定语言（DSL），语法风格为类 Go + Python 混合。采用静态类型与类型推断，关键字数量控制在 16 个以内，力求用最少的语法表达完整的运维意图。
+OpsLang 是一门面向运维领域的领域特定语言（DSL），语法风格为类 Go + Python 混合。OpsLang 是**动态类型**语言（变量无类型标注，运行期决定类型），关键字共 20 个，力求用最少的语法表达完整的运维意图。
 
 **关键字一览：**
 
@@ -33,12 +34,16 @@ OpsLang 是一门面向运维领域的领域特定语言（DSL），语法风格
 | `while` | 条件循环 |
 | `return` | 函数返回 |
 | `task` / `on` | 任务声明 |
-| `import` | 模块导入 |
+| `import` | 模块导入（声明性） |
+| `privilege` | 脚本权限级别声明 |
 | `true` / `false` | 布尔字面量 |
 | `nil` | 空值 |
 | `report` | 结构化报告输出 |
 | `alert` | 告警输出 |
 | `ensure` | 声明式幂等 |
+| `metric` | 指标输出 |
+| `log` | 日志输出 |
+| `parallel` | 并行块 |
 
 ---
 
@@ -173,7 +178,7 @@ let items = [1, 2, 3]
 let config = {"host": "localhost"}
 ```
 
-`let` 在同一作用域中不可重复声明同一变量名。
+`let` 在同一作用域中不可重复声明同一变量名（重复声明报错；重新赋值用 `=`）。
 
 ### 4.2 赋值（=）
 
@@ -203,13 +208,16 @@ count = count + 1   // count 现在是 1
 | `/` | 除法 | `10 / 3` |
 | `%` | 取模 | `10 % 3` |
 
-**类型自动提升规则：** 如果任意操作数为 `float`，结果为 `float`：
+**类型提升与整除规则：** 两个 `int` 相除为**整除**；任意操作数为 `float` 时结果为 `float`：
 
 ```ops
 let a = 1 + 2       // 3（int）
 let b = 1.0 + 2     // 3.0（float）
-let c = 10 / 3      // 3.333...（float，因为除法默认返回 float）
+let c = 10 / 3      // 3（int 整除，舍去小数）
+let d = 10 / 3.0    // 3.333...（float）
 ```
+
+除零和模零均为运行时错误。
 
 **字符串拼接：** `+` 运算符用于字符串时执行拼接。非字符串类型会自动转换为字符串再拼接：
 
@@ -230,6 +238,8 @@ let msg = "CPU: " + str(95.5) + "%"       // "CPU: 95.5%"
 | `>=` | 大于等于 | `x >= 1` |
 
 比较表达式返回 `bool` 类型（`true` 或 `false`）。
+
+**相等比较是严格的：** 类型不同的值不相等（`1 != "1"`）；数值在 int/float 之间可以跨类型按数值比较（`1 == 1.0` 为 `true`）。
 
 ### 5.3 逻辑运算符
 
@@ -303,7 +313,7 @@ if [1] {
 
 ### 6.2 for 循环
 
-C 风格的 for 循环，包含初始化、条件、更新三部分：
+C 风格的 for 循环是唯一支持的 for 形式，包含初始化、条件、更新三部分：
 
 ```ops
 for let i = 0; i < 10; i = i + 1 {
@@ -314,7 +324,7 @@ for let i = 0; i < 10; i = i + 1 {
 语法结构：`for <初始化语句>; <条件表达式>; <更新语句> { <循环体> }`
 
 ```ops
-// 遍历列表
+// 遍历列表（按下标）
 let items = [10, 20, 30]
 for let i = 0; i < len(items); i = i + 1 {
     print(items[i])
@@ -327,6 +337,8 @@ for let i = 0; i < 3; i = i + 1 {
     }
 }
 ```
+
+**注意：** 语言没有 `for x in list` 遍历语法；遍历集合请使用下标循环（见第 14 节 Roadmap）。
 
 ### 6.3 while 循环
 
@@ -450,14 +462,15 @@ str([1, 2])    // "[1, 2]"
 
 ### int
 
-将值转换为整数（int64）：
+将值转换为整数（int64）。字符串采用**严格解析**，含非数字字符即报错：
 
 ```ops
 int(3.14)      // 3（浮点截断）
-int("42")      // 42（字符串解析）
+int("42")      // 42（字符串严格解析）
 int(true)      // 1
 int(false)     // 0
 int(nil)       // 0
+int("42abc")   // 运行时错误（严格解析，不截断前缀）
 ```
 
 ### float
@@ -564,33 +577,41 @@ metric("request_latency_ms", 120, {"endpoint": "/api/health"})
 
 ## 10. 声明式幂等
 
-`ensure` 关键字用于声明期望的系统状态。系统会自动执行"检查 → 应用 → 验证"三步流程：
+`ensure` 关键字用于声明期望的系统状态。完整语法：
 
-```ops
-ensure file.exists("/etc/myapp/config") {
-    file.write("/etc/myapp/config", "default config content")
-}
+```
+ensure <条件表达式> {
+    <应用动作>
+} notify <表达式>
 ```
 
-**执行逻辑：**
+`notify` 子句可选。系统按"检查 → 应用 → 验证 → 通知"四步执行：
 
 1. **检查（Check）：** 先执行 `ensure` 后面的条件表达式
 2. **应用（Apply）：** 条件不满足时，执行 `{}` 内的操作
-3. **验证（Verify）：** 操作执行后再次检查条件是否满足
+3. **验证（Verify）：** 操作执行后再次检查条件；若仍不满足，**脚本报错退出**
+4. **通知（Notify）：** `notify` 表达式只在本次**实际发生了变更**（执行过 apply）之后才求值；条件本来就满足时不触发
 
 ```ops
-// 确保服务正在运行
-ensure service.status("nginx").running {
-    service.start("nginx")
-}
+// 确保目录存在，创建成功后输出通知
+ensure file.exists("/etc/myapp").exists {
+    file.mkdir("/etc/myapp")
+} notify log("created /etc/myapp")
 
-// 确保配置文件内容正确
-ensure file.checksum("/etc/app.conf", "sha256") == expected_hash {
-    file.write("/etc/app.conf", correct_content)
-}
+// 确保配置文件存在
+ensure file.exists("/etc/app.conf").exists {
+    file.write("/etc/app.conf", "default")
+} notify alert("app.conf was missing and has been recreated")
 ```
 
-`ensure` 天然支持 `--dry-run` 模式：在 dry-run 下只输出"需要做什么"而不实际执行变更操作。
+**dry-run 支持：** `opsctl run --dry-run` 下，`ensure` 的 apply 步骤只打印将要执行的动作而不实际执行，check/verify 照常评估。
+
+```ops
+// 判断条件可以是任意表达式，例如校验和比较
+ensure file.checksum("/etc/app.conf", "sha256").checksum == expected_hash {
+    file.write("/etc/app.conf", correct_content)
+} notify log("app.conf rewritten")
+```
 
 ---
 
@@ -599,7 +620,7 @@ ensure file.checksum("/etc/app.conf", "sha256") == expected_hash {
 `task ... on` 语法用于声明需要在目标主机上执行的任务：
 
 ```ops
-task "deploy" on targets {
+task "deploy" on "web1" {
     let cpu = sys.cpu.usage()
     let mem = sys.memory.info()
 
@@ -613,69 +634,69 @@ task "deploy" on targets {
 
 语法结构：`task "<任务名称>" on <目标> { <任务体> }`
 
-**targets 的取值方式（Phase 4 完整实现）：**
+**执行方式（重要）：**
+
+- `opsctl run` 本地执行时，带 `on` 子句的 task 会**报错**并提示改用 `opsctl deploy`（本地执行无法路由到远程主机）；不带 `on` 的 task 体在本地执行。
+- `opsctl deploy` 下目标路由生效：task 体只发送到 `on` 子句选中的目标主机；task 之外的顶层语句发送到全部目标。
+
+**on 子句的选择器（deploy 模式）：**
 
 ```ops
-// 内联主机列表
-task "check" on ["host1", "host2", "host3"] {
-    // ...
-}
-
-// 从变量引用
-let targets = ["web1", "web2"]
-task "deploy" on targets {
-    // ...
-}
-
-// 分组表达式
-task "collect" on group("env=prod") {
-    // ...
-}
+// 精确主机名 / user@host，或 glob 模式
+task "check" on "web1" { }
+task "check" on "deploy@web1.example.com" { }
+task "check" on "web*" { }
 ```
 
-**注意：** 当前阶段（Phase 2），任务体内的代码在本地执行。远程执行能力将在 Phase 4 中实现。
+选择器按精确名、主机地址、`user@host` 三种形式与 deploy 目标列表匹配，支持 `path.Match` 语法的 glob。以下写法在 deploy 时会**报错拒绝**：
+
+```ops
+let targets = ["web1", "web2"]
+task "deploy" on targets { }        // 错误：变量选择器无法在部署期解析
+
+task "collect" on group("env=prod") { }  // 错误：动态选择器不支持
+```
+
+若 `on` 子句选不中任何 deploy 目标，deploy 同样报错。
 
 ### parallel 块
 
-`parallel` 块用于声明其中的操作可以并行执行：
+`parallel` 块内的语句并发执行（每个语句一个 goroutine）：
 
 ```ops
-task "multi_check" on targets {
-    parallel {
-        let cpu = sys.cpu.usage()
-        let mem = sys.memory.info()
-        let disk = sys.disk.usage("/")
-    }
+parallel {
+    let cpu = sys.cpu.usage()
+    let mem = sys.memory.info()
+    let disk = sys.disk.usage("/")
+}
 
-    report {
-        cpu: cpu,
-        mem: mem,
-        disk: disk
-    }
+report {
+    cpu: cpu,
+    mem: mem,
+    disk: disk
 }
 ```
+
+**语义：**
+
+- 块内各语句并发执行，互不共享中间写入
+- 块内的 `let` 声明按**源码顺序**确定性合并回外层作用域，因此执行结束后外层可以访问这些变量
+- 任一语句出错则整个 parallel 块报错
 
 ---
 
 ## 12. 导入
 
-使用 `import` 关键字导入模块或标准库：
-
-```ops
-import sys
-import file
-import net
-```
-
-导入后可以调用模块中的函数：
+`import` 是**声明性**的：标准库内置函数全局注册，无需导入即可直接调用（`import sys` 之类的写法只是显式声明意图，不产生副作用）：
 
 ```ops
 import sys
 
-let cpu = sys.cpu.usage()
-let mem = sys.memory.info()
+let cpu = sys.cpu.usage()   // 不写 import sys 也可以直接调用
 print("CPU: " + str(cpu.percent) + "%")
 ```
+
+**第三方 Go 库导入未实现：** `import "go <包路径>"` 在 `opsctl run` 与 `opsctl deploy/build` 中都会报错拒绝（见 Roadmap）。
 
 ---
 
@@ -762,12 +783,12 @@ report {
 // 确保应用配置正确
 let expected_config = "worker_processes auto;\nlisten 80;\n"
 
-ensure file.exists("/etc/nginx/conf.d/app.conf") {
+ensure file.exists("/etc/nginx/conf.d/app.conf").exists {
     file.write("/etc/nginx/conf.d/app.conf", expected_config)
     log("已写入 nginx 配置")
 }
 
-ensure service.status("nginx").running {
+ensure service.status("nginx").active {
     service.start("nginx")
     log("已启动 nginx 服务")
 }
@@ -778,8 +799,8 @@ metric("config_managed", 1, {"file": "/etc/nginx/conf.d/app.conf"})
 ### 示例 5：任务声明
 
 ```ops
-// 多主机信息采集任务
-task "collect_info" on targets {
+// 多主机信息采集任务（通过 opsctl deploy --targets web1,web2 执行）
+task "collect_info" on "web*" {
     let cpu = sys.cpu.usage()
     let mem = sys.memory.info()
     let disks = sys.disk.usage("/")
@@ -825,6 +846,16 @@ report {
     total: result
 }
 ```
+
+---
+
+## 14. Roadmap（未实现特性）
+
+以下语法特性**尚未实现**，本文档不以现有功能描述它们：
+
+- **`for ... in ...` 遍历循环**：不存在此语法，遍历集合请用 C 风格下标循环
+- **`import "go <包路径>"` 第三方 Go 库**：所有执行引擎均报错拒绝
+- **task `on` 变量 / 动态选择器**：deploy 只支持字面量主机选择器（精确名 / `user@host` / glob）
 
 ---
 

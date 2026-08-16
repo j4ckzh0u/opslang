@@ -13,10 +13,23 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/opslang/opslang/internal/ast"
+	opsexec "github.com/opslang/opslang/internal/exec"
 	"github.com/opslang/opslang/internal/interpreter"
 	"github.com/opslang/opslang/internal/parser"
 	"github.com/opslang/opslang/internal/runner"
 )
+
+// hasRoutedTask reports whether the program contains a task with an
+// on-clause (deploy-only example).
+func hasRoutedTask(prog *ast.Program) bool {
+	for _, stmt := range prog.Statements {
+		if task, ok := stmt.(*ast.TaskStatement); ok && task.Targets != nil {
+			return true
+		}
+	}
+	return false
+}
 
 func TestExamplesAllRun(t *testing.T) {
 	_, thisFile, _, _ := runtime.Caller(0)
@@ -44,6 +57,23 @@ func TestExamplesAllRun(t *testing.T) {
 			prog, err := p.Parse()
 			if err != nil {
 				t.Fatalf("parse error: %v", err)
+			}
+
+			// Deploy examples (task with on-clauses) must route, not run
+			// locally; everything else runs end to end.
+			if hasRoutedTask(prog) {
+				targets := []opsexec.Target{
+					{Name: "web-01", Host: "10.0.0.1", User: "root"},
+					{Name: "db-01", Host: "10.0.0.2", User: "root"},
+				}
+				steps, err := buildDeploySteps(prog, targets, "test")
+				if err != nil {
+					t.Fatalf("deploy example must build valid steps: %v", err)
+				}
+				if len(steps) == 0 {
+					t.Fatal("deploy example produced no steps")
+				}
+				return
 			}
 
 			interp := interpreter.New(nil)

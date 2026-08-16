@@ -166,14 +166,14 @@ func Names(avail *Availability) []string {
 // accept these at lookup time for backward compatibility with existing
 // instruction packages, but generators only emit canonical names.
 var Aliases = map[string]string{
-	"sys.load.avg":        "sys.load",
-	"sys.host.info":       "sys.os",
-	"net.http.get":        "net.http_get",
-	"net.http.post":       "net.http_post",
-	"net.tcp.ping":        "net.tcp_check",
-	"net.dns.resolve":     "net.dns_lookup",
+	"sys.load.avg":         "sys.load",
+	"sys.host.info":        "sys.os",
+	"net.http.get":         "net.http_get",
+	"net.http.post":        "net.http_post",
+	"net.tcp.ping":         "net.tcp_check",
+	"net.dns.resolve":      "net.dns_lookup",
 	"process.find.by_name": "process.find_by_name",
 	"process.find.by_port": "process.find_by_port",
-	"file.info":           "file.stat",
-	"pkg.search":          "pkg.info",
+	"file.info":            "file.stat",
+	"pkg.search":           "pkg.info",
 }

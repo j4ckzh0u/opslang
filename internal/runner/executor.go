@@ -84,11 +84,7 @@ func (e *Executor) resolveValue(value interface{}) interface{} {
 			return strings.TrimPrefix(v, varPrefix)
 		}
 		if strings.HasPrefix(v, varPrefix) {
-			name := v[1:]
-			if varVal, exists := e.vars[name]; exists {
-				return varVal
-			}
-			return nil // unresolved reference: yields nil, downstream ops validate
+			return e.resolveRef(v[1:])
 		}
 		return v
 	case []interface{}:
@@ -106,6 +102,46 @@ func (e *Executor) resolveValue(value interface{}) interface{} {
 	default:
 		return value
 	}
+}
+
+// resolveRef resolves "$name" and "$name.field.path" references against
+// executor variables, indexing into nested maps for each dotted segment.
+// SDK results are typed structs; they are converted to generic maps via a
+// JSON round-trip on first member access (mirroring the interpreter's
+// structToMap), so "$cpu.percent" works against any result type.
+func (e *Executor) resolveRef(ref string) interface{} {
+	parts := strings.Split(ref, ".")
+	current, ok := e.vars[parts[0]]
+	if !ok {
+		return nil // unresolved reference: yields nil, downstream ops validate
+	}
+	for _, field := range parts[1:] {
+		m, ok := asStringMap(current)
+		if !ok {
+			return nil
+		}
+		current, ok = m[field]
+		if !ok {
+			return nil
+		}
+	}
+	return current
+}
+
+// asStringMap converts maps (and SDK structs via JSON) to map[string]interface{}.
+func asStringMap(v interface{}) (map[string]interface{}, bool) {
+	if m, ok := v.(map[string]interface{}); ok {
+		return m, true
+	}
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, false
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, false
+	}
+	return m, true
 }
 
 // executeReport collects named variables into the output data map.

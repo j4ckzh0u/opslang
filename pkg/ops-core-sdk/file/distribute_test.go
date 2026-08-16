@@ -260,7 +260,6 @@ func TestDistribute_DefaultTransferFunc(t *testing.T) {
 	}
 }
 
-
 func TestComputeFileChecksum(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "test.txt")

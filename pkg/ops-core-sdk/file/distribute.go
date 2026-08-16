@@ -256,4 +256,3 @@ func computeFileChecksum(path string) (string, error) {
 	}
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
-

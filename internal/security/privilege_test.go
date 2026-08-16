@@ -176,7 +176,7 @@ func TestClassifyOperation(t *testing.T) {
 		{"file.delete is write", "file.delete", OpWrite},
 		{"file.copy is write", "file.copy", OpWrite},
 		{"file.mkdir is write", "file.mkdir", OpWrite},
-		{"file.template is write", "file.template", OpWrite},
+		{"file.template is read (renders, never writes)", "file.template", OpSystem},
 
 		{"process.exec is exec", "process.exec", OpExec},
 		{"process.kill is exec", "process.kill", OpExec},
