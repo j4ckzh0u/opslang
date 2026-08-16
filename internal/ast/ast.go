@@ -202,6 +202,28 @@ func (s *ImportStatement) String() string {
 	return fmt.Sprintf("import %q", s.Path)
 }
 
+// PrivilegeLevel represents the permission level of a script.
+type PrivilegeLevel string
+
+const (
+	PrivilegeReadOnly PrivilegeLevel = "read_only"
+	PrivilegeAdmin    PrivilegeLevel = "admin"
+	PrivilegeRoot     PrivilegeLevel = "root"
+)
+
+// PrivilegeStatement represents: privilege: read_only | admin | root
+// Must appear at the top of the script before any other statements.
+type PrivilegeStatement struct {
+	Position Position
+	Level    PrivilegeLevel
+}
+
+func (s *PrivilegeStatement) Pos() Position  { return s.Position }
+func (s *PrivilegeStatement) statementNode() {}
+func (s *PrivilegeStatement) String() string {
+	return fmt.Sprintf("privilege: %s", s.Level)
+}
+
 // ExpressionStatement wraps an expression used as a statement.
 type ExpressionStatement struct {
 	Position Position

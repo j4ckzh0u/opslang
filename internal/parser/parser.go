@@ -173,6 +173,8 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 		stmt, err = p.parseTaskStatement()
 	case token.IMPORT:
 		stmt, err = p.parseImportStatement()
+	case token.PRIVILEGE:
+		stmt, err = p.parsePrivilegeStatement()
 	case token.REPORT:
 		stmt, err = p.parseReportStatement()
 	case token.ALERT:
@@ -555,6 +557,41 @@ func (p *Parser) parseImportStatement() (*ast.ImportStatement, error) {
 	return &ast.ImportStatement{
 		Position: astPos(pos),
 		Path:     pathTok.Literal,
+	}, nil
+}
+
+// --- Privilege -------------------------------------------------------------
+
+func (p *Parser) parsePrivilegeStatement() (*ast.PrivilegeStatement, error) {
+	pos := p.current().Pos
+	p.advance() // consume 'privilege'
+
+	// Expect ':'
+	if _, err := p.expect(token.COLON); err != nil {
+		return nil, err
+	}
+
+	// Expect identifier: read_only, admin, or root
+	levelTok, err := p.expect(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+
+	var level ast.PrivilegeLevel
+	switch levelTok.Literal {
+	case "read_only":
+		level = ast.PrivilegeReadOnly
+	case "admin":
+		level = ast.PrivilegeAdmin
+	case "root":
+		level = ast.PrivilegeRoot
+	default:
+		return nil, fmt.Errorf("invalid privilege level: %s (must be read_only, admin, or root)", levelTok.Literal)
+	}
+
+	return &ast.PrivilegeStatement{
+		Position: astPos(pos),
+		Level:    level,
 	}, nil
 }
 

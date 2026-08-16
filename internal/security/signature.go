@@ -1,144 +1,155 @@
+// Package security implements permission checks, audit logging, resource limits, and signature verification.
 package security
 
 import (
 	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/x509"
-	"encoding/pem"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"hash"
+	"io"
 	"os"
-	"path/filepath"
 )
 
-// Sign signs the payload with the private key using Ed25519
-func Sign(payload []byte, privKey ed25519.PrivateKey) []byte {
-	return ed25519.Sign(privKey, payload)
+// newHash returns a new SHA256 hash.
+func newHash() hash.Hash {
+	return sha256.New()
 }
 
-// Verify verifies the signature of the payload with the public key
-func Verify(payload, sig []byte, pubKey ed25519.PublicKey) bool {
-	return ed25519.Verify(pubKey, payload, sig)
+// SignatureManager handles Ed25519 signature operations.
+type SignatureManager struct {
+	privateKey ed25519.PrivateKey
+	publicKey  ed25519.PublicKey
 }
 
-// GenerateKey generates a new Ed25519 key pair
-func GenerateKey() (ed25519.PublicKey, ed25519.PrivateKey, error) {
-	return ed25519.GenerateKey(rand.Reader)
-}
-
-// SavePublicKey saves the public key to a file in PEM format
-func SavePublicKey(path string, key ed25519.PublicKey) error {
-	// Create directory if it doesn't exist
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
+// NewSignatureManager creates a new signature manager.
+// If privateKey is nil, a new key pair is generated.
+func NewSignatureManager(privateKey ed25519.PrivateKey) *SignatureManager {
+	if privateKey == nil {
+		pub, priv, _ := ed25519.GenerateKey(rand.Reader)
+		return &SignatureManager{
+			privateKey: priv,
+			publicKey:  pub,
+		}
 	}
+	return &SignatureManager{
+		privateKey: privateKey,
+		publicKey:  privateKey.Public().(ed25519.PublicKey),
+	}
+}
 
-	// Marshal the public key to PKIX format
-	derBytes, err := x509.MarshalPKIXPublicKey(key)
+// Sign signs data and returns the signature.
+func (m *SignatureManager) Sign(data []byte) []byte {
+	return ed25519.Sign(m.privateKey, data)
+}
+
+// Verify verifies a signature against data.
+func (m *SignatureManager) Verify(data, signature []byte) bool {
+	return ed25519.Verify(m.publicKey, data, signature)
+}
+
+// PublicKey returns the public key.
+func (m *SignatureManager) PublicKey() ed25519.PublicKey {
+	return m.publicKey
+}
+
+// PrivateKey returns the private key.
+func (m *SignatureManager) PrivateKey() ed25519.PrivateKey {
+	return m.privateKey
+}
+
+// SignFile signs a file and returns the signature.
+func (m *SignatureManager) SignFile(path string) ([]byte, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("failed to marshal public key: %w", err)
+		return nil, fmt.Errorf("failed to read file: %w", err)
 	}
-
-	// Create PEM block
-	pemBlock := &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: derBytes,
-	}
-
-	// Write to file
-	if err := os.WriteFile(path, pem.EncodeToMemory(pemBlock), 0644); err != nil {
-		return fmt.Errorf("failed to write public key: %w", err)
-	}
-
-	return nil
+	return m.Sign(data), nil
 }
 
-// LoadPublicKey loads a public key from a PEM file
+// VerifyFile verifies a file's signature.
+func (m *SignatureManager) VerifyFile(path string, signature []byte) (bool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false, fmt.Errorf("failed to read file: %w", err)
+	}
+	return m.Verify(data, signature), nil
+}
+
+// SavePublicKey saves the public key to a file.
+func (m *SignatureManager) SavePublicKey(path string) error {
+	return os.WriteFile(path, m.publicKey, 0644)
+}
+
+// LoadPublicKey loads a public key from a file.
 func LoadPublicKey(path string) (ed25519.PublicKey, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read public key file: %w", err)
+		return nil, fmt.Errorf("failed to read public key: %w", err)
 	}
-
-	// Decode PEM block
-	block, _ := pem.Decode(data)
-	if block == nil {
-		return nil, fmt.Errorf("failed to decode PEM block")
+	if len(data) != ed25519.PublicKeySize {
+		return nil, fmt.Errorf("invalid public key size: expected %d, got %d", ed25519.PublicKeySize, len(data))
 	}
-
-	if block.Type != "PUBLIC KEY" {
-		return nil, fmt.Errorf("unexpected PEM block type: %s", block.Type)
-	}
-
-	// Parse the public key
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse public key: %w", err)
-	}
-
-	edKey, ok := pub.(ed25519.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf("key is not Ed25519")
-	}
-
-	return edKey, nil
+	return ed25519.PublicKey(data), nil
 }
 
-// SavePrivateKey saves the private key to a file in PEM format
-func SavePrivateKey(path string, key ed25519.PrivateKey) error {
-	// Create directory if it doesn't exist
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	// Marshal the private key to PKCS8 format
-	derBytes, err := x509.MarshalPKCS8PrivateKey(key)
-	if err != nil {
-		return fmt.Errorf("failed to marshal private key: %w", err)
-	}
-
-	// Create PEM block
-	pemBlock := &pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: derBytes,
-	}
-
-	// Write to file with restricted permissions
-	if err := os.WriteFile(path, pem.EncodeToMemory(pemBlock), 0600); err != nil {
-		return fmt.Errorf("failed to write private key: %w", err)
-	}
-
-	return nil
+// SavePrivateKey saves the private key to a file.
+func (m *SignatureManager) SavePrivateKey(path string) error {
+	return os.WriteFile(path, m.privateKey, 0600)
 }
 
-// LoadPrivateKey loads a private key from a PEM file
+// LoadPrivateKey loads a private key from a file.
 func LoadPrivateKey(path string) (ed25519.PrivateKey, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read private key file: %w", err)
+		return nil, fmt.Errorf("failed to read private key: %w", err)
 	}
-
-	// Decode PEM block
-	block, _ := pem.Decode(data)
-	if block == nil {
-		return nil, fmt.Errorf("failed to decode PEM block")
+	if len(data) != ed25519.PrivateKeySize {
+		return nil, fmt.Errorf("invalid private key size: expected %d, got %d", ed25519.PrivateKeySize, len(data))
 	}
+	return ed25519.PrivateKey(data), nil
+}
 
-	if block.Type != "PRIVATE KEY" {
-		return nil, fmt.Errorf("unexpected PEM block type: %s", block.Type)
-	}
+// SignatureToString converts a signature to hex string.
+func SignatureToString(sig []byte) string {
+	return hex.EncodeToString(sig)
+}
 
-	// Parse the private key
-	priv, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+// StringToSignature converts a hex string to signature.
+func StringToSignature(s string) ([]byte, error) {
+	return hex.DecodeString(s)
+}
+
+// PublicKeyToString converts a public key to hex string.
+func PublicKeyToString(pub ed25519.PublicKey) string {
+	return hex.EncodeToString(pub)
+}
+
+// StringToPublicKey converts a hex string to public key.
+func StringToPublicKey(s string) (ed25519.PublicKey, error) {
+	data, err := hex.DecodeString(s)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse private key: %w", err)
+		return nil, fmt.Errorf("invalid hex string: %w", err)
+	}
+	if len(data) != ed25519.PublicKeySize {
+		return nil, fmt.Errorf("invalid public key size")
+	}
+	return ed25519.PublicKey(data), nil
+}
+
+// ComputeChecksum computes SHA256 checksum of a file.
+func ComputeChecksum(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to open file: %w", err)
+	}
+	defer f.Close()
+
+	h := newHash()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", fmt.Errorf("failed to compute checksum: %w", err)
 	}
 
-	edKey, ok := priv.(ed25519.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf("key is not Ed25519")
-	}
-
-	return edKey, nil
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

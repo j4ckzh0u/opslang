@@ -17,6 +17,7 @@ import (
 	"github.com/opslang/opslang/internal/inventory"
 	"github.com/opslang/opslang/internal/parser"
 	"github.com/opslang/opslang/internal/runner"
+	"github.com/opslang/opslang/internal/security"
 	"github.com/spf13/cobra"
 )
 
@@ -80,6 +81,10 @@ func runDeployCommand(scriptPath string) error {
 		return fmt.Errorf("parse error: %w", err)
 	}
 
+	// Check privilege level.
+	scriptPriv := security.GetScriptPrivilege(prog)
+	fmt.Fprintf(os.Stderr, "Script privilege: %s\n", scriptPriv)
+
 	// Determine execution mode.
 	mode := resolveDeployMode(deployMode, prog)
 
@@ -116,14 +121,47 @@ func runDeployCommand(scriptPath string) error {
 
 	startedAt := time.Now().UTC()
 
+	// Create audit entry
+	auditEntry := security.NewAuditEntry(
+		generateTaskID(scriptPath),
+		scriptPath,
+		string(scriptPriv),
+		func() []string {
+			names := make([]string, len(targets))
+			for i, t := range targets {
+				names[i] = fmt.Sprintf("%s@%s", t.User, t.Host)
+			}
+			return names
+		}(),
+		deployUser,
+		mode,
+		deployDryRun,
+	)
+
+	// Create audit logger
+	auditLogger := security.NewAuditLogger("")
+
 	switch mode {
 	case "runner":
-		return deployRunnerMode(ctx, scriptPath, prog, targets, startedAt)
+		err = deployRunnerMode(ctx, scriptPath, prog, targets, startedAt)
 	case "aot":
-		return deployAOTMode(ctx, scriptPath, targets, startedAt)
+		err = deployAOTMode(ctx, scriptPath, targets, startedAt)
 	default:
-		return fmt.Errorf("unknown mode: %s", mode)
+		err = fmt.Errorf("unknown mode: %s", mode)
 	}
+
+	// Record audit
+	durationMs := time.Since(startedAt).Milliseconds()
+	if err != nil {
+		auditEntry.SetError(err)
+	} else {
+		auditEntry.SetStatus("success", durationMs)
+	}
+	if logErr := auditLogger.Log(auditEntry); logErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to write audit log: %v\n", logErr)
+	}
+
+	return err
 }
 
 // resolveDeployMode decides between runner and aot based on script features.
@@ -458,8 +496,9 @@ func outputDeployResult(summary *opsexec.Summary, startedAt time.Time, scriptPat
 		fmt.Println(string(result))
 	}
 
+	// Return error instead of os.Exit to allow audit logging
 	if summary.Status == "failed" {
-		os.Exit(1)
+		return fmt.Errorf("deployment failed")
 	}
 
 	return nil

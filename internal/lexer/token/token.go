@@ -21,7 +21,7 @@ const (
 	FALSE  // false
 	NIL    // nil
 
-	// Keywords (18)
+	// Keywords (19)
 	LET
 	FN
 	IF
@@ -32,6 +32,7 @@ const (
 	TASK
 	ON
 	IMPORT
+	PRIVILEGE
 	REPORT
 	ALERT
 	ENSURE
@@ -90,6 +91,7 @@ var tokenNames = map[TokenType]string{
 	TASK:      "TASK",
 	ON:        "ON",
 	IMPORT:    "IMPORT",
+	PRIVILEGE: "PRIVILEGE",
 	REPORT:    "REPORT",
 	ALERT:     "ALERT",
 	ENSURE:    "ENSURE",
@@ -168,6 +170,7 @@ var keywords = map[string]TokenType{
 	"task":   TASK,
 	"on":     ON,
 	"import": IMPORT,
+	"privilege": PRIVILEGE,
 	"true":   TRUE,
 	"false":  FALSE,
 	"nil":    NIL,

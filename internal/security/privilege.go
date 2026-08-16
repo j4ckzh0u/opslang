@@ -1,119 +1,146 @@
+// Package security implements permission checks and audit logging.
 package security
 
 import (
 	"fmt"
-	"strings"
+
+	"github.com/opslang/opslang/internal/ast"
 )
 
-// Privilege represents the privilege level of a script
-type Privilege int
+// OperationType represents the type of operation being performed.
+type OperationType string
 
 const (
-	ReadOnly Privilege = iota
-	Admin
-	Root
+	OpRead     OperationType = "read"
+	OpWrite    OperationType = "write"
+	OpExec     OperationType = "exec"
+	OpAdmin    OperationType = "admin"
+	OpSystem   OperationType = "system"
 )
 
-// String returns the string representation of the privilege level
-func (p Privilege) String() string {
-	switch p {
-	case ReadOnly:
-		return "read_only"
-	case Admin:
-		return "admin"
-	case Root:
-		return "root"
-	default:
-		return "unknown"
-	}
+// operationPermissions maps operations to their required privilege levels.
+var operationPermissions = map[OperationType]ast.PrivilegeLevel{
+	OpRead:   ast.PrivilegeReadOnly,
+	OpWrite:  ast.PrivilegeAdmin,
+	OpExec:   ast.PrivilegeAdmin,
+	OpAdmin:  ast.PrivilegeRoot,
+	OpSystem: ast.PrivilegeRoot,
 }
 
-// ParsePrivilege parses a string into a Privilege level
-func ParsePrivilege(s string) (Privilege, error) {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "read_only", "readonly":
-		return ReadOnly, nil
-	case "admin":
-		return Admin, nil
-	case "root":
-		return Root, nil
-	default:
-		return ReadOnly, fmt.Errorf("unknown privilege level: %s", s)
+// CheckPrivilege verifies that the script's privilege level allows the operation.
+func CheckPrivilege(scriptPriv ast.PrivilegeLevel, op OperationType) error {
+	required, ok := operationPermissions[op]
+	if !ok {
+		return fmt.Errorf("unknown operation type: %s", op)
 	}
+
+	if !privilegeAllows(scriptPriv, required) {
+		return fmt.Errorf("privilege denied: operation %s requires %s, but script has %s",
+			op, required, scriptPriv)
+	}
+
+	return nil
 }
 
-// mutationOps contains operations that modify system state
-var mutationOps = map[string]bool{
-	"file.write":      true,
-	"file.delete":     true,
-	"file.move":       true,
-	"file.copy":       true,
-	"file.append":     true,
-	"file.touch":      true,
-	"file.template":   true,
-	"service.start":   true,
-	"service.stop":    true,
-	"service.restart": true,
-	"service.enable":  true,
-	"pkg.install":     true,
-	"pkg.remove":      true,
-	"process.kill":    true,
-	"process.exec":    true,
-}
-
-// IsMutationOp checks if an operation is a mutation operation
-func IsMutationOp(op string) bool {
-	// Check exact match first
-	if mutationOps[op] {
-		return true
-	}
-
-	// Check prefix match for service.*
-	if strings.HasPrefix(op, "service.") {
-		return true
-	}
-
-	return false
-}
-
-// CanCall checks if the privilege level allows calling the operation
-func (p Privilege) CanCall(op string) bool {
-	if !IsMutationOp(op) {
-		return true // Read operations are always allowed
-	}
-
-	switch p {
-	case Root:
-		return true // Root can call everything
-	case Admin:
-		return true // Admin can call most mutations
-	case ReadOnly:
-		return false // ReadOnly cannot call mutations
+// privilegeAllows checks if 'has' privilege level allows 'required' level.
+// Hierarchy: root > admin > read_only
+func privilegeAllows(has, required ast.PrivilegeLevel) bool {
+	switch required {
+	case ast.PrivilegeReadOnly:
+		return true // Any level allows read_only
+	case ast.PrivilegeAdmin:
+		return has == ast.PrivilegeAdmin || has == ast.PrivilegeRoot
+	case ast.PrivilegeRoot:
+		return has == ast.PrivilegeRoot
 	default:
 		return false
 	}
 }
 
-// Checker validates operations against privilege requirements
-type Checker struct {
-	required Privilege
-}
-
-// NewChecker creates a new privilege checker with the required privilege level
-func NewChecker(required Privilege) *Checker {
-	return &Checker{required: required}
-}
-
-// ValidateCall checks if an operation is allowed for the required privilege level
-func (c *Checker) ValidateCall(op string) error {
-	if c.required.CanCall(op) {
-		return nil
+// GetScriptPrivilege extracts the privilege level from a program.
+// Returns read_only if no privilege statement is found (default).
+func GetScriptPrivilege(prog *ast.Program) ast.PrivilegeLevel {
+	for _, stmt := range prog.Statements {
+		if priv, ok := stmt.(*ast.PrivilegeStatement); ok {
+			return priv.Level
+		}
+		// Privilege must be the first statement (or after imports)
+		if _, isImport := stmt.(*ast.ImportStatement); !isImport {
+			break
+		}
 	}
-
-	return fmt.Errorf("operation %q not allowed with privilege level %s", op, c.required.String())
+	return ast.PrivilegeReadOnly // Default
 }
 
-// Required returns the required privilege level
-func (c *Checker) Required() Privilege {
-	return c.required
+// ClassifyOperation determines the operation type for a given function call.
+func ClassifyOperation(funcName string) OperationType {
+	// Read operations
+	if isReadOperation(funcName) {
+		return OpRead
+	}
+	// Write operations
+	if isWriteOperation(funcName) {
+		return OpWrite
+	}
+	// Exec operations
+	if isExecOperation(funcName) {
+		return OpExec
+	}
+	// Admin operations
+	if isAdminOperation(funcName) {
+		return OpAdmin
+	}
+	// System operations
+	return OpSystem
+}
+
+func isReadOperation(name string) bool {
+	readOps := []string{
+		"sys.cpu", "sys.memory", "sys.disk", "sys.host",
+		"sys.load", "sys.net", "sys.users", "sys.uptime",
+		"sys.hostname", "sys.os", "sys.kernel",
+		"file.read", "file.exists", "file.info", "file.list",
+		"file.checksum", "process.list", "process.find",
+		"net.http.get", "net.tcp", "net.dns", "net.interfaces",
+		"service.status", "pkg.list", "pkg.search",
+	}
+	for _, op := range readOps {
+		if len(name) >= len(op) && name[:len(op)] == op {
+			return true
+		}
+	}
+	return false
+}
+
+func isWriteOperation(name string) bool {
+	writeOps := []string{
+		"file.write", "file.append", "file.copy", "file.move",
+		"file.delete", "file.mkdir", "file.touch", "file.template",
+	}
+	for _, op := range writeOps {
+		if len(name) >= len(op) && name[:len(op)] == op {
+			return true
+		}
+	}
+	return false
+}
+
+func isExecOperation(name string) bool {
+	execOps := []string{
+		"process.exec", "process.kill",
+		"service.start", "service.stop", "service.restart",
+		"service.enable", "service.disable",
+		"pkg.install", "pkg.remove",
+	}
+	for _, op := range execOps {
+		if len(name) >= len(op) && name[:len(op)] == op {
+			return true
+		}
+	}
+	return false
+}
+
+func isAdminOperation(name string) bool {
+	// Admin operations require explicit admin privilege
+	return false // For now, no special admin operations
 }
