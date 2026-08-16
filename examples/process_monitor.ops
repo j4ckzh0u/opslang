@@ -4,6 +4,7 @@
 // Note: process.find_by_name() is called sparingly as it enumerates all processes internally
 // Usage: opsctl run examples/process_monitor.ops
 
+privilege: admin
 print("=== Process Monitor ===")
 
 let hostname = sys.hostname()

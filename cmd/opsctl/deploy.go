@@ -109,6 +109,13 @@ func runDeployCommand(scriptPath string) error {
 	scriptPriv := security.GetScriptPrivilege(prog)
 	fmt.Fprintf(os.Stderr, "Script privilege: %s\n", scriptPriv)
 
+	// Privilege gate before anything touches a host: a read_only script
+	// with mutating calls is refused here in every mode (runner generation
+	// and AOT compilation both re-check independently).
+	if err := compiler.CheckPrivileges(prog); err != nil {
+		return fmt.Errorf("privilege check failed: %w", err)
+	}
+
 	mode := resolveDeployMode(deployMode, prog)
 	fmt.Fprintf(os.Stderr, "Deploy mode: %s\n", mode)
 
@@ -133,9 +140,9 @@ func runDeployCommand(scriptPath string) error {
 	var result *deployAggregate
 	switch mode {
 	case "runner":
-		result, err = deployRunnerMode(ctx, scriptPath, prog, targets, taskID)
+		result, err = deployRunnerMode(ctx, scriptPath, prog, targets, taskID, scriptPriv)
 	case "aot":
-		result, err = deployAOTMode(ctx, scriptPath, prog, targets, taskID)
+		result, err = deployAOTMode(ctx, scriptPath, prog, targets, taskID, scriptPriv)
 	default:
 		err = fmt.Errorf("unknown mode: %s", mode)
 	}
@@ -250,8 +257,8 @@ func (a *deployAggregate) add(summary *opsexec.Summary) {
 	}
 }
 
-func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program, targets []opsexec.Target, taskID string) (*deployAggregate, error) {
-	steps, err := buildDeploySteps(prog, targets, taskID)
+func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program, targets []opsexec.Target, taskID string, scriptPriv ast.PrivilegeLevel) (*deployAggregate, error) {
+	steps, err := buildDeploySteps(prog, targets, taskID, scriptPriv)
 	if err != nil {
 		return nil, err
 	}
@@ -286,11 +293,19 @@ func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program,
 
 // buildDeploySteps converts the program into per-task instruction packages
 // with their target subsets. Statements outside tasks run on all targets.
-func buildDeploySteps(prog *ast.Program, targets []opsexec.Target, taskID string) ([]deployStep, error) {
+// scriptPriv governs generation-time privilege enforcement and travels with
+// every package so the remote runner can re-check it.
+func buildDeploySteps(prog *ast.Program, targets []opsexec.Target, taskID string, scriptPriv ast.PrivilegeLevel) ([]deployStep, error) {
 	var steps []deployStep
 
 	var prelude []ast.Statement
 	for _, stmt := range prog.Statements {
+		// Privilege declarations are metadata (checked by the gate above
+		// and carried on every package); a script whose only non-task
+		// statement is `privilege:` has no runnable prelude.
+		if _, isPriv := stmt.(*ast.PrivilegeStatement); isPriv {
+			continue
+		}
 		task, ok := stmt.(*ast.TaskStatement)
 		if !ok {
 			prelude = append(prelude, stmt)
@@ -306,7 +321,7 @@ func buildDeploySteps(prog *ast.Program, targets []opsexec.Target, taskID string
 				task.Name, targetNames(targets))
 		}
 
-		gen := &runner.InstructionGenerator{}
+		gen := &runner.InstructionGenerator{Privilege: scriptPriv}
 		pkg, err := gen.Generate(task, deployDryRun)
 		if err != nil {
 			return nil, fmt.Errorf("task %q: %w", task.Name, err)
@@ -323,7 +338,7 @@ func buildDeploySteps(prog *ast.Program, targets []opsexec.Target, taskID string
 	}
 
 	if len(prelude) > 0 {
-		gen := &runner.InstructionGenerator{}
+		gen := &runner.InstructionGenerator{Privilege: scriptPriv}
 		pkg, err := gen.GenerateFromStatements(prelude, deployDryRun)
 		if err != nil {
 			return nil, err
@@ -416,7 +431,7 @@ func sanitizeStepName(name string) string {
 // AOT mode
 // ============================================================
 
-func deployAOTMode(ctx context.Context, scriptPath string, prog *ast.Program, targets []opsexec.Target, taskID string) (*deployAggregate, error) {
+func deployAOTMode(ctx context.Context, scriptPath string, prog *ast.Program, targets []opsexec.Target, taskID string, scriptPriv ast.PrivilegeLevel) (*deployAggregate, error) {
 	// Task routing happens inside the compiled binary on each host — but a
 	// self-contained binary cannot know which host it lands on, so routed
 	// tasks would silently run on EVERY target. Reject instead of misroute.
@@ -452,10 +467,16 @@ func deployAOTMode(ctx context.Context, scriptPath string, prog *ast.Program, ta
 	// The runner executes the uploaded binary; the executor rewrites the
 	// placeholder to the per-host remote path after upload. The binary's
 	// parsed report is assigned to "app" so it lands in the deploy output.
+	// The package carries the script privilege: binary.exec counts as a
+	// mutating op, so a read_only script cannot be deployed as an opaque
+	// binary the runner has no way to verify — read_only scripts deploy
+	// in runner mode instead (the compiler already rejected mutating
+	// calls inside them, so their instruction packages are read-only too).
 	pkg := &runner.InstructionPackage{
-		Version: "1.0",
-		TaskID:  taskID,
-		DryRun:  deployDryRun,
+		Version:   "1.0",
+		TaskID:    taskID,
+		DryRun:    deployDryRun,
+		Privilege: string(scriptPriv),
 		Instructions: []runner.Instruction{
 			{
 				Op:     "binary.exec",

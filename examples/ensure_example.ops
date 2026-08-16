@@ -8,6 +8,7 @@
 // This makes operations idempotent - safe to run multiple times
 // Usage: opsctl run examples/ensure_example.ops
 
+privilege: admin
 print("=== Ensure (Idempotent) Pattern Demo ===")
 
 let hostname = sys.hostname()

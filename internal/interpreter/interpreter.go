@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/opslang/opslang/internal/ast"
+	"github.com/opslang/opslang/internal/security"
 )
 
 // ---------------------------------------------------------------------------
@@ -140,6 +141,11 @@ type Interpreter struct {
 	globalEnv *Environment
 	// DryRun prints the ensure apply steps instead of executing them.
 	dryRun bool
+	// scriptPriv is the privilege level of the program being executed,
+	// derived from its `privilege:` statement (read_only when undeclared).
+	// It is set at the start of Execute and read-only afterwards, so
+	// parallel-block goroutines can read it without synchronization.
+	scriptPriv ast.PrivilegeLevel
 }
 
 // SetDryRun enables dry-run mode: ensure bodies are reported as planned
@@ -269,6 +275,11 @@ func (interp *Interpreter) RegisterBuiltin(name string, fn BuiltinFunc) {
 // Execute runs a program and returns the result.
 func (interp *Interpreter) Execute(prog *ast.Program) (*Result, error) {
 	interp.output = nil
+	// Privilege enforcement: derive the script's declared level once per
+	// run (undeclared scripts default to read_only) and check every
+	// builtin call against it in evalCall. This is what makes
+	// `privilege: read_only` actually deny mutating functions.
+	interp.scriptPriv = security.GetScriptPrivilege(prog)
 	var retVal interface{}
 
 	for _, stmt := range prog.Statements {
@@ -320,8 +331,9 @@ func (interp *Interpreter) execStatement(stmt ast.Statement, env *Environment) (
 		}
 		return nil, nil
 	case *ast.PrivilegeStatement:
-		// Declares the script's required privilege level. opsctl checks it
-		// before execution; at interpretation time it is metadata.
+		// Declares the script's required privilege level. Execute() derives
+		// the level from it once and evalCall enforces it on every builtin
+		// call; the statement itself has no runtime effect.
 		return nil, nil
 	case *ast.ExpressionStatement:
 		return interp.evalExpression(s.Expr, env)
@@ -1018,6 +1030,12 @@ func (interp *Interpreter) evalCall(e *ast.CallExpression, env *Environment) (in
 	fnName := interp.resolveFuncName(e.Function)
 	if fnName != "" {
 		if builtin, ok := interp.builtins[fnName]; ok {
+			// Privilege enforcement: a read_only script may not call
+			// mutating builtins. Unknown names (custom builtins) are not
+			// restricted — the opsspec table defines what mutates.
+			if err := security.CheckFuncPrivilege(interp.scriptPriv, fnName); err != nil {
+				return nil, &RuntimeError{Pos: e.Pos(), Msg: err.Error()}
+			}
 			result, err := builtin(args...)
 			if err != nil {
 				return nil, &RuntimeError{Pos: e.Pos(), Msg: err.Error()}

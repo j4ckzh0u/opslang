@@ -4,6 +4,7 @@
 // All operations use /tmp/ for cross-platform compatibility (macOS + Linux)
 // Usage: opsctl run examples/deploy_app.ops
 
+privilege: admin
 print("=== Application Deployment Simulation ===")
 
 let hostname = sys.hostname()

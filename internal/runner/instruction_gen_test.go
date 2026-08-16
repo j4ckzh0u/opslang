@@ -36,10 +36,25 @@ func findTask(t *testing.T, prog *ast.Program) *ast.TaskStatement {
 }
 
 // generate parses source, finds its task, and generates instructions.
+// The generator defaults to read_only, matching undeclared scripts.
 func generate(t *testing.T, source string) *InstructionPackage {
 	t.Helper()
+	return generateWithPrivilege(t, source, "")
+}
+
+// generateAsAdmin is generate with admin privilege, for tests whose task
+// bodies legitimately perform mutating operations.
+func generateAsAdmin(t *testing.T, source string) *InstructionPackage {
+	t.Helper()
+	return generateWithPrivilege(t, source, ast.PrivilegeAdmin)
+}
+
+// generateWithPrivilege parses source, finds its task, and generates
+// instructions under the given privilege level.
+func generateWithPrivilege(t *testing.T, source string, priv ast.PrivilegeLevel) *InstructionPackage {
+	t.Helper()
 	task := findTask(t, mustParse(t, source))
-	gen := &InstructionGenerator{}
+	gen := &InstructionGenerator{Privilege: priv}
 	pkg, err := gen.Generate(task, false)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
@@ -166,7 +181,7 @@ func TestGenerate_FileOperations(t *testing.T) {
 func TestGenerate_ArgumentNamesAreCanonical(t *testing.T) {
 	// The generated arg keys must match the op signatures the registry
 	// validates — "arg0"-style keys silently produced empty paths before.
-	pkg := generate(t, `task "t" on "h" {
+	pkg := generateAsAdmin(t, `task "t" on "h" {
 		file.copy("/src", "/dst")
 		net.tcp_check("localhost", 22)
 		file.checksum("/etc/hosts", "md5")
@@ -336,7 +351,7 @@ func TestGenerate_TaskIDUniqueness(t *testing.T) {
 }
 
 func TestGenerate_CopyFileOperation(t *testing.T) {
-	pkg := generate(t, `task "test" on "host1" {
+	pkg := generateAsAdmin(t, `task "test" on "host1" {
 		file.copy("/src/file", "/dst/file")
 	}`)
 

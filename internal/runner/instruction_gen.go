@@ -10,6 +10,7 @@ import (
 
 	"github.com/opslang/opslang/internal/ast"
 	"github.com/opslang/opslang/internal/opsspec"
+	"github.com/opslang/opslang/internal/security"
 )
 
 // InstructionGenerator converts AST statements into instruction packages
@@ -24,6 +25,23 @@ import (
 type InstructionGenerator struct {
 	instructions []Instruction
 	varCounter   int
+	// scriptPriv is the resolved privilege of the statements being
+	// generated. Mutating calls below that level fail generation.
+	scriptPriv ast.PrivilegeLevel
+	// Privilege explicitly sets the governing privilege level, overriding
+	// any `privilege:` statement in the generated statements (deploy uses
+	// this to pass the program-level declaration for task bodies). When
+	// left unset it is derived from the statements; an undeclared script
+	// defaults to read_only, mirroring security.GetScriptPrivilege.
+	Privilege ast.PrivilegeLevel
+}
+
+// resolvePrivilege picks the governing privilege for a generation run.
+func (g *InstructionGenerator) resolvePrivilege(stmts []ast.Statement) ast.PrivilegeLevel {
+	if g.Privilege != "" {
+		return g.Privilege
+	}
+	return security.GetScriptPrivilege(&ast.Program{Statements: stmts})
 }
 
 // Generate creates an instruction package from a task statement's body.
@@ -32,6 +50,13 @@ type InstructionGenerator struct {
 func (g *InstructionGenerator) Generate(task *ast.TaskStatement, dryRun bool) (*InstructionPackage, error) {
 	g.instructions = nil
 	g.varCounter = 0
+	// Task bodies do not carry the program-level privilege statement; the
+	// deploy layer passes it via the Privilege field. Unset means the
+	// caller had none, which defaults to read_only below.
+	g.scriptPriv = g.Privilege
+	if g.scriptPriv == "" {
+		g.scriptPriv = ast.PrivilegeReadOnly
+	}
 
 	if task.Body == nil {
 		return &InstructionPackage{
@@ -39,6 +64,7 @@ func (g *InstructionGenerator) Generate(task *ast.TaskStatement, dryRun bool) (*
 			TaskID:       generateTaskID(),
 			DryRun:       dryRun,
 			Instructions: []Instruction{},
+			Privilege:    string(g.scriptPriv),
 		}, nil
 	}
 
@@ -51,6 +77,7 @@ func (g *InstructionGenerator) Generate(task *ast.TaskStatement, dryRun bool) (*
 		TaskID:       generateTaskID(),
 		DryRun:       dryRun,
 		Instructions: g.instructions,
+		Privilege:    string(g.scriptPriv),
 	}, nil
 }
 
@@ -58,6 +85,7 @@ func (g *InstructionGenerator) Generate(task *ast.TaskStatement, dryRun bool) (*
 func (g *InstructionGenerator) GenerateFromStatements(stmts []ast.Statement, dryRun bool) (*InstructionPackage, error) {
 	g.instructions = nil
 	g.varCounter = 0
+	g.scriptPriv = g.resolvePrivilege(stmts)
 
 	for _, stmt := range stmts {
 		if err := g.genStatement(stmt); err != nil {
@@ -70,6 +98,7 @@ func (g *InstructionGenerator) GenerateFromStatements(stmts []ast.Statement, dry
 		TaskID:       generateTaskID(),
 		DryRun:       dryRun,
 		Instructions: g.instructions,
+		Privilege:    string(g.scriptPriv),
 	}, nil
 }
 
@@ -115,7 +144,8 @@ func (g *InstructionGenerator) genStatement(stmt ast.Statement) error {
 		}
 		return nil
 	case *ast.PrivilegeStatement:
-		// Metadata only; enforced by opsctl before deployment.
+		// Consumed by resolvePrivilege (governs generation and lands in
+		// the package for the runner's second check); no instruction.
 		return nil
 	case *ast.TaskStatement:
 		// Target routing is handled by the deploy layer; the body's
@@ -405,13 +435,19 @@ func (g *InstructionGenerator) genCallAsTarget(call *ast.CallExpression, assign 
 // buildArgs extracts argument values from a call expression's argument list
 // and maps them to named parameters using the canonical opsspec signature.
 // Unknown ops and argument-count mismatches are generation-time errors:
-// a typo must fail the deploy, not the remote run.
+// a typo must fail the deploy, not the remote run. Mutating ops below the
+// script's declared privilege fail here as well — this is the compile-time
+// check of the runner pipeline, before anything reaches a host.
 func (g *InstructionGenerator) buildArgs(call *ast.CallExpression, opName string) (map[string]interface{}, error) {
 	// Skip validation for the special alert/log ops that go through the
 	// statement path; direct calls of print() map to log.
 	checkName := opName
 	if checkName == "print" {
 		checkName = "log"
+	}
+
+	if err := security.CheckFuncPrivilege(g.scriptPriv, checkName); err != nil {
+		return nil, err
 	}
 
 	paramNames, known := opsspec.ArgNames(checkName)

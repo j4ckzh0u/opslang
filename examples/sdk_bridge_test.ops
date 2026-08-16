@@ -1,6 +1,7 @@
 // SDK Bridge Test Script
 // This script demonstrates the ops-core-sdk functions available in the interpreter
 
+privilege: admin
 print("=== OpsLang SDK Bridge Test ===")
 
 // System Information

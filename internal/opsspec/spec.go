@@ -29,6 +29,14 @@ type Func struct {
 	Args []string
 	// Avail restricts which engines expose the function.
 	Avail Availability
+	// Mutating marks functions that change system or remote state (files,
+	// processes, services, packages, or the state of a remote HTTP
+	// endpoint). Mutating functions require at least admin privilege;
+	// non-mutating ones are available to every privilege level. This flag
+	// is the single source of truth shared by the interpreter, the
+	// instruction generator, the AOT compiler and the runner — engines
+	// must not keep their own mutation lists.
+	Mutating bool
 }
 
 // Funcs is the canonical table. Keep sorted by category then name.
@@ -48,51 +56,56 @@ var Funcs = []Func{
 	{Name: "sys.users"},
 
 	// ── file ──────────────────────────────────────────────────────────
-	{Name: "file.append", Args: []string{"path", "content"}},
+	{Name: "file.append", Args: []string{"path", "content"}, Mutating: true},
 	{Name: "file.checksum", Args: []string{"path", "algo"}},
-	{Name: "file.chmod", Args: []string{"path", "mode"}},
-	{Name: "file.copy", Args: []string{"src", "dst"}},
-	{Name: "file.delete", Args: []string{"path"}},
+	{Name: "file.chmod", Args: []string{"path", "mode"}, Mutating: true},
+	{Name: "file.copy", Args: []string{"src", "dst"}, Mutating: true},
+	{Name: "file.delete", Args: []string{"path"}, Mutating: true},
 	{Name: "file.exists", Args: []string{"path"}},
 	{Name: "file.list", Args: []string{"dir"}},
-	{Name: "file.mkdir", Args: []string{"path"}},
-	{Name: "file.move", Args: []string{"src", "dst"}},
+	{Name: "file.mkdir", Args: []string{"path"}, Mutating: true},
+	{Name: "file.move", Args: []string{"src", "dst"}, Mutating: true},
 	{Name: "file.read", Args: []string{"path"}},
 	{Name: "file.stat", Args: []string{"path"}},
+	// file.template only READS the template and returns the rendered text;
+	// it never writes a file, so it is not mutating.
 	{Name: "file.template", Args: []string{"path", "vars"}},
-	{Name: "file.write", Args: []string{"path", "content"}},
+	{Name: "file.write", Args: []string{"path", "content"}, Mutating: true},
 	// distribute/collect fan out from the controller over SSH; a remote
 	// runner executing them would need controller credentials.
-	{Name: "file.distribute", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly},
-	{Name: "file.collect", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly},
+	{Name: "file.distribute", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly, Mutating: true},
+	{Name: "file.collect", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly, Mutating: true},
 
 	// ── net ───────────────────────────────────────────────────────────
 	{Name: "net.dns_lookup", Args: []string{"host"}},
 	{Name: "net.http_get", Args: []string{"url"}},
-	{Name: "net.http_post", Args: []string{"url", "body"}},
+	// net.http_post is classified as mutating even though it only changes
+	// REMOTE state: a POST submits data (deploys, webhooks, form
+	// submissions) and is the writing counterpart to the read-only GET.
+	{Name: "net.http_post", Args: []string{"url", "body"}, Mutating: true},
 	{Name: "net.interfaces"},
 	{Name: "net.tcp_check", Args: []string{"host", "port"}},
 
 	// ── process ───────────────────────────────────────────────────────
-	{Name: "process.exec", Args: []string{"command", "args"}},
+	{Name: "process.exec", Args: []string{"command", "args"}, Mutating: true},
 	{Name: "process.find_by_name", Args: []string{"name"}},
 	{Name: "process.find_by_port", Args: []string{"port"}},
-	{Name: "process.kill", Args: []string{"pid", "signal"}},
+	{Name: "process.kill", Args: []string{"pid", "signal"}, Mutating: true},
 	{Name: "process.list"},
 
 	// ── service ───────────────────────────────────────────────────────
-	{Name: "service.disable", Args: []string{"name"}},
-	{Name: "service.enable", Args: []string{"name"}},
-	{Name: "service.restart", Args: []string{"name"}},
-	{Name: "service.start", Args: []string{"name"}},
+	{Name: "service.disable", Args: []string{"name"}, Mutating: true},
+	{Name: "service.enable", Args: []string{"name"}, Mutating: true},
+	{Name: "service.restart", Args: []string{"name"}, Mutating: true},
+	{Name: "service.start", Args: []string{"name"}, Mutating: true},
 	{Name: "service.status", Args: []string{"name"}},
-	{Name: "service.stop", Args: []string{"name"}},
+	{Name: "service.stop", Args: []string{"name"}, Mutating: true},
 
 	// ── pkg ───────────────────────────────────────────────────────────
 	{Name: "pkg.info", Args: []string{"name"}},
-	{Name: "pkg.install", Args: []string{"name"}},
+	{Name: "pkg.install", Args: []string{"name"}, Mutating: true},
 	{Name: "pkg.list"},
-	{Name: "pkg.remove", Args: []string{"name"}},
+	{Name: "pkg.remove", Args: []string{"name"}, Mutating: true},
 
 	// ── time ──────────────────────────────────────────────────────────
 	{Name: "time.diff", Args: []string{"t1", "t2"}},
@@ -125,6 +138,28 @@ var byName = func() map[string]Func {
 func Lookup(name string) (Func, bool) {
 	f, ok := byName[name]
 	return f, ok
+}
+
+// Mutating reports whether an operation (SDK call or builtin VM op, with
+// historical aliases resolved) changes system or remote state. known is
+// false for names outside the canonical table and BuiltinOps — callers
+// must skip privilege enforcement for them (they are custom builtins, not
+// OpsLang operations). binary.exec counts as mutating: it runs an
+// arbitrary binary, which can change anything.
+func Mutating(op string) (isMutating, known bool) {
+	if canonical, isAlias := Aliases[op]; isAlias {
+		op = canonical
+	}
+	if f, ok := byName[op]; ok {
+		return f.Mutating, true
+	}
+	switch op {
+	case "binary.exec":
+		return true, true
+	case "log", "alert", "set", "report":
+		return false, true // output/bookkeeping ops only
+	}
+	return false, false
 }
 
 // ArgNames returns the positional argument names for an op (SDK call or

@@ -4,6 +4,7 @@
 // All operations use /tmp/ for cross-platform compatibility (macOS + Linux)
 // Usage: opsctl run examples/file_ops.ops
 
+privilege: admin
 print("=== File Operations Demo ===")
 
 // Setup: create a working directory

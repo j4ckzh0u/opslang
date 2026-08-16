@@ -2,6 +2,7 @@
 // 使用 SDK 检查系统资源、磁盘、进程等健康状态
 // 兼容 macOS 和 Linux（不使用 service.* 函数，因为 macOS 无 systemd）
 
+privilege: admin
 print("=== 服务健康检查 ===")
 
 let host = sys.hostname()

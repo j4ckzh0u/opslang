@@ -11,6 +11,7 @@
 //
 // Usage: opsctl run examples/ensure_service.ops
 
+privilege: admin
 print("=== Service Health Check (Cross-Platform) ===")
 
 let hostname = sys.hostname()

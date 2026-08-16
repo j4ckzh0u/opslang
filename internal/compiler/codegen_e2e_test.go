@@ -103,7 +103,8 @@ func TestAOTEnsureIsIdempotent(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, "ensured-dir")
 
-	source := `ensure file.exists("` + target + `").exists {
+	source := `privilege: admin
+ensure file.exists("` + target + `").exists {
 	file.mkdir("` + target + `")
 }
 report { ok: file.exists("` + target + `").exists }
@@ -157,6 +158,7 @@ func TestAOTTypedSDKArgs(t *testing.T) {
 	path := filepath.Join(dir, "typed.txt")
 
 	data := runAndReportJSON(t, `
+privilege: admin
 file.write("`+path+`", "hello")
 file.chmod("`+path+`", "0600")
 let info = file.stat("`+path+`")

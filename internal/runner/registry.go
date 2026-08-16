@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 
+	"github.com/opslang/opslang/internal/ast"
 	"github.com/opslang/opslang/internal/opsspec"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/file"
 	opsjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
@@ -653,6 +654,14 @@ func ValidatePackage(pkg *InstructionPackage) error {
 	}
 	if len(pkg.Instructions) == 0 {
 		return fmt.Errorf("at least one instruction is required")
+	}
+	// The privilege field is optional (legacy packages omit it), but when
+	// present it must be a declared level so the runner's second check
+	// cannot be silently downgraded by a typo.
+	switch pkg.Privilege {
+	case "", string(ast.PrivilegeReadOnly), string(ast.PrivilegeAdmin), string(ast.PrivilegeRoot):
+	default:
+		return fmt.Errorf("invalid privilege %q (expected read_only, admin, or root)", pkg.Privilege)
 	}
 	registry := NewRegistry()
 	for i, inst := range pkg.Instructions {

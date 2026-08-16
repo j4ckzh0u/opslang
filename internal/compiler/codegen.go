@@ -197,6 +197,13 @@ type userFunc struct {
 
 // Generate takes an AST Program and returns a complete Go source string.
 func (g *CodeGenerator) Generate(prog *ast.Program) (string, error) {
+	// Compile-time privilege enforcement: reject mutating calls in scripts
+	// whose declared privilege (default read_only) does not allow them,
+	// before generating any code.
+	if err := CheckPrivileges(prog); err != nil {
+		return "", err
+	}
+
 	g.usedSDK = make(map[string]bool)
 	g.userFuncs = nil
 	g.useOS = false
@@ -1195,16 +1202,7 @@ func (g *CodeGenerator) genArgs(args []ast.Expression) ([]string, error) {
 
 // resolveFuncName builds a dotted name from a call's function expression.
 func (g *CodeGenerator) resolveFuncName(expr ast.Expression) string {
-	switch e := expr.(type) {
-	case *ast.Identifier:
-		return e.Name
-	case *ast.MemberExpression:
-		prefix := g.resolveFuncName(e.Object)
-		if prefix != "" {
-			return prefix + "." + e.Member.Name
-		}
-	}
-	return ""
+	return resolveCallName(expr)
 }
 
 // sanitizeName escapes Go reserved words and invalid identifier characters

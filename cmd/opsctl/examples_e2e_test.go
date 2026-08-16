@@ -18,6 +18,7 @@ import (
 	"github.com/opslang/opslang/internal/interpreter"
 	"github.com/opslang/opslang/internal/parser"
 	"github.com/opslang/opslang/internal/runner"
+	"github.com/opslang/opslang/internal/security"
 )
 
 // hasRoutedTask reports whether the program contains a task with an
@@ -66,7 +67,7 @@ func TestExamplesAllRun(t *testing.T) {
 					{Name: "web-01", Host: "10.0.0.1", User: "root"},
 					{Name: "db-01", Host: "10.0.0.2", User: "root"},
 				}
-				steps, err := buildDeploySteps(prog, targets, "test")
+				steps, err := buildDeploySteps(prog, targets, "test", security.GetScriptPrivilege(prog))
 				if err != nil {
 					t.Fatalf("deploy example must build valid steps: %v", err)
 				}

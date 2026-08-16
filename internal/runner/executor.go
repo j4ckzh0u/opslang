@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/opslang/opslang/internal/ast"
+	"github.com/opslang/opslang/internal/security"
 )
 
 // varPrefix marks an argument value as a variable reference. Only strings
@@ -19,6 +22,13 @@ type Executor struct {
 	vars     map[string]interface{}
 	dryRun   bool
 	warnings []string
+	// privilege is the package-declared script privilege used as the
+	// runner-side second check: mutating operations that contradict the
+	// declaration fail that instruction with a structured error. The zero
+	// value means the package did not declare a privilege (legacy format)
+	// and no runner-side check applies — controller-side enforcement
+	// (interpreter, compiler, instruction generator) covers those.
+	privilege ast.PrivilegeLevel
 }
 
 // NewExecutor creates a new executor with the given registry and dry-run setting.
@@ -31,12 +41,27 @@ func NewExecutor(registry *Registry, dryRun bool) *Executor {
 	}
 }
 
+// SetPrivilege sets the script privilege level enforced on mutating ops.
+func (e *Executor) SetPrivilege(level ast.PrivilegeLevel) {
+	e.privilege = level
+}
+
 // Execute runs a single instruction with variable resolution.
 func (e *Executor) Execute(inst *Instruction) (interface{}, error) {
 	// Look up the operation first so unknown ops fail even in dry-run.
 	fn, ok := e.registry.Get(inst.Op)
 	if !ok {
 		return nil, fmt.Errorf("unknown operation: %q", inst.Op)
+	}
+
+	// Privilege second check: when the package declares a privilege level,
+	// a mutating instruction that contradicts it fails here (structured
+	// error, never a panic) — defense in depth behind the controller-side
+	// enforcement that already rejects these at generation time.
+	if e.privilege != "" {
+		if err := security.CheckFuncPrivilege(e.privilege, inst.Op); err != nil {
+			return nil, err
+		}
 	}
 
 	// Resolve variable references in args.
@@ -199,6 +224,19 @@ func Run(pkg *InstructionPackage, registry *Registry) *Output {
 	}
 
 	executor := NewExecutor(registry, pkg.DryRun)
+	if pkg.Privilege != "" {
+		switch lvl := pkg.PrivilegeLevel(); lvl {
+		case ast.PrivilegeReadOnly, ast.PrivilegeAdmin, ast.PrivilegeRoot:
+			executor.SetPrivilege(lvl)
+		default:
+			// A malformed privilege value must not silently pass the
+			// second check; fail the whole run with a structured error.
+			output.Errors = append(output.Errors,
+				fmt.Sprintf("invalid package privilege %q (expected read_only, admin, or root)", pkg.Privilege))
+			output.Status = "failed"
+			return output
+		}
+	}
 	var lastReport map[string]interface{}
 	succeeded, failed := 0, 0
 

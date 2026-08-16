@@ -8,6 +8,7 @@ import (
 	"github.com/opslang/opslang/internal/ast"
 	opsexec "github.com/opslang/opslang/internal/exec"
 	"github.com/opslang/opslang/internal/parser"
+	"github.com/opslang/opslang/internal/security"
 )
 
 func parseProgram(t *testing.T, source string) *ast.Program {
@@ -56,7 +57,7 @@ task "db" on "db-01" {
 }
 `)
 
-	steps, err := buildDeploySteps(prog, testTargets(), "task-1")
+	steps, err := buildDeploySteps(prog, testTargets(), "task-1", security.GetScriptPrivilege(prog))
 	if err != nil {
 		t.Fatalf("buildDeploySteps failed: %v", err)
 	}
@@ -95,7 +96,7 @@ task "db" on "db-01" {
 
 func TestBuildDeploySteps_TaskMatchingNothingFails(t *testing.T) {
 	prog := parseProgram(t, `task "x" on "cache-*" { sys.cpu.usage() }`)
-	_, err := buildDeploySteps(prog, testTargets(), "task-1")
+	_, err := buildDeploySteps(prog, testTargets(), "task-1", security.GetScriptPrivilege(prog))
 	if err == nil {
 		t.Fatal("task selecting no targets must fail the deploy, not silently skip")
 	}
@@ -108,7 +109,7 @@ func TestBuildDeploySteps_ControlFlowInTaskFails(t *testing.T) {
 	prog := parseProgram(t, `task "x" on "web-01" {
 	if true { sys.cpu.usage() }
 }`)
-	_, err := buildDeploySteps(prog, testTargets(), "task-1")
+	_, err := buildDeploySteps(prog, testTargets(), "task-1", security.GetScriptPrivilege(prog))
 	if err == nil {
 		t.Fatal("control flow in runner mode must fail generation")
 	}
@@ -120,7 +121,7 @@ func TestBuildDeploySteps_ControlFlowInTaskFails(t *testing.T) {
 func TestBuildDeploySteps_VariableTargetFails(t *testing.T) {
 	prog := parseProgram(t, `let hosts = ["a"]
 task "x" on hosts { sys.cpu.usage() }`)
-	_, err := buildDeploySteps(prog, testTargets(), "task-1")
+	_, err := buildDeploySteps(prog, testTargets(), "task-1", security.GetScriptPrivilege(prog))
 	if err == nil {
 		t.Fatal("variable on-clause must fail at deploy time")
 	}
@@ -186,3 +187,36 @@ func TestOutputDeployResultPartialIsError(t *testing.T) {
 }
 
 func nowUTC() (t time.Time) { return time.Now().UTC() }
+
+func TestBuildDeploySteps_ReadOnlyTaskWithMutatingCallFails(t *testing.T) {
+	// Generation-time privilege enforcement on the runner path: the task
+	// body's mutating call contradicts the script's read_only declaration,
+	// so the deploy must fail on the controller, not on the host.
+	prog := parseProgram(t, `privilege: read_only
+task "x" on "web-01" {
+	file.write("/tmp/never.txt", "nope")
+}`)
+	_, err := buildDeploySteps(prog, testTargets(), "task-1", security.GetScriptPrivilege(prog))
+	if err == nil {
+		t.Fatal("read_only task with file.write must fail generation")
+	}
+	if !strings.Contains(err.Error(), "privilege denied") || !strings.Contains(err.Error(), "file.write") {
+		t.Errorf("error must name the denied function: %v", err)
+	}
+}
+
+func TestBuildDeploySteps_AdminTaskWithMutatingCallSucceeds(t *testing.T) {
+	prog := parseProgram(t, `privilege: admin
+task "x" on "web-01" {
+	file.write("/tmp/ok.txt", "yes")
+}`)
+	steps, err := buildDeploySteps(prog, testTargets(), "task-1", security.GetScriptPrivilege(prog))
+	if err != nil {
+		t.Fatalf("admin task with file.write must generate: %v", err)
+	}
+	for _, step := range steps {
+		if step.pkg.Privilege != "admin" {
+			t.Errorf("step %q package privilege = %q, want admin (runner second check relies on it)", step.name, step.pkg.Privilege)
+		}
+	}
+}

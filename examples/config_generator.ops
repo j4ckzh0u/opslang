@@ -1,6 +1,7 @@
 // config_generator.ops - 基于真实系统信息生成配置文件
 // 演示使用 SDK 获取系统信息，据此生成优化的配置
 
+privilege: admin
 print("=== 配置生成器 ===")
 
 // 获取真实系统信息
