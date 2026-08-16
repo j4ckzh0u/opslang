@@ -108,7 +108,7 @@ func ParseResourceLimits(cpu, memory string) (*ResourceLimits, error) {
 			return nil, fmt.Errorf("invalid CPU limit: %s", cpu)
 		}
 		if percent < 1 || percent > 1000 {
-			return nil, fmt.Errorf("CPU limit must be between 1% and 1000%%")
+			return nil, fmt.Errorf("CPU limit must be between 1%%%% and 1000%%%%")
 		}
 		limits.CPUPercent = percent
 		limits.CPUQuota = fmt.Sprintf("%d%%", percent)
