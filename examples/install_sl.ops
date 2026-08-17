@@ -1,35 +1,33 @@
 // install_sl.ops - 批量安装 sl 命令并生成详细报告
 // 用法: opsctl deploy --hosts host1,host2,host3 install_sl.ops
+privilege: admin
 
-task "install_sl" on targets {
-    // 记录开始时间
-    let start_time = time.now()
-    let host = sys.hostname()
-    let os_info = sys.os()
+// 记录开始时间
+let start_time = time.now()
+let host = sys.hostname()
+let os_info = sys.os()
 
-    print("[" + host + "] 开始安装 sl...")
+print("[" + host + "] 开始安装 sl...")
 
-    // 检查是否已安装
-    let check = process.exec("which", "sl")
+// 检查是否已安装
+let check = process.exec("which", "sl")
 
-    if check.exit_code == 0 {
-        // 已安装
-        print("[" + host + "] sl 已安装: " + check.stdout)
+if check.exit_code == 0 {
+    // 已安装
+    print("[" + host + "] sl 已安装: " + check.stdout)
 
-        report {
-            host: host,
-            os: os_info.platform,
-            arch: os_info.platform,
-            kernel: os_info.kernel_version,
-            action: "install_sl",
-            status: "skipped",
-            message: "already installed",
-            path: check.stdout,
-            timestamp: start_time.iso8601
-        }
-        return
+    report {
+        host: host,
+        os: os_info.platform,
+        arch: os_info.platform,
+        kernel: os_info.kernel_version,
+        action: "install_sl",
+        status: "skipped",
+        message: "already installed",
+        path: check.stdout,
+        timestamp: start_time.iso8601
     }
-
+} else {
     // 执行安装
     let install_start = time.now()
     let result = pkg.install("sl")
