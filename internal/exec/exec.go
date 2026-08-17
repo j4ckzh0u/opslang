@@ -31,6 +31,9 @@ type Target struct {
 	User     string
 	Password string
 	KeyFile  string
+	// Tags carries the inventory entry's tags (e.g. env=prod). Inline
+	// targets have none. The approval gate classifies targets with them.
+	Tags map[string]string
 }
 
 // HostResult captures the execution result for a single host.
@@ -550,6 +553,7 @@ func TargetsFromInventory(inv *inventory.Inventory) []Target {
 			User:     h.User,
 			Password: h.Password,
 			KeyFile:  h.KeyFile,
+			Tags:     h.Tags,
 		}
 	}
 	return targets

@@ -12,6 +12,8 @@ import (
 
 	opsexec "github.com/opslang/opslang/internal/exec"
 	"github.com/opslang/opslang/internal/inventory"
+	"github.com/opslang/opslang/internal/opsspec"
+	"github.com/opslang/opslang/internal/runner"
 	"github.com/opslang/opslang/internal/security"
 	"github.com/spf13/cobra"
 )
@@ -28,6 +30,7 @@ var (
 	execRunnerPath      string
 	execOutputFile      string
 	execInsecureHostKey bool
+	execAutoApprove     bool
 )
 
 var execCmd = &cobra.Command{
@@ -41,7 +44,10 @@ Targets can be specified via --hosts (comma-separated user@host entries) or
 The runner binary is automatically built for the target architecture on first
 use and cached in ~/.cache/opslang/runners/ for subsequent executions.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runExecCommand()
+		// Resolve --auto-approve (flag over env) here: reading the flag set
+		// from helpers would create an init cycle via execCmd.
+		auto, src := security.ResolveAutoApprove(cmd.Flags().Changed("auto-approve"), execAutoApprove)
+		return runExecCommand(auto, src)
 	},
 }
 
@@ -57,10 +63,11 @@ func init() {
 	execCmd.Flags().StringVar(&execRunnerPath, "runner-path", "", "Path to pre-built runner binary")
 	execCmd.Flags().BoolVar(&execInsecureHostKey, "insecure-host-key", false, "Skip SSH host key verification (lab use only)")
 	execCmd.Flags().StringVarP(&execOutputFile, "output", "o", "", "Output file path (default: stdout)")
+	execCmd.Flags().BoolVar(&execAutoApprove, "auto-approve", false, "Pre-approve gated executions (privileged packages on production targets); non-interactive runs are refused without it")
 }
 
 // runExecCommand is the main execution logic for the exec subcommand.
-func runExecCommand() error {
+func runExecCommand(autoApprove bool, autoSource security.ApprovalSource) error {
 	// Validate required flags.
 	if execInstructions == "" {
 		return fmt.Errorf("--instructions flag is required")
@@ -76,22 +83,34 @@ func runExecCommand() error {
 	}
 
 	// Build target list from --hosts and/or --inventory.
-	var targets []opsexec.Target
-
-	if len(execHosts) > 0 {
-		targets = append(targets, opsexec.ParseTargets(execHosts, execUser)...)
+	targets, err := buildExecTargets()
+	if err != nil {
+		return err
 	}
-
-	if execInventory != "" {
-		inv, err := inventory.ParseFile(execInventory)
-		if err != nil {
-			return fmt.Errorf("failed to parse inventory: %w", err)
-		}
-		targets = append(targets, opsexec.TargetsFromInventory(inv)...)
-	}
-
 	if len(targets) == 0 {
 		return fmt.Errorf("no targets specified")
+	}
+
+	// Approval gate: privileged packages aimed at production targets need
+	// explicit approval before any host is contacted.
+	taskID := fmt.Sprintf("exec-%d", time.Now().UnixNano())
+	approvalRec, err := enforceExecApproval(execInstructions, pkg, targets, autoApprove, autoSource)
+	if err != nil {
+		entry := security.NewAuditEntry(
+			taskID,
+			execInstructions,
+			pkg.Privilege,
+			targetAddressList(targets),
+			execUser,
+			"instruction-exec",
+			execDryRun,
+		)
+		entry.SetError(err)
+		entry.Approval = approvalRec
+		if lerr := security.NewAuditLogger("").Log(entry); lerr != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to write audit log: %v\n", lerr)
+		}
+		return err
 	}
 
 	// Set up context with signal handling for graceful shutdown.
@@ -116,7 +135,7 @@ func runExecCommand() error {
 		DryRun:                    execDryRun,
 		RunnerPath:                execRunnerPath,
 		InsecureSkipHostKeyVerify: execInsecureHostKey,
-		TaskID:                    fmt.Sprintf("exec-%d", time.Now().UnixNano()),
+		TaskID:                    taskID,
 	}
 
 	summary := executor.Execute(ctx)
@@ -131,6 +150,7 @@ func runExecCommand() error {
 		"instruction-exec",
 		execDryRun,
 	)
+	auditEntry.Approval = approvalRec
 	if summary.Status == "success" {
 		auditEntry.SetStatus("success", summary.FinishedAt.Sub(summary.StartedAt).Milliseconds())
 	} else {
@@ -165,4 +185,53 @@ func runExecCommand() error {
 	}
 
 	return nil
+}
+
+// buildExecTargets assembles the target list from --hosts and --inventory.
+func buildExecTargets() ([]opsexec.Target, error) {
+	var targets []opsexec.Target
+	if len(execHosts) > 0 {
+		targets = append(targets, opsexec.ParseTargets(execHosts, execUser)...)
+	}
+	if execInventory != "" {
+		inv, err := inventory.ParseFile(execInventory)
+		if err != nil {
+			return targets, fmt.Errorf("failed to parse inventory: %w", err)
+		}
+		targets = append(targets, opsexec.TargetsFromInventory(inv)...)
+	}
+	return targets, nil
+}
+
+// enforceExecApproval applies the approval gate to a raw instruction-package
+// execution. The package's declared privilege drives the decision (empty —
+// legacy packages — never gates, matching the runner's treatment); the
+// mutating operations come straight from the instructions.
+func enforceExecApproval(instrPath string, pkg *runner.InstructionPackage, targets []opsexec.Target, autoApprove bool, autoSource security.ApprovalSource) (*security.ApprovalRecord, error) {
+	var mutatingOps []string
+	for _, in := range pkg.Instructions {
+		if mutating, known := opsspec.Mutating(in.Op); known && mutating {
+			mutatingOps = append(mutatingOps, in.Op)
+		}
+	}
+	gate := &security.ApprovalGate{
+		Decision: security.EvaluateApproval(
+			pkg.PrivilegeLevel(),
+			mutatingOps,
+			targetTags(targets),
+		),
+		ScriptName:  instrPath,
+		AutoApprove: autoApprove,
+		AutoSource:  autoSource,
+		Interactive: deployStdinIsInteractive(),
+		Confirm:     deployConfirmFn,
+	}
+	rec, err := gate.Check()
+	if err != nil {
+		return rec, fmt.Errorf("execution blocked: %w", err)
+	}
+	if rec != nil {
+		fmt.Fprintf(os.Stderr, "Approved via %s by %s\n", rec.Source, rec.User)
+	}
+	return rec, nil
 }

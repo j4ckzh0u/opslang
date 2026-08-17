@@ -212,6 +212,7 @@ opsctl deploy [flags] <script.ops>
 | `--password` | `-p` | string | - | SSH 密码 |
 | `--output` | `-o` | string | stdout | 结果输出文件路径 |
 | `--insecure-host-key` | - | bool | `false` | 跳过 SSH 主机密钥校验（默认启用 TOFU 校验；仅限实验室环境） |
+| `--auto-approve` | - | bool | `false` | 预先批准被审批流拦截的部署（admin/root 脚本 + 生产目标）；非交互环境缺省拒绝 |
 
 ### 执行模式
 
@@ -262,6 +263,21 @@ opsctl deploy deploy_app.ops --targets web1 --dry-run
 - 脚本含 `import "go <包路径>"` 时直接报错拒绝。
 - task 的 `on` 子句选不中任何 deploy 目标时报错。
 
+### 审批流（生产环境保护）
+
+**触发条件**（同时满足才拦截）：
+- 脚本声明 `privilege: admin` 或 `privilege: root`；
+- 目标主机来自 `--inventory` 且带生产标签（`tags: {env: prod}` 或 `env: production`）。
+
+`--targets` 内联主机与无标签的 inventory 条目不算生产目标（生产身份只来自 inventory 元数据）；`read_only` 脚本不拦截。
+
+**拦截后的行为**：
+- 交互式终端：展示审批摘要（脚本、权限级别、变更类操作列表、生产目标数量与样例）后 `y/N` 确认，拒绝即中止且不联系任何主机，退出码非 0；
+- 非交互（管道/CI）：**默认拒绝**并报错；需显式 `--auto-approve` 或环境变量 `OPSCTL_AUTO_APPROVE=1` 放行（flag 优先，显式 `--auto-approve=false` 可压掉环境变量）；
+- 审批结果（批准/拒绝、来源、批准人 `$USER`、生产目标清单、变更操作）写入审计日志，与运行记录同文件可回溯。
+
+`opsctl exec` 指令包同理：包内 `privilege` 为 `admin`/`root` 且目标为生产主机时触发审批（不带 `privilege` 字段的旧格式指令包不拦截）。
+
 ---
 
 ## opsctl exec
@@ -293,6 +309,7 @@ opsctl exec [flags]
 | `--runner-path` | - | string | - | 预构建 Runner 二进制路径（跳过自动构建） |
 | `--insecure-host-key` | - | bool | `false` | 跳过 SSH 主机密钥校验（默认启用 TOFU 校验；仅限实验室环境） |
 | `--output` | `-o` | string | stdout | 结果输出文件路径 |
+| `--auto-approve` | - | bool | `false` | 预先批准被审批流拦截的执行（privileged 指令包 + 生产目标）；非交互环境缺省拒绝 |
 
 ### 输出
 
@@ -342,6 +359,7 @@ $ opsctl exec --hosts root@web1 --instructions tasks.json -o result.json
 - 按 Ctrl+C 或发送 SIGTERM 信号可优雅中断，已启动的远程任务会尝试清理。
 - 部分失败（`partial`，部分主机未完成）退出码为 1；全部失败（`failed`）退出码为 2；全部成功退出码为 0。具体结果见 JSON 输出。
 - `--hosts` 格式支持 `user@host` 或纯 `host`（纯 host 时使用 `--user` 指定的用户）。
+- 指令包 `privilege` 为 `admin`/`root` 且 inventory 目标带生产标签时触发审批流（见 [opsctl deploy 的审批流说明](#审批流生产环境保护)）；审批被拒返回非零退出码且不联系任何主机。
 
 ---
 
@@ -430,7 +448,7 @@ ops> if true {
 | `0` | 执行成功 |
 | `1` | 部分失败：`opsctl deploy` 部分主机未完成、`opsctl exec` 部分主机失败 |
 | `2` | 全部失败：`opsctl exec` 所有主机失败 |
-| 其他非零 | 参数错误、脚本解析/运行错误、`opsctl deploy` 部署失败等 |
+| 其他非零 | 参数错误、脚本解析/运行错误、`opsctl deploy` 部署失败、审批被拒（未联系任何主机）等 |
 
 ### ops-runner 退出码
 
@@ -454,6 +472,8 @@ ops> if true {
 | `OPSLANG_SSH_KEY` | `file.distribute` / `file.collect` 传输使用的 SSH 私钥路径 |
 | `OPSLANG_CACHE_DIR` | Runner 编译缓存目录（默认 `~/.cache/opslang/runners/`） |
 | `OPSLANG_PROJECT_ROOT` | 覆盖项目根目录探测（开发调试用） |
+| `OPSLANG_AUTO_APPROVE` | 设为 `1` 时放行审批流拦截的运行（CI 用）；`--auto-approve` flag 优先 |
+| `OPSLANG_AUDIT_DIR` | 审计日志目录（默认 `/var/log/opsctl`，无权限时回退临时目录） |
 
 ---
 

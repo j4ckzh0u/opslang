@@ -409,7 +409,7 @@
           <td class="name">安全模块</td>
           <td><span class="badge badge-green">可用</span></td>
           <td>148</td>
-          <td>权限分级，审计日志，资源限制，Ed25519 签名</td>
+          <td>权限分级，审批流，审计日志，资源限制，Ed25519 签名</td>
         </tr>
         <tr>
           <td class="name">CLI</td>
@@ -497,7 +497,8 @@
       <ul>
         <li><strong>权限分级</strong>：read_only / admin / root，操作分类（read/write/exec/admin/system），变更类函数元数据以 <code>opsspec</code> 为单一事实来源</li>
         <li><strong>权限自动执行</strong>：read_only 脚本调用变更函数在三层被拒绝——解释器（运行时，带行列号）、AOT 编译期静态检查、Runner 二次校验（指令包携带 privilege 字段）</li>
-        <li><strong>审计日志</strong>：JSON 格式，记录任务 ID、脚本、权限、目标、用户、模式、结果</li>
+        <li><strong>审批流</strong>：<code>privilege: admin/root</code> 脚本部署到生产目标（inventory 标签 <code>env: prod/production</code>）前强制审批——TTY 展示摘要（权限、变更操作、生产目标）后 y/N 确认；非 TTY（管道/CI）默认拒绝，需 <code>--auto-approve</code> 或 <code>OPSCTL_AUTO_APPROVE=1</code>（flag 优先）放行；拒绝即中止，不联系任何主机；决策逻辑独立于交互（<code>internal/security/approval.go</code>），<code>opsctl deploy</code> 与 <code>opsctl exec</code> 均已接入</li>
+        <li><strong>审计日志</strong>：JSON 格式，记录任务 ID、脚本、权限、目标、用户、模式、结果；审批决策（批准/拒绝、来源、批准人、生产目标清单）随运行记录一同落盘，可回溯</li>
         <li><strong>资源限制</strong>：<code>setrlimit(2)</code> 内存限制（CPU quota 未强制执行）</li>
         <li><strong>签名验证</strong>：Ed25519 签名/验签，密钥文件 I/O</li>
         <li><strong>临时目录</strong>：自动创建/清理，幂等</li>
@@ -584,7 +585,7 @@
       这是一个<strong>完整、可工作</strong>的实现。没有桩代码，没有空壳。所有 1520 个测试通过，23 个示例脚本可执行，双执行引擎（Runner + AOT）均可用，远程执行链路（SSH → 架构检测 → 缓存上传 → 执行 → 结果回收）已打通。
     </p>
     <p style="margin-top: 0.75rem;">
-      主要缺口：模块系统、CI 竞态检测。这些是有意识的简化而非遗漏——代码中有 <code>ponytail:</code> 注释标明升级路径。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制，变更类函数清单集中在 <code>internal/opsspec</code>）；1 万主机文件分发/收集模拟测试已实现（真实编排 + 模拟传输层，见已知限制区说明）。
+      主要缺口：模块系统、CI 竞态检测。这些是有意识的简化而非遗漏——代码中有 <code>ponytail:</code> 注释标明升级路径。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制，变更类函数清单集中在 <code>internal/opsspec</code>）；审批流已实现（admin/root 脚本 + 生产目标 = 部署前强制审批，非交互默认拒绝，决策与审计落地）；1 万主机文件分发/收集模拟测试已实现（真实编排 + 模拟传输层，见已知限制区说明）。
     </p>
   </div>
 

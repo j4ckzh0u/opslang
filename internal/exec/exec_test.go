@@ -1795,3 +1795,50 @@ func TestMarshalInstructionsPlaceholderReplacement(t *testing.T) {
 		t.Error("placeholder-free package corrupted")
 	}
 }
+
+// ============================================================
+// Inventory tag propagation (approval gate input)
+// ============================================================
+
+func TestTargetsFromInventoryPropagatesTags(t *testing.T) {
+	inv, err := inventory.Parse([]byte(`
+hosts:
+  - name: prod-web
+    host: 10.0.0.1
+    tags:
+      env: prod
+      role: web
+  - name: dev-box
+    host: 10.0.0.2
+    tags:
+      env: dev
+  - name: bare
+    host: 10.0.0.3
+`))
+	if err != nil {
+		t.Fatalf("parse inventory: %v", err)
+	}
+	targets := TargetsFromInventory(inv)
+	if len(targets) != 3 {
+		t.Fatalf("expected 3 targets, got %d", len(targets))
+	}
+	if targets[0].Tags["env"] != "prod" || targets[0].Tags["role"] != "web" {
+		t.Errorf("prod-web tags not propagated: %v", targets[0].Tags)
+	}
+	if targets[1].Tags["env"] != "dev" {
+		t.Errorf("dev-box tags not propagated: %v", targets[1].Tags)
+	}
+	if targets[2].Tags != nil {
+		t.Errorf("untagged host should have nil tags, got %v", targets[2].Tags)
+	}
+}
+
+func TestParseTargetsInlineHaveNoTags(t *testing.T) {
+	targets := ParseTargets([]string{"root@10.0.0.1:22"}, "root")
+	if len(targets) != 1 {
+		t.Fatalf("expected 1 target, got %d", len(targets))
+	}
+	if targets[0].Tags != nil {
+		t.Errorf("inline targets carry no tags, got %v", targets[0].Tags)
+	}
+}

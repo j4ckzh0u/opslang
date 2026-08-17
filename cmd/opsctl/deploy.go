@@ -34,6 +34,13 @@ var (
 	deployPassword        string
 	deployOutput          string
 	deployInsecureHostKey bool
+	deployAutoApprove     bool
+)
+
+// Injection points so tests can drive the approval gate without a TTY.
+var (
+	deployConfirmFn         = security.PromptConfirm
+	deployStdinIsInteractive = security.StdinIsInteractive
 )
 
 var deployCmd = &cobra.Command{
@@ -54,7 +61,10 @@ Supports two execution modes:
 Results are aggregated and output as JSON.`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runDeployCommand(args[0])
+		// Resolve --auto-approve (flag over env) here: reading the flag set
+		// from helpers would create an init cycle via deployCmd.
+		auto, src := security.ResolveAutoApprove(cmd.Flags().Changed("auto-approve"), deployAutoApprove)
+		return runDeployCommand(args[0], auto, src)
 	},
 }
 
@@ -69,6 +79,7 @@ func init() {
 	deployCmd.Flags().StringVarP(&deployPassword, "password", "p", "", "SSH password")
 	deployCmd.Flags().StringVarP(&deployOutput, "output", "o", "", "Output file path (default: stdout)")
 	deployCmd.Flags().BoolVar(&deployInsecureHostKey, "insecure-host-key", false, "Skip SSH host key verification (TOFU still applies by default; lab use only)")
+	deployCmd.Flags().BoolVar(&deployAutoApprove, "auto-approve", false, "Pre-approve gated deploys (admin/root scripts on production targets); non-interactive runs are refused without it")
 }
 
 // deployStep is one instruction package to run on one subset of targets.
@@ -80,7 +91,7 @@ type deployStep struct {
 	pkg     *runner.InstructionPackage
 }
 
-func runDeployCommand(scriptPath string) error {
+func runDeployCommand(scriptPath string, autoApprove bool, autoSource security.ApprovalSource) error {
 	if deployTargets == "" && deployInventory == "" {
 		return fmt.Errorf("either --targets or --inventory must be specified")
 	}
@@ -137,6 +148,18 @@ func runDeployCommand(scriptPath string) error {
 	startedAt := time.Now().UTC()
 	taskID := generateTaskID(scriptPath)
 
+	// Approval gate: privileged scripts (admin/root) aimed at production
+	// targets need explicit approval before any host is contacted.
+	approvalRec, err := enforceDeployApproval(scriptPath, prog, targets, autoApprove, autoSource)
+	if err != nil {
+		recordDeployAudit(auditParams{
+			taskID: taskID, scriptPath: scriptPath, privilege: string(scriptPriv),
+			targets: targets, user: deployUser, mode: mode, dryRun: deployDryRun,
+			startedAt: startedAt, runErr: err, approval: approvalRec,
+		})
+		return err
+	}
+
 	var result *deployAggregate
 	switch mode {
 	case "runner":
@@ -150,7 +173,7 @@ func runDeployCommand(scriptPath string) error {
 		recordDeployAudit(auditParams{
 			taskID: taskID, scriptPath: scriptPath, privilege: string(scriptPriv),
 			targets: targets, user: deployUser, mode: mode, dryRun: deployDryRun,
-			startedAt: startedAt, runErr: err,
+			startedAt: startedAt, runErr: err, approval: approvalRec,
 		})
 		return err
 	}
@@ -175,6 +198,7 @@ func runDeployCommand(scriptPath string) error {
 		dryRun:     deployDryRun,
 		startedAt:  startedAt,
 		runErr:     statusErr,
+		approval:   approvalRec,
 	})
 
 	return outputDeployResult(result, startedAt, scriptPath)
@@ -507,6 +531,47 @@ func deployAOTMode(ctx context.Context, scriptPath string, prog *ast.Program, ta
 }
 
 // ============================================================
+// Approval gate
+// ============================================================
+
+// targetTags converts deploy targets into the tag view the approval
+// decision consumes (name + env metadata; inline targets carry no tags).
+func targetTags(targets []opsexec.Target) []security.TargetTags {
+	out := make([]security.TargetTags, len(targets))
+	for i, t := range targets {
+		out[i] = security.TargetTags{Name: t.Name, Tags: t.Tags}
+	}
+	return out
+}
+
+// enforceDeployApproval applies the approval gate to a deploy. It returns
+// the approval record for the audit trail (nil when no approval was
+// required) and an error when the deploy must be aborted before any host
+// is contacted.
+func enforceDeployApproval(scriptPath string, prog *ast.Program, targets []opsexec.Target, autoApprove bool, autoSource security.ApprovalSource) (*security.ApprovalRecord, error) {
+	gate := &security.ApprovalGate{
+		Decision: security.EvaluateApproval(
+			security.GetScriptPrivilege(prog),
+			security.CollectMutatingOps(prog),
+			targetTags(targets),
+		),
+		ScriptName:  scriptPath,
+		AutoApprove: autoApprove,
+		AutoSource:  autoSource,
+		Interactive: deployStdinIsInteractive(),
+		Confirm:     deployConfirmFn,
+	}
+	rec, err := gate.Check()
+	if err != nil {
+		return rec, fmt.Errorf("deploy blocked: %w", err)
+	}
+	if rec != nil {
+		fmt.Fprintf(os.Stderr, "Approved via %s by %s\n", rec.Source, rec.User)
+	}
+	return rec, nil
+}
+
+// ============================================================
 // Result output and audit
 // ============================================================
 
@@ -521,6 +586,7 @@ type auditParams struct {
 	dryRun     bool
 	startedAt  time.Time
 	runErr     error
+	approval   *security.ApprovalRecord
 }
 
 // recordDeployAudit writes an honest audit entry: only a nil runErr with a
@@ -542,6 +608,7 @@ func recordDeployAudit(p auditParams) {
 	} else {
 		entry.SetStatus("success", durationMs)
 	}
+	entry.Approval = p.approval
 	logger := security.NewAuditLogger("")
 	if err := logger.Log(entry); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to write audit log: %v\n", err)

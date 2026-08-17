@@ -273,6 +273,8 @@ hosts:
     user: root
   - host: 10.0.0.2
     user: deploy
+    tags:
+      env: prod        # 生产标签：admin/root 脚本命中此主机时触发审批流
 ```
 
 ```bash
@@ -280,6 +282,8 @@ hosts:
   --inventory hosts.yml \
   --instructions check_cpu.json
 ```
+
+带 `env: prod`（或 `production`）标签的主机被视为生产目标：`privilege: admin/root` 的脚本部署到它们时，`opsctl deploy` 会先要求审批（交互式 y/N 确认；CI 中需 `--auto-approve` 或 `OPSCTL_AUTO_APPROVE=1`），详见 CLI 参考的审批流章节。
 
 ### 工作原理
 

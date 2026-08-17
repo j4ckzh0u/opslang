@@ -25,6 +25,10 @@ type AuditEntry struct {
 	DurationMs int64                  `json:"duration_ms"`
 	StartedAt  time.Time              `json:"started_at"`
 	FinishedAt time.Time              `json:"finished_at"`
+	// Approval records the pre-execution approval decision when one was
+	// required (privileged run against production targets). It makes the
+	// approval event traceable in the same trail as the run itself.
+	Approval *ApprovalRecord `json:"approval,omitempty"`
 }
 
 // AuditLogger handles audit log writing.
