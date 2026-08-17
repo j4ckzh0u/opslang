@@ -15,7 +15,9 @@ type PackageAction struct {
 	Action  string `json:"action"`
 	Manager string `json:"manager"`
 	Success bool   `json:"success"`
+	Changed bool   `json:"changed"`
 	Message string `json:"message"`
+	Error   string `json:"error,omitempty"`
 }
 
 // PackageInfo represents metadata about an installed package.
@@ -64,7 +66,7 @@ func runCommand(binary string, args ...string) (string, error) {
 func Install(name string) (PackageAction, error) {
 	mgrName, mgrPath, err := detectManager()
 	if err != nil {
-		return PackageAction{Name: name, Action: "install", Success: false, Message: err.Error()}, err
+		return PackageAction{Name: name, Action: "install", Success: false, Message: err.Error(), Error: err.Error()}, err
 	}
 
 	output, execErr := runCommand(mgrPath, "install", "-y", name)
@@ -73,9 +75,11 @@ func Install(name string) (PackageAction, error) {
 		Action:  "install",
 		Manager: mgrName,
 		Success: execErr == nil,
+		Changed: execErr == nil,
 		Message: strings.TrimSpace(output),
 	}
 	if execErr != nil {
+		action.Error = fmt.Sprintf("install %s with %s failed: %s: %s", name, mgrName, execErr, strings.TrimSpace(output))
 		return action, fmt.Errorf("install %s with %s failed: %w: %s", name, mgrName, execErr, output)
 	}
 	return action, nil
@@ -85,7 +89,7 @@ func Install(name string) (PackageAction, error) {
 func Remove(name string) (PackageAction, error) {
 	mgrName, mgrPath, err := detectManager()
 	if err != nil {
-		return PackageAction{Name: name, Action: "remove", Success: false, Message: err.Error()}, err
+		return PackageAction{Name: name, Action: "remove", Success: false, Message: err.Error(), Error: err.Error()}, err
 	}
 
 	output, execErr := runCommand(mgrPath, "remove", "-y", name)
@@ -94,9 +98,11 @@ func Remove(name string) (PackageAction, error) {
 		Action:  "remove",
 		Manager: mgrName,
 		Success: execErr == nil,
+		Changed: execErr == nil,
 		Message: strings.TrimSpace(output),
 	}
 	if execErr != nil {
+		action.Error = fmt.Sprintf("remove %s with %s failed: %s: %s", name, mgrName, execErr, strings.TrimSpace(output))
 		return action, fmt.Errorf("remove %s with %s failed: %w: %s", name, mgrName, execErr, output)
 	}
 	return action, nil

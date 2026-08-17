@@ -278,7 +278,7 @@ func TestPackageActionJSONFieldNames(t *testing.T) {
 	var m map[string]interface{}
 	json.Unmarshal(data, &m)
 
-	expectedKeys := []string{"name", "action", "manager", "success", "message"}
+	expectedKeys := []string{"name", "action", "manager", "success", "changed", "message"}
 	for _, key := range expectedKeys {
 		if _, ok := m[key]; !ok {
 			t.Errorf("JSON output missing key %q", key)

@@ -378,14 +378,16 @@ func (r *Registry) registerPkgOps() {
 		if err != nil {
 			return nil, fmt.Errorf("pkg.install: %w", err)
 		}
-		return opspkg.Install(name)
+		r, _ := opspkg.Install(name)
+		return r, nil
 	})
 	r.Register("pkg.remove", func(args map[string]interface{}) (interface{}, error) {
 		name, err := argString(args, "name")
 		if err != nil {
 			return nil, fmt.Errorf("pkg.remove: %w", err)
 		}
-		return opspkg.Remove(name)
+		r, _ := opspkg.Remove(name)
+		return r, nil
 	})
 	r.Register("pkg.info", func(args map[string]interface{}) (interface{}, error) {
 		name, err := argString(args, "name")

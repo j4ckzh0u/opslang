@@ -852,10 +852,7 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		if !ok {
 			return nil, fmt.Errorf("pkg.install(): argument must be string")
 		}
-		r, err := opspkg.Install(name)
-		if err != nil {
-			return nil, err
-		}
+		r, _ := opspkg.Install(name)
 		return structToMap(r)
 	}
 
@@ -867,10 +864,7 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		if !ok {
 			return nil, fmt.Errorf("pkg.remove(): argument must be string")
 		}
-		r, err := opspkg.Remove(name)
-		if err != nil {
-			return nil, err
-		}
+		r, _ := opspkg.Remove(name)
 		return structToMap(r)
 	}
 
