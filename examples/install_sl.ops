@@ -32,7 +32,7 @@ if check.exit_code == 0 {
     let install_start = time.now()
     let result = pkg.install("sl")
     let install_end = time.now()
-    let duration = time.diff(install_start, install_end)
+    let duration = time.diff(install_start.unix, install_end.unix)
 
     if result.success {
         // 安装成功，验证
@@ -55,7 +55,7 @@ if check.exit_code == 0 {
             changed: result.changed,
             path: verify.stdout,
             version: version_check.stdout,
-            duration_ms: duration.milliseconds,
+            duration_ms: duration.seconds,
             package_manager: result.manager,
             disk_usage_percent: disk.used_percent,
             memory_usage_percent: mem.used_percent,
@@ -73,7 +73,7 @@ if check.exit_code == 0 {
             action: "install_sl",
             status: "failed",
             error: result.error,
-            duration_ms: duration.milliseconds,
+            duration_ms: duration.seconds,
             package_manager: result.manager,
             timestamp: install_end.iso8601
         }
