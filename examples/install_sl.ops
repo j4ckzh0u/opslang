@@ -1,0 +1,83 @@
+// install_sl.ops - 批量安装 sl 命令并生成详细报告
+// 用法: opsctl deploy --hosts host1,host2,host3 install_sl.ops
+
+task "install_sl" on targets {
+    // 记录开始时间
+    let start_time = time.now()
+    let host = sys.hostname()
+    let os_info = sys.os()
+
+    print("[" + host + "] 开始安装 sl...")
+
+    // 检查是否已安装
+    let check = process.exec("which", "sl")
+
+    if check.exit_code == 0 {
+        // 已安装
+        print("[" + host + "] sl 已安装: " + check.stdout)
+
+        report {
+            host: host,
+            os: os_info.platform,
+            arch: os_info.platform,
+            kernel: os_info.kernel_version,
+            action: "install_sl",
+            status: "skipped",
+            message: "already installed",
+            path: check.stdout,
+            timestamp: start_time.iso8601
+        }
+        return
+    }
+
+    // 执行安装
+    let install_start = time.now()
+    let result = pkg.install("sl")
+    let install_end = time.now()
+    let duration = time.diff(install_start, install_end)
+
+    if result.success {
+        // 安装成功，验证
+        let verify = process.exec("which", "sl")
+        let version_check = process.exec("sl", "-V")
+
+        print("[" + host + "] ✓ sl 安装成功")
+
+        // 获取磁盘使用情况
+        let disk = sys.disk.usage("/")
+        let mem = sys.memory.info()
+
+        report {
+            host: host,
+            os: os_info.platform,
+            arch: os_info.platform,
+            kernel: os_info.kernel_version,
+            action: "install_sl",
+            status: "success",
+            changed: result.changed,
+            path: verify.stdout,
+            version: version_check.stdout,
+            duration_ms: duration.milliseconds,
+            package_manager: result.manager,
+            disk_usage_percent: disk.used_percent,
+            memory_usage_percent: mem.used_percent,
+            timestamp: install_end.iso8601
+        }
+    } else {
+        // 安装失败
+        print("[" + host + "] ✗ sl 安装失败: " + result.error)
+
+        report {
+            host: host,
+            os: os_info.platform,
+            arch: os_info.platform,
+            kernel: os_info.kernel_version,
+            action: "install_sl",
+            status: "failed",
+            error: result.error,
+            duration_ms: duration.milliseconds,
+            package_manager: result.manager,
+            timestamp: install_end.iso8601
+        }
+    }
+}
