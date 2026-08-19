@@ -1,0 +1,43 @@
+// 网络接口管理脚本
+// 使用 ipaddr 管理 IP 地址和网络接口
+
+fn list_network_info() {
+    // 列出所有网络接口
+    let interfaces = ipaddr.list()
+    print("网络接口总数: " + str(interfaces.count))
+
+    for iface in interfaces.interfaces {
+        print("\n接口: " + iface.name)
+        print("状态: " + iface.state)
+        print("MAC: " + iface.mac)
+
+        for addr in iface.addresses {
+            print("  IP: " + addr.address)
+        }
+    }
+}
+
+fn manage_interface(iface_name) {
+    // 获取接口详细信息
+    let info = ipaddr.list_interface(iface_name)
+    print("接口 " + iface_name + " 详情:")
+    print(info)
+
+    // 添加 IP 地址
+    let add_result = ipaddr.add("192.168.1.100/24", iface_name)
+    print("添加 IP: " + add_result.status)
+
+    // 获取链路状态
+    let links = ipaddr.links()
+    print("\n链路状态:")
+    for link in links.links {
+        print(link.name + ": " + link.state)
+    }
+}
+
+fn main() {
+    list_network_info()
+
+    // 管理特定接口（示例）
+    // manage_interface("eth0")
+}

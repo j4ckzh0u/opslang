@@ -733,6 +733,65 @@ var Funcs = []Func{
 	{Name: "supervisor.clear_log", Args: []string{"name"}, Mutating: true},
 	{Name: "supervisor.reread", Mutating: true},
 	{Name: "supervisor.update", Args: []string{"name"}, Mutating: true},
+
+	// ── smartctl ───────────────────────────────────────────────────────────
+	{Name: "smartctl.device", Args: []string{"device"}},
+	{Name: "smartctl.health", Args: []string{"device"}},
+	{Name: "smartctl.attributes", Args: []string{"device"}},
+	{Name: "smartctl.list"},
+	{Name: "smartctl.json", Args: []string{"device"}},
+
+	// ── virsh ──────────────────────────────────────────────────────────────
+	{Name: "virsh.start", Args: []string{"domain"}, Mutating: true},
+	{Name: "virsh.stop", Args: []string{"domain"}, Mutating: true},
+	{Name: "virsh.reboot", Args: []string{"domain"}, Mutating: true},
+	{Name: "virsh.shutdown", Args: []string{"domain"}, Mutating: true},
+	{Name: "virsh.suspend", Args: []string{"domain"}, Mutating: true},
+	{Name: "virsh.resume", Args: []string{"domain"}, Mutating: true},
+	{Name: "virsh.list"},
+	{Name: "virsh.info", Args: []string{"domain"}},
+	{Name: "virsh.version"},
+
+	// ── ethtool ────────────────────────────────────────────────────────────
+	{Name: "ethtool.show", Args: []string{"interface"}},
+	{Name: "ethtool.set_speed", Args: []string{"interface", "speed"}, Mutating: true},
+	{Name: "ethtool.set_duplex", Args: []string{"interface", "duplex"}, Mutating: true},
+	{Name: "ethtool.set_autoneg", Args: []string{"interface", "autoneg"}, Mutating: true},
+	{Name: "ethtool.set_pause", Args: []string{"interface", "rx", "tx"}, Mutating: true},
+	{Name: "ethtool.set_offload", Args: []string{"interface", "feature", "value"}, Mutating: true},
+
+	// ── systemd_analyze ────────────────────────────────────────────────────
+	{Name: "systemd_analyze.time"},
+	{Name: "systemd_analyze.blame"},
+	{Name: "systemd_analyze.critical_chain"},
+	{Name: "systemd_analyze.security", Args: []string{"unit"}},
+	{Name: "systemd_analyze.verify", Args: []string{"unit"}},
+
+	// ── nvme ───────────────────────────────────────────────────────────────
+	{Name: "nvme.list"},
+	{Name: "nvme.smart_log", Args: []string{"device"}},
+	{Name: "nvme.firmware_log", Args: []string{"device"}},
+	{Name: "nvme.error_log", Args: []string{"device"}},
+	{Name: "nvme.version"},
+
+	// ── lshw ───────────────────────────────────────────────────────────────
+	{Name: "lshw.short"},
+	{Name: "lshw.class", Args: []string{"class"}},
+	{Name: "lshw.json"},
+	{Name: "lshw.system"},
+	{Name: "lshw.memory"},
+	{Name: "lshw.disk"},
+	{Name: "lshw.network"},
+
+	// ── ipaddr ─────────────────────────────────────────────────────────────
+	{Name: "ipaddr.list"},
+	{Name: "ipaddr.list_interface", Args: []string{"interface"}},
+	{Name: "ipaddr.add", Args: []string{"address", "interface"}, Mutating: true},
+	{Name: "ipaddr.delete", Args: []string{"address", "interface"}, Mutating: true},
+	{Name: "ipaddr.flush", Args: []string{"interface"}, Mutating: true},
+	{Name: "ipaddr.links"},
+	{Name: "ipaddr.link_up", Args: []string{"interface"}, Mutating: true},
+	{Name: "ipaddr.link_down", Args: []string{"interface"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

@@ -1,0 +1,26 @@
+// SMART 磁盘健康监控脚本
+// 使用 smartctl 获取磁盘健康信息
+
+fn check_disk_health(device) {
+    let health = smartctl.health(device)
+    let attrs = smartctl.attributes(device)
+
+    report {
+        device: device,
+        health: health,
+        attributes: attrs
+    }
+}
+
+fn main() {
+    // 列出所有支持 SMART 的设备
+    let devices = smartctl.list()
+    print("发现的 SMART 设备:")
+    print(devices)
+
+    // 检查第一个设备的健康状态
+    if len(devices.devices) > 0 {
+        let first_device = devices.devices[0]
+        check_disk_health(first_device)
+    }
+}

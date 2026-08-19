@@ -1,0 +1,31 @@
+// 虚拟机管理脚本
+// 使用 virsh 管理 KVM/QEMU 虚拟机
+
+fn check_vm_status() {
+    let vms = virsh.list()
+    print("当前运行的虚拟机:")
+    print(vms)
+
+    // 获取每个虚拟机的详细信息
+    for vm in vms.domains {
+        let info = virsh.info(vm.name)
+        print("虚拟机: " + vm.name)
+        print("状态: " + info.state)
+        print("CPU: " + str(info.cpus))
+        print("内存: " + str(info.memory) + " MB")
+    }
+}
+
+fn manage_vm(domain) {
+    // 启动虚拟机
+    let start_result = virsh.start(domain)
+    print("启动 " + domain + ": " + start_result.status)
+
+    // 获取版本信息
+    let version = virsh.version()
+    print("Virsh 版本: " + version.version)
+}
+
+fn main() {
+    check_vm_status()
+}

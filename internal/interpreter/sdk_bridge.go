@@ -94,6 +94,13 @@ import (
 	sdkdmidecode "github.com/opslang/opslang/pkg/ops-core-sdk/dmidecode"
 	sdktuned "github.com/opslang/opslang/pkg/ops-core-sdk/tuned"
 	sdksupervisor "github.com/opslang/opslang/pkg/ops-core-sdk/supervisor"
+	sdksmartctl "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl"
+	sdkvirsh "github.com/opslang/opslang/pkg/ops-core-sdk/virsh"
+	sdkethtool "github.com/opslang/opslang/pkg/ops-core-sdk/ethtool"
+	sdksystemd_analyze "github.com/opslang/opslang/pkg/ops-core-sdk/systemd_analyze"
+	sdknvme "github.com/opslang/opslang/pkg/ops-core-sdk/nvme"
+	sdkslshw "github.com/opslang/opslang/pkg/ops-core-sdk/lshw"
+	sdkipaddr "github.com/opslang/opslang/pkg/ops-core-sdk/ipaddr"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -6280,6 +6287,388 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			}
 		}
 		return sdksupervisor.Update(name), nil
+	}
+
+	// ── smartctl ──────────────────────────────────────────────────────────
+	interp.builtins["smartctl.device"] = func(args ...interface{}) (interface{}, error) {
+		device := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				device = s
+			}
+		}
+		return sdksmartctl.Device(device), nil
+	}
+	interp.builtins["smartctl.health"] = func(args ...interface{}) (interface{}, error) {
+		device := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				device = s
+			}
+		}
+		return sdksmartctl.Health(device), nil
+	}
+	interp.builtins["smartctl.attributes"] = func(args ...interface{}) (interface{}, error) {
+		device := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				device = s
+			}
+		}
+		return sdksmartctl.Attributes(device), nil
+	}
+	interp.builtins["smartctl.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdksmartctl.List(), nil
+	}
+	interp.builtins["smartctl.json"] = func(args ...interface{}) (interface{}, error) {
+		device := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				device = s
+			}
+		}
+		v, err := sdksmartctl.JSON(device)
+		return map[string]interface{}{"output": v}, err
+	}
+
+	// ── virsh ─────────────────────────────────────────────────────────────
+	interp.builtins["virsh.start"] = func(args ...interface{}) (interface{}, error) {
+		domain := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				domain = s
+			}
+		}
+		return sdkvirsh.Start(domain), nil
+	}
+	interp.builtins["virsh.stop"] = func(args ...interface{}) (interface{}, error) {
+		domain := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				domain = s
+			}
+		}
+		return sdkvirsh.Stop(domain), nil
+	}
+	interp.builtins["virsh.reboot"] = func(args ...interface{}) (interface{}, error) {
+		domain := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				domain = s
+			}
+		}
+		return sdkvirsh.Reboot(domain), nil
+	}
+	interp.builtins["virsh.shutdown"] = func(args ...interface{}) (interface{}, error) {
+		domain := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				domain = s
+			}
+		}
+		return sdkvirsh.Shutdown(domain), nil
+	}
+	interp.builtins["virsh.suspend"] = func(args ...interface{}) (interface{}, error) {
+		domain := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				domain = s
+			}
+		}
+		return sdkvirsh.Suspend(domain), nil
+	}
+	interp.builtins["virsh.resume"] = func(args ...interface{}) (interface{}, error) {
+		domain := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				domain = s
+			}
+		}
+		return sdkvirsh.Resume(domain), nil
+	}
+	interp.builtins["virsh.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkvirsh.List(), nil
+	}
+	interp.builtins["virsh.info"] = func(args ...interface{}) (interface{}, error) {
+		domain := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				domain = s
+			}
+		}
+		return sdkvirsh.Info(domain)
+	}
+	interp.builtins["virsh.version"] = func(args ...interface{}) (interface{}, error) {
+		v, err := sdkvirsh.Version()
+		return map[string]interface{}{"version": v}, err
+	}
+
+	// ── ethtool ───────────────────────────────────────────────────────────
+	interp.builtins["ethtool.show"] = func(args ...interface{}) (interface{}, error) {
+		iface := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				iface = s
+			}
+		}
+		return sdkethtool.Show(iface), nil
+	}
+	interp.builtins["ethtool.set_speed"] = func(args ...interface{}) (interface{}, error) {
+		iface, speed := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				iface = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				speed = s
+			}
+		}
+		return sdkethtool.SetSpeed(iface, speed), nil
+	}
+	interp.builtins["ethtool.set_duplex"] = func(args ...interface{}) (interface{}, error) {
+		iface, duplex := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				iface = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				duplex = s
+			}
+		}
+		return sdkethtool.SetDuplex(iface, duplex), nil
+	}
+	interp.builtins["ethtool.set_autoneg"] = func(args ...interface{}) (interface{}, error) {
+		iface, autoneg := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				iface = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				autoneg = s
+			}
+		}
+		return sdkethtool.SetAutoneg(iface, autoneg), nil
+	}
+	interp.builtins["ethtool.set_pause"] = func(args ...interface{}) (interface{}, error) {
+		iface, rx, tx := "", "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				iface = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				rx = s
+			}
+		}
+		if len(args) > 2 {
+			if s, ok := args[2].(string); ok {
+				tx = s
+			}
+		}
+		return sdkethtool.SetPause(iface, rx, tx), nil
+	}
+	interp.builtins["ethtool.set_offload"] = func(args ...interface{}) (interface{}, error) {
+		iface, feature, value := "", "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				iface = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				feature = s
+			}
+		}
+		if len(args) > 2 {
+			if s, ok := args[2].(string); ok {
+				value = s
+			}
+		}
+		return sdkethtool.SetOffload(iface, feature, value), nil
+	}
+
+	// ── systemd_analyze ───────────────────────────────────────────────────
+	interp.builtins["systemd_analyze.time"] = func(args ...interface{}) (interface{}, error) {
+		return sdksystemd_analyze.Time(), nil
+	}
+	interp.builtins["systemd_analyze.blame"] = func(args ...interface{}) (interface{}, error) {
+		return sdksystemd_analyze.Blame(), nil
+	}
+	interp.builtins["systemd_analyze.critical_chain"] = func(args ...interface{}) (interface{}, error) {
+		return sdksystemd_analyze.CriticalChain(), nil
+	}
+	interp.builtins["systemd_analyze.security"] = func(args ...interface{}) (interface{}, error) {
+		unit := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				unit = s
+			}
+		}
+		v, err := sdksystemd_analyze.Security(unit)
+		return map[string]interface{}{"output": v}, err
+	}
+	interp.builtins["systemd_analyze.verify"] = func(args ...interface{}) (interface{}, error) {
+		unit := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				unit = s
+			}
+		}
+		v, err := sdksystemd_analyze.Verify(unit)
+		return map[string]interface{}{"output": v}, err
+	}
+
+	// ── nvme ──────────────────────────────────────────────────────────────
+	interp.builtins["nvme.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdknvme.List(), nil
+	}
+	interp.builtins["nvme.smart_log"] = func(args ...interface{}) (interface{}, error) {
+		device := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				device = s
+			}
+		}
+		v, err := sdknvme.SmartLog(device)
+		return map[string]interface{}{"output": v}, err
+	}
+	interp.builtins["nvme.firmware_log"] = func(args ...interface{}) (interface{}, error) {
+		device := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				device = s
+			}
+		}
+		v, err := sdknvme.FirmwareLog(device)
+		return map[string]interface{}{"output": v}, err
+	}
+	interp.builtins["nvme.error_log"] = func(args ...interface{}) (interface{}, error) {
+		device := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				device = s
+			}
+		}
+		v, err := sdknvme.ErrorLog(device)
+		return map[string]interface{}{"output": v}, err
+	}
+	interp.builtins["nvme.version"] = func(args ...interface{}) (interface{}, error) {
+		v, err := sdknvme.Version()
+		return map[string]interface{}{"version": v}, err
+	}
+
+	// ── lshw ──────────────────────────────────────────────────────────────
+	interp.builtins["lshw.short"] = func(args ...interface{}) (interface{}, error) {
+		return sdkslshw.Short(), nil
+	}
+	interp.builtins["lshw.class"] = func(args ...interface{}) (interface{}, error) {
+		class := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				class = s
+			}
+		}
+		v, err := sdkslshw.Class(class)
+		return map[string]interface{}{"output": v}, err
+	}
+	interp.builtins["lshw.json"] = func(args ...interface{}) (interface{}, error) {
+		v, err := sdkslshw.JSON()
+		return map[string]interface{}{"output": v}, err
+	}
+	interp.builtins["lshw.system"] = func(args ...interface{}) (interface{}, error) {
+		v, err := sdkslshw.System()
+		return map[string]interface{}{"output": v}, err
+	}
+	interp.builtins["lshw.memory"] = func(args ...interface{}) (interface{}, error) {
+		v, err := sdkslshw.Memory()
+		return map[string]interface{}{"output": v}, err
+	}
+	interp.builtins["lshw.disk"] = func(args ...interface{}) (interface{}, error) {
+		v, err := sdkslshw.Disk()
+		return map[string]interface{}{"output": v}, err
+	}
+	interp.builtins["lshw.network"] = func(args ...interface{}) (interface{}, error) {
+		v, err := sdkslshw.Network()
+		return map[string]interface{}{"output": v}, err
+	}
+
+	// ── ipaddr ────────────────────────────────────────────────────────────
+	interp.builtins["ipaddr.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkipaddr.List(), nil
+	}
+	interp.builtins["ipaddr.list_interface"] = func(args ...interface{}) (interface{}, error) {
+		iface := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				iface = s
+			}
+		}
+		return sdkipaddr.ListInterface(iface), nil
+	}
+	interp.builtins["ipaddr.add"] = func(args ...interface{}) (interface{}, error) {
+		addr, iface := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				addr = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				iface = s
+			}
+		}
+		return sdkipaddr.Add(addr, iface), nil
+	}
+	interp.builtins["ipaddr.delete"] = func(args ...interface{}) (interface{}, error) {
+		addr, iface := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				addr = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				iface = s
+			}
+		}
+		return sdkipaddr.Delete(addr, iface), nil
+	}
+	interp.builtins["ipaddr.flush"] = func(args ...interface{}) (interface{}, error) {
+		iface := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				iface = s
+			}
+		}
+		return sdkipaddr.Flush(iface), nil
+	}
+	interp.builtins["ipaddr.links"] = func(args ...interface{}) (interface{}, error) {
+		return sdkipaddr.Links(), nil
+	}
+	interp.builtins["ipaddr.link_up"] = func(args ...interface{}) (interface{}, error) {
+		iface := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				iface = s
+			}
+		}
+		return sdkipaddr.LinkUp(iface), nil
+	}
+	interp.builtins["ipaddr.link_down"] = func(args ...interface{}) (interface{}, error) {
+		iface := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				iface = s
+			}
+		}
+		return sdkipaddr.LinkDown(iface), nil
 	}
 }
 // If the arg at idx is a map[string]interface{}, values are converted to strings.

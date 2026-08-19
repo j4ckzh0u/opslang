@@ -708,6 +708,65 @@ var sdkMapping = map[string]sdkFunc{
 	"supervisor.clear_log":  {pkg: "supervisor", goName: "ClearLog", args: true, params: []string{"s"}},
 	"supervisor.reread":     {pkg: "supervisor", goName: "Reread", args: true},
 	"supervisor.update":     {pkg: "supervisor", goName: "Update", args: true, params: []string{"s"}},
+
+	// smartctl
+	"smartctl.device":     {pkg: "smartctl", goName: "Device", args: true, params: []string{"s"}},
+	"smartctl.health":     {pkg: "smartctl", goName: "Health", args: true, params: []string{"s"}},
+	"smartctl.attributes": {pkg: "smartctl", goName: "Attributes", args: true, params: []string{"s"}},
+	"smartctl.list":       {pkg: "smartctl", goName: "List"},
+	"smartctl.json":       {pkg: "smartctl", goName: "JSON", args: true, params: []string{"s"}},
+
+	// virsh
+	"virsh.start":   {pkg: "virsh", goName: "Start", args: true, params: []string{"s"}},
+	"virsh.stop":    {pkg: "virsh", goName: "Stop", args: true, params: []string{"s"}},
+	"virsh.reboot":  {pkg: "virsh", goName: "Reboot", args: true, params: []string{"s"}},
+	"virsh.shutdown": {pkg: "virsh", goName: "Shutdown", args: true, params: []string{"s"}},
+	"virsh.suspend": {pkg: "virsh", goName: "Suspend", args: true, params: []string{"s"}},
+	"virsh.resume":  {pkg: "virsh", goName: "Resume", args: true, params: []string{"s"}},
+	"virsh.list":    {pkg: "virsh", goName: "List"},
+	"virsh.info":    {pkg: "virsh", goName: "Info", args: true, params: []string{"s"}},
+	"virsh.version": {pkg: "virsh", goName: "Version"},
+
+	// ethtool
+	"ethtool.show":        {pkg: "ethtool", goName: "Show", args: true, params: []string{"s"}},
+	"ethtool.set_speed":   {pkg: "ethtool", goName: "SetSpeed", args: true, params: []string{"s", "s"}},
+	"ethtool.set_duplex":  {pkg: "ethtool", goName: "SetDuplex", args: true, params: []string{"s", "s"}},
+	"ethtool.set_autoneg": {pkg: "ethtool", goName: "SetAutoneg", args: true, params: []string{"s", "s"}},
+	"ethtool.set_pause":   {pkg: "ethtool", goName: "SetPause", args: true, params: []string{"s", "s", "s"}},
+	"ethtool.set_offload": {pkg: "ethtool", goName: "SetOffload", args: true, params: []string{"s", "s", "s"}},
+
+	// systemd_analyze
+	"systemd_analyze.time":          {pkg: "systemd_analyze", goName: "Time"},
+	"systemd_analyze.blame":         {pkg: "systemd_analyze", goName: "Blame"},
+	"systemd_analyze.critical_chain": {pkg: "systemd_analyze", goName: "CriticalChain"},
+	"systemd_analyze.security":      {pkg: "systemd_analyze", goName: "Security", args: true, params: []string{"s"}},
+	"systemd_analyze.verify":        {pkg: "systemd_analyze", goName: "Verify", args: true, params: []string{"s"}},
+
+	// nvme
+	"nvme.list":         {pkg: "nvme", goName: "List"},
+	"nvme.smart_log":    {pkg: "nvme", goName: "SmartLog", args: true, params: []string{"s"}},
+	"nvme.firmware_log": {pkg: "nvme", goName: "FirmwareLog", args: true, params: []string{"s"}},
+	"nvme.error_log":    {pkg: "nvme", goName: "ErrorLog", args: true, params: []string{"s"}},
+	"nvme.version":      {pkg: "nvme", goName: "Version"},
+
+	// lshw
+	"lshw.short":   {pkg: "lshw", goName: "Short"},
+	"lshw.class":   {pkg: "lshw", goName: "Class", args: true, params: []string{"s"}},
+	"lshw.json":    {pkg: "lshw", goName: "JSON"},
+	"lshw.system":  {pkg: "lshw", goName: "System"},
+	"lshw.memory":  {pkg: "lshw", goName: "Memory"},
+	"lshw.disk":    {pkg: "lshw", goName: "Disk"},
+	"lshw.network": {pkg: "lshw", goName: "Network"},
+
+	// ipaddr
+	"ipaddr.list":           {pkg: "ipaddr", goName: "List"},
+	"ipaddr.list_interface": {pkg: "ipaddr", goName: "ListInterface", args: true, params: []string{"s"}},
+	"ipaddr.add":            {pkg: "ipaddr", goName: "Add", args: true, params: []string{"s", "s"}},
+	"ipaddr.delete":         {pkg: "ipaddr", goName: "Delete", args: true, params: []string{"s", "s"}},
+	"ipaddr.flush":          {pkg: "ipaddr", goName: "Flush", args: true, params: []string{"s"}},
+	"ipaddr.links":          {pkg: "ipaddr", goName: "Links"},
+	"ipaddr.link_up":        {pkg: "ipaddr", goName: "LinkUp", args: true, params: []string{"s"}},
+	"ipaddr.link_down":      {pkg: "ipaddr", goName: "LinkDown", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -856,6 +915,13 @@ var pkgImportAlias = map[string]string{
 	"dmidecode":      "opsdmidecode",
 	"tuned":          "opstuned",
 	"supervisor":     "opssupervisor",
+	"smartctl":       "opssmartctl",
+	"virsh":          "opsvirsh",
+	"ethtool":        "opsethtool",
+	"systemd_analyze": "opssystemd_analyze",
+	"nvme":           "opsnvme",
+	"lshw":           "opslshw",
+	"ipaddr":         "opsipaddr",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -930,6 +996,13 @@ var pkgImportPath = map[string]string{
 	"dmidecode":      "github.com/opslang/opslang/pkg/ops-core-sdk/dmidecode",
 	"tuned":          "github.com/opslang/opslang/pkg/ops-core-sdk/tuned",
 	"supervisor":     "github.com/opslang/opslang/pkg/ops-core-sdk/supervisor",
+	"smartctl":       "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl",
+	"virsh":          "github.com/opslang/opslang/pkg/ops-core-sdk/virsh",
+	"ethtool":        "github.com/opslang/opslang/pkg/ops-core-sdk/ethtool",
+	"systemd_analyze": "github.com/opslang/opslang/pkg/ops-core-sdk/systemd_analyze",
+	"nvme":           "github.com/opslang/opslang/pkg/ops-core-sdk/nvme",
+	"lshw":           "github.com/opslang/opslang/pkg/ops-core-sdk/lshw",
+	"ipaddr":         "github.com/opslang/opslang/pkg/ops-core-sdk/ipaddr",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

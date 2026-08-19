@@ -95,6 +95,13 @@ import (
 	sdkdmidecode "github.com/opslang/opslang/pkg/ops-core-sdk/dmidecode"
 	sdktuned "github.com/opslang/opslang/pkg/ops-core-sdk/tuned"
 	sdksupervisor "github.com/opslang/opslang/pkg/ops-core-sdk/supervisor"
+	sdksmartctl "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl"
+	sdkvirsh "github.com/opslang/opslang/pkg/ops-core-sdk/virsh"
+	sdkethtool "github.com/opslang/opslang/pkg/ops-core-sdk/ethtool"
+	sdksystemd_analyze "github.com/opslang/opslang/pkg/ops-core-sdk/systemd_analyze"
+	sdknvme "github.com/opslang/opslang/pkg/ops-core-sdk/nvme"
+	sdkslshw "github.com/opslang/opslang/pkg/ops-core-sdk/lshw"
+	sdkipaddr "github.com/opslang/opslang/pkg/ops-core-sdk/ipaddr"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -3877,6 +3884,207 @@ func (r *Registry) registerExtensions() {
 	r.Register("supervisor.update", func(args map[string]interface{}) (interface{}, error) {
 		name, _ := argString(args, "name")
 		return sdksupervisor.Update(name), nil
+	})
+
+	// ── smartctl ──────────────────────────────────────────────────────────
+	r.Register("smartctl.device", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		return sdksmartctl.Device(device), nil
+	})
+	r.Register("smartctl.health", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		return sdksmartctl.Health(device), nil
+	})
+	r.Register("smartctl.attributes", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		return sdksmartctl.Attributes(device), nil
+	})
+	r.Register("smartctl.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdksmartctl.List(), nil
+	})
+	r.Register("smartctl.json", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		v, err := sdksmartctl.JSON(device)
+		return map[string]interface{}{"output": v}, err
+	})
+
+	// ── virsh ─────────────────────────────────────────────────────────────
+	r.Register("virsh.start", func(args map[string]interface{}) (interface{}, error) {
+		domain, _ := argString(args, "domain")
+		return sdkvirsh.Start(domain), nil
+	})
+	r.Register("virsh.stop", func(args map[string]interface{}) (interface{}, error) {
+		domain, _ := argString(args, "domain")
+		return sdkvirsh.Stop(domain), nil
+	})
+	r.Register("virsh.reboot", func(args map[string]interface{}) (interface{}, error) {
+		domain, _ := argString(args, "domain")
+		return sdkvirsh.Reboot(domain), nil
+	})
+	r.Register("virsh.shutdown", func(args map[string]interface{}) (interface{}, error) {
+		domain, _ := argString(args, "domain")
+		return sdkvirsh.Shutdown(domain), nil
+	})
+	r.Register("virsh.suspend", func(args map[string]interface{}) (interface{}, error) {
+		domain, _ := argString(args, "domain")
+		return sdkvirsh.Suspend(domain), nil
+	})
+	r.Register("virsh.resume", func(args map[string]interface{}) (interface{}, error) {
+		domain, _ := argString(args, "domain")
+		return sdkvirsh.Resume(domain), nil
+	})
+	r.Register("virsh.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkvirsh.List(), nil
+	})
+	r.Register("virsh.info", func(args map[string]interface{}) (interface{}, error) {
+		domain, _ := argString(args, "domain")
+		return sdkvirsh.Info(domain)
+	})
+	r.Register("virsh.version", func(args map[string]interface{}) (interface{}, error) {
+		v, err := sdkvirsh.Version()
+		return map[string]interface{}{"version": v}, err
+	})
+
+	// ── ethtool ───────────────────────────────────────────────────────────
+	r.Register("ethtool.show", func(args map[string]interface{}) (interface{}, error) {
+		iface, _ := argString(args, "interface")
+		return sdkethtool.Show(iface), nil
+	})
+	r.Register("ethtool.set_speed", func(args map[string]interface{}) (interface{}, error) {
+		iface, _ := argString(args, "interface")
+		speed, _ := argString(args, "speed")
+		return sdkethtool.SetSpeed(iface, speed), nil
+	})
+	r.Register("ethtool.set_duplex", func(args map[string]interface{}) (interface{}, error) {
+		iface, _ := argString(args, "interface")
+		duplex, _ := argString(args, "duplex")
+		return sdkethtool.SetDuplex(iface, duplex), nil
+	})
+	r.Register("ethtool.set_autoneg", func(args map[string]interface{}) (interface{}, error) {
+		iface, _ := argString(args, "interface")
+		autoneg, _ := argString(args, "autoneg")
+		return sdkethtool.SetAutoneg(iface, autoneg), nil
+	})
+	r.Register("ethtool.set_pause", func(args map[string]interface{}) (interface{}, error) {
+		iface, _ := argString(args, "interface")
+		rx, _ := argString(args, "rx")
+		tx, _ := argString(args, "tx")
+		return sdkethtool.SetPause(iface, rx, tx), nil
+	})
+	r.Register("ethtool.set_offload", func(args map[string]interface{}) (interface{}, error) {
+		iface, _ := argString(args, "interface")
+		feature, _ := argString(args, "feature")
+		value, _ := argString(args, "value")
+		return sdkethtool.SetOffload(iface, feature, value), nil
+	})
+
+	// ── systemd_analyze ───────────────────────────────────────────────────
+	r.Register("systemd_analyze.time", func(args map[string]interface{}) (interface{}, error) {
+		return sdksystemd_analyze.Time(), nil
+	})
+	r.Register("systemd_analyze.blame", func(args map[string]interface{}) (interface{}, error) {
+		return sdksystemd_analyze.Blame(), nil
+	})
+	r.Register("systemd_analyze.critical_chain", func(args map[string]interface{}) (interface{}, error) {
+		return sdksystemd_analyze.CriticalChain(), nil
+	})
+	r.Register("systemd_analyze.security", func(args map[string]interface{}) (interface{}, error) {
+		unit, _ := argString(args, "unit")
+		v, err := sdksystemd_analyze.Security(unit)
+		return map[string]interface{}{"output": v}, err
+	})
+	r.Register("systemd_analyze.verify", func(args map[string]interface{}) (interface{}, error) {
+		unit, _ := argString(args, "unit")
+		v, err := sdksystemd_analyze.Verify(unit)
+		return map[string]interface{}{"output": v}, err
+	})
+
+	// ── nvme ──────────────────────────────────────────────────────────────
+	r.Register("nvme.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdknvme.List(), nil
+	})
+	r.Register("nvme.smart_log", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		v, err := sdknvme.SmartLog(device)
+		return map[string]interface{}{"output": v}, err
+	})
+	r.Register("nvme.firmware_log", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		v, err := sdknvme.FirmwareLog(device)
+		return map[string]interface{}{"output": v}, err
+	})
+	r.Register("nvme.error_log", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		v, err := sdknvme.ErrorLog(device)
+		return map[string]interface{}{"output": v}, err
+	})
+	r.Register("nvme.version", func(args map[string]interface{}) (interface{}, error) {
+		v, err := sdknvme.Version()
+		return map[string]interface{}{"version": v}, err
+	})
+
+	// ── lshw ──────────────────────────────────────────────────────────────
+	r.Register("lshw.short", func(args map[string]interface{}) (interface{}, error) {
+		return sdkslshw.Short(), nil
+	})
+	r.Register("lshw.class", func(args map[string]interface{}) (interface{}, error) {
+		class, _ := argString(args, "class")
+		v, err := sdkslshw.Class(class)
+		return map[string]interface{}{"output": v}, err
+	})
+	r.Register("lshw.json", func(args map[string]interface{}) (interface{}, error) {
+		v, err := sdkslshw.JSON()
+		return map[string]interface{}{"output": v}, err
+	})
+	r.Register("lshw.system", func(args map[string]interface{}) (interface{}, error) {
+		v, err := sdkslshw.System()
+		return map[string]interface{}{"output": v}, err
+	})
+	r.Register("lshw.memory", func(args map[string]interface{}) (interface{}, error) {
+		v, err := sdkslshw.Memory()
+		return map[string]interface{}{"output": v}, err
+	})
+	r.Register("lshw.disk", func(args map[string]interface{}) (interface{}, error) {
+		v, err := sdkslshw.Disk()
+		return map[string]interface{}{"output": v}, err
+	})
+	r.Register("lshw.network", func(args map[string]interface{}) (interface{}, error) {
+		v, err := sdkslshw.Network()
+		return map[string]interface{}{"output": v}, err
+	})
+
+	// ── ipaddr ────────────────────────────────────────────────────────────
+	r.Register("ipaddr.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkipaddr.List(), nil
+	})
+	r.Register("ipaddr.list_interface", func(args map[string]interface{}) (interface{}, error) {
+		iface, _ := argString(args, "interface")
+		return sdkipaddr.ListInterface(iface), nil
+	})
+	r.Register("ipaddr.add", func(args map[string]interface{}) (interface{}, error) {
+		addr, _ := argString(args, "address")
+		iface, _ := argString(args, "interface")
+		return sdkipaddr.Add(addr, iface), nil
+	})
+	r.Register("ipaddr.delete", func(args map[string]interface{}) (interface{}, error) {
+		addr, _ := argString(args, "address")
+		iface, _ := argString(args, "interface")
+		return sdkipaddr.Delete(addr, iface), nil
+	})
+	r.Register("ipaddr.flush", func(args map[string]interface{}) (interface{}, error) {
+		iface, _ := argString(args, "interface")
+		return sdkipaddr.Flush(iface), nil
+	})
+	r.Register("ipaddr.links", func(args map[string]interface{}) (interface{}, error) {
+		return sdkipaddr.Links(), nil
+	})
+	r.Register("ipaddr.link_up", func(args map[string]interface{}) (interface{}, error) {
+		iface, _ := argString(args, "interface")
+		return sdkipaddr.LinkUp(iface), nil
+	})
+	r.Register("ipaddr.link_down", func(args map[string]interface{}) (interface{}, error) {
+		iface, _ := argString(args, "interface")
+		return sdkipaddr.LinkDown(iface), nil
 	})
 }
 

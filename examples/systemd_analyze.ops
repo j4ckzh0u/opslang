@@ -1,0 +1,42 @@
+// 系统启动性能分析脚本
+// 使用 systemd-analyze 分析启动时间
+
+fn analyze_boot_performance() {
+    // 获取总体启动时间
+    let boot_time = systemd_analyze.time()
+    print("启动时间分析:")
+    print(boot_time.total)
+
+    // 获取启动最慢的服务
+    let blame = systemd_analyze.blame()
+    print("\n启动最慢的前 10 个服务:")
+    for i, entry in blame.entries {
+        if i < 10 {
+            print(entry.time + " - " + entry.unit)
+        }
+    }
+
+    // 获取关键启动链
+    let critical = systemd_analyze.critical_chain()
+    print("\n关键启动链:")
+    print(critical.output)
+}
+
+fn verify_service_unit(unit_name) {
+    // 验证 unit 文件配置
+    let verify = systemd_analyze.verify(unit_name)
+    print("验证 " + unit_name + ":")
+    print(verify.output)
+
+    // 检查安全配置
+    let security = systemd_analyze.security(unit_name)
+    print("\n安全评估:")
+    print(security.output)
+}
+
+fn main() {
+    analyze_boot_performance()
+
+    // 验证特定服务
+    verify_service_unit("nginx.service")
+}
