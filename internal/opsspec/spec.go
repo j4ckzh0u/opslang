@@ -827,6 +827,39 @@ var Funcs = []Func{
 	// ── issue ─────────────────────────────────────────────────────────────
 	{Name: "issue.read"},
 	{Name: "issue.write", Args: []string{"content"}, Mutating: true},
+
+	// ── authorized_key ──────────────────────────────────────────────────────
+	{Name: "authorized_key.manage", Args: []string{"username", "key", "state", "path"}, Mutating: true},
+	{Name: "authorized_key.list", Args: []string{"username", "path"}},
+	{Name: "authorized_key.check", Args: []string{"username", "key", "path"}},
+
+	// ── blockinfile ─────────────────────────────────────────────────────────
+	{Name: "blockinfile.manage", Args: []string{"path", "block", "state", "marker", "insert_after", "insert_before"}, Mutating: true},
+	{Name: "blockinfile.read", Args: []string{"path", "marker"}},
+
+	// ── debconf ─────────────────────────────────────────────────────────────
+	{Name: "debconf.set", Args: []string{"package", "name", "vtype", "value"}, Mutating: true},
+	{Name: "debconf.get", Args: []string{"package", "name"}},
+	{Name: "debconf.list", Args: []string{"package"}},
+
+	// ── reboot ──────────────────────────────────────────────────────────────
+	{Name: "reboot.request", Args: []string{"msg", "delay"}, Mutating: true},
+	{Name: "reboot.dry_run", Args: []string{"msg", "delay"}},
+	{Name: "reboot.check"},
+
+	// ── swap ────────────────────────────────────────────────────────────────
+	{Name: "swap.info"},
+	{Name: "swap.create", Args: []string{"path", "size_mb"}, Mutating: true},
+	{Name: "swap.enable", Args: []string{"device"}, Mutating: true},
+	{Name: "swap.disable", Args: []string{"device"}, Mutating: true},
+
+	// ── raw ─────────────────────────────────────────────────────────────────
+	{Name: "raw.execute", Args: []string{"command", "timeout"}, Mutating: true},
+	{Name: "raw.execute_with_env", Args: []string{"command", "timeout", "env"}, Mutating: true},
+
+	// ── expect ──────────────────────────────────────────────────────────────
+	{Name: "expect.run", Args: []string{"command", "responses", "timeout"}, Mutating: true},
+	{Name: "expect.run_simple", Args: []string{"command", "prompt", "response", "timeout"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

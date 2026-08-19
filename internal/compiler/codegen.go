@@ -802,6 +802,39 @@ var sdkMapping = map[string]sdkFunc{
 	// issue
 	"issue.read":  {pkg: "issue", goName: "Read"},
 	"issue.write": {pkg: "issue", goName: "Write", args: true, params: []string{"s"}},
+
+	// authorized_key
+	"authorized_key.manage": {pkg: "authorized_key", goName: "Manage", args: true, params: []string{"s", "s", "s", "s"}},
+	"authorized_key.list":   {pkg: "authorized_key", goName: "List", args: true, params: []string{"s", "s"}},
+	"authorized_key.check":  {pkg: "authorized_key", goName: "Check", args: true, params: []string{"s", "s", "s"}},
+
+	// blockinfile
+	"blockinfile.manage": {pkg: "blockinfile", goName: "Manage", args: true, params: []string{"s", "s", "s", "s", "s", "s"}},
+	"blockinfile.read":   {pkg: "blockinfile", goName: "Read", args: true, params: []string{"s", "s"}},
+
+	// debconf
+	"debconf.set":  {pkg: "debconf", goName: "Set", args: true, params: []string{"s", "s", "s", "s"}},
+	"debconf.get":  {pkg: "debconf", goName: "Get", args: true, params: []string{"s", "s"}},
+	"debconf.list": {pkg: "debconf", goName: "List", args: true, params: []string{"s"}},
+
+	// reboot
+	"reboot.request": {pkg: "reboot", goName: "Request", args: true, params: []string{"s", "i"}},
+	"reboot.dry_run": {pkg: "reboot", goName: "DryRun", args: true, params: []string{"s", "i"}},
+	"reboot.check":   {pkg: "reboot", goName: "Check"},
+
+	// swap
+	"swap.info":    {pkg: "swap", goName: "Info"},
+	"swap.create":  {pkg: "swap", goName: "Create", args: true, params: []string{"s", "i"}},
+	"swap.enable":  {pkg: "swap", goName: "Enable", args: true, params: []string{"s"}},
+	"swap.disable": {pkg: "swap", goName: "Disable", args: true, params: []string{"s"}},
+
+	// raw
+	"raw.execute":        {pkg: "raw", goName: "Execute", args: true, params: []string{"s", "i"}},
+	"raw.execute_with_env": {pkg: "raw", goName: "ExecuteWithEnv", args: true, params: []string{"s", "i", "ms"}},
+
+	// expect
+	"expect.run":        {pkg: "expect", goName: "Run", args: true, params: []string{"s", "ms", "i"}},
+	"expect.run_simple": {pkg: "expect", goName: "RunSimple", args: true, params: []string{"s", "s", "s", "i"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -964,6 +997,13 @@ var pkgImportAlias = map[string]string{
 	"pam_limits":     "opspam_limits",
 	"motd":           "opsmotd",
 	"issue":          "opsissue",
+	"authorized_key": "opsauthorized_key",
+	"blockinfile":    "opsblockinfile",
+	"debconf":        "opsdebconf",
+	"reboot":         "opsreboot",
+	"swap":           "opsswap",
+	"raw":            "opsraw",
+	"expect":         "opsexpect",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1052,6 +1092,13 @@ var pkgImportPath = map[string]string{
 	"pam_limits":     "github.com/opslang/opslang/pkg/ops-core-sdk/pam_limits",
 	"motd":           "github.com/opslang/opslang/pkg/ops-core-sdk/motd",
 	"issue":          "github.com/opslang/opslang/pkg/ops-core-sdk/issue",
+	"authorized_key": "github.com/opslang/opslang/pkg/ops-core-sdk/authorized_key",
+	"blockinfile":    "github.com/opslang/opslang/pkg/ops-core-sdk/blockinfile",
+	"debconf":        "github.com/opslang/opslang/pkg/ops-core-sdk/debconf",
+	"reboot":         "github.com/opslang/opslang/pkg/ops-core-sdk/reboot",
+	"swap":           "github.com/opslang/opslang/pkg/ops-core-sdk/swap",
+	"raw":            "github.com/opslang/opslang/pkg/ops-core-sdk/raw",
+	"expect":         "github.com/opslang/opslang/pkg/ops-core-sdk/expect",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

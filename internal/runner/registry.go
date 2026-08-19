@@ -109,6 +109,13 @@ import (
 	sdkpam_limits "github.com/opslang/opslang/pkg/ops-core-sdk/pam_limits"
 	sdkmotd "github.com/opslang/opslang/pkg/ops-core-sdk/motd"
 	sdkissue "github.com/opslang/opslang/pkg/ops-core-sdk/issue"
+	sdkauthorized_key "github.com/opslang/opslang/pkg/ops-core-sdk/authorized_key"
+	sdkblockinfile "github.com/opslang/opslang/pkg/ops-core-sdk/blockinfile"
+	sdkdebconf "github.com/opslang/opslang/pkg/ops-core-sdk/debconf"
+	sdkreboot "github.com/opslang/opslang/pkg/ops-core-sdk/reboot"
+	sdkswap "github.com/opslang/opslang/pkg/ops-core-sdk/swap"
+	sdkraw "github.com/opslang/opslang/pkg/ops-core-sdk/raw"
+	sdkexpect "github.com/opslang/opslang/pkg/ops-core-sdk/expect"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -4188,6 +4195,126 @@ func (r *Registry) registerExtensions() {
 	r.Register("issue.write", func(args map[string]interface{}) (interface{}, error) {
 		content, _ := argString(args, "content")
 		return sdkissue.Write(content), nil
+	})
+
+	// ── authorized_key ──────────────────────────────────────────────────────
+	r.Register("authorized_key.manage", func(args map[string]interface{}) (interface{}, error) {
+		username, _ := argString(args, "username")
+		key, _ := argString(args, "key")
+		state, _ := argString(args, "state")
+		path, _ := argString(args, "path")
+		return sdkauthorized_key.Manage(username, key, state, path), nil
+	})
+	r.Register("authorized_key.list", func(args map[string]interface{}) (interface{}, error) {
+		username, _ := argString(args, "username")
+		path, _ := argString(args, "path")
+		return sdkauthorized_key.List(username, path), nil
+	})
+	r.Register("authorized_key.check", func(args map[string]interface{}) (interface{}, error) {
+		username, _ := argString(args, "username")
+		key, _ := argString(args, "key")
+		path, _ := argString(args, "path")
+		return sdkauthorized_key.Check(username, key, path), nil
+	})
+
+	// ── blockinfile ─────────────────────────────────────────────────────────
+	r.Register("blockinfile.manage", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		block, _ := argString(args, "block")
+		state, _ := argString(args, "state")
+		marker, _ := argString(args, "marker")
+		insertAfter, _ := argString(args, "insert_after")
+		insertBefore, _ := argString(args, "insert_before")
+		return sdkblockinfile.Manage(path, block, state, marker, insertAfter, insertBefore), nil
+	})
+	r.Register("blockinfile.read", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		marker, _ := argString(args, "marker")
+		content, found, err := sdkblockinfile.Read(path, marker)
+		errStr := ""
+		if err != nil {
+			errStr = err.Error()
+		}
+		return map[string]interface{}{"content": content, "found": found, "error": errStr}, nil
+	})
+
+	// ── debconf ─────────────────────────────────────────────────────────────
+	r.Register("debconf.set", func(args map[string]interface{}) (interface{}, error) {
+		pkg, _ := argString(args, "package")
+		name, _ := argString(args, "name")
+		vtype, _ := argString(args, "vtype")
+		value, _ := argString(args, "value")
+		return sdkdebconf.Set(pkg, name, vtype, value), nil
+	})
+	r.Register("debconf.get", func(args map[string]interface{}) (interface{}, error) {
+		pkg, _ := argString(args, "package")
+		name, _ := argString(args, "name")
+		return sdkdebconf.Get(pkg, name), nil
+	})
+	r.Register("debconf.list", func(args map[string]interface{}) (interface{}, error) {
+		pkg, _ := argString(args, "package")
+		return sdkdebconf.List(pkg), nil
+	})
+
+	// ── reboot ──────────────────────────────────────────────────────────────
+	r.Register("reboot.request", func(args map[string]interface{}) (interface{}, error) {
+		msg, _ := argString(args, "msg")
+		delay, _ := argInt(args, "delay")
+		return sdkreboot.Request(msg, delay), nil
+	})
+	r.Register("reboot.dry_run", func(args map[string]interface{}) (interface{}, error) {
+		msg, _ := argString(args, "msg")
+		delay, _ := argInt(args, "delay")
+		return sdkreboot.DryRun(msg, delay), nil
+	})
+	r.Register("reboot.check", func(args map[string]interface{}) (interface{}, error) {
+		return sdkreboot.Check(), nil
+	})
+
+	// ── swap ────────────────────────────────────────────────────────────────
+	r.Register("swap.info", func(args map[string]interface{}) (interface{}, error) {
+		return sdkswap.Info(), nil
+	})
+	r.Register("swap.create", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		sizeMB, _ := argInt(args, "size_mb")
+		return sdkswap.Create(path, sizeMB), nil
+	})
+	r.Register("swap.enable", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		return sdkswap.Enable(device), nil
+	})
+	r.Register("swap.disable", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		return sdkswap.Disable(device), nil
+	})
+
+	// ── raw ─────────────────────────────────────────────────────────────────
+	r.Register("raw.execute", func(args map[string]interface{}) (interface{}, error) {
+		command, _ := argString(args, "command")
+		timeout, _ := argInt(args, "timeout")
+		return sdkraw.Execute(command, timeout), nil
+	})
+	r.Register("raw.execute_with_env", func(args map[string]interface{}) (interface{}, error) {
+		command, _ := argString(args, "command")
+		timeout, _ := argInt(args, "timeout")
+		env := toStringMapArg(args, "env")
+		return sdkraw.ExecuteWithEnv(command, timeout, env), nil
+	})
+
+	// ── expect ──────────────────────────────────────────────────────────────
+	r.Register("expect.run", func(args map[string]interface{}) (interface{}, error) {
+		command, _ := argString(args, "command")
+		responses := toStringMapArg(args, "responses")
+		timeout, _ := argInt(args, "timeout")
+		return sdkexpect.Run(command, responses, timeout), nil
+	})
+	r.Register("expect.run_simple", func(args map[string]interface{}) (interface{}, error) {
+		command, _ := argString(args, "command")
+		prompt, _ := argString(args, "prompt")
+		response, _ := argString(args, "response")
+		timeout, _ := argInt(args, "timeout")
+		return sdkexpect.RunSimple(command, prompt, response, timeout), nil
 	})
 }
 

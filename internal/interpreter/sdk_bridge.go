@@ -108,6 +108,13 @@ import (
 	sdkpam_limits "github.com/opslang/opslang/pkg/ops-core-sdk/pam_limits"
 	sdkmotd "github.com/opslang/opslang/pkg/ops-core-sdk/motd"
 	sdkissue "github.com/opslang/opslang/pkg/ops-core-sdk/issue"
+	sdkauthorized_key "github.com/opslang/opslang/pkg/ops-core-sdk/authorized_key"
+	sdkblockinfile "github.com/opslang/opslang/pkg/ops-core-sdk/blockinfile"
+	sdkdebconf "github.com/opslang/opslang/pkg/ops-core-sdk/debconf"
+	sdkreboot "github.com/opslang/opslang/pkg/ops-core-sdk/reboot"
+	sdkswap "github.com/opslang/opslang/pkg/ops-core-sdk/swap"
+	sdkraw "github.com/opslang/opslang/pkg/ops-core-sdk/raw"
+	sdkexpect "github.com/opslang/opslang/pkg/ops-core-sdk/expect"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -6862,6 +6869,177 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			}
 		}
 		return sdkissue.Write(content), nil
+	}
+
+	// ── authorized_key ──────────────────────────────────────────────────────
+	interp.builtins["authorized_key.manage"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("authorized_key.manage() requires 4 arguments")
+		}
+		username, _ := args[0].(string)
+		key, _ := args[1].(string)
+		state, _ := args[2].(string)
+		path, _ := args[3].(string)
+		return sdkauthorized_key.Manage(username, key, state, path), nil
+	}
+	interp.builtins["authorized_key.list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("authorized_key.list() requires 2 arguments")
+		}
+		username, _ := args[0].(string)
+		path, _ := args[1].(string)
+		return sdkauthorized_key.List(username, path), nil
+	}
+	interp.builtins["authorized_key.check"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("authorized_key.check() requires 3 arguments")
+		}
+		username, _ := args[0].(string)
+		key, _ := args[1].(string)
+		path, _ := args[2].(string)
+		return sdkauthorized_key.Check(username, key, path), nil
+	}
+
+	// ── blockinfile ─────────────────────────────────────────────────────────
+	interp.builtins["blockinfile.manage"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 6 {
+			return nil, fmt.Errorf("blockinfile.manage() requires 6 arguments")
+		}
+		path, _ := args[0].(string)
+		block, _ := args[1].(string)
+		state, _ := args[2].(string)
+		marker, _ := args[3].(string)
+		insertAfter, _ := args[4].(string)
+		insertBefore, _ := args[5].(string)
+		return sdkblockinfile.Manage(path, block, state, marker, insertAfter, insertBefore), nil
+	}
+	interp.builtins["blockinfile.read"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("blockinfile.read() requires 2 arguments")
+		}
+		path, _ := args[0].(string)
+		marker, _ := args[1].(string)
+		content, found, err := sdkblockinfile.Read(path, marker)
+		errStr := ""
+		if err != nil {
+			errStr = err.Error()
+		}
+		return map[string]interface{}{"content": content, "found": found, "error": errStr}, nil
+	}
+
+	// ── debconf ─────────────────────────────────────────────────────────────
+	interp.builtins["debconf.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("debconf.set() requires 4 arguments")
+		}
+		pkg, _ := args[0].(string)
+		name, _ := args[1].(string)
+		vtype, _ := args[2].(string)
+		value, _ := args[3].(string)
+		return sdkdebconf.Set(pkg, name, vtype, value), nil
+	}
+	interp.builtins["debconf.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("debconf.get() requires 2 arguments")
+		}
+		pkg, _ := args[0].(string)
+		name, _ := args[1].(string)
+		return sdkdebconf.Get(pkg, name), nil
+	}
+	interp.builtins["debconf.list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("debconf.list() requires 1 argument")
+		}
+		pkg, _ := args[0].(string)
+		return sdkdebconf.List(pkg), nil
+	}
+
+	// ── reboot ──────────────────────────────────────────────────────────────
+	interp.builtins["reboot.request"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("reboot.request() requires 2 arguments")
+		}
+		msg, _ := args[0].(string)
+		delay, _ := args[1].(int)
+		return sdkreboot.Request(msg, delay), nil
+	}
+	interp.builtins["reboot.dry_run"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("reboot.dry_run() requires 2 arguments")
+		}
+		msg, _ := args[0].(string)
+		delay, _ := args[1].(int)
+		return sdkreboot.DryRun(msg, delay), nil
+	}
+	interp.builtins["reboot.check"] = func(args ...interface{}) (interface{}, error) {
+		return sdkreboot.Check(), nil
+	}
+
+	// ── swap ────────────────────────────────────────────────────────────────
+	interp.builtins["swap.info"] = func(args ...interface{}) (interface{}, error) {
+		return sdkswap.Info(), nil
+	}
+	interp.builtins["swap.create"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("swap.create() requires 2 arguments")
+		}
+		path, _ := args[0].(string)
+		sizeMB, _ := args[1].(int)
+		return sdkswap.Create(path, sizeMB), nil
+	}
+	interp.builtins["swap.enable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("swap.enable() requires 1 argument")
+		}
+		device, _ := args[0].(string)
+		return sdkswap.Enable(device), nil
+	}
+	interp.builtins["swap.disable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("swap.disable() requires 1 argument")
+		}
+		device, _ := args[0].(string)
+		return sdkswap.Disable(device), nil
+	}
+
+	// ── raw ─────────────────────────────────────────────────────────────────
+	interp.builtins["raw.execute"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("raw.execute() requires 2 arguments")
+		}
+		command, _ := args[0].(string)
+		timeout, _ := args[1].(int)
+		return sdkraw.Execute(command, timeout), nil
+	}
+	interp.builtins["raw.execute_with_env"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("raw.execute_with_env() requires 3 arguments")
+		}
+		command, _ := args[0].(string)
+		timeout, _ := args[1].(int)
+		env := toStringMap(args, 2)
+		return sdkraw.ExecuteWithEnv(command, timeout, env), nil
+	}
+
+	// ── expect ──────────────────────────────────────────────────────────────
+	interp.builtins["expect.run"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("expect.run() requires 3 arguments")
+		}
+		command, _ := args[0].(string)
+		responses := toStringMap(args, 1)
+		timeout, _ := args[2].(int)
+		return sdkexpect.Run(command, responses, timeout), nil
+	}
+	interp.builtins["expect.run_simple"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("expect.run_simple() requires 4 arguments")
+		}
+		command, _ := args[0].(string)
+		prompt, _ := args[1].(string)
+		response, _ := args[2].(string)
+		timeout, _ := args[3].(int)
+		return sdkexpect.RunSimple(command, prompt, response, timeout), nil
 	}
 }
 // If the arg at idx is a map[string]interface{}, values are converted to strings.
