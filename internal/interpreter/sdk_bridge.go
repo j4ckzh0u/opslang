@@ -12,6 +12,7 @@ import (
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
 	sdkdocker "github.com/opslang/opslang/pkg/ops-core-sdk/docker"
 	sdkfile "github.com/opslang/opslang/pkg/ops-core-sdk/file"
+	sdkfirewalld "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld"
 	sdkgit "github.com/opslang/opslang/pkg/ops-core-sdk/git"
 	sdkgroup "github.com/opslang/opslang/pkg/ops-core-sdk/group"
 	sdkhosts "github.com/opslang/opslang/pkg/ops-core-sdk/hosts"
@@ -24,6 +25,7 @@ import (
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	sdkprocess "github.com/opslang/opslang/pkg/ops-core-sdk/process"
 	sdkresolv "github.com/opslang/opslang/pkg/ops-core-sdk/resolv"
+	sdkselinux "github.com/opslang/opslang/pkg/ops-core-sdk/selinux"
 	sdkservice "github.com/opslang/opslang/pkg/ops-core-sdk/service"
 	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
 	sdksys "github.com/opslang/opslang/pkg/ops-core-sdk/sys"
@@ -656,6 +658,29 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, fmt.Errorf("service.enable(): argument must be string")
 		}
 		r, err := sdkservice.Enable(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── selinux.* ────────────────────────────────────────────────────────
+	interp.builtins["selinux.get"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkselinux.Get()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["selinux.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("selinux.set() requires 1 argument (mode)")
+		}
+		mode, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("selinux.set(): argument must be string")
+		}
+		r, err := sdkselinux.Set(mode)
 		if err != nil {
 			return nil, err
 		}
@@ -1377,6 +1402,64 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			source, _ = args[3].(string)
 		}
 		r, err := sdksys.FirewallRule(action, protocol, port, source)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── firewalld ────────────────────────────────────────────────────────
+	interp.builtins["firewalld.get"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfirewalld.Get()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld.start"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfirewalld.Start()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld.stop"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfirewalld.Stop()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld.restart"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfirewalld.Restart()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld.enable"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfirewalld.Enable()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld.disable"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfirewalld.Disable()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld.list_zones"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfirewalld.ListZones()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld.reload"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfirewalld.Reload()
 		if err != nil {
 			return nil, err
 		}

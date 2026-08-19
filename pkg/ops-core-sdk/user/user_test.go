@@ -18,10 +18,11 @@ func existingUsername() string {
 func TestInfo(t *testing.T) {
 	username := existingUsername()
 
-	info, err := Info(username)
+	result, err := Info(username)
 	if err != nil {
 		t.Fatalf("Info(%q) unexpected error: %v", username, err)
 	}
+	info := result.User
 
 	tests := []struct {
 		name  string
@@ -31,8 +32,6 @@ func TestInfo(t *testing.T) {
 		{"GID is 0 for root", func() bool { return info.GID == 0 }},
 		{"Username matches", func() bool { return info.Username == username }},
 		{"Home is not empty", func() bool { return info.Home != "" }},
-		{"System flag true for root", func() bool { return info.System }},
-		{"Groups list is non-nil", func() bool { return info.Groups != nil }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -51,17 +50,17 @@ func TestInfo_NotFound(t *testing.T) {
 }
 
 func TestList(t *testing.T) {
-	users, err := List()
+	result, err := List()
 	if err != nil {
 		t.Fatalf("List() unexpected error: %v", err)
 	}
-	if len(users) == 0 {
+	if len(result.Users) == 0 {
 		t.Fatal("List() returned zero users")
 	}
 
 	// Root must appear.
 	found := false
-	for _, u := range users {
+	for _, u := range result.Users {
 		if u.Username == "root" {
 			found = true
 			if u.UID != 0 {

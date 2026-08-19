@@ -1,0 +1,36 @@
+// selinux_management.ops - 演示 SELinux 状态管理
+// 新增 SDK: selinux.*
+privilege: admin
+
+print("=== SELinux 状态管理 ===")
+
+// 1. 获取 SELinux 状态
+print("\n当前 SELinux 状态:")
+block {
+    let status = selinux.get()
+    print("  已启用: " + str(status.status.enabled))
+    if status.status.mode != "" {
+        print("  模式: " + status.status.mode)
+    }
+    if status.status.policy != "" {
+        print("  策略: " + status.status.policy)
+    }
+}
+rescue {
+    print("  ✗ SELinux 不可用（可能在非 Linux 系统或未安装）")
+}
+
+// 2. 演示设置（伪代码）
+print("\n设置 SELinux 示例（伪代码）:")
+print(`
+  selinux.set("enforcing")    // 设置为强制模式
+  selinux.set("permissive")   // 设置为宽容模式
+  selinux.set("disabled")     // 禁用（需重启生效）
+`)
+
+print("\n注意：修改 SELinux 模式可能影响系统安全")
+print("enforcing: 强制执行安全策略")
+print("permissive: 仅记录违规，不阻止")
+print("disabled: 完全禁用 SELinux")
+
+print("\n=== selinux 管理演示完成 ===")

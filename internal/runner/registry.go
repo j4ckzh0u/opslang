@@ -13,6 +13,7 @@ import (
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
 	sdkdocker "github.com/opslang/opslang/pkg/ops-core-sdk/docker"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/file"
+	sdkfirewalld "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld"
 	opsgit "github.com/opslang/opslang/pkg/ops-core-sdk/git"
 	opsgrp "github.com/opslang/opslang/pkg/ops-core-sdk/group"
 	opshosts "github.com/opslang/opslang/pkg/ops-core-sdk/hosts"
@@ -25,6 +26,7 @@ import (
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/process"
 	sdkresolv "github.com/opslang/opslang/pkg/ops-core-sdk/resolv"
+	sdkselinux "github.com/opslang/opslang/pkg/ops-core-sdk/selinux"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/service"
 	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/sys"
@@ -97,6 +99,7 @@ func (r *Registry) registerAll() {
 	r.registerGitOps()
 	r.registerBuiltinOps()
 	r.registerPlatformOps()
+	r.registerSelinuxOps()
 	r.registerExtensions()
 }
 
@@ -417,6 +420,23 @@ func serviceOp[T any](opName string, fn func(string) (T, error)) OperationFunc {
 		}
 		return fn(name)
 	}
+}
+
+// ============================================================
+// selinux operations
+// ============================================================
+
+func (r *Registry) registerSelinuxOps() {
+	r.Register("selinux.get", func(args map[string]interface{}) (interface{}, error) {
+		return sdkselinux.Get()
+	})
+	r.Register("selinux.set", func(args map[string]interface{}) (interface{}, error) {
+		mode, err := argString(args, "mode")
+		if err != nil {
+			return nil, fmt.Errorf("selinux.set: %w", err)
+		}
+		return sdkselinux.Set(mode)
+	})
 }
 
 // ============================================================
@@ -778,6 +798,32 @@ func (r *Registry) registerPlatformOps() {
 		port, _ := argInt(args, "port")
 		source := getStringArg(args, "source", "")
 		return sys.FirewallRule(action, protocol, port, source)
+	})
+
+	// ── firewalld ────────────────────────────────────────────────────────
+	r.Register("firewalld.get", func(args map[string]interface{}) (interface{}, error) {
+		return sdkfirewalld.Get()
+	})
+	r.Register("firewalld.start", func(args map[string]interface{}) (interface{}, error) {
+		return sdkfirewalld.Start()
+	})
+	r.Register("firewalld.stop", func(args map[string]interface{}) (interface{}, error) {
+		return sdkfirewalld.Stop()
+	})
+	r.Register("firewalld.restart", func(args map[string]interface{}) (interface{}, error) {
+		return sdkfirewalld.Restart()
+	})
+	r.Register("firewalld.enable", func(args map[string]interface{}) (interface{}, error) {
+		return sdkfirewalld.Enable()
+	})
+	r.Register("firewalld.disable", func(args map[string]interface{}) (interface{}, error) {
+		return sdkfirewalld.Disable()
+	})
+	r.Register("firewalld.list_zones", func(args map[string]interface{}) (interface{}, error) {
+		return sdkfirewalld.ListZones()
+	})
+	r.Register("firewalld.reload", func(args map[string]interface{}) (interface{}, error) {
+		return sdkfirewalld.Reload()
 	})
 }
 

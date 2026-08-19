@@ -101,6 +101,16 @@ var Funcs = []Func{
 	// ── firewall ──────────────────────────────────────────────────────
 	{Name: "firewall.rule", Args: []string{"action", "protocol", "port", "source"}, Mutating: true},
 
+	// ── firewalld ─────────────────────────────────────────────────────
+	{Name: "firewalld.get"},
+	{Name: "firewalld.start", Mutating: true},
+	{Name: "firewalld.stop", Mutating: true},
+	{Name: "firewalld.restart", Mutating: true},
+	{Name: "firewalld.enable", Mutating: true},
+	{Name: "firewalld.disable", Mutating: true},
+	{Name: "firewalld.list_zones"},
+	{Name: "firewalld.reload", Mutating: true},
+
 	// ── git ───────────────────────────────────────────────────────────
 	{Name: "git.clone", Args: []string{"url", "dest", "opts"}, Mutating: true},
 	{Name: "git.pull", Args: []string{"repo_path", "remote", "branch"}, Mutating: true},
@@ -183,6 +193,10 @@ var Funcs = []Func{
 	{Name: "service.start", Args: []string{"name"}, Mutating: true},
 	{Name: "service.status", Args: []string{"name"}},
 	{Name: "service.stop", Args: []string{"name"}, Mutating: true},
+
+	// ── selinux ───────────────────────────────────────────────────────
+	{Name: "selinux.get"},
+	{Name: "selinux.set", Args: []string{"mode"}, Mutating: true},
 
 	// ── ssh ───────────────────────────────────────────────────────────
 	{Name: "ssh.authorized_key_add", Args: []string{"user", "key", "exclusive"}, Mutating: true},

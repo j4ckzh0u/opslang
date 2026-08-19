@@ -65,6 +65,10 @@ var sdkMapping = map[string]sdkFunc{
 	"service.enable":  {pkg: "service", goName: "Enable", args: true, params: []string{"s"}},
 	"service.disable": {pkg: "service", goName: "Disable", args: true, params: []string{"s"}},
 
+	// selinux
+	"selinux.get": {pkg: "selinux", goName: "Get"},
+	"selinux.set": {pkg: "selinux", goName: "Set", args: true, params: []string{"s"}},
+
 	// pkg
 	"pkg.install": {pkg: "pkg", goName: "Install", args: true, params: []string{"s"}},
 	"pkg.remove":  {pkg: "pkg", goName: "Remove", args: true, params: []string{"s"}},
@@ -128,6 +132,16 @@ var sdkMapping = map[string]sdkFunc{
 
 	// firewall
 	"firewall.rule": {pkg: "sys", goName: "FirewallRule", args: true, params: []string{"s", "s", "i", "s"}},
+
+	// firewalld
+	"firewalld.get":        {pkg: "firewalld", goName: "Get"},
+	"firewalld.start":      {pkg: "firewalld", goName: "Start"},
+	"firewalld.stop":       {pkg: "firewalld", goName: "Stop"},
+	"firewalld.restart":    {pkg: "firewalld", goName: "Restart"},
+	"firewalld.enable":     {pkg: "firewalld", goName: "Enable"},
+	"firewalld.disable":    {pkg: "firewalld", goName: "Disable"},
+	"firewalld.list_zones": {pkg: "firewalld", goName: "ListZones"},
+	"firewalld.reload":     {pkg: "firewalld", goName: "Reload"},
 
 	// archive
 	"archive.create":  {pkg: "archive", goName: "Create", args: true, params: []string{"s", "l"}},

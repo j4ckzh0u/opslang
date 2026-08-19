@@ -1,0 +1,47 @@
+// firewalld_management.ops - 演示 firewalld 防火墙服务管理
+// 新增 SDK: firewalld.*
+privilege: admin
+
+print("=== firewalld 防火墙服务管理 ===")
+
+// 1. 获取 firewalld 状态
+print("\nfirewalld 状态:")
+block {
+    let status = firewalld.get()
+    print("  运行中: " + str(status.status.running))
+    print("  开机启动: " + str(status.status.enabled))
+    if status.status.default_zone != "" {
+        print("  默认区域: " + status.status.default_zone)
+    }
+}
+rescue {
+    print("  ✗ firewalld 不可用（可能在非 Linux 系统或未安装）")
+}
+
+// 2. 列出可用区域
+print("\n可用区域:")
+block {
+    let zones = firewalld.list_zones()
+    if len(zones.zones) == 0 {
+        print("  (无区域信息)")
+    } else {
+        for z in zones.zones {
+            print("  - " + z)
+        }
+    }
+}
+rescue {
+    print("  ✗ 无法获取区域信息")
+}
+
+// 3. 演示操作（伪代码）
+print("\n操作示例（伪代码）:")
+print(`
+  firewalld.start()     // 启动防火墙
+  firewalld.stop()      // 停止防火墙
+  firewalld.enable()    // 设置开机启动
+  firewalld.disable()   // 取消开机启动
+  firewalld.reload()    // 重载配置
+`)
+
+print("\n=== firewalld 管理演示完成 ===")
