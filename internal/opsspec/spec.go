@@ -340,6 +340,46 @@ var Funcs = []Func{
 	{Name: "gem.list"},
 	{Name: "gem.version"},
 
+	// ── rabbitmq ──────────────────────────────────────────────────────
+	{Name: "rabbitmq.add_vhost", Args: []string{"name"}, Mutating: true},
+	{Name: "rabbitmq.delete_vhost", Args: []string{"name"}, Mutating: true},
+	{Name: "rabbitmq.list_vhosts"},
+	{Name: "rabbitmq.add_user", Args: []string{"name", "password", "tags"}, Mutating: true},
+	{Name: "rabbitmq.delete_user", Args: []string{"name"}, Mutating: true},
+	{Name: "rabbitmq.set_user_tags", Args: []string{"name", "tags"}, Mutating: true},
+	{Name: "rabbitmq.list_users"},
+	{Name: "rabbitmq.set_permission", Args: []string{"user", "vhost", "configure", "write", "read"}, Mutating: true},
+	{Name: "rabbitmq.clear_permission", Args: []string{"user", "vhost"}, Mutating: true},
+	{Name: "rabbitmq.set_policy", Args: []string{"name", "vhost", "pattern", "definition", "apply_to"}, Mutating: true},
+	{Name: "rabbitmq.delete_policy", Args: []string{"name", "vhost"}, Mutating: true},
+	{Name: "rabbitmq.declare_queue", Args: []string{"name", "vhost", "queue_type", "durable", "auto_delete"}, Mutating: true},
+	{Name: "rabbitmq.delete_queue", Args: []string{"name", "vhost"}, Mutating: true},
+	{Name: "rabbitmq.declare_exchange", Args: []string{"name", "vhost", "type", "durable", "auto_delete"}, Mutating: true},
+	{Name: "rabbitmq.delete_exchange", Args: []string{"name", "vhost"}, Mutating: true},
+	{Name: "rabbitmq.bind_queue", Args: []string{"queue", "exchange", "vhost", "routing_key"}, Mutating: true},
+	{Name: "rabbitmq.unbind_queue", Args: []string{"queue", "exchange", "vhost", "routing_key"}, Mutating: true},
+	{Name: "rabbitmq.get_status"},
+
+	// ── consul ────────────────────────────────────────────────────────
+	{Name: "consul.kv_get", Args: []string{"key", "addr"}},
+	{Name: "consul.kv_put", Args: []string{"key", "value", "addr"}, Mutating: true},
+	{Name: "consul.kv_delete", Args: []string{"key", "addr"}, Mutating: true},
+	{Name: "consul.kv_list", Args: []string{"prefix", "addr"}},
+	{Name: "consul.service_register", Args: []string{"name", "id", "addr", "port", "consul_addr"}, Mutating: true},
+	{Name: "consul.service_deregister", Args: []string{"id", "consul_addr"}, Mutating: true},
+	{Name: "consul.members", Args: []string{"addr"}},
+	{Name: "consul.info", Args: []string{"addr"}},
+	{Name: "consul.health_check", Args: []string{"service", "addr"}},
+	{Name: "consul.version"},
+
+	// ── memcached ─────────────────────────────────────────────────────
+	{Name: "memcached.get", Args: []string{"key", "host", "port"}},
+	{Name: "memcached.set", Args: []string{"key", "value", "host", "port", "expiry"}, Mutating: true},
+	{Name: "memcached.delete", Args: []string{"key", "host", "port"}, Mutating: true},
+	{Name: "memcached.flush_all", Args: []string{"host", "port"}, Mutating: true},
+	{Name: "memcached.stats", Args: []string{"host", "port"}},
+	{Name: "memcached.version", Args: []string{"host", "port"}},
+
 	// ── selinux ───────────────────────────────────────────────────────
 	{Name: "selinux.get"},
 	{Name: "selinux.set", Args: []string{"mode"}, Mutating: true},

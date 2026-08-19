@@ -84,6 +84,9 @@ import (
 	sdkopenssl "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_cert"
 	sdkredis "github.com/opslang/opslang/pkg/ops-core-sdk/redis"
 	sdkgem "github.com/opslang/opslang/pkg/ops-core-sdk/gem"
+	sdkrabbitmq "github.com/opslang/opslang/pkg/ops-core-sdk/rabbitmq"
+	sdkconsul "github.com/opslang/opslang/pkg/ops-core-sdk/consul"
+	sdkmemcached "github.com/opslang/opslang/pkg/ops-core-sdk/memcached"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -1745,6 +1748,259 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["gem.version"] = func(args ...interface{}) (interface{}, error) {
 		return sdkgem.Version()
+	}
+
+	// ── rabbitmq.* ──────────────────────────────────────────────────────
+	interp.builtins["rabbitmq.add_vhost"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("rabbitmq.add_vhost() requires name") }
+		name, _ := args[0].(string)
+		r := sdkrabbitmq.AddVhost(name)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.delete_vhost"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("rabbitmq.delete_vhost() requires name") }
+		name, _ := args[0].(string)
+		r := sdkrabbitmq.DeleteVhost(name)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.list_vhosts"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkrabbitmq.ListVhosts()
+		return r, err
+	}
+	interp.builtins["rabbitmq.add_user"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 { return nil, fmt.Errorf("rabbitmq.add_user() requires name, password, tags") }
+		name, _ := args[0].(string)
+		pass, _ := args[1].(string)
+		tags, _ := args[2].(string)
+		r := sdkrabbitmq.AddUser(name, pass, tags)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.delete_user"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("rabbitmq.delete_user() requires name") }
+		name, _ := args[0].(string)
+		r := sdkrabbitmq.DeleteUser(name)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.set_user_tags"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("rabbitmq.set_user_tags() requires name, tags") }
+		name, _ := args[0].(string)
+		tags, _ := args[1].(string)
+		r := sdkrabbitmq.SetUserTags(name, tags)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.list_users"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkrabbitmq.ListUsers()
+		return r, err
+	}
+	interp.builtins["rabbitmq.set_permission"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 { return nil, fmt.Errorf("rabbitmq.set_permission() requires user, vhost, configure, write, read") }
+		user, _ := args[0].(string)
+		vhost, _ := args[1].(string)
+		configure, _ := args[2].(string)
+		write, _ := args[3].(string)
+		read, _ := args[4].(string)
+		r := sdkrabbitmq.SetPermission(user, vhost, configure, write, read)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.clear_permission"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("rabbitmq.clear_permission() requires user, vhost") }
+		user, _ := args[0].(string)
+		vhost, _ := args[1].(string)
+		r := sdkrabbitmq.ClearPermission(user, vhost)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.set_policy"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 { return nil, fmt.Errorf("rabbitmq.set_policy() requires name, vhost, pattern, definition, apply_to") }
+		name, _ := args[0].(string)
+		vhost, _ := args[1].(string)
+		pattern, _ := args[2].(string)
+		definition, _ := args[3].(string)
+		applyTo, _ := args[4].(string)
+		r := sdkrabbitmq.SetPolicy(name, vhost, pattern, definition, applyTo)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.delete_policy"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("rabbitmq.delete_policy() requires name, vhost") }
+		name, _ := args[0].(string)
+		vhost, _ := args[1].(string)
+		r := sdkrabbitmq.DeletePolicy(name, vhost)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.declare_queue"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 { return nil, fmt.Errorf("rabbitmq.declare_queue() requires name, vhost, queue_type, durable, auto_delete") }
+		name, _ := args[0].(string)
+		vhost, _ := args[1].(string)
+		queueType, _ := args[2].(string)
+		durable := opsBool(args[3])
+		autoDelete := opsBool(args[4])
+		r := sdkrabbitmq.DeclareQueue(name, vhost, queueType, durable, autoDelete)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.delete_queue"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("rabbitmq.delete_queue() requires name, vhost") }
+		name, _ := args[0].(string)
+		vhost, _ := args[1].(string)
+		r := sdkrabbitmq.DeleteQueue(name, vhost)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.declare_exchange"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 { return nil, fmt.Errorf("rabbitmq.declare_exchange() requires name, vhost, type, durable, auto_delete") }
+		name, _ := args[0].(string)
+		vhost, _ := args[1].(string)
+		exType, _ := args[2].(string)
+		durable := opsBool(args[3])
+		autoDelete := opsBool(args[4])
+		r := sdkrabbitmq.DeclareExchange(name, vhost, exType, durable, autoDelete)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.delete_exchange"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("rabbitmq.delete_exchange() requires name, vhost") }
+		name, _ := args[0].(string)
+		vhost, _ := args[1].(string)
+		r := sdkrabbitmq.DeleteExchange(name, vhost)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.bind_queue"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 { return nil, fmt.Errorf("rabbitmq.bind_queue() requires queue, exchange, vhost, routing_key") }
+		queue, _ := args[0].(string)
+		exchange, _ := args[1].(string)
+		vhost, _ := args[2].(string)
+		routingKey, _ := args[3].(string)
+		r := sdkrabbitmq.BindQueue(queue, exchange, vhost, routingKey)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.unbind_queue"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 { return nil, fmt.Errorf("rabbitmq.unbind_queue() requires queue, exchange, vhost, routing_key") }
+		queue, _ := args[0].(string)
+		exchange, _ := args[1].(string)
+		vhost, _ := args[2].(string)
+		routingKey, _ := args[3].(string)
+		r := sdkrabbitmq.UnbindQueue(queue, exchange, vhost, routingKey)
+		return r, nil
+	}
+	interp.builtins["rabbitmq.get_status"] = func(args ...interface{}) (interface{}, error) {
+		r := sdkrabbitmq.GetStatus()
+		return r, nil
+	}
+
+	// ── consul.* ────────────────────────────────────────────────────────
+	interp.builtins["consul.kv_get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("consul.kv_get() requires key, addr") }
+		key, _ := args[0].(string)
+		addr, _ := args[1].(string)
+		r := sdkconsul.KVGet(key, addr)
+		return r, nil
+	}
+	interp.builtins["consul.kv_put"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 { return nil, fmt.Errorf("consul.kv_put() requires key, value, addr") }
+		key, _ := args[0].(string)
+		value, _ := args[1].(string)
+		addr, _ := args[2].(string)
+		r := sdkconsul.KVPut(key, value, addr)
+		return r, nil
+	}
+	interp.builtins["consul.kv_delete"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("consul.kv_delete() requires key, addr") }
+		key, _ := args[0].(string)
+		addr, _ := args[1].(string)
+		r := sdkconsul.KVDelete(key, addr)
+		return r, nil
+	}
+	interp.builtins["consul.kv_list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("consul.kv_list() requires prefix, addr") }
+		prefix, _ := args[0].(string)
+		addr, _ := args[1].(string)
+		r, err := sdkconsul.KVList(prefix, addr)
+		return r, err
+	}
+	interp.builtins["consul.service_register"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 { return nil, fmt.Errorf("consul.service_register() requires name, id, addr, port, consul_addr") }
+		name, _ := args[0].(string)
+		id, _ := args[1].(string)
+		addr, _ := args[2].(string)
+		port, _ := args[3].(string)
+		consulAddr, _ := args[4].(string)
+		r := sdkconsul.ServiceRegister(name, id, addr, port, consulAddr)
+		return r, nil
+	}
+	interp.builtins["consul.service_deregister"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("consul.service_deregister() requires id, consul_addr") }
+		id, _ := args[0].(string)
+		consulAddr, _ := args[1].(string)
+		r := sdkconsul.ServiceDeregister(id, consulAddr)
+		return r, nil
+	}
+	interp.builtins["consul.members"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("consul.members() requires addr") }
+		addr, _ := args[0].(string)
+		r := sdkconsul.Members(addr)
+		return r, nil
+	}
+	interp.builtins["consul.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("consul.info() requires addr") }
+		addr, _ := args[0].(string)
+		r := sdkconsul.Info(addr)
+		return r, nil
+	}
+	interp.builtins["consul.health_check"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("consul.health_check() requires service, addr") }
+		service, _ := args[0].(string)
+		addr, _ := args[1].(string)
+		r := sdkconsul.HealthCheck(service, addr)
+		return r, nil
+	}
+	interp.builtins["consul.version"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkconsul.Version()
+		return r, err
+	}
+
+	// ── memcached.* ─────────────────────────────────────────────────────
+	interp.builtins["memcached.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 { return nil, fmt.Errorf("memcached.get() requires key, host, port") }
+		key, _ := args[0].(string)
+		host, _ := args[1].(string)
+		pf, _ := toFloat(args[2])
+		r := sdkmemcached.Get(key, host, int(pf))
+		return r, nil
+	}
+	interp.builtins["memcached.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 { return nil, fmt.Errorf("memcached.set() requires key, value, host, port, expiry") }
+		key, _ := args[0].(string)
+		value, _ := args[1].(string)
+		host, _ := args[2].(string)
+		pf, _ := toFloat(args[3])
+		ef, _ := toFloat(args[4])
+		r := sdkmemcached.Set(key, value, host, int(pf), int(ef))
+		return r, nil
+	}
+	interp.builtins["memcached.delete"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 { return nil, fmt.Errorf("memcached.delete() requires key, host, port") }
+		key, _ := args[0].(string)
+		host, _ := args[1].(string)
+		pf, _ := toFloat(args[2])
+		r := sdkmemcached.Delete(key, host, int(pf))
+		return r, nil
+	}
+	interp.builtins["memcached.flush_all"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("memcached.flush_all() requires host, port") }
+		host, _ := args[0].(string)
+		pf, _ := toFloat(args[1])
+		r := sdkmemcached.FlushAll(host, int(pf))
+		return r, nil
+	}
+	interp.builtins["memcached.stats"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("memcached.stats() requires host, port") }
+		host, _ := args[0].(string)
+		pf, _ := toFloat(args[1])
+		r := sdkmemcached.Stats(host, int(pf))
+		return r, nil
+	}
+	interp.builtins["memcached.version"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("memcached.version() requires host, port") }
+		host, _ := args[0].(string)
+		pf, _ := toFloat(args[1])
+		r := sdkmemcached.Version(host, int(pf))
+		return r, nil
 	}
 
 	// ── selinux.* ────────────────────────────────────────────────────────

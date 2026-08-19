@@ -85,6 +85,9 @@ import (
 	sdkopenssl "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_cert"
 	sdkredis "github.com/opslang/opslang/pkg/ops-core-sdk/redis"
 	sdkgem "github.com/opslang/opslang/pkg/ops-core-sdk/gem"
+	sdkrabbitmq "github.com/opslang/opslang/pkg/ops-core-sdk/rabbitmq"
+	sdkconsul "github.com/opslang/opslang/pkg/ops-core-sdk/consul"
+	sdkmemcached "github.com/opslang/opslang/pkg/ops-core-sdk/memcached"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -3505,6 +3508,195 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("gem.version", func(args map[string]interface{}) (interface{}, error) {
 		return sdkgem.Version()
+	})
+
+	// ── rabbitmq ────────────────────────────────────────────────────────
+	r.Register("rabbitmq.add_vhost", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkrabbitmq.AddVhost(name), nil
+	})
+	r.Register("rabbitmq.delete_vhost", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkrabbitmq.DeleteVhost(name), nil
+	})
+	r.Register("rabbitmq.list_vhosts", func(args map[string]interface{}) (interface{}, error) {
+		return sdkrabbitmq.ListVhosts()
+	})
+	r.Register("rabbitmq.add_user", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		pass, _ := argString(args, "password")
+		tags, _ := argString(args, "tags")
+		return sdkrabbitmq.AddUser(name, pass, tags), nil
+	})
+	r.Register("rabbitmq.delete_user", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkrabbitmq.DeleteUser(name), nil
+	})
+	r.Register("rabbitmq.set_user_tags", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		tags, _ := argString(args, "tags")
+		return sdkrabbitmq.SetUserTags(name, tags), nil
+	})
+	r.Register("rabbitmq.list_users", func(args map[string]interface{}) (interface{}, error) {
+		return sdkrabbitmq.ListUsers()
+	})
+	r.Register("rabbitmq.set_permission", func(args map[string]interface{}) (interface{}, error) {
+		user, _ := argString(args, "user")
+		vhost, _ := argString(args, "vhost")
+		configure, _ := argString(args, "configure")
+		write, _ := argString(args, "write")
+		read, _ := argString(args, "read")
+		return sdkrabbitmq.SetPermission(user, vhost, configure, write, read), nil
+	})
+	r.Register("rabbitmq.clear_permission", func(args map[string]interface{}) (interface{}, error) {
+		user, _ := argString(args, "user")
+		vhost, _ := argString(args, "vhost")
+		return sdkrabbitmq.ClearPermission(user, vhost), nil
+	})
+	r.Register("rabbitmq.set_policy", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		vhost, _ := argString(args, "vhost")
+		pattern, _ := argString(args, "pattern")
+		definition, _ := argString(args, "definition")
+		applyTo, _ := argString(args, "apply_to")
+		return sdkrabbitmq.SetPolicy(name, vhost, pattern, definition, applyTo), nil
+	})
+	r.Register("rabbitmq.delete_policy", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		vhost, _ := argString(args, "vhost")
+		return sdkrabbitmq.DeletePolicy(name, vhost), nil
+	})
+	r.Register("rabbitmq.declare_queue", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		vhost, _ := argString(args, "vhost")
+		queueType, _ := argString(args, "queue_type")
+		durable, _ := argBool(args, "durable")
+		autoDelete, _ := argBool(args, "auto_delete")
+		return sdkrabbitmq.DeclareQueue(name, vhost, queueType, durable, autoDelete), nil
+	})
+	r.Register("rabbitmq.delete_queue", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		vhost, _ := argString(args, "vhost")
+		return sdkrabbitmq.DeleteQueue(name, vhost), nil
+	})
+	r.Register("rabbitmq.declare_exchange", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		vhost, _ := argString(args, "vhost")
+		exType, _ := argString(args, "type")
+		durable, _ := argBool(args, "durable")
+		autoDelete, _ := argBool(args, "auto_delete")
+		return sdkrabbitmq.DeclareExchange(name, vhost, exType, durable, autoDelete), nil
+	})
+	r.Register("rabbitmq.delete_exchange", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		vhost, _ := argString(args, "vhost")
+		return sdkrabbitmq.DeleteExchange(name, vhost), nil
+	})
+	r.Register("rabbitmq.bind_queue", func(args map[string]interface{}) (interface{}, error) {
+		queue, _ := argString(args, "queue")
+		exchange, _ := argString(args, "exchange")
+		vhost, _ := argString(args, "vhost")
+		routingKey, _ := argString(args, "routing_key")
+		return sdkrabbitmq.BindQueue(queue, exchange, vhost, routingKey), nil
+	})
+	r.Register("rabbitmq.unbind_queue", func(args map[string]interface{}) (interface{}, error) {
+		queue, _ := argString(args, "queue")
+		exchange, _ := argString(args, "exchange")
+		vhost, _ := argString(args, "vhost")
+		routingKey, _ := argString(args, "routing_key")
+		return sdkrabbitmq.UnbindQueue(queue, exchange, vhost, routingKey), nil
+	})
+	r.Register("rabbitmq.get_status", func(args map[string]interface{}) (interface{}, error) {
+		return sdkrabbitmq.GetStatus(), nil
+	})
+
+	// ── consul ──────────────────────────────────────────────────────────
+	r.Register("consul.kv_get", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		addr, _ := argString(args, "addr")
+		return sdkconsul.KVGet(key, addr), nil
+	})
+	r.Register("consul.kv_put", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		value, _ := argString(args, "value")
+		addr, _ := argString(args, "addr")
+		return sdkconsul.KVPut(key, value, addr), nil
+	})
+	r.Register("consul.kv_delete", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		addr, _ := argString(args, "addr")
+		return sdkconsul.KVDelete(key, addr), nil
+	})
+	r.Register("consul.kv_list", func(args map[string]interface{}) (interface{}, error) {
+		prefix, _ := argString(args, "prefix")
+		addr, _ := argString(args, "addr")
+		return sdkconsul.KVList(prefix, addr)
+	})
+	r.Register("consul.service_register", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		id, _ := argString(args, "id")
+		addr, _ := argString(args, "addr")
+		port, _ := argString(args, "port")
+		consulAddr, _ := argString(args, "consul_addr")
+		return sdkconsul.ServiceRegister(name, id, addr, port, consulAddr), nil
+	})
+	r.Register("consul.service_deregister", func(args map[string]interface{}) (interface{}, error) {
+		id, _ := argString(args, "id")
+		consulAddr, _ := argString(args, "consul_addr")
+		return sdkconsul.ServiceDeregister(id, consulAddr), nil
+	})
+	r.Register("consul.members", func(args map[string]interface{}) (interface{}, error) {
+		addr, _ := argString(args, "addr")
+		return sdkconsul.Members(addr), nil
+	})
+	r.Register("consul.info", func(args map[string]interface{}) (interface{}, error) {
+		addr, _ := argString(args, "addr")
+		return sdkconsul.Info(addr), nil
+	})
+	r.Register("consul.health_check", func(args map[string]interface{}) (interface{}, error) {
+		service, _ := argString(args, "service")
+		addr, _ := argString(args, "addr")
+		return sdkconsul.HealthCheck(service, addr), nil
+	})
+	r.Register("consul.version", func(args map[string]interface{}) (interface{}, error) {
+		return sdkconsul.Version()
+	})
+
+	// ── memcached ───────────────────────────────────────────────────────
+	r.Register("memcached.get", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		host, _ := argString(args, "host")
+		port, _ := argInt(args, "port")
+		return sdkmemcached.Get(key, host, port), nil
+	})
+	r.Register("memcached.set", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		value, _ := argString(args, "value")
+		host, _ := argString(args, "host")
+		port, _ := argInt(args, "port")
+		expiry, _ := argInt(args, "expiry")
+		return sdkmemcached.Set(key, value, host, port, expiry), nil
+	})
+	r.Register("memcached.delete", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		host, _ := argString(args, "host")
+		port, _ := argInt(args, "port")
+		return sdkmemcached.Delete(key, host, port), nil
+	})
+	r.Register("memcached.flush_all", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := argString(args, "host")
+		port, _ := argInt(args, "port")
+		return sdkmemcached.FlushAll(host, port), nil
+	})
+	r.Register("memcached.stats", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := argString(args, "host")
+		port, _ := argInt(args, "port")
+		return sdkmemcached.Stats(host, port), nil
+	})
+	r.Register("memcached.version", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := argString(args, "host")
+		port, _ := argInt(args, "port")
+		return sdkmemcached.Version(host, port), nil
 	})
 }
 

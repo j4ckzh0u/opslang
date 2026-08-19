@@ -614,6 +614,46 @@ var sdkMapping = map[string]sdkFunc{
 	"gem.info":      {pkg: "gem", goName: "Info", args: true, params: []string{"s"}},
 	"gem.list":      {pkg: "gem", goName: "List", args: true},
 	"gem.version":   {pkg: "gem", goName: "Version", args: true},
+
+	// rabbitmq
+	"rabbitmq.add_vhost":       {pkg: "rabbitmq", goName: "AddVhost", args: true, params: []string{"s"}},
+	"rabbitmq.delete_vhost":    {pkg: "rabbitmq", goName: "DeleteVhost", args: true, params: []string{"s"}},
+	"rabbitmq.list_vhosts":     {pkg: "rabbitmq", goName: "ListVhosts", args: true},
+	"rabbitmq.add_user":        {pkg: "rabbitmq", goName: "AddUser", args: true, params: []string{"s", "s", "s"}},
+	"rabbitmq.delete_user":     {pkg: "rabbitmq", goName: "DeleteUser", args: true, params: []string{"s"}},
+	"rabbitmq.set_user_tags":   {pkg: "rabbitmq", goName: "SetUserTags", args: true, params: []string{"s", "s"}},
+	"rabbitmq.list_users":      {pkg: "rabbitmq", goName: "ListUsers", args: true},
+	"rabbitmq.set_permission":  {pkg: "rabbitmq", goName: "SetPermission", args: true, params: []string{"s", "s", "s", "s", "s"}},
+	"rabbitmq.clear_permission": {pkg: "rabbitmq", goName: "ClearPermission", args: true, params: []string{"s", "s"}},
+	"rabbitmq.set_policy":      {pkg: "rabbitmq", goName: "SetPolicy", args: true, params: []string{"s", "s", "s", "s", "s"}},
+	"rabbitmq.delete_policy":   {pkg: "rabbitmq", goName: "DeletePolicy", args: true, params: []string{"s", "s"}},
+	"rabbitmq.declare_queue":   {pkg: "rabbitmq", goName: "DeclareQueue", args: true, params: []string{"s", "s", "s", "b", "b"}},
+	"rabbitmq.delete_queue":    {pkg: "rabbitmq", goName: "DeleteQueue", args: true, params: []string{"s", "s"}},
+	"rabbitmq.declare_exchange": {pkg: "rabbitmq", goName: "DeclareExchange", args: true, params: []string{"s", "s", "s", "b", "b"}},
+	"rabbitmq.delete_exchange": {pkg: "rabbitmq", goName: "DeleteExchange", args: true, params: []string{"s", "s"}},
+	"rabbitmq.bind_queue":      {pkg: "rabbitmq", goName: "BindQueue", args: true, params: []string{"s", "s", "s", "s"}},
+	"rabbitmq.unbind_queue":    {pkg: "rabbitmq", goName: "UnbindQueue", args: true, params: []string{"s", "s", "s", "s"}},
+	"rabbitmq.get_status":      {pkg: "rabbitmq", goName: "GetStatus", args: true},
+
+	// consul
+	"consul.kv_get":           {pkg: "consul", goName: "KVGet", args: true, params: []string{"s", "s"}},
+	"consul.kv_put":           {pkg: "consul", goName: "KVPut", args: true, params: []string{"s", "s", "s"}},
+	"consul.kv_delete":        {pkg: "consul", goName: "KVDelete", args: true, params: []string{"s", "s"}},
+	"consul.kv_list":          {pkg: "consul", goName: "KVList", args: true, params: []string{"s", "s"}},
+	"consul.service_register": {pkg: "consul", goName: "ServiceRegister", args: true, params: []string{"s", "s", "s", "s", "s"}},
+	"consul.service_deregister": {pkg: "consul", goName: "ServiceDeregister", args: true, params: []string{"s", "s"}},
+	"consul.members":          {pkg: "consul", goName: "Members", args: true, params: []string{"s"}},
+	"consul.info":             {pkg: "consul", goName: "Info", args: true, params: []string{"s"}},
+	"consul.health_check":     {pkg: "consul", goName: "HealthCheck", args: true, params: []string{"s", "s"}},
+	"consul.version":          {pkg: "consul", goName: "Version", args: true},
+
+	// memcached
+	"memcached.get":        {pkg: "memcached", goName: "Get", args: true, params: []string{"s", "s", "i"}},
+	"memcached.set":        {pkg: "memcached", goName: "Set", args: true, params: []string{"s", "s", "s", "i", "i"}},
+	"memcached.delete":     {pkg: "memcached", goName: "Delete", args: true, params: []string{"s", "s", "i"}},
+	"memcached.flush_all":  {pkg: "memcached", goName: "FlushAll", args: true, params: []string{"s", "i"}},
+	"memcached.stats":      {pkg: "memcached", goName: "Stats", args: true, params: []string{"s", "i"}},
+	"memcached.version":    {pkg: "memcached", goName: "Version", args: true, params: []string{"s", "i"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -752,6 +792,9 @@ var pkgImportAlias = map[string]string{
 	"openssl_cert":   "opsopenssl",
 	"redis":          "opsredis",
 	"gem":            "opsgem",
+	"rabbitmq":       "opsrabbitmq",
+	"consul":         "opsconsul",
+	"memcached":      "opsmemcached",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -816,6 +859,9 @@ var pkgImportPath = map[string]string{
 	"openssl_cert":   "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_cert",
 	"redis":          "github.com/opslang/opslang/pkg/ops-core-sdk/redis",
 	"gem":            "github.com/opslang/opslang/pkg/ops-core-sdk/gem",
+	"rabbitmq":       "github.com/opslang/opslang/pkg/ops-core-sdk/rabbitmq",
+	"consul":         "github.com/opslang/opslang/pkg/ops-core-sdk/consul",
+	"memcached":      "github.com/opslang/opslang/pkg/ops-core-sdk/memcached",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

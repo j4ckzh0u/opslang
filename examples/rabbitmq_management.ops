@@ -1,0 +1,125 @@
+// RabbitMQ 消息队列管理示例
+// RabbitMQ message queue management example
+
+// 检查 RabbitMQ 状态
+block {
+    let status = rabbitmq.get_status()
+    report {
+        node: status.node,
+        running: status.running
+    }
+}
+rescue {
+    print("rabbitmq.get_status failed: " + _error)
+}
+
+// 创建虚拟主机
+block {
+    let result = rabbitmq.add_vhost("/production")
+    report {
+        name: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("rabbitmq.add_vhost failed: " + _error)
+}
+
+// 创建用户
+block {
+    let result = rabbitmq.add_user("appuser", "secret123", "administrator")
+    report {
+        name: result.name,
+        success: result.success,
+        tags: result.tags
+    }
+}
+rescue {
+    print("rabbitmq.add_user failed: " + _error)
+}
+
+// 设置权限
+block {
+    let result = rabbitmq.set_permission("appuser", "/production", ".*", ".*", ".*")
+    report {
+        user: result.user,
+        vhost: result.vhost,
+        success: result.success
+    }
+}
+rescue {
+    print("rabbitmq.set_permission failed: " + _error)
+}
+
+// 创建队列
+block {
+    let result = rabbitmq.declare_queue("tasks", "/production", "classic", true, false)
+    report {
+        name: result.name,
+        vhost: result.vhost,
+        success: result.success
+    }
+}
+rescue {
+    print("rabbitmq.declare_queue failed: " + _error)
+}
+
+// 创建交换机
+block {
+    let result = rabbitmq.declare_exchange("events", "/production", "topic", true, false)
+    report {
+        name: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("rabbitmq.declare_exchange failed: " + _error)
+}
+
+// 绑定队列到交换机
+block {
+    let result = rabbitmq.bind_queue("tasks", "events", "/production", "task.#")
+    report {
+        queue: result.queue,
+        exchange: result.exchange,
+        success: result.success
+    }
+}
+rescue {
+    print("rabbitmq.bind_queue failed: " + _error)
+}
+
+// 设置策略
+block {
+    let result = rabbitmq.set_policy("ha-all", "/production", ".*", "{\"ha-mode\":\"all\"}", "queues")
+    report {
+        name: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("rabbitmq.set_policy failed: " + _error)
+}
+
+// 列出虚拟主机
+block {
+    let vhosts = rabbitmq.list_vhosts()
+    report {
+        count: vhosts.count
+    }
+}
+rescue {
+    print("rabbitmq.list_vhosts failed: " + _error)
+}
+
+// 列出用户
+block {
+    let users = rabbitmq.list_users()
+    report {
+        count: users.count
+    }
+}
+rescue {
+    print("rabbitmq.list_users failed: " + _error)
+}

@@ -1,0 +1,128 @@
+// Consul 服务发现与配置管理示例
+// Consul service discovery and configuration management example
+
+// 获取 Consul 版本
+block {
+    let ver = consul.version()
+    report {
+        version: ver
+    }
+}
+rescue {
+    print("consul.version failed: " + _error)
+}
+
+// 获取代理信息
+block {
+    let info = consul.info("")
+    report {
+        datacenter: info.datacenter,
+        node_name: info.node_name,
+        ready: info.ready
+    }
+}
+rescue {
+    print("consul.info failed: " + _error)
+}
+
+// 列出集群成员
+block {
+    let members = consul.members("")
+    report {
+        count: members.count
+    }
+}
+rescue {
+    print("consul.members failed: " + _error)
+}
+
+// 写入配置到 KV
+block {
+    let result = consul.kv_put("config/app/db_host", "10.0.0.5", "")
+    report {
+        key: result.key,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("consul.kv_put failed: " + _error)
+}
+
+// 读取配置从 KV
+block {
+    let result = consul.kv_get("config/app/db_host", "")
+    report {
+        key: result.key,
+        value: result.value,
+        success: result.success
+    }
+}
+rescue {
+    print("consul.kv_get failed: " + _error)
+}
+
+// 列出 KV 键
+block {
+    let keys = consul.kv_list("config/", "")
+    report {
+        prefix: "config/",
+        count: keys.count
+    }
+}
+rescue {
+    print("consul.kv_list failed: " + _error)
+}
+
+// 删除 KV 键
+block {
+    let result = consul.kv_delete("config/app/old_key", "")
+    report {
+        key: result.key,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("consul.kv_delete failed: " + _error)
+}
+
+// 注册服务
+block {
+    let result = consul.service_register("web", "web-1", "10.0.0.10", "8080", "")
+    report {
+        name: result.name,
+        id: result.id,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("consul.service_register failed: " + _error)
+}
+
+// 检查服务健康状态
+block {
+    let result = consul.health_check("web", "")
+    report {
+        service: result.service,
+        status: result.status,
+        checks: result.checks
+    }
+}
+rescue {
+    print("consul.health_check failed: " + _error)
+}
+
+// 注销服务
+block {
+    let result = consul.service_deregister("web-1", "")
+    report {
+        id: result.id,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("consul.service_deregister failed: " + _error)
+}
