@@ -1,0 +1,11 @@
+// npm_management.ops - Node.js npm package management
+block {
+    let global_pkgs = npm.list(true)
+    report { global_packages: global_pkgs }
+
+    let outdated = npm.outdated(true)
+    report { outdated: outdated }
+}
+rescue {
+    print("npm not available: " + _error)
+}

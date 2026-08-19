@@ -1,0 +1,11 @@
+// alternatives_management.ops - update-alternatives management
+block {
+    let alts = alternatives.list("editor")
+    report { editor_alternatives: alts }
+
+    let current = alternatives.display("editor")
+    report { current_editor: current }
+}
+rescue {
+    print("update-alternatives not available: " + _error)
+}

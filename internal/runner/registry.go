@@ -42,6 +42,14 @@ import (
 	sdkinifile "github.com/opslang/opslang/pkg/ops-core-sdk/ini_file"
 	sdkmount "github.com/opslang/opslang/pkg/ops-core-sdk/mount"
 	sdkhostname "github.com/opslang/opslang/pkg/ops-core-sdk/hostname"
+	sdkiptables "github.com/opslang/opslang/pkg/ops-core-sdk/iptables"
+	sdknpm "github.com/opslang/opslang/pkg/ops-core-sdk/npm"
+	sdkmysql "github.com/opslang/opslang/pkg/ops-core-sdk/mysql"
+	sdknginx "github.com/opslang/opslang/pkg/ops-core-sdk/nginx"
+	sdkmodprobe "github.com/opslang/opslang/pkg/ops-core-sdk/modprobe"
+	sdkalternatives "github.com/opslang/opslang/pkg/ops-core-sdk/alternatives"
+	sdkblockdev "github.com/opslang/opslang/pkg/ops-core-sdk/blockdev"
+	sdkat "github.com/opslang/opslang/pkg/ops-core-sdk/at"
 	sdktimezone "github.com/opslang/opslang/pkg/ops-core-sdk/timezone"
 )
 
@@ -1697,6 +1705,298 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("timezone.list", func(args map[string]interface{}) (interface{}, error) {
 		return sdktimezone.List()
+	})
+
+	// ── iptables ──────────────────────────────────────────────────────
+	r.Register("iptables.list", func(args map[string]interface{}) (interface{}, error) {
+		chain := getStringArg(args, "chain", "")
+		return sdkiptables.List(chain)
+	})
+	r.Register("iptables.flush", func(args map[string]interface{}) (interface{}, error) {
+		table := getStringArg(args, "table", "")
+		return sdkiptables.Flush(table)
+	})
+	r.Register("iptables.add_rule", func(args map[string]interface{}) (interface{}, error) {
+		chain, err := argString(args, "chain")
+		if err != nil {
+			return nil, fmt.Errorf("iptables.add_rule: %w", err)
+		}
+		ruleSpec, err := argString(args, "rule_spec")
+		if err != nil {
+			return nil, fmt.Errorf("iptables.add_rule: %w", err)
+		}
+		return sdkiptables.AddRule(chain, ruleSpec)
+	})
+	r.Register("iptables.delete_rule", func(args map[string]interface{}) (interface{}, error) {
+		chain, err := argString(args, "chain")
+		if err != nil {
+			return nil, fmt.Errorf("iptables.delete_rule: %w", err)
+		}
+		num, err := argInt(args, "number")
+		if err != nil {
+			return nil, fmt.Errorf("iptables.delete_rule: %w", err)
+		}
+		return sdkiptables.DeleteRule(chain, num)
+	})
+	r.Register("iptables.save", func(args map[string]interface{}) (interface{}, error) {
+		return sdkiptables.Save()
+	})
+	r.Register("iptables.list_chains", func(args map[string]interface{}) (interface{}, error) {
+		return sdkiptables.ListChains()
+	})
+
+	// ── npm ───────────────────────────────────────────────────────────
+	r.Register("npm.list", func(args map[string]interface{}) (interface{}, error) {
+		global, _ := argBool(args, "global")
+		return sdknpm.List(global)
+	})
+	r.Register("npm.install", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("npm.install: %w", err)
+		}
+		global, _ := argBool(args, "global")
+		return sdknpm.Install(name, global)
+	})
+	r.Register("npm.uninstall", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("npm.uninstall: %w", err)
+		}
+		global, _ := argBool(args, "global")
+		return sdknpm.Uninstall(name, global)
+	})
+	r.Register("npm.outdated", func(args map[string]interface{}) (interface{}, error) {
+		global, _ := argBool(args, "global")
+		return sdknpm.Outdated(global)
+	})
+
+	// ── mysql ─────────────────────────────────────────────────────────
+	r.Register("mysql.databases", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmysql.Databases()
+	})
+	r.Register("mysql.create_database", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("mysql.create_database: %w", err)
+		}
+		return sdkmysql.CreateDatabase(name)
+	})
+	r.Register("mysql.drop_database", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("mysql.drop_database: %w", err)
+		}
+		return sdkmysql.DropDatabase(name)
+	})
+	r.Register("mysql.users", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmysql.Users()
+	})
+	r.Register("mysql.create_user", func(args map[string]interface{}) (interface{}, error) {
+		user, err := argString(args, "user")
+		if err != nil {
+			return nil, fmt.Errorf("mysql.create_user: %w", err)
+		}
+		host, err := argString(args, "host")
+		if err != nil {
+			return nil, fmt.Errorf("mysql.create_user: %w", err)
+		}
+		password, err := argString(args, "password")
+		if err != nil {
+			return nil, fmt.Errorf("mysql.create_user: %w", err)
+		}
+		return sdkmysql.CreateUser(user, host, password)
+	})
+	r.Register("mysql.drop_user", func(args map[string]interface{}) (interface{}, error) {
+		user, err := argString(args, "user")
+		if err != nil {
+			return nil, fmt.Errorf("mysql.drop_user: %w", err)
+		}
+		host, err := argString(args, "host")
+		if err != nil {
+			return nil, fmt.Errorf("mysql.drop_user: %w", err)
+		}
+		return sdkmysql.DropUser(user, host)
+	})
+	r.Register("mysql.grant", func(args map[string]interface{}) (interface{}, error) {
+		privileges, err := argString(args, "privileges")
+		if err != nil {
+			return nil, fmt.Errorf("mysql.grant: %w", err)
+		}
+		database, err := argString(args, "database")
+		if err != nil {
+			return nil, fmt.Errorf("mysql.grant: %w", err)
+		}
+		user, err := argString(args, "user")
+		if err != nil {
+			return nil, fmt.Errorf("mysql.grant: %w", err)
+		}
+		host, err := argString(args, "host")
+		if err != nil {
+			return nil, fmt.Errorf("mysql.grant: %w", err)
+		}
+		return sdkmysql.Grant(privileges, database, user, host)
+	})
+
+	// ── nginx ─────────────────────────────────────────────────────────
+	r.Register("nginx.config_test", func(args map[string]interface{}) (interface{}, error) {
+		return sdknginx.ConfigTest()
+	})
+	r.Register("nginx.reload", func(args map[string]interface{}) (interface{}, error) {
+		return sdknginx.Reload()
+	})
+	r.Register("nginx.sites_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdknginx.SitesList()
+	})
+	r.Register("nginx.site_enable", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("nginx.site_enable: %w", err)
+		}
+		return sdknginx.SiteEnable(name)
+	})
+	r.Register("nginx.site_disable", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("nginx.site_disable: %w", err)
+		}
+		return sdknginx.SiteDisable(name)
+	})
+
+	// ── modprobe ──────────────────────────────────────────────────────
+	r.Register("modprobe.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmodprobe.List()
+	})
+	r.Register("modprobe.load", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("modprobe.load: %w", err)
+		}
+		return sdkmodprobe.Load(name)
+	})
+	r.Register("modprobe.unload", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("modprobe.unload: %w", err)
+		}
+		return sdkmodprobe.Unload(name)
+	})
+	r.Register("modprobe.is_loaded", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("modprobe.is_loaded: %w", err)
+		}
+		return sdkmodprobe.IsLoaded(name)
+	})
+
+	// ── alternatives ──────────────────────────────────────────────────
+	r.Register("alternatives.list", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("alternatives.list: %w", err)
+		}
+		return sdkalternatives.List(name)
+	})
+	r.Register("alternatives.display", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("alternatives.display: %w", err)
+		}
+		return sdkalternatives.Display(name)
+	})
+	r.Register("alternatives.set", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("alternatives.set: %w", err)
+		}
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("alternatives.set: %w", err)
+		}
+		return sdkalternatives.Set(name, path)
+	})
+	r.Register("alternatives.install", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("alternatives.install: %w", err)
+		}
+		link, err := argString(args, "link")
+		if err != nil {
+			return nil, fmt.Errorf("alternatives.install: %w", err)
+		}
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("alternatives.install: %w", err)
+		}
+		priority, err := argInt(args, "priority")
+		if err != nil {
+			return nil, fmt.Errorf("alternatives.install: %w", err)
+		}
+		return sdkalternatives.Install(name, link, path, priority)
+	})
+	r.Register("alternatives.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("alternatives.remove: %w", err)
+		}
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("alternatives.remove: %w", err)
+		}
+		return sdkalternatives.Remove(name, path)
+	})
+
+	// ── blockdev ──────────────────────────────────────────────────────
+	r.Register("blockdev.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkblockdev.List()
+	})
+	r.Register("blockdev.info", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("blockdev.info: %w", err)
+		}
+		return sdkblockdev.Info(device)
+	})
+	r.Register("blockdev.flush_buffers", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("blockdev.flush_buffers: %w", err)
+		}
+		return sdkblockdev.FlushBuffers(device)
+	})
+	r.Register("blockdev.set_readahead", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("blockdev.set_readahead: %w", err)
+		}
+		value, err := argInt(args, "value")
+		if err != nil {
+			return nil, fmt.Errorf("blockdev.set_readahead: %w", err)
+		}
+		return sdkblockdev.SetReadahead(device, value)
+	})
+
+	// ── at ────────────────────────────────────────────────────────────
+	r.Register("at.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkat.List()
+	})
+	r.Register("at.schedule", func(args map[string]interface{}) (interface{}, error) {
+		command, err := argString(args, "command")
+		if err != nil {
+			return nil, fmt.Errorf("at.schedule: %w", err)
+		}
+		timeSpec, err := argString(args, "time_spec")
+		if err != nil {
+			return nil, fmt.Errorf("at.schedule: %w", err)
+		}
+		return sdkat.Schedule(command, timeSpec)
+	})
+	r.Register("at.remove", func(args map[string]interface{}) (interface{}, error) {
+		jobID, err := argString(args, "job_id")
+		if err != nil {
+			return nil, fmt.Errorf("at.remove: %w", err)
+		}
+		return sdkat.Remove(jobID)
 	})
 }
 

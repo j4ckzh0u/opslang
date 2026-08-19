@@ -1,0 +1,11 @@
+// mysql_management.ops - MySQL database and user management
+block {
+    let dbs = mysql.databases()
+    report { databases: dbs }
+
+    let users = mysql.users()
+    report { users: users }
+}
+rescue {
+    print("mysql not available: " + _error)
+}

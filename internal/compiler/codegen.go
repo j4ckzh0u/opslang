@@ -280,6 +280,60 @@ var sdkMapping = map[string]sdkFunc{
 	"timezone.get":  {pkg: "timezone", goName: "Get"},
 	"timezone.set":  {pkg: "timezone", goName: "Set", args: true, params: []string{"s"}},
 	"timezone.list": {pkg: "timezone", goName: "List"},
+
+	// iptables
+	"iptables.list":        {pkg: "iptables", goName: "List", args: true, params: []string{"s"}},
+	"iptables.flush":       {pkg: "iptables", goName: "Flush", args: true, params: []string{"s"}},
+	"iptables.add_rule":    {pkg: "iptables", goName: "AddRule", args: true, params: []string{"s", "s"}},
+	"iptables.delete_rule": {pkg: "iptables", goName: "DeleteRule", args: true, params: []string{"s", "i"}},
+	"iptables.save":        {pkg: "iptables", goName: "Save"},
+	"iptables.list_chains": {pkg: "iptables", goName: "ListChains"},
+
+	// npm
+	"npm.list":      {pkg: "npm", goName: "List", args: true, params: []string{"b"}},
+	"npm.install":   {pkg: "npm", goName: "Install", args: true, params: []string{"s", "b"}},
+	"npm.uninstall": {pkg: "npm", goName: "Uninstall", args: true, params: []string{"s", "b"}},
+	"npm.outdated":  {pkg: "npm", goName: "Outdated", args: true, params: []string{"b"}},
+
+	// mysql
+	"mysql.databases":     {pkg: "mysql", goName: "Databases"},
+	"mysql.create_database": {pkg: "mysql", goName: "CreateDatabase", args: true, params: []string{"s"}},
+	"mysql.drop_database": {pkg: "mysql", goName: "DropDatabase", args: true, params: []string{"s"}},
+	"mysql.users":         {pkg: "mysql", goName: "Users"},
+	"mysql.create_user":   {pkg: "mysql", goName: "CreateUser", args: true, params: []string{"s", "s", "s"}},
+	"mysql.drop_user":     {pkg: "mysql", goName: "DropUser", args: true, params: []string{"s", "s"}},
+	"mysql.grant":         {pkg: "mysql", goName: "Grant", args: true, params: []string{"s", "s", "s", "s"}},
+
+	// nginx
+	"nginx.config_test":  {pkg: "nginx", goName: "ConfigTest"},
+	"nginx.reload":       {pkg: "nginx", goName: "Reload"},
+	"nginx.sites_list":   {pkg: "nginx", goName: "SitesList"},
+	"nginx.site_enable":  {pkg: "nginx", goName: "SiteEnable", args: true, params: []string{"s"}},
+	"nginx.site_disable": {pkg: "nginx", goName: "SiteDisable", args: true, params: []string{"s"}},
+
+	// modprobe
+	"modprobe.list":      {pkg: "modprobe", goName: "List"},
+	"modprobe.load":      {pkg: "modprobe", goName: "Load", args: true, params: []string{"s"}},
+	"modprobe.unload":    {pkg: "modprobe", goName: "Unload", args: true, params: []string{"s"}},
+	"modprobe.is_loaded": {pkg: "modprobe", goName: "IsLoaded", args: true, params: []string{"s"}},
+
+	// alternatives
+	"alternatives.list":     {pkg: "alternatives", goName: "List", args: true, params: []string{"s"}},
+	"alternatives.display":  {pkg: "alternatives", goName: "Display", args: true, params: []string{"s"}},
+	"alternatives.set":      {pkg: "alternatives", goName: "Set", args: true, params: []string{"s", "s"}},
+	"alternatives.install":  {pkg: "alternatives", goName: "Install", args: true, params: []string{"s", "s", "s", "i"}},
+	"alternatives.remove":   {pkg: "alternatives", goName: "Remove", args: true, params: []string{"s", "s"}},
+
+	// blockdev
+	"blockdev.list":          {pkg: "blockdev", goName: "List"},
+	"blockdev.info":          {pkg: "blockdev", goName: "Info", args: true, params: []string{"s"}},
+	"blockdev.flush_buffers": {pkg: "blockdev", goName: "FlushBuffers", args: true, params: []string{"s"}},
+	"blockdev.set_readahead": {pkg: "blockdev", goName: "SetReadahead", args: true, params: []string{"s", "i"}},
+
+	// at
+	"at.list":     {pkg: "at", goName: "List"},
+	"at.schedule": {pkg: "at", goName: "Schedule", args: true, params: []string{"s", "s"}},
+	"at.remove":   {pkg: "at", goName: "Remove", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -376,6 +430,14 @@ var pkgImportAlias = map[string]string{
 	"disk":    "opsdisk",
 	"kernel":  "opskernel",
 	"ssh":     "opsssh",
+	"iptables":  "opsiptables",
+	"npm":       "opsnpm",
+	"mysql":     "opsmysql",
+	"nginx":     "opsnginx",
+	"modprobe":  "opsmodprobe",
+	"alternatives": "opsalternatives",
+	"blockdev":     "opsblockdev",
+	"at":           "opsat",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -398,6 +460,14 @@ var pkgImportPath = map[string]string{
 	"disk":    "github.com/opslang/opslang/pkg/ops-core-sdk/disk",
 	"kernel":  "github.com/opslang/opslang/pkg/ops-core-sdk/kernel",
 	"ssh":     "github.com/opslang/opslang/pkg/ops-core-sdk/ssh",
+	"iptables":  "github.com/opslang/opslang/pkg/ops-core-sdk/iptables",
+	"npm":       "github.com/opslang/opslang/pkg/ops-core-sdk/npm",
+	"mysql":     "github.com/opslang/opslang/pkg/ops-core-sdk/mysql",
+	"nginx":     "github.com/opslang/opslang/pkg/ops-core-sdk/nginx",
+	"modprobe":  "github.com/opslang/opslang/pkg/ops-core-sdk/modprobe",
+	"alternatives": "github.com/opslang/opslang/pkg/ops-core-sdk/alternatives",
+	"blockdev":     "github.com/opslang/opslang/pkg/ops-core-sdk/blockdev",
+	"at":           "github.com/opslang/opslang/pkg/ops-core-sdk/at",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

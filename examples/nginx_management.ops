@@ -1,0 +1,11 @@
+// nginx_management.ops - Nginx web server management
+block {
+    let test = nginx.config_test()
+    report { config_test: test }
+
+    let sites = nginx.sites_list()
+    report { sites: sites }
+}
+rescue {
+    print("nginx not available: " + _error)
+}

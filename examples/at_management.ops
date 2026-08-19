@@ -1,0 +1,8 @@
+// at_management.ops - at job scheduling management
+block {
+    let jobs = at.list()
+    report { scheduled_jobs: jobs }
+}
+rescue {
+    print("at not available: " + _error)
+}

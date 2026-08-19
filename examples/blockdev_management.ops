@@ -1,0 +1,11 @@
+// blockdev_management.ops - Block device management
+block {
+    let devices = blockdev.list()
+    report { block_devices: devices }
+
+    let info = blockdev.info("sda")
+    report { sda_info: info }
+}
+rescue {
+    print("blockdev not available: " + _error)
+}

@@ -41,6 +41,14 @@ import (
 	sdktime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
 	sdkuser "github.com/opslang/opslang/pkg/ops-core-sdk/user"
 	sdkyaml "github.com/opslang/opslang/pkg/ops-core-sdk/yaml"
+	sdkiptables "github.com/opslang/opslang/pkg/ops-core-sdk/iptables"
+	sdknpm "github.com/opslang/opslang/pkg/ops-core-sdk/npm"
+	sdkmysql "github.com/opslang/opslang/pkg/ops-core-sdk/mysql"
+	sdknginx "github.com/opslang/opslang/pkg/ops-core-sdk/nginx"
+	sdkmodprobe "github.com/opslang/opslang/pkg/ops-core-sdk/modprobe"
+	sdkalternatives "github.com/opslang/opslang/pkg/ops-core-sdk/alternatives"
+	sdkblockdev "github.com/opslang/opslang/pkg/ops-core-sdk/blockdev"
+	sdkat "github.com/opslang/opslang/pkg/ops-core-sdk/at"
 	sdkyumrepo "github.com/opslang/opslang/pkg/ops-core-sdk/yum_repo"
 )
 
@@ -2807,6 +2815,432 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["timezone.list"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdktimezone.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── iptables ──────────────────────────────────────────────────────
+	interp.builtins["iptables.list"] = func(args ...interface{}) (interface{}, error) {
+		chain := ""
+		if len(args) > 0 {
+			chain, _ = args[0].(string)
+		}
+		r, err := sdkiptables.List(chain)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["iptables.flush"] = func(args ...interface{}) (interface{}, error) {
+		table := ""
+		if len(args) > 0 {
+			table, _ = args[0].(string)
+		}
+		r, err := sdkiptables.Flush(table)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["iptables.add_rule"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("iptables.add_rule() requires 2 arguments (chain, rule_spec)")
+		}
+		chain, _ := args[0].(string)
+		ruleSpec, _ := args[1].(string)
+		r, err := sdkiptables.AddRule(chain, ruleSpec)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["iptables.delete_rule"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("iptables.delete_rule() requires 2 arguments (chain, number)")
+		}
+		chain, _ := args[0].(string)
+		num := int(0)
+		if n, ok := args[1].(float64); ok {
+			num = int(n)
+		}
+		r, err := sdkiptables.DeleteRule(chain, num)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["iptables.save"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkiptables.Save()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["iptables.list_chains"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkiptables.ListChains()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── npm ───────────────────────────────────────────────────────────
+	interp.builtins["npm.list"] = func(args ...interface{}) (interface{}, error) {
+		global := false
+		if len(args) > 0 {
+			global, _ = args[0].(bool)
+		}
+		r, err := sdknpm.List(global)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["npm.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("npm.install() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		global := false
+		if len(args) > 1 {
+			global, _ = args[1].(bool)
+		}
+		r, err := sdknpm.Install(name, global)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["npm.uninstall"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("npm.uninstall() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		global := false
+		if len(args) > 1 {
+			global, _ = args[1].(bool)
+		}
+		r, err := sdknpm.Uninstall(name, global)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["npm.outdated"] = func(args ...interface{}) (interface{}, error) {
+		global := false
+		if len(args) > 0 {
+			global, _ = args[0].(bool)
+		}
+		r, err := sdknpm.Outdated(global)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── mysql ─────────────────────────────────────────────────────────
+	interp.builtins["mysql.databases"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkmysql.Databases()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["mysql.create_database"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("mysql.create_database() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkmysql.CreateDatabase(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["mysql.drop_database"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("mysql.drop_database() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkmysql.DropDatabase(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["mysql.users"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkmysql.Users()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["mysql.create_user"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("mysql.create_user() requires 3 arguments (user, host, password)")
+		}
+		user, _ := args[0].(string)
+		host, _ := args[1].(string)
+		password, _ := args[2].(string)
+		r, err := sdkmysql.CreateUser(user, host, password)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["mysql.drop_user"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("mysql.drop_user() requires 2 arguments (user, host)")
+		}
+		user, _ := args[0].(string)
+		host, _ := args[1].(string)
+		r, err := sdkmysql.DropUser(user, host)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["mysql.grant"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("mysql.grant() requires 4 arguments (privileges, database, user, host)")
+		}
+		privileges, _ := args[0].(string)
+		database, _ := args[1].(string)
+		user, _ := args[2].(string)
+		host, _ := args[3].(string)
+		r, err := sdkmysql.Grant(privileges, database, user, host)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── nginx ─────────────────────────────────────────────────────────
+	interp.builtins["nginx.config_test"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdknginx.ConfigTest()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nginx.reload"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdknginx.Reload()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nginx.sites_list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdknginx.SitesList()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nginx.site_enable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("nginx.site_enable() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdknginx.SiteEnable(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nginx.site_disable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("nginx.site_disable() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdknginx.SiteDisable(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── modprobe ──────────────────────────────────────────────────────
+	interp.builtins["modprobe.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkmodprobe.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["modprobe.load"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("modprobe.load() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkmodprobe.Load(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["modprobe.unload"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("modprobe.unload() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkmodprobe.Unload(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["modprobe.is_loaded"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("modprobe.is_loaded() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkmodprobe.IsLoaded(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── alternatives ──────────────────────────────────────────────────
+	interp.builtins["alternatives.list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("alternatives.list() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkalternatives.List(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["alternatives.display"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("alternatives.display() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkalternatives.Display(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["alternatives.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("alternatives.set() requires 2 arguments (name, path)")
+		}
+		name, _ := args[0].(string)
+		path, _ := args[1].(string)
+		r, err := sdkalternatives.Set(name, path)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["alternatives.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("alternatives.install() requires 4 arguments (name, link, path, priority)")
+		}
+		name, _ := args[0].(string)
+		link, _ := args[1].(string)
+		path, _ := args[2].(string)
+		priority := int(0)
+		if p, ok := args[3].(float64); ok {
+			priority = int(p)
+		}
+		r, err := sdkalternatives.Install(name, link, path, priority)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["alternatives.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("alternatives.remove() requires 2 arguments (name, path)")
+		}
+		name, _ := args[0].(string)
+		path, _ := args[1].(string)
+		r, err := sdkalternatives.Remove(name, path)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── blockdev ──────────────────────────────────────────────────────
+	interp.builtins["blockdev.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkblockdev.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["blockdev.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("blockdev.info() requires 1 argument (device)")
+		}
+		device, _ := args[0].(string)
+		r, err := sdkblockdev.Info(device)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["blockdev.flush_buffers"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("blockdev.flush_buffers() requires 1 argument (device)")
+		}
+		device, _ := args[0].(string)
+		r, err := sdkblockdev.FlushBuffers(device)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["blockdev.set_readahead"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("blockdev.set_readahead() requires 2 arguments (device, value)")
+		}
+		device, _ := args[0].(string)
+		value := int(0)
+		if v, ok := args[1].(float64); ok {
+			value = int(v)
+		}
+		r, err := sdkblockdev.SetReadahead(device, value)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── at ────────────────────────────────────────────────────────────
+	interp.builtins["at.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkat.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["at.schedule"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("at.schedule() requires 2 arguments (command, time_spec)")
+		}
+		command, _ := args[0].(string)
+		timeSpec, _ := args[1].(string)
+		r, err := sdkat.Schedule(command, timeSpec)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["at.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("at.remove() requires 1 argument (job_id)")
+		}
+		jobID, _ := args[0].(string)
+		r, err := sdkat.Remove(jobID)
 		if err != nil {
 			return nil, err
 		}

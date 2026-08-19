@@ -306,6 +306,60 @@ var Funcs = []Func{
 	{Name: "timezone.get"},
 	{Name: "timezone.set", Args: []string{"timezone"}, Mutating: true},
 	{Name: "timezone.list"},
+
+	// ── iptables ──────────────────────────────────────────────────────
+	{Name: "iptables.list", Args: []string{"chain"}},
+	{Name: "iptables.flush", Args: []string{"table"}, Mutating: true},
+	{Name: "iptables.add_rule", Args: []string{"chain", "rule_spec"}, Mutating: true},
+	{Name: "iptables.delete_rule", Args: []string{"chain", "number"}, Mutating: true},
+	{Name: "iptables.save"},
+	{Name: "iptables.list_chains"},
+
+	// ── npm ───────────────────────────────────────────────────────────
+	{Name: "npm.list", Args: []string{"global"}},
+	{Name: "npm.install", Args: []string{"name", "global"}, Mutating: true},
+	{Name: "npm.uninstall", Args: []string{"name", "global"}, Mutating: true},
+	{Name: "npm.outdated", Args: []string{"global"}},
+
+	// ── mysql ─────────────────────────────────────────────────────────
+	{Name: "mysql.databases"},
+	{Name: "mysql.create_database", Args: []string{"name"}, Mutating: true},
+	{Name: "mysql.drop_database", Args: []string{"name"}, Mutating: true},
+	{Name: "mysql.users"},
+	{Name: "mysql.create_user", Args: []string{"user", "host", "password"}, Mutating: true},
+	{Name: "mysql.drop_user", Args: []string{"user", "host"}, Mutating: true},
+	{Name: "mysql.grant", Args: []string{"privileges", "database", "user", "host"}, Mutating: true},
+
+	// ── nginx ─────────────────────────────────────────────────────────
+	{Name: "nginx.config_test"},
+	{Name: "nginx.reload", Mutating: true},
+	{Name: "nginx.sites_list"},
+	{Name: "nginx.site_enable", Args: []string{"name"}, Mutating: true},
+	{Name: "nginx.site_disable", Args: []string{"name"}, Mutating: true},
+
+	// ── modprobe ──────────────────────────────────────────────────────
+	{Name: "modprobe.list"},
+	{Name: "modprobe.load", Args: []string{"name"}, Mutating: true},
+	{Name: "modprobe.unload", Args: []string{"name"}, Mutating: true},
+	{Name: "modprobe.is_loaded", Args: []string{"name"}},
+
+	// ── alternatives ──────────────────────────────────────────────────
+	{Name: "alternatives.list", Args: []string{"name"}},
+	{Name: "alternatives.display", Args: []string{"name"}},
+	{Name: "alternatives.set", Args: []string{"name", "path"}, Mutating: true},
+	{Name: "alternatives.install", Args: []string{"name", "link", "path", "priority"}, Mutating: true},
+	{Name: "alternatives.remove", Args: []string{"name", "path"}, Mutating: true},
+
+	// ── blockdev ──────────────────────────────────────────────────────
+	{Name: "blockdev.list"},
+	{Name: "blockdev.info", Args: []string{"device"}},
+	{Name: "blockdev.flush_buffers", Args: []string{"device"}, Mutating: true},
+	{Name: "blockdev.set_readahead", Args: []string{"device", "value"}, Mutating: true},
+
+	// ── at ────────────────────────────────────────────────────────────
+	{Name: "at.list"},
+	{Name: "at.schedule", Args: []string{"command", "time_spec"}, Mutating: true},
+	{Name: "at.remove", Args: []string{"job_id"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

@@ -1,0 +1,14 @@
+// iptables_management.ops - iptables firewall rule management
+block {
+    let chains = iptables.list_chains()
+    report { chains: chains }
+
+    let rules = iptables.list("INPUT")
+    report { input_rules: rules }
+
+    let saved = iptables.save()
+    report { saved: saved }
+}
+rescue {
+    print("iptables not available: " + _error)
+}

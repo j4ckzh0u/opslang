@@ -1,0 +1,11 @@
+// modprobe_management.ops - Linux kernel module management
+block {
+    let modules = modprobe.list()
+    report { loaded_modules: modules }
+
+    let is_loaded = modprobe.is_loaded("loop")
+    report { loop_loaded: is_loaded }
+}
+rescue {
+    print("modprobe not available: " + _error)
+}
