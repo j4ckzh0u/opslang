@@ -880,6 +880,74 @@ var sdkMapping = map[string]sdkFunc{
 	"uri_ext.delete":  {pkg: "uri_ext", goName: "Delete", args: true, params: []string{"s", "ms", "i"}},
 	"uri_ext.head":    {pkg: "uri_ext", goName: "Head", args: true, params: []string{"s", "ms", "i"}},
 	"uri_ext.options": {pkg: "uri_ext", goName: "Options", args: true, params: []string{"s", "ms", "i"}},
+
+	// hwclock
+	"hwclock.get":      {pkg: "hwclock", goName: "Get"},
+	"hwclock.set":      {pkg: "hwclock", goName: "Set"},
+	"hwclock.hctosys":  {pkg: "hwclock", goName: "HCToSys"},
+	"hwclock.set_time": {pkg: "hwclock", goName: "SetTime", args: true, params: []string{"s"}},
+
+	// mdadm
+	"mdadm.create":  {pkg: "mdadm", goName: "Create", args: true, params: []string{"s", "s", "l"}},
+	"mdadm.destroy": {pkg: "mdadm", goName: "Destroy", args: true, params: []string{"s"}},
+	"mdadm.detail":  {pkg: "mdadm", goName: "Detail", args: true, params: []string{"s"}},
+	"mdadm.scan":    {pkg: "mdadm", goName: "Scan"},
+	"mdadm.add":     {pkg: "mdadm", goName: "Add", args: true, params: []string{"s", "s"}},
+	"mdadm.remove":  {pkg: "mdadm", goName: "Remove", args: true, params: []string{"s", "s"}},
+
+	// open_iscsi
+	"open_iscsi.discover":   {pkg: "open_iscsi", goName: "Discover", args: true, params: []string{"s", "i"}},
+	"open_iscsi.login":      {pkg: "open_iscsi", goName: "Login", args: true, params: []string{"s", "s"}},
+	"open_iscsi.logout":     {pkg: "open_iscsi", goName: "Logout", args: true, params: []string{"s", "s"}},
+	"open_iscsi.list_sessions": {pkg: "open_iscsi", goName: "ListSessions"},
+	"open_iscsi.list_nodes":    {pkg: "open_iscsi", goName: "ListNodes"},
+	"open_iscsi.set_startup":   {pkg: "open_iscsi", goName: "SetStartup", args: true, params: []string{"s", "s", "s"}},
+
+	// rfkill
+	"rfkill.list":       {pkg: "rfkill", goName: "List"},
+	"rfkill.block":      {pkg: "rfkill", goName: "Block", args: true, params: []string{"s"}},
+	"rfkill.unblock":    {pkg: "rfkill", goName: "Unblock", args: true, params: []string{"s"}},
+	"rfkill.block_all":  {pkg: "rfkill", goName: "BlockAll", args: true, params: []string{"s"}},
+	"rfkill.unblock_all": {pkg: "rfkill", goName: "UnblockAll", args: true, params: []string{"s"}},
+
+	// multipath
+	"multipath.reconfigure": {pkg: "multipath", goName: "Reconfigure"},
+	"multipath.list_paths":  {pkg: "multipath", goName: "ListPaths"},
+	"multipath.list_maps":   {pkg: "multipath", goName: "ListMaps"},
+	"multipath.add_map":     {pkg: "multipath", goName: "AddMap", args: true, params: []string{"s"}},
+	"multipath.remove_map":  {pkg: "multipath", goName: "RemoveMap", args: true, params: []string{"s"}},
+	"multipath.flush":       {pkg: "multipath", goName: "Flush"},
+
+	// dmsetup
+	"dmsetup.create":     {pkg: "dmsetup", goName: "Create", args: true, params: []string{"s", "s"}},
+	"dmsetup.remove":     {pkg: "dmsetup", goName: "Remove", args: true, params: []string{"s"}},
+	"dmsetup.remove_all": {pkg: "dmsetup", goName: "RemoveAll"},
+	"dmsetup.list":       {pkg: "dmsetup", goName: "List"},
+	"dmsetup.info":       {pkg: "dmsetup", goName: "Info", args: true, params: []string{"s"}},
+	"dmsetup.suspend":    {pkg: "dmsetup", goName: "Suspend", args: true, params: []string{"s"}},
+	"dmsetup.resume":     {pkg: "dmsetup", goName: "Resume", args: true, params: []string{"s"}},
+
+	// lvm_enhanced
+	"lvm_enhanced.pv_create":     {pkg: "lvm_enhanced", goName: "PVCreate", args: true, params: []string{"s"}},
+	"lvm_enhanced.pv_remove":     {pkg: "lvm_enhanced", goName: "PVRemove", args: true, params: []string{"s", "b"}},
+	"lvm_enhanced.pv_list":       {pkg: "lvm_enhanced", goName: "PVList"},
+	"lvm_enhanced.vg_create":     {pkg: "lvm_enhanced", goName: "VGCreate", args: true, params: []string{"s", "l"}},
+	"lvm_enhanced.vg_remove":     {pkg: "lvm_enhanced", goName: "VGRemove", args: true, params: []string{"s", "b"}},
+	"lvm_enhanced.vg_extend":     {pkg: "lvm_enhanced", goName: "VGExtend", args: true, params: []string{"s", "s"}},
+	"lvm_enhanced.vg_list":       {pkg: "lvm_enhanced", goName: "VGList"},
+	"lvm_enhanced.lv_extend":     {pkg: "lvm_enhanced", goName: "LVExtend", args: true, params: []string{"s", "s"}},
+	"lvm_enhanced.lv_extend_all": {pkg: "lvm_enhanced", goName: "LVExtendAll", args: true, params: []string{"s"}},
+	"lvm_enhanced.lv_list":       {pkg: "lvm_enhanced", goName: "LVList"},
+
+	// puppet
+	"puppet.run":            {pkg: "puppet", goName: "Run", args: true, params: []string{"s", "l"}},
+	"puppet.run_noop":       {pkg: "puppet", goName: "RunNoop", args: true, params: []string{"s", "l"}},
+	"puppet.status":         {pkg: "puppet", goName: "Status"},
+	"puppet.disable":        {pkg: "puppet", goName: "Disable", args: true, params: []string{"s"}},
+	"puppet.enable":         {pkg: "puppet", goName: "Enable"},
+	"puppet.fact":           {pkg: "puppet", goName: "Fact", args: true, params: []string{"s"}},
+	"puppet.module_list":    {pkg: "puppet", goName: "ModuleList"},
+	"puppet.module_install": {pkg: "puppet", goName: "ModuleInstall", args: true, params: []string{"s", "s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1056,6 +1124,14 @@ var pkgImportAlias = map[string]string{
 	"pause":          "opspause",
 	"meta":           "opsmeta",
 	"uri_ext":        "opsuri_ext",
+	"hwclock":        "opshwclock",
+	"mdadm":          "opsmdadm",
+	"open_iscsi":     "opsopen_iscsi",
+	"rfkill":         "opsrfkill",
+	"multipath":      "opsmultipath",
+	"dmsetup":        "opsdmsetup",
+	"lvm_enhanced":   "opslvm_enhanced",
+	"puppet":         "opspuppet",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1158,6 +1234,14 @@ var pkgImportPath = map[string]string{
 	"pause":          "github.com/opslang/opslang/pkg/ops-core-sdk/pause",
 	"meta":           "github.com/opslang/opslang/pkg/ops-core-sdk/meta",
 	"uri_ext":        "github.com/opslang/opslang/pkg/ops-core-sdk/uri_ext",
+	"hwclock":        "github.com/opslang/opslang/pkg/ops-core-sdk/hwclock",
+	"mdadm":          "github.com/opslang/opslang/pkg/ops-core-sdk/mdadm",
+	"open_iscsi":     "github.com/opslang/opslang/pkg/ops-core-sdk/open_iscsi",
+	"rfkill":         "github.com/opslang/opslang/pkg/ops-core-sdk/rfkill",
+	"multipath":      "github.com/opslang/opslang/pkg/ops-core-sdk/multipath",
+	"dmsetup":        "github.com/opslang/opslang/pkg/ops-core-sdk/dmsetup",
+	"lvm_enhanced":   "github.com/opslang/opslang/pkg/ops-core-sdk/lvm_enhanced",
+	"puppet":         "github.com/opslang/opslang/pkg/ops-core-sdk/puppet",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

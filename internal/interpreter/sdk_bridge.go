@@ -122,6 +122,14 @@ import (
 	sdkpause "github.com/opslang/opslang/pkg/ops-core-sdk/pause"
 	sdkmeta "github.com/opslang/opslang/pkg/ops-core-sdk/meta"
 	sdkuri_ext "github.com/opslang/opslang/pkg/ops-core-sdk/uri_ext"
+	sdkhwclock "github.com/opslang/opslang/pkg/ops-core-sdk/hwclock"
+	sdkmdadm "github.com/opslang/opslang/pkg/ops-core-sdk/mdadm"
+	sdkopen_iscsi "github.com/opslang/opslang/pkg/ops-core-sdk/open_iscsi"
+	sdkrfkill "github.com/opslang/opslang/pkg/ops-core-sdk/rfkill"
+	sdkmultipath "github.com/opslang/opslang/pkg/ops-core-sdk/multipath"
+	sdkdmsetup "github.com/opslang/opslang/pkg/ops-core-sdk/dmsetup"
+	sdklvm_enhanced "github.com/opslang/opslang/pkg/ops-core-sdk/lvm_enhanced"
+	sdkpuppet "github.com/opslang/opslang/pkg/ops-core-sdk/puppet"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -7268,6 +7276,344 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		headers := toStringMap(args, 1)
 		timeout, _ := args[2].(int)
 		return sdkuri_ext.Options(url, headers, timeout), nil
+	}
+
+	// ── hwclock ─────────────────────────────────────────────────────────────
+	interp.builtins["hwclock.get"] = func(args ...interface{}) (interface{}, error) {
+		return sdkhwclock.Get(), nil
+	}
+	interp.builtins["hwclock.set"] = func(args ...interface{}) (interface{}, error) {
+		return sdkhwclock.Set(), nil
+	}
+	interp.builtins["hwclock.hctosys"] = func(args ...interface{}) (interface{}, error) {
+		return sdkhwclock.HCToSys(), nil
+	}
+	interp.builtins["hwclock.set_time"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("hwclock.set_time() requires 1 argument")
+		}
+		timeStr, _ := args[0].(string)
+		return sdkhwclock.SetTime(timeStr), nil
+	}
+
+	// ── mdadm ───────────────────────────────────────────────────────────────
+	interp.builtins["mdadm.create"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("mdadm.create() requires 3 arguments")
+		}
+		device, _ := args[0].(string)
+		level, _ := args[1].(string)
+		devices := args[2].([]interface{})
+		devStrs := make([]string, len(devices))
+		for i, d := range devices {
+			devStrs[i], _ = d.(string)
+		}
+		return sdkmdadm.Create(device, level, devStrs), nil
+	}
+	interp.builtins["mdadm.destroy"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("mdadm.destroy() requires 1 argument")
+		}
+		device, _ := args[0].(string)
+		return sdkmdadm.Destroy(device), nil
+	}
+	interp.builtins["mdadm.detail"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("mdadm.detail() requires 1 argument")
+		}
+		device, _ := args[0].(string)
+		return sdkmdadm.Detail(device), nil
+	}
+	interp.builtins["mdadm.scan"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmdadm.Scan(), nil
+	}
+	interp.builtins["mdadm.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("mdadm.add() requires 2 arguments")
+		}
+		device, _ := args[0].(string)
+		member, _ := args[1].(string)
+		return sdkmdadm.Add(device, member), nil
+	}
+	interp.builtins["mdadm.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("mdadm.remove() requires 2 arguments")
+		}
+		device, _ := args[0].(string)
+		member, _ := args[1].(string)
+		return sdkmdadm.Remove(device, member), nil
+	}
+
+	// ── open_iscsi ──────────────────────────────────────────────────────────
+	interp.builtins["open_iscsi.discover"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("open_iscsi.discover() requires 2 arguments")
+		}
+		portal, _ := args[0].(string)
+		port, _ := args[1].(int)
+		return sdkopen_iscsi.Discover(portal, port), nil
+	}
+	interp.builtins["open_iscsi.login"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("open_iscsi.login() requires 2 arguments")
+		}
+		target, _ := args[0].(string)
+		portal, _ := args[1].(string)
+		return sdkopen_iscsi.Login(target, portal), nil
+	}
+	interp.builtins["open_iscsi.logout"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("open_iscsi.logout() requires 2 arguments")
+		}
+		target, _ := args[0].(string)
+		portal, _ := args[1].(string)
+		return sdkopen_iscsi.Logout(target, portal), nil
+	}
+	interp.builtins["open_iscsi.list_sessions"] = func(args ...interface{}) (interface{}, error) {
+		return sdkopen_iscsi.ListSessions(), nil
+	}
+	interp.builtins["open_iscsi.list_nodes"] = func(args ...interface{}) (interface{}, error) {
+		return sdkopen_iscsi.ListNodes(), nil
+	}
+	interp.builtins["open_iscsi.set_startup"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("open_iscsi.set_startup() requires 3 arguments")
+		}
+		target, _ := args[0].(string)
+		portal, _ := args[1].(string)
+		startup, _ := args[2].(string)
+		return sdkopen_iscsi.SetStartup(target, portal, startup), nil
+	}
+
+	// ── rfkill ──────────────────────────────────────────────────────────────
+	interp.builtins["rfkill.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkrfkill.List(), nil
+	}
+	interp.builtins["rfkill.block"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("rfkill.block() requires 1 argument")
+		}
+		device, _ := args[0].(string)
+		return sdkrfkill.Block(device), nil
+	}
+	interp.builtins["rfkill.unblock"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("rfkill.unblock() requires 1 argument")
+		}
+		device, _ := args[0].(string)
+		return sdkrfkill.Unblock(device), nil
+	}
+	interp.builtins["rfkill.block_all"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("rfkill.block_all() requires 1 argument")
+		}
+		deviceType, _ := args[0].(string)
+		return sdkrfkill.BlockAll(deviceType), nil
+	}
+	interp.builtins["rfkill.unblock_all"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("rfkill.unblock_all() requires 1 argument")
+		}
+		deviceType, _ := args[0].(string)
+		return sdkrfkill.UnblockAll(deviceType), nil
+	}
+
+	// ── multipath ───────────────────────────────────────────────────────────
+	interp.builtins["multipath.reconfigure"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmultipath.Reconfigure(), nil
+	}
+	interp.builtins["multipath.list_paths"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmultipath.ListPaths(), nil
+	}
+	interp.builtins["multipath.list_maps"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmultipath.ListMaps(), nil
+	}
+	interp.builtins["multipath.add_map"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("multipath.add_map() requires 1 argument")
+		}
+		device, _ := args[0].(string)
+		return sdkmultipath.AddMap(device), nil
+	}
+	interp.builtins["multipath.remove_map"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("multipath.remove_map() requires 1 argument")
+		}
+		device, _ := args[0].(string)
+		return sdkmultipath.RemoveMap(device), nil
+	}
+	interp.builtins["multipath.flush"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmultipath.Flush(), nil
+	}
+
+	// ── dmsetup ─────────────────────────────────────────────────────────────
+	interp.builtins["dmsetup.create"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("dmsetup.create() requires 2 arguments")
+		}
+		name, _ := args[0].(string)
+		table, _ := args[1].(string)
+		return sdkdmsetup.Create(name, table), nil
+	}
+	interp.builtins["dmsetup.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dmsetup.remove() requires 1 argument")
+		}
+		name, _ := args[0].(string)
+		return sdkdmsetup.Remove(name), nil
+	}
+	interp.builtins["dmsetup.remove_all"] = func(args ...interface{}) (interface{}, error) {
+		return sdkdmsetup.RemoveAll(), nil
+	}
+	interp.builtins["dmsetup.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkdmsetup.List(), nil
+	}
+	interp.builtins["dmsetup.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dmsetup.info() requires 1 argument")
+		}
+		name, _ := args[0].(string)
+		return sdkdmsetup.Info(name), nil
+	}
+	interp.builtins["dmsetup.suspend"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dmsetup.suspend() requires 1 argument")
+		}
+		name, _ := args[0].(string)
+		return sdkdmsetup.Suspend(name), nil
+	}
+	interp.builtins["dmsetup.resume"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dmsetup.resume() requires 1 argument")
+		}
+		name, _ := args[0].(string)
+		return sdkdmsetup.Resume(name), nil
+	}
+
+	// ── lvm_enhanced ────────────────────────────────────────────────────────
+	interp.builtins["lvm_enhanced.pv_create"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("lvm_enhanced.pv_create() requires 1 argument")
+		}
+		device, _ := args[0].(string)
+		return sdklvm_enhanced.PVCreate(device), nil
+	}
+	interp.builtins["lvm_enhanced.pv_remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("lvm_enhanced.pv_remove() requires 2 arguments")
+		}
+		device, _ := args[0].(string)
+		force, _ := args[1].(bool)
+		return sdklvm_enhanced.PVRemove(device, force), nil
+	}
+	interp.builtins["lvm_enhanced.pv_list"] = func(args ...interface{}) (interface{}, error) {
+		return sdklvm_enhanced.PVList(), nil
+	}
+	interp.builtins["lvm_enhanced.vg_create"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("lvm_enhanced.vg_create() requires 2 arguments")
+		}
+		name, _ := args[0].(string)
+		devicesRaw := args[1].([]interface{})
+		devStrs := make([]string, len(devicesRaw))
+		for i, d := range devicesRaw {
+			devStrs[i], _ = d.(string)
+		}
+		return sdklvm_enhanced.VGCreate(name, devStrs), nil
+	}
+	interp.builtins["lvm_enhanced.vg_remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("lvm_enhanced.vg_remove() requires 2 arguments")
+		}
+		name, _ := args[0].(string)
+		force, _ := args[1].(bool)
+		return sdklvm_enhanced.VGRemove(name, force), nil
+	}
+	interp.builtins["lvm_enhanced.vg_extend"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("lvm_enhanced.vg_extend() requires 2 arguments")
+		}
+		vgName, _ := args[0].(string)
+		device, _ := args[1].(string)
+		return sdklvm_enhanced.VGExtend(vgName, device), nil
+	}
+	interp.builtins["lvm_enhanced.vg_list"] = func(args ...interface{}) (interface{}, error) {
+		return sdklvm_enhanced.VGList(), nil
+	}
+	interp.builtins["lvm_enhanced.lv_extend"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("lvm_enhanced.lv_extend() requires 2 arguments")
+		}
+		lvPath, _ := args[0].(string)
+		size, _ := args[1].(string)
+		return sdklvm_enhanced.LVExtend(lvPath, size), nil
+	}
+	interp.builtins["lvm_enhanced.lv_extend_all"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("lvm_enhanced.lv_extend_all() requires 1 argument")
+		}
+		lvPath, _ := args[0].(string)
+		return sdklvm_enhanced.LVExtendAll(lvPath), nil
+	}
+	interp.builtins["lvm_enhanced.lv_list"] = func(args ...interface{}) (interface{}, error) {
+		return sdklvm_enhanced.LVList(), nil
+	}
+
+	// ── puppet ──────────────────────────────────────────────────────────────
+	interp.builtins["puppet.run"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("puppet.run() requires 2 arguments")
+		}
+		environment, _ := args[0].(string)
+		tagsRaw := args[1].([]interface{})
+		tags := make([]string, len(tagsRaw))
+		for i, t := range tagsRaw {
+			tags[i], _ = t.(string)
+		}
+		return sdkpuppet.Run(environment, tags), nil
+	}
+	interp.builtins["puppet.run_noop"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("puppet.run_noop() requires 2 arguments")
+		}
+		environment, _ := args[0].(string)
+		tagsRaw := args[1].([]interface{})
+		tags := make([]string, len(tagsRaw))
+		for i, t := range tagsRaw {
+			tags[i], _ = t.(string)
+		}
+		return sdkpuppet.RunNoop(environment, tags), nil
+	}
+	interp.builtins["puppet.status"] = func(args ...interface{}) (interface{}, error) {
+		return sdkpuppet.Status(), nil
+	}
+	interp.builtins["puppet.disable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("puppet.disable() requires 1 argument")
+		}
+		message, _ := args[0].(string)
+		return sdkpuppet.Disable(message), nil
+	}
+	interp.builtins["puppet.enable"] = func(args ...interface{}) (interface{}, error) {
+		return sdkpuppet.Enable(), nil
+	}
+	interp.builtins["puppet.fact"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("puppet.fact() requires 1 argument")
+		}
+		name, _ := args[0].(string)
+		return sdkpuppet.Fact(name), nil
+	}
+	interp.builtins["puppet.module_list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkpuppet.ModuleList(), nil
+	}
+	interp.builtins["puppet.module_install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("puppet.module_install() requires 2 arguments")
+		}
+		name, _ := args[0].(string)
+		version, _ := args[1].(string)
+		return sdkpuppet.ModuleInstall(name, version), nil
 	}
 }
 // If the arg at idx is a map[string]interface{}, values are converted to strings.

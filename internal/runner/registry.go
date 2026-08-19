@@ -123,6 +123,14 @@ import (
 	sdkpause "github.com/opslang/opslang/pkg/ops-core-sdk/pause"
 	sdkmeta "github.com/opslang/opslang/pkg/ops-core-sdk/meta"
 	sdkuri_ext "github.com/opslang/opslang/pkg/ops-core-sdk/uri_ext"
+	sdkhwclock "github.com/opslang/opslang/pkg/ops-core-sdk/hwclock"
+	sdkmdadm "github.com/opslang/opslang/pkg/ops-core-sdk/mdadm"
+	sdkopen_iscsi "github.com/opslang/opslang/pkg/ops-core-sdk/open_iscsi"
+	sdkrfkill "github.com/opslang/opslang/pkg/ops-core-sdk/rfkill"
+	sdkmultipath "github.com/opslang/opslang/pkg/ops-core-sdk/multipath"
+	sdkdmsetup "github.com/opslang/opslang/pkg/ops-core-sdk/dmsetup"
+	sdklvm_enhanced "github.com/opslang/opslang/pkg/ops-core-sdk/lvm_enhanced"
+	sdkpuppet "github.com/opslang/opslang/pkg/ops-core-sdk/puppet"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -4475,6 +4483,229 @@ func (r *Registry) registerExtensions() {
 		timeout, _ := argInt(args, "timeout")
 		return sdkuri_ext.Options(url, headers, timeout), nil
 	})
+
+	// ── hwclock ─────────────────────────────────────────────────────────────
+	r.Register("hwclock.get", func(args map[string]interface{}) (interface{}, error) {
+		return sdkhwclock.Get(), nil
+	})
+	r.Register("hwclock.set", func(args map[string]interface{}) (interface{}, error) {
+		return sdkhwclock.Set(), nil
+	})
+	r.Register("hwclock.hctosys", func(args map[string]interface{}) (interface{}, error) {
+		return sdkhwclock.HCToSys(), nil
+	})
+	r.Register("hwclock.set_time", func(args map[string]interface{}) (interface{}, error) {
+		timeStr, _ := argString(args, "time")
+		return sdkhwclock.SetTime(timeStr), nil
+	})
+
+	// ── mdadm ───────────────────────────────────────────────────────────────
+	r.Register("mdadm.create", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		level, _ := argString(args, "level")
+		devices := argStringSlice(args, "devices")
+		return sdkmdadm.Create(device, level, devices), nil
+	})
+	r.Register("mdadm.destroy", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		return sdkmdadm.Destroy(device), nil
+	})
+	r.Register("mdadm.detail", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		return sdkmdadm.Detail(device), nil
+	})
+	r.Register("mdadm.scan", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmdadm.Scan(), nil
+	})
+	r.Register("mdadm.add", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		member, _ := argString(args, "member")
+		return sdkmdadm.Add(device, member), nil
+	})
+	r.Register("mdadm.remove", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		member, _ := argString(args, "member")
+		return sdkmdadm.Remove(device, member), nil
+	})
+
+	// ── open_iscsi ──────────────────────────────────────────────────────────
+	r.Register("open_iscsi.discover", func(args map[string]interface{}) (interface{}, error) {
+		portal, _ := argString(args, "portal")
+		port, _ := argInt(args, "port")
+		return sdkopen_iscsi.Discover(portal, port), nil
+	})
+	r.Register("open_iscsi.login", func(args map[string]interface{}) (interface{}, error) {
+		target, _ := argString(args, "target")
+		portal, _ := argString(args, "portal")
+		return sdkopen_iscsi.Login(target, portal), nil
+	})
+	r.Register("open_iscsi.logout", func(args map[string]interface{}) (interface{}, error) {
+		target, _ := argString(args, "target")
+		portal, _ := argString(args, "portal")
+		return sdkopen_iscsi.Logout(target, portal), nil
+	})
+	r.Register("open_iscsi.list_sessions", func(args map[string]interface{}) (interface{}, error) {
+		return sdkopen_iscsi.ListSessions(), nil
+	})
+	r.Register("open_iscsi.list_nodes", func(args map[string]interface{}) (interface{}, error) {
+		return sdkopen_iscsi.ListNodes(), nil
+	})
+	r.Register("open_iscsi.set_startup", func(args map[string]interface{}) (interface{}, error) {
+		target, _ := argString(args, "target")
+		portal, _ := argString(args, "portal")
+		startup, _ := argString(args, "startup")
+		return sdkopen_iscsi.SetStartup(target, portal, startup), nil
+	})
+
+	// ── rfkill ──────────────────────────────────────────────────────────────
+	r.Register("rfkill.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkrfkill.List(), nil
+	})
+	r.Register("rfkill.block", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		return sdkrfkill.Block(device), nil
+	})
+	r.Register("rfkill.unblock", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		return sdkrfkill.Unblock(device), nil
+	})
+	r.Register("rfkill.block_all", func(args map[string]interface{}) (interface{}, error) {
+		deviceType, _ := argString(args, "type")
+		return sdkrfkill.BlockAll(deviceType), nil
+	})
+	r.Register("rfkill.unblock_all", func(args map[string]interface{}) (interface{}, error) {
+		deviceType, _ := argString(args, "type")
+		return sdkrfkill.UnblockAll(deviceType), nil
+	})
+
+	// ── multipath ───────────────────────────────────────────────────────────
+	r.Register("multipath.reconfigure", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmultipath.Reconfigure(), nil
+	})
+	r.Register("multipath.list_paths", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmultipath.ListPaths(), nil
+	})
+	r.Register("multipath.list_maps", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmultipath.ListMaps(), nil
+	})
+	r.Register("multipath.add_map", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		return sdkmultipath.AddMap(device), nil
+	})
+	r.Register("multipath.remove_map", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		return sdkmultipath.RemoveMap(device), nil
+	})
+	r.Register("multipath.flush", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmultipath.Flush(), nil
+	})
+
+	// ── dmsetup ─────────────────────────────────────────────────────────────
+	r.Register("dmsetup.create", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		table, _ := argString(args, "table")
+		return sdkdmsetup.Create(name, table), nil
+	})
+	r.Register("dmsetup.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkdmsetup.Remove(name), nil
+	})
+	r.Register("dmsetup.remove_all", func(args map[string]interface{}) (interface{}, error) {
+		return sdkdmsetup.RemoveAll(), nil
+	})
+	r.Register("dmsetup.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkdmsetup.List(), nil
+	})
+	r.Register("dmsetup.info", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkdmsetup.Info(name), nil
+	})
+	r.Register("dmsetup.suspend", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkdmsetup.Suspend(name), nil
+	})
+	r.Register("dmsetup.resume", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkdmsetup.Resume(name), nil
+	})
+
+	// ── lvm_enhanced ────────────────────────────────────────────────────────
+	r.Register("lvm_enhanced.pv_create", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		return sdklvm_enhanced.PVCreate(device), nil
+	})
+	r.Register("lvm_enhanced.pv_remove", func(args map[string]interface{}) (interface{}, error) {
+		device, _ := argString(args, "device")
+		force, _ := argBool(args, "force")
+		return sdklvm_enhanced.PVRemove(device, force), nil
+	})
+	r.Register("lvm_enhanced.pv_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdklvm_enhanced.PVList(), nil
+	})
+	r.Register("lvm_enhanced.vg_create", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		devices := argStringSlice(args, "devices")
+		return sdklvm_enhanced.VGCreate(name, devices), nil
+	})
+	r.Register("lvm_enhanced.vg_remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		force, _ := argBool(args, "force")
+		return sdklvm_enhanced.VGRemove(name, force), nil
+	})
+	r.Register("lvm_enhanced.vg_extend", func(args map[string]interface{}) (interface{}, error) {
+		vgName, _ := argString(args, "vg_name")
+		device, _ := argString(args, "device")
+		return sdklvm_enhanced.VGExtend(vgName, device), nil
+	})
+	r.Register("lvm_enhanced.vg_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdklvm_enhanced.VGList(), nil
+	})
+	r.Register("lvm_enhanced.lv_extend", func(args map[string]interface{}) (interface{}, error) {
+		lvPath, _ := argString(args, "lv_path")
+		size, _ := argString(args, "size")
+		return sdklvm_enhanced.LVExtend(lvPath, size), nil
+	})
+	r.Register("lvm_enhanced.lv_extend_all", func(args map[string]interface{}) (interface{}, error) {
+		lvPath, _ := argString(args, "lv_path")
+		return sdklvm_enhanced.LVExtendAll(lvPath), nil
+	})
+	r.Register("lvm_enhanced.lv_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdklvm_enhanced.LVList(), nil
+	})
+
+	// ── puppet ──────────────────────────────────────────────────────────────
+	r.Register("puppet.run", func(args map[string]interface{}) (interface{}, error) {
+		environment, _ := argString(args, "environment")
+		tags := argStringSlice(args, "tags")
+		return sdkpuppet.Run(environment, tags), nil
+	})
+	r.Register("puppet.run_noop", func(args map[string]interface{}) (interface{}, error) {
+		environment, _ := argString(args, "environment")
+		tags := argStringSlice(args, "tags")
+		return sdkpuppet.RunNoop(environment, tags), nil
+	})
+	r.Register("puppet.status", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpuppet.Status(), nil
+	})
+	r.Register("puppet.disable", func(args map[string]interface{}) (interface{}, error) {
+		message, _ := argString(args, "message")
+		return sdkpuppet.Disable(message), nil
+	})
+	r.Register("puppet.enable", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpuppet.Enable(), nil
+	})
+	r.Register("puppet.fact", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkpuppet.Fact(name), nil
+	})
+	r.Register("puppet.module_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpuppet.ModuleList(), nil
+	})
+	r.Register("puppet.module_install", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		version, _ := argString(args, "version")
+		return sdkpuppet.ModuleInstall(name, version), nil
+	})
 }
 
 // toStringMapArg extracts a map[string]string from args[key].
@@ -4672,6 +4903,29 @@ func argBool(args map[string]interface{}, key string) (bool, error) {
 	default:
 		return false, fmt.Errorf("argument %q must be a boolean, got %T", key, v)
 	}
+}
+
+// argStringSlice extracts a []string from args[key].
+func argStringSlice(args map[string]interface{}, key string) []string {
+	v, ok := args[key]
+	if !ok || v == nil {
+		return nil
+	}
+	switch s := v.(type) {
+	case []string:
+		return s
+	case []interface{}:
+		result := make([]string, 0, len(s))
+		for _, item := range s {
+			if str, ok := item.(string); ok {
+				result = append(result, str)
+			}
+		}
+		return result
+	case string:
+		return []string{s}
+	}
+	return nil
 }
 
 // ValidatePackage checks if an instruction package is valid.

@@ -905,6 +905,74 @@ var Funcs = []Func{
 	{Name: "uri_ext.delete", Args: []string{"url", "headers", "timeout"}, Mutating: true},
 	{Name: "uri_ext.head", Args: []string{"url", "headers", "timeout"}},
 	{Name: "uri_ext.options", Args: []string{"url", "headers", "timeout"}},
+
+	// ── hwclock ─────────────────────────────────────────────────────────────
+	{Name: "hwclock.get"},
+	{Name: "hwclock.set", Mutating: true},
+	{Name: "hwclock.hctosys", Mutating: true},
+	{Name: "hwclock.set_time", Args: []string{"time"}, Mutating: true},
+
+	// ── mdadm ───────────────────────────────────────────────────────────────
+	{Name: "mdadm.create", Args: []string{"device", "level", "devices"}, Mutating: true},
+	{Name: "mdadm.destroy", Args: []string{"device"}, Mutating: true},
+	{Name: "mdadm.detail", Args: []string{"device"}},
+	{Name: "mdadm.scan"},
+	{Name: "mdadm.add", Args: []string{"device", "member"}, Mutating: true},
+	{Name: "mdadm.remove", Args: []string{"device", "member"}, Mutating: true},
+
+	// ── open_iscsi ──────────────────────────────────────────────────────────
+	{Name: "open_iscsi.discover", Args: []string{"portal", "port"}},
+	{Name: "open_iscsi.login", Args: []string{"target", "portal"}, Mutating: true},
+	{Name: "open_iscsi.logout", Args: []string{"target", "portal"}, Mutating: true},
+	{Name: "open_iscsi.list_sessions"},
+	{Name: "open_iscsi.list_nodes"},
+	{Name: "open_iscsi.set_startup", Args: []string{"target", "portal", "startup"}, Mutating: true},
+
+	// ── rfkill ──────────────────────────────────────────────────────────────
+	{Name: "rfkill.list"},
+	{Name: "rfkill.block", Args: []string{"device"}, Mutating: true},
+	{Name: "rfkill.unblock", Args: []string{"device"}, Mutating: true},
+	{Name: "rfkill.block_all", Args: []string{"type"}, Mutating: true},
+	{Name: "rfkill.unblock_all", Args: []string{"type"}, Mutating: true},
+
+	// ── multipath ───────────────────────────────────────────────────────────
+	{Name: "multipath.reconfigure", Mutating: true},
+	{Name: "multipath.list_paths"},
+	{Name: "multipath.list_maps"},
+	{Name: "multipath.add_map", Args: []string{"device"}, Mutating: true},
+	{Name: "multipath.remove_map", Args: []string{"device"}, Mutating: true},
+	{Name: "multipath.flush", Mutating: true},
+
+	// ── dmsetup ─────────────────────────────────────────────────────────────
+	{Name: "dmsetup.create", Args: []string{"name", "table"}, Mutating: true},
+	{Name: "dmsetup.remove", Args: []string{"name"}, Mutating: true},
+	{Name: "dmsetup.remove_all", Mutating: true},
+	{Name: "dmsetup.list"},
+	{Name: "dmsetup.info", Args: []string{"name"}},
+	{Name: "dmsetup.suspend", Args: []string{"name"}, Mutating: true},
+	{Name: "dmsetup.resume", Args: []string{"name"}, Mutating: true},
+
+	// ── lvm_enhanced ────────────────────────────────────────────────────────
+	{Name: "lvm_enhanced.pv_create", Args: []string{"device"}, Mutating: true},
+	{Name: "lvm_enhanced.pv_remove", Args: []string{"device", "force"}, Mutating: true},
+	{Name: "lvm_enhanced.pv_list"},
+	{Name: "lvm_enhanced.vg_create", Args: []string{"name", "devices"}, Mutating: true},
+	{Name: "lvm_enhanced.vg_remove", Args: []string{"name", "force"}, Mutating: true},
+	{Name: "lvm_enhanced.vg_extend", Args: []string{"vg_name", "device"}, Mutating: true},
+	{Name: "lvm_enhanced.vg_list"},
+	{Name: "lvm_enhanced.lv_extend", Args: []string{"lv_path", "size"}, Mutating: true},
+	{Name: "lvm_enhanced.lv_extend_all", Args: []string{"lv_path"}, Mutating: true},
+	{Name: "lvm_enhanced.lv_list"},
+
+	// ── puppet ──────────────────────────────────────────────────────────────
+	{Name: "puppet.run", Args: []string{"environment", "tags"}, Mutating: true},
+	{Name: "puppet.run_noop", Args: []string{"environment", "tags"}},
+	{Name: "puppet.status"},
+	{Name: "puppet.disable", Args: []string{"message"}, Mutating: true},
+	{Name: "puppet.enable", Mutating: true},
+	{Name: "puppet.fact", Args: []string{"name"}},
+	{Name: "puppet.module_list"},
+	{Name: "puppet.module_install", Args: []string{"name", "version"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
