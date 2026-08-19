@@ -5,8 +5,20 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"net"
 	"strings"
 )
+
+// MACAddressResult represents the result of getting a MAC address.
+type MACAddressResult struct {
+	Interface string `json:"interface"`
+	MAC       string `json:"mac"`
+}
+
+// MACListResult represents all non-loopback MAC addresses.
+type MACListResult struct {
+	Addresses []MACAddressResult `json:"addresses"`
+}
 
 // UUIDResult represents the result of UUID generation.
 type UUIDResult struct {
@@ -101,4 +113,61 @@ func RandomPassword(length int, useSpecial bool, useNumbers bool, useUppercase b
 		Password: string(runes),
 		Length:   len(runes),
 	}, nil
+}
+
+// MACAddress returns the MAC address of a specific network interface.
+// If iface is empty, returns the first non-loopback interface's MAC.
+func MACAddress(iface string) (MACAddressResult, error) {
+	if iface != "" {
+		ifi, err := net.InterfaceByName(iface)
+		if err != nil {
+			return MACAddressResult{}, fmt.Errorf("interface %s not found: %w", iface, err)
+		}
+		if len(ifi.HardwareAddr) == 0 {
+			return MACAddressResult{}, fmt.Errorf("interface %s has no MAC address", iface)
+		}
+		return MACAddressResult{
+			Interface: ifi.Name,
+			MAC:       ifi.HardwareAddr.String(),
+		}, nil
+	}
+
+	// Find first non-loopback interface with a MAC
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return MACAddressResult{}, fmt.Errorf("failed to list interfaces: %w", err)
+	}
+	for _, ifi := range ifaces {
+		if ifi.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		if len(ifi.HardwareAddr) > 0 {
+			return MACAddressResult{
+				Interface: ifi.Name,
+				MAC:       ifi.HardwareAddr.String(),
+			}, nil
+		}
+	}
+	return MACAddressResult{}, fmt.Errorf("no interface with MAC address found")
+}
+
+// MACAddresses returns MAC addresses for all non-loopback interfaces.
+func MACAddresses() (MACListResult, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return MACListResult{}, fmt.Errorf("failed to list interfaces: %w", err)
+	}
+	result := MACListResult{Addresses: make([]MACAddressResult, 0)}
+	for _, ifi := range ifaces {
+		if ifi.Flags&net.FlagLoopback != 0 {
+			continue
+		}
+		if len(ifi.HardwareAddr) > 0 {
+			result.Addresses = append(result.Addresses, MACAddressResult{
+				Interface: ifi.Name,
+				MAC:       ifi.HardwareAddr.String(),
+			})
+		}
+	}
+	return result, nil
 }

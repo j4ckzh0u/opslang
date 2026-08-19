@@ -1,0 +1,49 @@
+// sefcontext 模块示例 - SELinux 文件上下文管理
+// sefcontext module example - SELinux file context management
+// 需要 SELinux 启用并安装 semanage 工具
+
+// 演示 sefcontext 模块功能（注释掉，避免测试时执行）:
+
+// 为 HTTPD 日志目录添加文件上下文
+// let result = sefcontext.add("/var/log/httpd(/.*)?", "httpd_log_t")
+// report {
+//     changed: result.changed,
+//     message: result.message
+// }
+
+// 修改文件上下文类型
+// let modified = sefcontext.modify("/var/log/httpd(/.*)?", "httpd_log_rw_t")
+// report {
+//     changed: modified.changed
+// }
+
+// 列出所有文件上下文
+// let all = sefcontext.list()
+// report {
+//     total_contexts: len(all.contexts)
+// }
+
+// 应用文件上下文到实际文件
+// let applied = sefcontext.apply("/var/log/httpd", true)
+// report {
+//     changed: applied.changed,
+//     message: applied.message
+// }
+
+// 移除文件上下文
+// let removed = sefcontext.remove("/var/log/httpd(/.*)?")
+// report {
+//     changed: removed.changed
+// }
+
+report {
+    module: "sefcontext",
+    description: "SELinux file context management",
+    functions: [
+        "sefcontext.add(filespec, se_type) - Add file context mapping",
+        "sefcontext.modify(filespec, se_type) - Modify file context mapping",
+        "sefcontext.remove(filespec) - Remove file context mapping",
+        "sefcontext.list() - List all file context mappings",
+        "sefcontext.apply(filespec, recursive) - Apply contexts to files (restorecon)"
+    ]
+}

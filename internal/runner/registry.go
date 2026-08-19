@@ -70,6 +70,8 @@ import (
 	sdkxattr "github.com/opslang/opslang/pkg/ops-core-sdk/xattr"
 	sdkfirewalldzone "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone"
 	sdkgeturl "github.com/opslang/opslang/pkg/ops-core-sdk/get_url"
+	sdkseport "github.com/opslang/opslang/pkg/ops-core-sdk/seport"
+	sdksefcontext "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -2811,6 +2813,77 @@ func (r *Registry) registerExtensions() {
 		useNumbers := getBoolArg(args, "use_numbers", true)
 		useUppercase := getBoolArg(args, "use_uppercase", true)
 		return sys.RandomPassword(length, useSpecial, useNumbers, useUppercase)
+	})
+
+	// ── sys mac_address ──────────────────────────────────────────────────────
+	r.Register("sys.mac_address", func(args map[string]interface{}) (interface{}, error) {
+		iface, _ := args["interface"].(string)
+		return sys.MACAddress(iface)
+	})
+	r.Register("sys.mac_addresses", func(args map[string]interface{}) (interface{}, error) {
+		return sys.MACAddresses()
+	})
+
+	// ── modprobe.set_boot ──────────────────────────────────────────────────────
+	r.Register("modprobe.set_boot", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		present := true
+		if v, ok := args["present"]; ok {
+			if b, ok := v.(bool); ok {
+				present = b
+			}
+		}
+		return sdkmodprobe.SetBoot(name, present)
+	})
+
+	// ── seport ─────────────────────────────────────────────────────────────────
+	r.Register("seport.add", func(args map[string]interface{}) (interface{}, error) {
+		seportType, _ := argString(args, "seport_type")
+		proto, _ := argString(args, "protocol")
+		port, _ := argString(args, "port")
+		return sdkseport.Add(seportType, proto, port)
+	})
+	r.Register("seport.remove", func(args map[string]interface{}) (interface{}, error) {
+		proto, _ := argString(args, "protocol")
+		port, _ := argString(args, "port")
+		return sdkseport.Remove(proto, port)
+	})
+	r.Register("seport.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkseport.List()
+	})
+	r.Register("seport.get", func(args map[string]interface{}) (interface{}, error) {
+		proto, _ := argString(args, "protocol")
+		port, _ := argString(args, "port")
+		return sdkseport.Get(proto, port)
+	})
+
+	// ── sefcontext ─────────────────────────────────────────────────────────────
+	r.Register("sefcontext.add", func(args map[string]interface{}) (interface{}, error) {
+		filespec, _ := argString(args, "filespec")
+		seType, _ := argString(args, "se_type")
+		return sdksefcontext.Add(filespec, seType)
+	})
+	r.Register("sefcontext.modify", func(args map[string]interface{}) (interface{}, error) {
+		filespec, _ := argString(args, "filespec")
+		seType, _ := argString(args, "se_type")
+		return sdksefcontext.Modify(filespec, seType)
+	})
+	r.Register("sefcontext.remove", func(args map[string]interface{}) (interface{}, error) {
+		filespec, _ := argString(args, "filespec")
+		return sdksefcontext.Remove(filespec)
+	})
+	r.Register("sefcontext.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdksefcontext.List()
+	})
+	r.Register("sefcontext.apply", func(args map[string]interface{}) (interface{}, error) {
+		recursive := false
+		if v, ok := args["recursive"]; ok {
+			if b, ok := v.(bool); ok {
+				recursive = b
+			}
+		}
+		filespec, _ := argString(args, "filespec")
+		return sdksefcontext.Apply(filespec, recursive)
 	})
 }
 

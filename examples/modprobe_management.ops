@@ -5,6 +5,10 @@ block {
 
     let is_loaded = modprobe.is_loaded("loop")
     report { loop_loaded: is_loaded }
+
+    // Ensure ip_vs module loads at boot (persistent)
+    let boot_result = modprobe.set_boot("ip_vs", true)
+    report { boot_persist: boot_result }
 }
 rescue {
     print("modprobe not available: " + _error)

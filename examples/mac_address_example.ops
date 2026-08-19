@@ -1,0 +1,23 @@
+// sys.mac_address 示例 - MAC 地址获取
+// sys.mac_address example - MAC address retrieval
+
+// 获取默认（第一个非回环）接口的 MAC 地址
+let mac_result = sys.mac_address("")
+report {
+    interface: mac_result.interface,
+    mac: mac_result.mac
+}
+
+// 获取所有非回环接口的 MAC 地址
+let all_macs = sys.mac_addresses()
+report {
+    total_interfaces: len(all_macs.addresses),
+    addresses: all_macs.addresses
+}
+
+// 获取特定接口的 MAC（如 eth0）
+// let eth0_mac = sys.mac_address("eth0")
+// report {
+//     interface: eth0_mac.interface,
+//     mac: eth0_mac.mac
+// }

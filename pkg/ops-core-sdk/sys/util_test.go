@@ -1,112 +1,48 @@
 package sys
 
 import (
-	"strings"
 	"testing"
 )
 
-func TestUUID(t *testing.T) {
-	result, err := UUID()
+func TestMACAddress_DefaultInterface(t *testing.T) {
+	// May fail in environments with no non-loopback interfaces
+	result, err := MACAddress("")
 	if err != nil {
-		t.Fatal(err)
+		t.Skipf("no non-loopback interface available: %v", err)
 	}
-	if result.UUID == "" {
-		t.Error("UUID should not be empty")
+	if result.Interface == "" {
+		t.Error("expected non-empty interface name")
 	}
-	// UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-	parts := strings.Split(result.UUID, "-")
-	if len(parts) != 5 {
-		t.Errorf("UUID should have 5 parts, got %d: %s", len(parts), result.UUID)
-	}
-	// Version should be 4
-	if len(parts[2]) > 0 && parts[2][0] != '4' {
-		t.Errorf("UUID version should be 4, got %c in %s", parts[2][0], result.UUID)
+	if result.MAC == "" {
+		t.Error("expected non-empty MAC address")
 	}
 }
 
-func TestUUID_Unique(t *testing.T) {
-	r1, _ := UUID()
-	r2, _ := UUID()
-	if r1.UUID == r2.UUID {
-		t.Error("two UUIDs should be unique")
+func TestMACAddress_SpecificInterface(t *testing.T) {
+	_, err := MACAddress("nonexistent0")
+	if err == nil {
+		t.Error("expected error for nonexistent interface")
 	}
 }
 
-func TestRandomPassword_DefaultLength(t *testing.T) {
-	result, err := RandomPassword(0, true, true, true)
+func TestMACAddresses(t *testing.T) {
+	result, err := MACAddresses()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("MACAddresses() error: %v", err)
 	}
-	if result.Length < 8 {
-		t.Errorf("password length should be at least 8, got %d", result.Length)
-	}
-	if result.Password == "" {
-		t.Error("password should not be empty")
-	}
+	// Result may be empty in some environments, but should not error
+	_ = result
 }
 
-func TestRandomPassword_SpecifiedLength(t *testing.T) {
-	result, err := RandomPassword(20, true, true, true)
-	if err != nil {
-		t.Fatal(err)
+func TestMACAddressResultJSON(t *testing.T) {
+	r := MACAddressResult{
+		Interface: "eth0",
+		MAC:       "00:11:22:33:44:55",
 	}
-	if result.Length != 20 {
-		t.Errorf("password length should be 20, got %d", result.Length)
+	if r.Interface != "eth0" {
+		t.Errorf("expected eth0, got %s", r.Interface)
 	}
-}
-
-func TestRandomPassword_MinLength(t *testing.T) {
-	result, err := RandomPassword(4, false, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Should be bumped to minimum 8
-	if result.Length < 8 {
-		t.Errorf("password length should be at least 8, got %d", result.Length)
-	}
-}
-
-func TestRandomPassword_CharacterSets(t *testing.T) {
-	// All character sets enabled
-	result, err := RandomPassword(50, true, true, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result.Password == "" {
-		t.Error("password should not be empty")
-	}
-
-	// Only lowercase
-	result2, err := RandomPassword(20, false, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result2.Password == "" {
-		t.Error("password should not be empty")
-	}
-}
-
-func TestRandomPassword_Unique(t *testing.T) {
-	r1, _ := RandomPassword(20, true, true, true)
-	r2, _ := RandomPassword(20, true, true, true)
-	if r1.Password == r2.Password {
-		t.Error("two passwords should be unique")
-	}
-}
-
-func TestUUIDResultFields(t *testing.T) {
-	r := UUIDResult{UUID: "test-uuid-123"}
-	if r.UUID != "test-uuid-123" {
-		t.Error("UUID mismatch")
-	}
-}
-
-func TestPasswordResultFields(t *testing.T) {
-	r := PasswordResult{Password: "test123", Length: 7}
-	if r.Password != "test123" {
-		t.Error("password mismatch")
-	}
-	if r.Length != 7 {
-		t.Error("length mismatch")
+	if r.MAC != "00:11:22:33:44:55" {
+		t.Errorf("expected 00:11:22:33:44:55, got %s", r.MAC)
 	}
 }

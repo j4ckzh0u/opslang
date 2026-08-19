@@ -460,6 +460,24 @@ var sdkMapping = map[string]sdkFunc{
 	// ── sys utilities ───────────────────────────────────────────────────────
 	"sys.uuid":            {pkg: "sys", goName: "UUID", args: true, params: []string{}},
 	"sys.random_password": {pkg: "sys", goName: "RandomPassword", args: true, params: []string{"i", "b", "b", "b"}},
+	"sys.mac_address":     {pkg: "sys", goName: "MACAddress", args: true, params: []string{"s"}},
+	"sys.mac_addresses":   {pkg: "sys", goName: "MACAddresses", args: true, params: []string{}},
+
+	// ── modprobe boot ─────────────────────────────────────────────────────────
+	"modprobe.set_boot": {pkg: "modprobe", goName: "SetBoot", args: true, params: []string{"s", "b"}},
+
+	// ── seport ─────────────────────────────────────────────────────────────────
+	"seport.add":    {pkg: "seport", goName: "Add", args: true, params: []string{"s", "s", "s"}},
+	"seport.remove": {pkg: "seport", goName: "Remove", args: true, params: []string{"s", "s"}},
+	"seport.list":   {pkg: "seport", goName: "List", args: true, params: []string{}},
+	"seport.get":    {pkg: "seport", goName: "Get", args: true, params: []string{"s", "s"}},
+
+	// ── sefcontext ─────────────────────────────────────────────────────────────
+	"sefcontext.add":    {pkg: "sefcontext", goName: "Add", args: true, params: []string{"s", "s"}},
+	"sefcontext.modify": {pkg: "sefcontext", goName: "Modify", args: true, params: []string{"s", "s"}},
+	"sefcontext.remove": {pkg: "sefcontext", goName: "Remove", args: true, params: []string{"s"}},
+	"sefcontext.list":   {pkg: "sefcontext", goName: "List", args: true, params: []string{}},
+	"sefcontext.apply":  {pkg: "sefcontext", goName: "Apply", args: true, params: []string{"s", "b"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -583,6 +601,8 @@ var pkgImportAlias = map[string]string{
 	"xattr":          "opsxattr",
 	"firewalld_zone": "opsfirewalldzone",
 	"get_url":        "opsgeturl",
+	"seport":         "opsseport",
+	"sefcontext":     "opssefcontext",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -632,6 +652,8 @@ var pkgImportPath = map[string]string{
 	"xattr":        "github.com/opslang/opslang/pkg/ops-core-sdk/xattr",
 	"firewalld_zone": "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone",
 	"get_url":        "github.com/opslang/opslang/pkg/ops-core-sdk/get_url",
+	"seport":         "github.com/opslang/opslang/pkg/ops-core-sdk/seport",
+	"sefcontext":     "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

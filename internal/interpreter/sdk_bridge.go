@@ -69,6 +69,8 @@ import (
 	sdkxattr "github.com/opslang/opslang/pkg/ops-core-sdk/xattr"
 	sdkfirewalldzone "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone"
 	sdkgeturl "github.com/opslang/opslang/pkg/ops-core-sdk/get_url"
+	seport "github.com/opslang/opslang/pkg/ops-core-sdk/seport"
+	sefcontext "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -4328,6 +4330,148 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			useUppercase, _ = args[3].(bool)
 		}
 		r, err := sdksys.RandomPassword(length, useSpecial, useNumbers, useUppercase)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── sys mac_address ──────────────────────────────────────────────────────
+	interp.builtins["sys.mac_address"] = func(args ...interface{}) (interface{}, error) {
+		iface := ""
+		if len(args) > 0 {
+			iface, _ = args[0].(string)
+		}
+		r, err := sdksys.MACAddress(iface)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sys.mac_addresses"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksys.MACAddresses()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── modprobe.set_boot ──────────────────────────────────────────────────────
+	interp.builtins["modprobe.set_boot"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("modprobe.set_boot() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		present := true
+		if len(args) > 1 {
+			present, _ = args[1].(bool)
+		}
+		r, err := sdkmodprobe.SetBoot(name, present)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── seport ─────────────────────────────────────────────────────────────────
+	interp.builtins["seport.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("seport.add() requires 3 arguments (seport_type, protocol, port)")
+		}
+		seportType, _ := args[0].(string)
+		proto, _ := args[1].(string)
+		port, _ := args[2].(string)
+		r, err := seport.Add(seportType, proto, port)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["seport.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("seport.remove() requires 2 arguments (protocol, port)")
+		}
+		proto, _ := args[0].(string)
+		port, _ := args[1].(string)
+		r, err := seport.Remove(proto, port)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["seport.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := seport.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["seport.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("seport.get() requires 2 arguments (protocol, port)")
+		}
+		proto, _ := args[0].(string)
+		port, _ := args[1].(string)
+		r, err := seport.Get(proto, port)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── sefcontext ─────────────────────────────────────────────────────────────
+	interp.builtins["sefcontext.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("sefcontext.add() requires 2 arguments (filespec, se_type)")
+		}
+		filespec, _ := args[0].(string)
+		seType, _ := args[1].(string)
+		r, err := sefcontext.Add(filespec, seType)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sefcontext.modify"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("sefcontext.modify() requires 2 arguments (filespec, se_type)")
+		}
+		filespec, _ := args[0].(string)
+		seType, _ := args[1].(string)
+		r, err := sefcontext.Modify(filespec, seType)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sefcontext.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sefcontext.remove() requires 1 argument (filespec)")
+		}
+		filespec, _ := args[0].(string)
+		r, err := sefcontext.Remove(filespec)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sefcontext.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sefcontext.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sefcontext.apply"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sefcontext.apply() requires at least 1 argument (filespec)")
+		}
+		filespec, _ := args[0].(string)
+		recursive := false
+		if len(args) > 1 {
+			recursive, _ = args[1].(bool)
+		}
+		r, err := sefcontext.Apply(filespec, recursive)
 		if err != nil {
 			return nil, err
 		}

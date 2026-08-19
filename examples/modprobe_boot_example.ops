@@ -1,0 +1,24 @@
+privilege: admin
+// modprobe.set_boot 示例 - 内核模块开机加载持久化
+// modprobe.set_boot example - Kernel module boot persistence
+
+// 确保 ip_vs 模块在开机时加载
+let result = modprobe.set_boot("ip_vs", true)
+report {
+    changed: result.changed,
+    message: result.message
+}
+
+// 确保 br_netfilter 模块在开机时加载
+let result2 = modprobe.set_boot("br_netfilter", true)
+report {
+    changed: result2.changed,
+    message: result2.message
+}
+
+// 移除模块的开机加载配置
+// let removed = modprobe.set_boot("ip_vs", false)
+// report {
+//     changed: removed.changed,
+//     message: removed.message
+// }

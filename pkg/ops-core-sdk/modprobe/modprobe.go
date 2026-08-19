@@ -110,3 +110,51 @@ func IsLoaded(name string) (*LoadedResult, error) {
 
 	return &LoadedResult{Loaded: loaded}, nil
 }
+
+// SetBoot ensures a kernel module is loaded at boot time by writing to /etc/modules-load.d/.
+func SetBoot(name string, present bool) (*ActionResult, error) {
+	configPath := "/etc/modules-load.d/" + name + ".conf"
+
+	if present {
+		// Check if already configured
+		for _, existingName := range readBootModules() {
+			if existingName == name {
+				return &ActionResult{Changed: false, Message: fmt.Sprintf("Module %s already set for boot", name)}, nil
+			}
+		}
+		// Write config
+		content := fmt.Sprintf("# OpsLang managed - load %s at boot\n%s\n", name, name)
+		cmd := exec.Command("tee", configPath)
+		cmd.Stdin = strings.NewReader(content)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return nil, fmt.Errorf("failed to write boot config: %w (output: %s)", err, string(out))
+		}
+		return &ActionResult{Changed: true, Message: fmt.Sprintf("Module %s configured for boot loading", name)}, nil
+	}
+
+	// Remove boot config
+	cmd := exec.Command("rm", "-f", configPath)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("failed to remove boot config: %w (output: %s)", err, string(out))
+	}
+	return &ActionResult{Changed: true, Message: fmt.Sprintf("Module %s removed from boot loading", name)}, nil
+}
+
+// readBootModules reads module names from /etc/modules-load.d/*.conf
+func readBootModules() []string {
+	out, err := exec.Command("sh", "-c", "cat /etc/modules-load.d/*.conf 2>/dev/null").CombinedOutput()
+	if err != nil || len(out) == 0 {
+		return nil
+	}
+	modules := make([]string, 0)
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		modules = append(modules, strings.Fields(line)[0])
+	}
+	return modules
+}

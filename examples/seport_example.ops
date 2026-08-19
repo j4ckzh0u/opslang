@@ -1,0 +1,43 @@
+// seport 模块示例 - SELinux 端口上下文管理
+// seport module example - SELinux port type management
+// 需要 SELinux 启用并安装 semanage 工具
+
+// 演示 seport 模块功能（注释掉，避免测试时执行）:
+
+// 为 HTTP 端口添加类型定义
+// let result = seport.add("http_port_t", "tcp", "8080")
+// report {
+//     changed: result.changed,
+//     message: result.message
+// }
+
+// 查询端口类型
+// let entry = seport.get("tcp", "8080")
+// report {
+//     selinux_port_type: entry.selinux_port_type,
+//     protocol: entry.protocol,
+//     port: entry.port_number
+// }
+
+// 列出所有端口定义
+// let all = seport.list()
+// report {
+//     total_ports: len(all.ports)
+// }
+
+// 移除端口类型定义
+// let removed = seport.remove("tcp", "8080")
+// report {
+//     changed: removed.changed
+// }
+
+report {
+    module: "seport",
+    description: "SELinux port type context management",
+    functions: [
+        "seport.add(seport_type, protocol, port) - Add port type definition",
+        "seport.remove(protocol, port) - Remove port type definition",
+        "seport.list() - List all port definitions",
+        "seport.get(protocol, port) - Get specific port definition"
+    ]
+}

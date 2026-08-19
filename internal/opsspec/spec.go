@@ -485,6 +485,24 @@ var Funcs = []Func{
 	// ── sys utilities ───────────────────────────────────────────────────────
 	{Name: "sys.uuid", Args: []string{}},
 	{Name: "sys.random_password", Args: []string{"length", "use_special", "use_numbers", "use_uppercase"}},
+	{Name: "sys.mac_address", Args: []string{"interface"}},
+	{Name: "sys.mac_addresses", Args: []string{}},
+
+	// ── modprobe boot ─────────────────────────────────────────────────────────
+	{Name: "modprobe.set_boot", Args: []string{"name", "present"}, Mutating: true},
+
+	// ── seport ─────────────────────────────────────────────────────────────────
+	{Name: "seport.add", Args: []string{"seport_type", "protocol", "port"}, Mutating: true},
+	{Name: "seport.remove", Args: []string{"protocol", "port"}, Mutating: true},
+	{Name: "seport.list", Args: []string{}},
+	{Name: "seport.get", Args: []string{"protocol", "port"}},
+
+	// ── sefcontext ─────────────────────────────────────────────────────────────
+	{Name: "sefcontext.add", Args: []string{"filespec", "se_type"}, Mutating: true},
+	{Name: "sefcontext.modify", Args: []string{"filespec", "se_type"}, Mutating: true},
+	{Name: "sefcontext.remove", Args: []string{"filespec"}, Mutating: true},
+	{Name: "sefcontext.list", Args: []string{}},
+	{Name: "sefcontext.apply", Args: []string{"filespec", "recursive"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
