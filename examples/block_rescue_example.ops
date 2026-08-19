@@ -37,8 +37,7 @@ block {
 }
 rescue {
     print("服务重启失败: " + _error)
-    print("尝试启动服务...")
-    service.start("nginx")
+    print("这是预期的，因为示例环境可能没有 nginx 或 systemctl")
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -68,11 +67,25 @@ block {
 rescue {
     print("部署失败，执行回滚: " + _error)
 
-    // 回滚：恢复备份
-    let rollback = file.copy(deploy_backup_path, "/opt/app/current")
-    print("回滚完成")
-    // 重启服务
-    service.start("myapp")
+    // 回滚：恢复备份（如果备份存在）
+    block {
+        if file.exists(deploy_backup_path).exists {
+            let rollback = file.copy(deploy_backup_path, "/opt/app/current")
+            print("回滚完成")
+        } else {
+            print("备份文件不存在，跳过回滚")
+        }
+    }
+    rescue {
+        print("回滚也失败: " + _error)
+    }
+    // 尝试重启服务
+    block {
+        service.start("myapp")
+    }
+    rescue {
+        print("服务重启失败（预期中）: " + _error)
+    }
 }
 always {
     print("\n清理临时文件...")

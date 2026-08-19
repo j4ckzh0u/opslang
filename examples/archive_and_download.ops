@@ -1,5 +1,6 @@
 // 示例：归档操作 + 文件下载
 // 演示 archive.create / archive.extract / net.download
+privilege: admin
 
 // 1. 创建归档
 file.mkdir("/tmp/archive_demo")

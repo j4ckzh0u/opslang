@@ -2,99 +2,96 @@
 // 新增 SDK: git.*
 privilege: admin
 
-print("=== 克隆 Git 仓库 ===")
-
-let repo_url = "https://github.com/j4ckzh0u/opslang.git"
-let clone_dir = "/tmp/opslang-clone-test"
-
-// 清理可能存在的目录
-file.delete(clone_dir)
-
-// 克隆仓库
-print("克隆仓库: " + repo_url)
-let clone_result = git.clone(repo_url, clone_dir, {})
-print("  ✓ 克隆成功")
-print("  路径: " + clone_result.path)
-print("  分支: " + clone_result.branch)
-
-// 克隆特定分支
-print("\n克隆特定分支 (main)...")
-let clone_branch_dir = "/tmp/opslang-main-test"
-file.delete(clone_branch_dir)
-
-let clone_branch = git.clone(repo_url, clone_branch_dir, {
-    "branch": "main",
-    "depth": "1"  // 浅克隆，节省空间
-})
-print("  ✓ 克隆成功")
-print("  分支: " + clone_branch.branch)
+print("=== Git 操作演示 ===")
+print("注意：此示例需要 git 命令行工具")
 
 // ═══════════════════════════════════════════════════════════
-// 2. 拉取更新
+// 1. 克隆仓库（演示用法）
 // ═══════════════════════════════════════════════════════════
 
-print("\n=== 拉取更新 ===")
+print("\n1. 克隆仓库示例:")
+print("   代码: git.clone(\"https://github.com/user/repo.git\", \"/tmp/repo\", {})")
 
-// 拉取默认分支
-print("拉取最新更新...")
-let pull_result = git.pull(clone_dir, "", "")
-if pull_result.changed {
-    print("  ✓ 已更新到新提交")
-    print("  提交: " + pull_result.commit)
-} else {
-    print("  - 已是最新")
+// 实际执行（可能失败，取决于网络和环境）
+block {
+    let test_dir = "/tmp/git-demo-clone"
+    process.exec("rm", ["-rf", test_dir])
+
+    // 尝试克隆一个小型公开仓库
+    let result = git.clone("https://github.com/octocat/Hello-World.git", test_dir, {
+        "depth": "1"
+    })
+    print("   ✓ 克隆成功")
+    print("   路径: " + result.path)
+    print("   有变更: " + str(result.changed))
+
+    // 清理
+    process.exec("rm", ["-rf", test_dir])
+    print("   ✓ 已清理")
+}
+rescue {
+    print("   ✗ 克隆失败（可能无网络或 git 未安装）: " + _error)
 }
 
 // ═══════════════════════════════════════════════════════════
-// 3. 实际场景：部署应用
+// 2. 拉取更新（演示用法）
 // ═══════════════════════════════════════════════════════════
 
-print("\n=== 实际场景：从 Git 部署应用 ===")
-
-let app_repo = "https://github.com/j4ckzh0u/opslang.git"
-let app_dir = "/tmp/app-deploy-test"
-
-// 步骤 1: 清理旧版本
-print("步骤 1: 清理旧版本...")
-file.delete(app_dir)
-print("  ✓ 旧版本已清理")
-
-// 步骤 2: 克隆新版本
-print("\n步骤 2: 克隆新版本...")
-let deploy_clone = git.clone(app_repo, app_dir, {
-    "branch": "main"
-})
-print("  ✓ 代码已克隆")
-
-// 步骤 3: 验证代码
-print("\n步骤 3: 验证代码...")
-let readme = file.read(app_dir + "/README.md")
-print("  ✓ README.md 存在")
-print("  大小: " + str(len(readme.content)) + " 字节")
-
-// 步骤 4: 列出文件
-print("\n步骤 4: 列出仓库文件...")
-let files = file.list(app_dir)
-print("  文件数量: " + str(len(files.files)))
-let count = 0
-for f in files.files {
-    if count >= 5 {
-        break
-    }
-    print("    - " + f.name)
-    count = count + 1
-}
+print("\n2. 拉取更新示例:")
+print("   代码: git.pull(\"/path/to/repo\", \"origin\", \"main\")")
+print("   返回: {changed: bool, commit: string, error: string}")
 
 // ═══════════════════════════════════════════════════════════
-// 4. 清理测试数据
+// 3. 实际场景：Git 部署流程
 // ═══════════════════════════════════════════════════════════
 
-print("\n=== 清理测试数据 ===")
+print("\n3. Git 部署流程示例:")
+print(`
+   // 部署脚本示例
+   let repo = "https://github.com/myorg/myapp.git"
+   let deploy_dir = "/opt/myapp"
+   let backup_dir = "/opt/myapp-backup-" + str(time.now().unix)
 
-let dirs_to_clean = [clone_dir, clone_branch_dir, app_dir]
-for dir in dirs_to_clean {
-    file.delete(dir)
-    print("  ✓ 删除: " + dir)
-}
+   // 备份当前版本
+   block {
+       file.copy(deploy_dir, backup_dir)
+       print("备份完成")
+   }
+   rescue {
+       print("备份失败: " + _error)
+   }
 
-print("\n=== git 操作演示完成 ===")
+   // 克隆新版本
+   block {
+       process.exec("rm", ["-rf", deploy_dir])
+       let clone = git.clone(repo, deploy_dir, {"branch": "main"})
+       print("代码已更新")
+
+       // 重启服务
+       service.restart("myapp")
+       print("服务已重启")
+   }
+   rescue {
+       print("部署失败: " + _error)
+       // 回滚
+       file.copy(backup_dir, deploy_dir)
+       service.restart("myapp")
+       print("已回滚到上一版本")
+   }
+`)
+
+// ═══════════════════════════════════════════════════════════
+// 4. Git 操作最佳实践
+// ═══════════════════════════════════════════════════════════
+
+print("\n4. Git 操作最佳实践:")
+print(`
+   ✓ 使用 depth: "1" 进行浅克隆，节省空间和时间
+   ✓ 指定 branch 参数避免克隆所有分支
+   ✓ 部署前备份当前版本
+   ✓ 使用 block/rescue 处理失败并回滚
+   ✓ 清理临时克隆目录
+   ✓ 生产环境使用特定 tag 或 commit，而非 branch
+`)
+
+print("\n=== Git 操作演示完成 ===")

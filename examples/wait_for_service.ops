@@ -7,8 +7,8 @@ print("=== 等待本地端口 ===")
 // 等待 SSH 端口（通常已开放）
 print("等待 SSH 端口 (22)...")
 let wait_ssh = net.wait_for("127.0.0.1", 22, 5)
-if wait_ssh.connected {
-    print("  ✓ SSH 端口已开放 (延迟: " + str(wait_ssh.latency_ms) + "ms)")
+if wait_ssh.success {
+    print("  ✓ SSH 端口已开放 (耗时: " + str(wait_ssh.duration_ms) + "ms)")
 } else {
     print("  ✗ SSH 端口未开放或超时")
 }
@@ -16,7 +16,7 @@ if wait_ssh.connected {
 // 等待 HTTP 端口（示例）
 print("\n等待 HTTP 端口 (80)...")
 let wait_http = net.wait_for("127.0.0.1", 80, 3)
-if wait_http.connected {
+if wait_http.success {
     print("  ✓ HTTP 端口已开放")
 } else {
     print("  ✗ HTTP 端口未开放 (可能未运行)")
@@ -38,7 +38,7 @@ print("检查服务依赖...")
 for svc in services {
     print("  等待 " + svc["name"] + " (" + svc["host"] + ":" + str(svc["port"]) + ")...")
     let result = net.wait_for(svc["host"], svc["port"], 2)
-    if result.connected {
+    if result.success {
         print("    ✓ 就绪")
     } else {
         print("    ✗ 未就绪")
@@ -54,7 +54,7 @@ print("\n=== 超时控制示例 ===")
 // 短超时（快速失败）
 print("短超时 (1秒) 测试...")
 let quick_check = net.wait_for("127.0.0.1", 9999, 1)
-if quick_check.connected {
+if quick_check.success {
     print("  ✓ 端口开放")
 } else {
     print("  ✗ 快速失败（端口未开放）")
@@ -75,7 +75,7 @@ print("执行部署后验证...")
 for step in verification_steps {
     let result = net.wait_for(step["host"], step["port"], 3)
 
-    if result.connected {
+    if result.success {
         print("  " + step["name"] + ": ✓ 通过")
     } else if step["required"] {
         print("  " + step["name"] + ": ✗ 失败 (必需)")

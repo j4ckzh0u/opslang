@@ -63,15 +63,21 @@ let services = {
 }
 
 print("\n=== 嵌套遍历：分组服务 ===")
+print("注意：服务状态检查需要 systemctl（Linux 系统）")
 for group in services {
     print("\n服务组: " + group)
     let svc_list = services[group]
     for svc in svc_list {
-        let status = service.status(svc)
-        if status.load_state == "loaded" {
-            print("  " + svc + ": " + status.active_state)
-        } else {
-            print("  " + svc + ": 未安装")
+        block {
+            let status = service.status(svc)
+            if status.load_state == "loaded" {
+                print("  " + svc + ": " + status.active_state)
+            } else {
+                print("  " + svc + ": 未安装")
+            }
+        }
+        rescue {
+            print("  " + svc + ": 无法检查（需要 systemctl）")
         }
     }
 }

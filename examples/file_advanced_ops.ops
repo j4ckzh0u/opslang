@@ -1,5 +1,6 @@
 // 示例：使用新增的文件高级操作能力
 // 演示 file.find / file.replace / file.blockinfile / file.ini_set / file.ini_get
+privilege: admin
 
 // 1. 查找 /tmp 下所有 .log 文件
 let logs = file.find(["/tmp"], ["*.log"], "", "file", 3, 0, 0)
