@@ -1,0 +1,64 @@
+// mount_management.ops - 演示挂载点管理
+// 新增 SDK: mount.*
+privilege: admin
+
+print("=== 挂载点管理 ===")
+
+// 1. 列出当前挂载点
+print("\n当前挂载点（前 10 个）:")
+block {
+    let mounts = mount.list()
+    let count = 0
+    let total = len(mounts.mounts)
+    while count < total && count < 10 {
+        let m = mounts.mounts[count]
+        print("  " + m.device + " -> " + m.mount_point + " (" + m.fs_type + ")")
+        count = count + 1
+    }
+    if total > 10 {
+        print("  ... 共 " + str(total) + " 个挂载点")
+    }
+}
+rescue {
+    print("  ✗ 无法列出挂载点")
+}
+
+// 2. 查看 /etc/fstab
+print("\n/etc/fstab 条目:")
+block {
+    let fstab = mount.fstab()
+    if len(fstab.entries) == 0 {
+        print("  (无条目)")
+    } else {
+        for e in fstab.entries {
+            print("  " + e.device + " -> " + e.mount_point + " (" + e.fs_type + ")")
+        }
+    }
+}
+rescue {
+    print("  ✗ 无法读取 /etc/fstab")
+}
+
+// 3. 演示挂载（伪代码）
+print("\n挂载示例（伪代码）:")
+print(`
+  mount.mount("/dev/sdb1", "/mnt/data", "ext4", "defaults")
+  mount.mount("nfs-server:/export", "/mnt/nfs", "nfs", "rw,soft")
+`)
+
+// 4. 演示卸载
+print("\n卸载示例（伪代码）:")
+print(`
+  mount.umount("/mnt/data")
+`)
+
+// 5. 演示 fstab 管理
+print("\nfstab 管理示例（伪代码）:")
+print(`
+  mount.add_fstab("/dev/sdb1", "/mnt/data", "ext4", "defaults")
+  mount.remove_fstab("/mnt/data")
+`)
+
+print("\n注意：挂载操作需要 root 权限")
+
+print("\n=== mount 管理演示完成 ===")

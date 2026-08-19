@@ -270,6 +270,42 @@ var Funcs = []Func{
 	{Name: "yum_repo.exists", Args: []string{"id"}},
 	{Name: "yum_repo.add", Args: []string{"id", "name", "base_url", "gpg_check", "gpg_key"}, Mutating: true},
 	{Name: "yum_repo.remove", Args: []string{"id"}, Mutating: true},
+
+	// ── ufw ───────────────────────────────────────────────────────────
+	{Name: "ufw.status"},
+	{Name: "ufw.list"},
+	{Name: "ufw.enable", Mutating: true},
+	{Name: "ufw.disable", Mutating: true},
+	{Name: "ufw.allow", Args: []string{"port", "proto"}, Mutating: true},
+	{Name: "ufw.deny", Args: []string{"port", "proto"}, Mutating: true},
+	{Name: "ufw.delete", Args: []string{"number"}, Mutating: true},
+	{Name: "ufw.reset", Mutating: true},
+	{Name: "ufw.reload", Mutating: true},
+
+	// ── ini_file ──────────────────────────────────────────────────────
+	{Name: "ini_file.sections", Args: []string{"path"}},
+	{Name: "ini_file.get", Args: []string{"path", "section", "key"}},
+	{Name: "ini_file.set", Args: []string{"path", "section", "key", "value"}, Mutating: true},
+	{Name: "ini_file.remove", Args: []string{"path", "section", "key"}, Mutating: true},
+	{Name: "ini_file.remove_section", Args: []string{"path", "section"}, Mutating: true},
+
+	// ── mount ─────────────────────────────────────────────────────────
+	{Name: "mount.list"},
+	{Name: "mount.mount", Args: []string{"device", "mountpoint", "fstype", "options"}, Mutating: true},
+	{Name: "mount.umount", Args: []string{"mountpoint"}, Mutating: true},
+	{Name: "mount.fstab"},
+	{Name: "mount.add_fstab", Args: []string{"device", "mountpoint", "fstype", "options"}, Mutating: true},
+	{Name: "mount.remove_fstab", Args: []string{"target"}, Mutating: true},
+
+	// ── hostname ──────────────────────────────────────────────────────
+	{Name: "hostname.get"},
+	{Name: "hostname.set", Args: []string{"hostname"}, Mutating: true},
+	{Name: "hostname.set_fqdn", Args: []string{"fqdn"}, Mutating: true},
+
+	// ── timezone ──────────────────────────────────────────────────────
+	{Name: "timezone.get"},
+	{Name: "timezone.set", Args: []string{"timezone"}, Mutating: true},
+	{Name: "timezone.list"},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

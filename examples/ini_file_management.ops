@@ -1,0 +1,56 @@
+// ini_file_management.ops - 演示 INI 配置文件管理
+// 新增 SDK: ini_file.*
+privilege: admin
+
+print("=== INI 配置文件管理 ===")
+
+// 1. 列出配置文件的 sections
+print("\n/etc/mysql/my.cnf 的 sections（如果存在）:")
+block {
+    let sections = ini_file.sections("/etc/mysql/my.cnf")
+    if len(sections.sections) == 0 {
+        print("  (无 sections 或文件不存在)")
+    } else {
+        for s in sections.sections {
+            print("  [" + s + "]")
+        }
+    }
+}
+rescue {
+    print("  ✗ 无法读取配置文件")
+}
+
+// 2. 获取配置值
+print("\n获取 [mysqld] 部分的 port 配置:")
+block {
+    let value = ini_file.get("/etc/mysql/my.cnf", "mysqld", "port")
+    if value.exists {
+        print("  port = " + value.value)
+    } else {
+        print("  (配置不存在)")
+    }
+}
+rescue {
+    print("  ✗ 无法获取配置")
+}
+
+// 3. 演示设置配置（伪代码）
+print("\n设置配置示例（伪代码）:")
+print(`
+  ini_file.set("/etc/mysql/my.cnf", "mysqld", "max_connections", "500")
+  ini_file.set("/etc/mysql/my.cnf", "mysqld", "innodb_buffer_pool_size", "2G")
+`)
+
+// 4. 演示删除配置
+print("\n删除配置示例（伪代码）:")
+print(`
+  ini_file.remove("/etc/mysql/my.cnf", "mysqld", "old_option")
+  ini_file.remove_section("/etc/mysql/my.cnf", "deprecated_section")
+`)
+
+print("\nINI 文件管理适用于:")
+print("  - MySQL/MariaDB 配置")
+print("  - PostgreSQL 配置")
+print("  - 传统的 Unix 配置文件")
+
+print("\n=== ini_file 管理演示完成 ===")

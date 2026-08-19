@@ -32,6 +32,11 @@ import (
 	sdkservice "github.com/opslang/opslang/pkg/ops-core-sdk/service"
 	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
 	sdksys "github.com/opslang/opslang/pkg/ops-core-sdk/sys"
+	sdkufw "github.com/opslang/opslang/pkg/ops-core-sdk/ufw"
+	sdkinifile "github.com/opslang/opslang/pkg/ops-core-sdk/ini_file"
+	sdkmount "github.com/opslang/opslang/pkg/ops-core-sdk/mount"
+	sdkhostname "github.com/opslang/opslang/pkg/ops-core-sdk/hostname"
+	sdktimezone "github.com/opslang/opslang/pkg/ops-core-sdk/timezone"
 	sdksysctl "github.com/opslang/opslang/pkg/ops-core-sdk/sysctl"
 	sdktime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
 	sdkuser "github.com/opslang/opslang/pkg/ops-core-sdk/user"
@@ -2530,6 +2535,278 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		id, _ := args[0].(string)
 		r, err := sdkyumrepo.Remove(id)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ufw
+	interp.builtins["ufw.status"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkufw.Status()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ufw.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkufw.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ufw.enable"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkufw.Enable()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ufw.disable"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkufw.Disable()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ufw.allow"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("ufw.allow() requires at least 1 argument (port)")
+		}
+		port, _ := args[0].(string)
+		proto := getStringArgBridge(args, 1, "tcp")
+		r, err := sdkufw.Allow(port, proto)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ufw.deny"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("ufw.deny() requires at least 1 argument (port)")
+		}
+		port, _ := args[0].(string)
+		proto := getStringArgBridge(args, 1, "tcp")
+		r, err := sdkufw.Deny(port, proto)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ufw.delete"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("ufw.delete() requires 1 argument (number)")
+		}
+		numFloat, ok := args[0].(float64)
+		if !ok {
+			return nil, fmt.Errorf("ufw.delete() number must be an integer")
+		}
+		num := int(numFloat)
+		r, err := sdkufw.Delete(num)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ufw.reset"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkufw.Reset()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ufw.reload"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkufw.Reload()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ini_file
+	interp.builtins["ini_file.sections"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("ini_file.sections() requires 1 argument (path)")
+		}
+		path, _ := args[0].(string)
+		r, err := sdkinifile.Sections(path)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ini_file.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("ini_file.get() requires 3 arguments (path, section, key)")
+		}
+		path, _ := args[0].(string)
+		section, _ := args[1].(string)
+		key, _ := args[2].(string)
+		r, err := sdkinifile.Get(path, section, key)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ini_file.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("ini_file.set() requires 4 arguments (path, section, key, value)")
+		}
+		path, _ := args[0].(string)
+		section, _ := args[1].(string)
+		key, _ := args[2].(string)
+		value, _ := args[3].(string)
+		r, err := sdkinifile.Set(path, section, key, value)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ini_file.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("ini_file.remove() requires 3 arguments (path, section, key)")
+		}
+		path, _ := args[0].(string)
+		section, _ := args[1].(string)
+		key, _ := args[2].(string)
+		r, err := sdkinifile.Remove(path, section, key)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ini_file.remove_section"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("ini_file.remove_section() requires 2 arguments (path, section)")
+		}
+		path, _ := args[0].(string)
+		section, _ := args[1].(string)
+		r, err := sdkinifile.RemoveSection(path, section)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// mount
+	interp.builtins["mount.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkmount.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["mount.mount"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("mount.mount() requires at least 2 arguments (device, mountpoint)")
+		}
+		device, _ := args[0].(string)
+		mountpoint, _ := args[1].(string)
+		fstype := getStringArgBridge(args, 2, "")
+		options := getStringArgBridge(args, 3, "")
+		r, err := sdkmount.Mount(device, mountpoint, fstype, options)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["mount.umount"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("mount.umount() requires 1 argument (mountpoint)")
+		}
+		mountpoint, _ := args[0].(string)
+		r, err := sdkmount.Unmount(mountpoint)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["mount.fstab"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkmount.Fstab()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["mount.add_fstab"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("mount.add_fstab() requires at least 3 arguments (device, mountpoint, fstype)")
+		}
+		device, _ := args[0].(string)
+		mountpoint, _ := args[1].(string)
+		fstype, _ := args[2].(string)
+		options := getStringArgBridge(args, 3, "")
+		r, err := sdkmount.AddFstab(device, mountpoint, fstype, options)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["mount.remove_fstab"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("mount.remove_fstab() requires 1 argument (target)")
+		}
+		target, _ := args[0].(string)
+		r, err := sdkmount.RemoveFstab(target)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// hostname
+	interp.builtins["hostname.get"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkhostname.Get()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["hostname.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("hostname.set() requires 1 argument (hostname)")
+		}
+		hostname, _ := args[0].(string)
+		r, err := sdkhostname.Set(hostname)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["hostname.set_fqdn"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("hostname.set_fqdn() requires 1 argument (fqdn)")
+		}
+		fqdn, _ := args[0].(string)
+		r, err := sdkhostname.SetFQDN(fqdn)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// timezone
+	interp.builtins["timezone.get"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdktimezone.Get()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["timezone.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("timezone.set() requires 1 argument (timezone)")
+		}
+		timezone, _ := args[0].(string)
+		r, err := sdktimezone.Set(timezone)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["timezone.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdktimezone.List()
 		if err != nil {
 			return nil, err
 		}

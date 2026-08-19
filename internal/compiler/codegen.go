@@ -244,6 +244,42 @@ var sdkMapping = map[string]sdkFunc{
 	"sys.timezone_get": {pkg: "sys", goName: "TimezoneGet"},
 	"sys.timezone_set": {pkg: "sys", goName: "TimezoneSet", args: true, params: []string{"s"}},
 	"sys.reboot":       {pkg: "sys", goName: "Reboot"},
+
+	// ufw
+	"ufw.status":  {pkg: "ufw", goName: "Status"},
+	"ufw.list":    {pkg: "ufw", goName: "List"},
+	"ufw.enable":  {pkg: "ufw", goName: "Enable"},
+	"ufw.disable": {pkg: "ufw", goName: "Disable"},
+	"ufw.allow":   {pkg: "ufw", goName: "Allow", args: true, params: []string{"s", "s"}},
+	"ufw.deny":    {pkg: "ufw", goName: "Deny", args: true, params: []string{"s", "s"}},
+	"ufw.delete":  {pkg: "ufw", goName: "Delete", args: true, params: []string{"i"}},
+	"ufw.reset":   {pkg: "ufw", goName: "Reset"},
+	"ufw.reload":  {pkg: "ufw", goName: "Reload"},
+
+	// ini_file
+	"ini_file.sections":        {pkg: "ini_file", goName: "Sections", args: true, params: []string{"s"}},
+	"ini_file.get":             {pkg: "ini_file", goName: "Get", args: true, params: []string{"s", "s", "s"}},
+	"ini_file.set":             {pkg: "ini_file", goName: "Set", args: true, params: []string{"s", "s", "s", "s"}},
+	"ini_file.remove":          {pkg: "ini_file", goName: "Remove", args: true, params: []string{"s", "s", "s"}},
+	"ini_file.remove_section":  {pkg: "ini_file", goName: "RemoveSection", args: true, params: []string{"s", "s"}},
+
+	// mount
+	"mount.list":        {pkg: "mount", goName: "List"},
+	"mount.mount":       {pkg: "mount", goName: "Mount", args: true, params: []string{"s", "s", "s", "s"}},
+	"mount.umount":      {pkg: "mount", goName: "Unmount", args: true, params: []string{"s"}},
+	"mount.fstab":       {pkg: "mount", goName: "Fstab"},
+	"mount.add_fstab":   {pkg: "mount", goName: "AddFstab", args: true, params: []string{"s", "s", "s", "s"}},
+	"mount.remove_fstab": {pkg: "mount", goName: "RemoveFstab", args: true, params: []string{"s"}},
+
+	// hostname
+	"hostname.get":      {pkg: "hostname", goName: "Get"},
+	"hostname.set":      {pkg: "hostname", goName: "Set", args: true, params: []string{"s"}},
+	"hostname.set_fqdn": {pkg: "hostname", goName: "SetFQDN", args: true, params: []string{"s"}},
+
+	// timezone
+	"timezone.get":  {pkg: "timezone", goName: "Get"},
+	"timezone.set":  {pkg: "timezone", goName: "Set", args: true, params: []string{"s"}},
+	"timezone.list": {pkg: "timezone", goName: "List"},
 }
 
 // SDKMappingNames returns every canonical function name the code generator

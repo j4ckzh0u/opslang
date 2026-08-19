@@ -38,6 +38,11 @@ import (
 	opsuser "github.com/opslang/opslang/pkg/ops-core-sdk/user"
 	opsyaml "github.com/opslang/opslang/pkg/ops-core-sdk/yaml"
 	sdkyumrepo "github.com/opslang/opslang/pkg/ops-core-sdk/yum_repo"
+	sdkufw "github.com/opslang/opslang/pkg/ops-core-sdk/ufw"
+	sdkinifile "github.com/opslang/opslang/pkg/ops-core-sdk/ini_file"
+	sdkmount "github.com/opslang/opslang/pkg/ops-core-sdk/mount"
+	sdkhostname "github.com/opslang/opslang/pkg/ops-core-sdk/hostname"
+	sdktimezone "github.com/opslang/opslang/pkg/ops-core-sdk/timezone"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -1489,6 +1494,209 @@ func (r *Registry) registerExtensions() {
 			return nil, fmt.Errorf("ntp.set: %w", err)
 		}
 		return sdkntp.Set(server)
+	})
+
+	// ── ufw ──────────────────────────────────────────────────────────────
+	r.Register("ufw.status", func(args map[string]interface{}) (interface{}, error) {
+		return sdkufw.Status()
+	})
+	r.Register("ufw.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkufw.List()
+	})
+	r.Register("ufw.enable", func(args map[string]interface{}) (interface{}, error) {
+		return sdkufw.Enable()
+	})
+	r.Register("ufw.disable", func(args map[string]interface{}) (interface{}, error) {
+		return sdkufw.Disable()
+	})
+	r.Register("ufw.allow", func(args map[string]interface{}) (interface{}, error) {
+		port, err := argString(args, "port")
+		if err != nil {
+			return nil, fmt.Errorf("ufw.allow: %w", err)
+		}
+		proto, _ := argString(args, "proto")
+		if proto == "" {
+			proto = "tcp"
+		}
+		return sdkufw.Allow(port, proto)
+	})
+	r.Register("ufw.deny", func(args map[string]interface{}) (interface{}, error) {
+		port, err := argString(args, "port")
+		if err != nil {
+			return nil, fmt.Errorf("ufw.deny: %w", err)
+		}
+		proto, _ := argString(args, "proto")
+		if proto == "" {
+			proto = "tcp"
+		}
+		return sdkufw.Deny(port, proto)
+	})
+	r.Register("ufw.delete", func(args map[string]interface{}) (interface{}, error) {
+		num, err := argInt(args, "number")
+		if err != nil {
+			return nil, fmt.Errorf("ufw.delete: %w", err)
+		}
+		return sdkufw.Delete(num)
+	})
+	r.Register("ufw.reset", func(args map[string]interface{}) (interface{}, error) {
+		return sdkufw.Reset()
+	})
+	r.Register("ufw.reload", func(args map[string]interface{}) (interface{}, error) {
+		return sdkufw.Reload()
+	})
+
+	// ── ini_file ─────────────────────────────────────────────────────────
+	r.Register("ini_file.sections", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.sections: %w", err)
+		}
+		return sdkinifile.Sections(path)
+	})
+	r.Register("ini_file.get", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.get: %w", err)
+		}
+		section, err := argString(args, "section")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.get: %w", err)
+		}
+		key, err := argString(args, "key")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.get: %w", err)
+		}
+		return sdkinifile.Get(path, section, key)
+	})
+	r.Register("ini_file.set", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.set: %w", err)
+		}
+		section, err := argString(args, "section")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.set: %w", err)
+		}
+		key, err := argString(args, "key")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.set: %w", err)
+		}
+		value, err := argString(args, "value")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.set: %w", err)
+		}
+		return sdkinifile.Set(path, section, key, value)
+	})
+	r.Register("ini_file.remove", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.remove: %w", err)
+		}
+		section, err := argString(args, "section")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.remove: %w", err)
+		}
+		key, err := argString(args, "key")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.remove: %w", err)
+		}
+		return sdkinifile.Remove(path, section, key)
+	})
+	r.Register("ini_file.remove_section", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.remove_section: %w", err)
+		}
+		section, err := argString(args, "section")
+		if err != nil {
+			return nil, fmt.Errorf("ini_file.remove_section: %w", err)
+		}
+		return sdkinifile.RemoveSection(path, section)
+	})
+
+	// ── mount ────────────────────────────────────────────────────────────
+	r.Register("mount.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmount.List()
+	})
+	r.Register("mount.mount", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("mount.mount: %w", err)
+		}
+		mountpoint, err := argString(args, "mountpoint")
+		if err != nil {
+			return nil, fmt.Errorf("mount.mount: %w", err)
+		}
+		fstype, _ := argString(args, "fstype")
+		options, _ := argString(args, "options")
+		return sdkmount.Mount(device, mountpoint, fstype, options)
+	})
+	r.Register("mount.umount", func(args map[string]interface{}) (interface{}, error) {
+		mountpoint, err := argString(args, "mountpoint")
+		if err != nil {
+			return nil, fmt.Errorf("mount.umount: %w", err)
+		}
+		return sdkmount.Unmount(mountpoint)
+	})
+	r.Register("mount.fstab", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmount.Fstab()
+	})
+	r.Register("mount.add_fstab", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("mount.add_fstab: %w", err)
+		}
+		mountpoint, err := argString(args, "mountpoint")
+		if err != nil {
+			return nil, fmt.Errorf("mount.add_fstab: %w", err)
+		}
+		fstype, err := argString(args, "fstype")
+		if err != nil {
+			return nil, fmt.Errorf("mount.add_fstab: %w", err)
+		}
+		options, _ := argString(args, "options")
+		return sdkmount.AddFstab(device, mountpoint, fstype, options)
+	})
+	r.Register("mount.remove_fstab", func(args map[string]interface{}) (interface{}, error) {
+		target, err := argString(args, "target")
+		if err != nil {
+			return nil, fmt.Errorf("mount.remove_fstab: %w", err)
+		}
+		return sdkmount.RemoveFstab(target)
+	})
+
+	// ── hostname ─────────────────────────────────────────────────────────
+	r.Register("hostname.get", func(args map[string]interface{}) (interface{}, error) {
+		return sdkhostname.Get()
+	})
+	r.Register("hostname.set", func(args map[string]interface{}) (interface{}, error) {
+		hostname, err := argString(args, "hostname")
+		if err != nil {
+			return nil, fmt.Errorf("hostname.set: %w", err)
+		}
+		return sdkhostname.Set(hostname)
+	})
+	r.Register("hostname.set_fqdn", func(args map[string]interface{}) (interface{}, error) {
+		fqdn, err := argString(args, "fqdn")
+		if err != nil {
+			return nil, fmt.Errorf("hostname.set_fqdn: %w", err)
+		}
+		return sdkhostname.SetFQDN(fqdn)
+	})
+
+	// ── timezone ─────────────────────────────────────────────────────────
+	r.Register("timezone.get", func(args map[string]interface{}) (interface{}, error) {
+		return sdktimezone.Get()
+	})
+	r.Register("timezone.set", func(args map[string]interface{}) (interface{}, error) {
+		timezone, err := argString(args, "timezone")
+		if err != nil {
+			return nil, fmt.Errorf("timezone.set: %w", err)
+		}
+		return sdktimezone.Set(timezone)
+	})
+	r.Register("timezone.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdktimezone.List()
 	})
 }
 

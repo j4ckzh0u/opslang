@@ -1,0 +1,66 @@
+// ufw_management.ops - 演示 Ubuntu 防火墙管理
+// 新增 SDK: ufw.*
+privilege: admin
+
+print("=== Ubuntu 防火墙管理 ===")
+
+// 1. 获取 UFW 状态
+print("\n当前 UFW 状态:")
+block {
+    let status = ufw.status()
+    print("  状态: " + status.status)
+    print("  日志: " + status.logging)
+}
+rescue {
+    print("  ✗ 无法获取 UFW 状态（可能未安装 UFW）")
+}
+
+// 2. 列出规则
+print("\n当前规则:")
+block {
+    let rules = ufw.list()
+    if len(rules.rules) == 0 {
+        print("  (无规则)")
+    } else {
+        let count = 0
+        let total = len(rules.rules)
+        while count < total && count < 10 {
+            let r = rules.rules[count]
+            print("  " + r.action + " " + r.to + " from " + r.from)
+            count = count + 1
+        }
+        if total > 10 {
+            print("  ... 共 " + str(total) + " 条规则")
+        }
+    }
+}
+rescue {
+    print("  ✗ 无法列出规则")
+}
+
+// 3. 演示允许端口（伪代码）
+print("\n允许端口示例（伪代码）:")
+print(`
+  ufw.allow("22", "tcp")    // SSH
+  ufw.allow("80", "tcp")    // HTTP
+  ufw.allow("443", "tcp")   // HTTPS
+`)
+
+// 4. 演示拒绝端口
+print("\n拒绝端口示例（伪代码）:")
+print(`
+  ufw.deny("23", "tcp")     // Telnet
+  ufw.deny("3306", "tcp")   // MySQL
+`)
+
+// 5. 演示启用/禁用
+print("\n启用/禁用示例（伪代码）:")
+print(`
+  ufw.enable()
+  ufw.disable()
+`)
+
+print("\n注意：UFW 仅在 Ubuntu/Debian 系统上可用")
+print("对于 RHEL/CentOS，请使用 firewalld")
+
+print("\n=== ufw 管理演示完成 ===")

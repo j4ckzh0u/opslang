@@ -1,0 +1,37 @@
+// hostname_management.ops - 演示主机名管理
+// 新增 SDK: hostname.*
+privilege: admin
+
+print("=== 主机名管理 ===")
+
+// 1. 获取当前主机名
+print("\n当前主机名:")
+block {
+    let info = hostname.get()
+    print("  主机名: " + info.hostname)
+    print("  FQDN: " + info.fqdn)
+}
+rescue {
+    print("  ✗ 无法获取主机名")
+}
+
+// 2. 演示设置主机名（伪代码）
+print("\n设置主机名示例（伪代码）:")
+print(`
+  hostname.set("web-server-01")
+  hostname.set("db-server-01")
+`)
+
+// 3. 演示设置 FQDN
+print("\n设置 FQDN 示例（伪代码）:")
+print(`
+  hostname.set_fqdn("web-server-01.example.com")
+  hostname.set_fqdn("api.example.com")
+`)
+
+print("\n注意：")
+print("  - 设置主机名需要 root 权限")
+print("  - 修改后会立即生效")
+print("  - 同时更新 /etc/hostname 和 /etc/hosts")
+
+print("\n=== hostname 管理演示完成 ===")
