@@ -373,7 +373,7 @@ type RouteEntry struct {
 	Destination string `json:"destination"`
 	Gateway     string `json:"gateway,omitempty"`
 	Interface   string `json:"interface,omitempty"`
-	Metric      string `json:"metric,omitempty"`
+	RouteMetric string `json:"route_metric,omitempty"`
 }
 
 // IpRouteResult represents the result of showing routing table.
@@ -457,7 +457,7 @@ func IpRoute() (IpRouteResult, error) {
 				route.Interface = parts[i+1]
 			}
 			if p == "metric" && i+1 < len(parts) {
-				route.Metric = parts[i+1]
+				route.RouteMetric = parts[i+1]
 			}
 		}
 		result.Routes = append(result.Routes, route)
