@@ -76,6 +76,7 @@ import (
 	sdkflatpak "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak"
 	sdkzfs "github.com/opslang/opslang/pkg/ops-core-sdk/zfs"
 	sdknmcli "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli"
+	sdkcrypttab "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -1234,6 +1235,127 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["nmcli.get_general_status"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdknmcli.GetGeneralStatus()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+
+	// ── crypttab.* ────────────────────────────────────────────────────────
+	interp.builtins["crypttab.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("crypttab.add() requires 2-4 arguments (name, device, key_file, options)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("crypttab.add(): first argument must be string")
+		}
+		device, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("crypttab.add(): second argument must be string")
+		}
+		keyFile := ""
+		if len(args) > 2 {
+			keyFile, _ = args[2].(string)
+		}
+		options := ""
+		if len(args) > 3 {
+			options, _ = args[3].(string)
+		}
+		r, err := sdkcrypttab.Add(name, device, keyFile, options)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["crypttab.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("crypttab.remove() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("crypttab.remove(): first argument must be string")
+		}
+		r, err := sdkcrypttab.Remove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["crypttab.modify"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("crypttab.modify() requires 2-4 arguments (name, device, key_file, options)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("crypttab.modify(): first argument must be string")
+		}
+		device := ""
+		if len(args) > 1 {
+			device, _ = args[1].(string)
+		}
+		keyFile := ""
+		if len(args) > 2 {
+			keyFile, _ = args[2].(string)
+		}
+		options := ""
+		if len(args) > 3 {
+			options, _ = args[3].(string)
+		}
+		r, err := sdkcrypttab.Modify(name, device, keyFile, options)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["crypttab.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("crypttab.get() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("crypttab.get(): first argument must be string")
+		}
+		r, err := sdkcrypttab.Get(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["crypttab.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkcrypttab.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["crypttab.exists"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("crypttab.exists() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("crypttab.exists(): first argument must be string")
+		}
+		r, err := sdkcrypttab.Exists(name)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"exists": r}, nil
+	}
+	interp.builtins["crypttab.validate"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkcrypttab.Validate()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["crypttab.backup"] = func(args ...interface{}) (interface{}, error) {
+		backupDir := ""
+		if len(args) > 0 {
+			backupDir, _ = args[0].(string)
+		}
+		r, err := sdkcrypttab.Backup(backupDir)
 		if err != nil {
 			return nil, err
 		}

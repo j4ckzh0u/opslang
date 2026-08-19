@@ -264,6 +264,16 @@ var Funcs = []Func{
 	{Name: "nmcli.reload", Mutating: true},
 	{Name: "nmcli.get_general_status"},
 
+	// ── crypttab ───────────────────────────────────────────────────────
+	{Name: "crypttab.add", Args: []string{"name", "device", "key_file", "options"}, Mutating: true},
+	{Name: "crypttab.remove", Args: []string{"name"}, Mutating: true},
+	{Name: "crypttab.modify", Args: []string{"name", "device", "key_file", "options"}, Mutating: true},
+	{Name: "crypttab.get", Args: []string{"name"}},
+	{Name: "crypttab.list"},
+	{Name: "crypttab.exists", Args: []string{"name"}},
+	{Name: "crypttab.validate"},
+	{Name: "crypttab.backup", Args: []string{"backup_dir"}, Mutating: true},
+
 	// ── selinux ───────────────────────────────────────────────────────
 	{Name: "selinux.get"},
 	{Name: "selinux.set", Args: []string{"mode"}, Mutating: true},

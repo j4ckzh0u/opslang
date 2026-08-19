@@ -538,6 +538,16 @@ var sdkMapping = map[string]sdkFunc{
 	"nmcli.list_devices":       {pkg: "nmcli", goName: "ListDevices"},
 	"nmcli.reload":             {pkg: "nmcli", goName: "Reload"},
 	"nmcli.get_general_status": {pkg: "nmcli", goName: "GetGeneralStatus"},
+
+	// ── crypttab ──────────────────────────────────────────────────────────
+	"crypttab.add":      {pkg: "crypttab", goName: "Add", args: true, params: []string{"s", "s", "s", "s"}},
+	"crypttab.remove":   {pkg: "crypttab", goName: "Remove", args: true, params: []string{"s"}},
+	"crypttab.modify":   {pkg: "crypttab", goName: "Modify", args: true, params: []string{"s", "s", "s", "s"}},
+	"crypttab.get":      {pkg: "crypttab", goName: "Get", args: true, params: []string{"s"}},
+	"crypttab.list":     {pkg: "crypttab", goName: "List"},
+	"crypttab.exists":   {pkg: "crypttab", goName: "Exists", args: true, params: []string{"s"}},
+	"crypttab.validate": {pkg: "crypttab", goName: "Validate"},
+	"crypttab.backup":   {pkg: "crypttab", goName: "Backup", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -668,6 +678,7 @@ var pkgImportAlias = map[string]string{
 	"flatpak":        "opsflatpak",
 	"zfs":            "opszfs",
 	"nmcli":          "opsnmcli",
+	"crypttab":       "opscrypttab",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -724,6 +735,7 @@ var pkgImportPath = map[string]string{
 	"flatpak":        "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak",
 	"zfs":            "github.com/opslang/opslang/pkg/ops-core-sdk/zfs",
 	"nmcli":          "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli",
+	"crypttab":       "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

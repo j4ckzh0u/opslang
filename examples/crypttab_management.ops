@@ -1,0 +1,111 @@
+// crypttab 加密文件系统管理示例
+// /etc/crypttab management example
+
+// 列出所有 crypttab 条目
+block {
+    let entries = crypttab.list()
+    report {
+        total_entries: len(entries.entries)
+    }
+    for entry in entries.entries {
+        report {
+            name: entry.name,
+            device: entry.device,
+            key_file: entry.key_file,
+            options: entry.options
+        }
+    }
+}
+rescue {
+    print("crypttab not available: " + _error)
+}
+
+// 验证 crypttab 文件语法
+block {
+    let validation = crypttab.validate()
+    report {
+        valid: validation.valid,
+        entries: validation.entries,
+        errors: validation.errors
+    }
+}
+rescue {
+    print("crypttab validate failed: " + _error)
+}
+
+// 检查特定条目是否存在
+block {
+    let exists = crypttab.exists("cryptroot")
+    report {
+        entry: "cryptroot",
+        exists: exists.exists
+    }
+}
+rescue {
+    print("crypttab.exists failed: " + _error)
+}
+
+// 获取特定条目详情
+block {
+    let entry = crypttab.get("cryptroot")
+    report {
+        name: entry.name,
+        device: entry.device,
+        key_file: entry.key_file,
+        options: entry.options
+    }
+}
+rescue {
+    print("crypttab.get failed: " + _error)
+}
+
+// 添加新条目
+block {
+    let result = crypttab.add("cryptdata", "/dev/sdb1", "/etc/keyfile", "luks,discard")
+    report {
+        added: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("crypttab.add failed (expected without root): " + _error)
+}
+
+// 修改条目
+block {
+    let result = crypttab.modify("cryptroot", "/dev/sda1", "none", "luks,discard")
+    report {
+        modified: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("crypttab.modify failed: " + _error)
+}
+
+// 删除条目
+block {
+    let result = crypttab.remove("cryptdata")
+    report {
+        removed: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("crypttab.remove failed: " + _error)
+}
+
+// 创建备份
+block {
+    let result = crypttab.backup("/tmp")
+    report {
+        success: result.success,
+        backup: result.backup
+    }
+}
+rescue {
+    print("crypttab.backup failed: " + _error)
+}

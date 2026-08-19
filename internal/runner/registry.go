@@ -77,6 +77,7 @@ import (
 	sdkflatpak "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak"
 	sdkzfs "github.com/opslang/opslang/pkg/ops-core-sdk/zfs"
 	sdknmcli "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli"
+	sdkcrypttab "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -3167,6 +3168,48 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("nmcli.get_general_status", func(args map[string]interface{}) (interface{}, error) {
 		return sdknmcli.GetGeneralStatus()
+	})
+
+	// ── crypttab ──────────────────────────────────────────────────────────
+	r.Register("crypttab.add", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		device, _ := argString(args, "device")
+		keyFile, _ := argString(args, "key_file")
+		options, _ := argString(args, "options")
+		return sdkcrypttab.Add(name, device, keyFile, options)
+	})
+	r.Register("crypttab.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkcrypttab.Remove(name)
+	})
+	r.Register("crypttab.modify", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		device, _ := argString(args, "device")
+		keyFile, _ := argString(args, "key_file")
+		options, _ := argString(args, "options")
+		return sdkcrypttab.Modify(name, device, keyFile, options)
+	})
+	r.Register("crypttab.get", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkcrypttab.Get(name)
+	})
+	r.Register("crypttab.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkcrypttab.List()
+	})
+	r.Register("crypttab.exists", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		exists, err := sdkcrypttab.Exists(name)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"exists": exists}, nil
+	})
+	r.Register("crypttab.validate", func(args map[string]interface{}) (interface{}, error) {
+		return sdkcrypttab.Validate()
+	})
+	r.Register("crypttab.backup", func(args map[string]interface{}) (interface{}, error) {
+		backupDir, _ := argString(args, "backup_dir")
+		return sdkcrypttab.Backup(backupDir)
 	})
 }
 
