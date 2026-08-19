@@ -1,0 +1,50 @@
+// resolv_management.ops - 演示 DNS 解析器配置管理
+// 新增 SDK: resolv.*
+privilege: admin
+
+print("=== DNS 解析器配置管理 ===")
+
+// 1. 获取当前 DNS 配置
+print("\n当前 DNS 配置:")
+let config = resolv.get()
+print("  Nameservers:")
+for ns in config.config.nameservers {
+    print("    " + ns)
+}
+if len(config.config.search) > 0 {
+    print("  Search domains:")
+    for domain in config.config.search {
+        print("    " + domain)
+    }
+}
+if config.config.domain != "" {
+    print("  Domain: " + config.config.domain)
+}
+
+// 2. 演示设置 DNS
+print("\n设置 DNS 示例（伪代码）:")
+print(`
+  resolv.set(
+      ["8.8.8.8", "8.8.4.4", "1.1.1.1"],
+      ["example.com", "local"],
+      ["ndots:2", "timeout:3"],
+      "example.com"
+  )
+`)
+
+// 3. 演示添加 nameserver
+print("\n添加 Nameserver 示例（伪代码）:")
+print(`
+  resolv.add_nameserver("9.9.9.9")
+`)
+
+// 4. 演示移除 nameserver
+print("\n移除 Nameserver 示例（伪代码）:")
+print(`
+  resolv.remove_nameserver("8.8.4.4")
+`)
+
+print("\n注意：修改 DNS 配置可能影响网络解析")
+print("建议先备份当前配置")
+
+print("\n=== resolv 管理演示完成 ===")

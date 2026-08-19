@@ -1,0 +1,63 @@
+// logrotate_management.ops - 演示日志轮转配置管理
+// 新增 SDK: logrotate.*
+privilege: admin
+
+print("=== 日志轮转配置管理 ===")
+
+// 1. 列出当前日志轮转配置
+print("\n当前日志轮转配置:")
+block {
+    let configs = logrotate.list()
+    if len(configs.configs) == 0 {
+        print("  (无日志轮转配置)")
+    } else {
+        let count = 0
+        let total = len(configs.configs)
+        let i = 0
+        while i < total && count < 10 {
+            let c = configs.configs[i]
+            print("  " + c.name + ": " + c.pattern + " (" + c.frequency + ", rotate " + str(c.rotate) + ")")
+            count = count + 1
+            i = i + 1
+        }
+        if total > 10 {
+            print("  ... 共 " + str(total) + " 个配置")
+        }
+    }
+}
+rescue {
+    print("  ✗ 无法读取日志轮转配置（需要 Linux 系统）")
+}
+
+// 2. 获取特定配置
+print("\n获取 nginx 日志轮转配置:")
+block {
+    let config = logrotate.get("nginx")
+    print("  模式: " + config.config.pattern)
+    print("  频率: " + config.config.frequency)
+    print("  保留: " + str(config.config.rotate) + " 份")
+}
+rescue {
+    print("  ✗ nginx 日志轮转配置未找到或不可用")
+}
+
+// 3. 演示设置日志轮转
+print("\n设置日志轮转示例（伪代码）:")
+print(`
+  logrotate.set(
+      "myapp",
+      "/var/log/myapp/*.log",
+      "daily",
+      30,
+      true,
+      "/usr/bin/systemctl reload myapp"
+  )
+`)
+
+// 4. 演示移除日志轮转
+print("\n移除日志轮转示例（伪代码）:")
+print(`
+  logrotate.remove("myapp")
+`)
+
+print("\n=== logrotate 管理演示完成 ===")

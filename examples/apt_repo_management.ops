@@ -1,0 +1,63 @@
+// apt_repo_management.ops - 演示 APT 仓库管理
+// 新增 SDK: apt_repo.*
+privilege: admin
+
+print("=== APT 仓库管理 ===")
+
+// 1. 列出当前仓库
+print("\n当前 APT 仓库:")
+block {
+    let repos = apt_repo.list()
+    if len(repos.repos) == 0 {
+        print("  (无 APT 仓库配置 - 可能在非 Debian/Ubuntu 系统上)")
+    } else {
+        for repo in repos.repos {
+            let status = "禁用"
+            if repo.enabled {
+                status = "启用"
+            }
+            print("  [" + status + "] " + repo.type + " " + repo.uri + " " + repo.dist + " " + repo.comps)
+        }
+    }
+}
+rescue {
+    print("  ✗ 无法读取 APT 仓库配置（需要 Linux 系统）")
+}
+
+// 2. 检查仓库是否存在
+print("\n检查仓库是否存在:")
+block {
+    let exists = apt_repo.exists("archive.ubuntu.com")
+    if exists.exists {
+        print("  ✓ Ubuntu 官方仓库已配置")
+    } else {
+        print("  ✗ Ubuntu 官方仓库未配置")
+    }
+}
+rescue {
+    print("  ✗ 无法检查仓库（需要 Linux 系统）")
+}
+
+// 3. 演示添加仓库
+print("\n添加仓库示例（伪代码）:")
+print(`
+  apt_repo.add(
+      "https://ppa.launchpadcontent.net/myppa/ubuntu",
+      "jammy",
+      "main"
+  )
+`)
+
+// 4. 演示更新仓库缓存
+print("\n更新仓库缓存示例（伪代码）:")
+print(`
+  apt_repo.update()
+`)
+
+// 5. 演示移除仓库
+print("\n移除仓库示例（伪代码）:")
+print(`
+  apt_repo.remove("https://ppa.launchpadcontent.net/myppa/ubuntu")
+`)
+
+print("\n=== apt_repo 管理演示完成 ===")

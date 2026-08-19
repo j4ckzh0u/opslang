@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/opslang/opslang/internal/opsspec"
+	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	sdkcron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
@@ -17,10 +18,12 @@ import (
 	sdkjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
 	sdkkernel "github.com/opslang/opslang/pkg/ops-core-sdk/kernel"
 	sdklocale "github.com/opslang/opslang/pkg/ops-core-sdk/locale"
+	sdklogrotate "github.com/opslang/opslang/pkg/ops-core-sdk/logrotate"
 	sdknet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
 	sdkpip "github.com/opslang/opslang/pkg/ops-core-sdk/pip"
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	sdkprocess "github.com/opslang/opslang/pkg/ops-core-sdk/process"
+	sdkresolv "github.com/opslang/opslang/pkg/ops-core-sdk/resolv"
 	sdkservice "github.com/opslang/opslang/pkg/ops-core-sdk/service"
 	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
 	sdksys "github.com/opslang/opslang/pkg/ops-core-sdk/sys"
@@ -28,6 +31,7 @@ import (
 	sdktime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
 	sdkuser "github.com/opslang/opslang/pkg/ops-core-sdk/user"
 	sdkyaml "github.com/opslang/opslang/pkg/ops-core-sdk/yaml"
+	sdkyumrepo "github.com/opslang/opslang/pkg/ops-core-sdk/yum_repo"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -2091,6 +2095,235 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		return structToMap(r)
 	}
+
+	// ── apt_repo.* ──────────────────────────────────────────────────────
+	interp.builtins["apt_repo.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkaptrepo.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt_repo.exists"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apt_repo.exists() requires 1 argument (uri)")
+		}
+		uri, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("apt_repo.exists(): uri must be string")
+		}
+		r, err := sdkaptrepo.Exists(uri)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt_repo.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("apt_repo.add() requires 3 arguments (uri, dist, components)")
+		}
+		uri, _ := args[0].(string)
+		dist, _ := args[1].(string)
+		comps, _ := args[2].(string)
+		r, err := sdkaptrepo.Add(uri, dist, comps)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt_repo.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apt_repo.remove() requires 1 argument (uri)")
+		}
+		uri, _ := args[0].(string)
+		r, err := sdkaptrepo.Remove(uri)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt_repo.update"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkaptrepo.Update()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── logrotate.* ─────────────────────────────────────────────────────
+	interp.builtins["logrotate.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdklogrotate.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["logrotate.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("logrotate.get() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdklogrotate.Get(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["logrotate.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("logrotate.set() requires at least 4 arguments (name, pattern, frequency, rotate)")
+		}
+		name, _ := args[0].(string)
+		pattern, _ := args[1].(string)
+		freq, _ := args[2].(string)
+		rotate := int(opsFloat(args, 3))
+		compress := false
+		if len(args) > 4 {
+			compress = opsBool(args[4])
+		}
+		postRotate := ""
+		if len(args) > 5 {
+			postRotate, _ = args[5].(string)
+		}
+		r, err := sdklogrotate.Set(name, pattern, freq, rotate, compress, postRotate)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["logrotate.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("logrotate.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdklogrotate.Remove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── resolv.* ────────────────────────────────────────────────────────
+	interp.builtins["resolv.get"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkresolv.Get()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["resolv.set"] = func(args ...interface{}) (interface{}, error) {
+		var nameservers, search, options []string
+		domain := ""
+		if len(args) > 0 {
+			if l, ok := args[0].([]interface{}); ok {
+				for _, v := range l {
+					if s, ok := v.(string); ok {
+						nameservers = append(nameservers, s)
+					}
+				}
+			}
+		}
+		if len(args) > 1 {
+			if l, ok := args[1].([]interface{}); ok {
+				for _, v := range l {
+					if s, ok := v.(string); ok {
+						search = append(search, s)
+					}
+				}
+			}
+		}
+		if len(args) > 2 {
+			if l, ok := args[2].([]interface{}); ok {
+				for _, v := range l {
+					if s, ok := v.(string); ok {
+						options = append(options, s)
+					}
+				}
+			}
+		}
+		if len(args) > 3 {
+			domain, _ = args[3].(string)
+		}
+		r, err := sdkresolv.Set(nameservers, search, options, domain)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["resolv.add_nameserver"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("resolv.add_nameserver() requires 1 argument (nameserver)")
+		}
+		ns, _ := args[0].(string)
+		r, err := sdkresolv.AddNameserver(ns)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["resolv.remove_nameserver"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("resolv.remove_nameserver() requires 1 argument (nameserver)")
+		}
+		ns, _ := args[0].(string)
+		r, err := sdkresolv.RemoveNameserver(ns)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── yum_repo.* ──────────────────────────────────────────────────────
+	interp.builtins["yum_repo.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkyumrepo.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["yum_repo.exists"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("yum_repo.exists() requires 1 argument (id)")
+		}
+		id, _ := args[0].(string)
+		r, err := sdkyumrepo.Exists(id)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["yum_repo.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("yum_repo.add() requires at least 3 arguments (id, name, base_url)")
+		}
+		id, _ := args[0].(string)
+		name, _ := args[1].(string)
+		baseURL, _ := args[2].(string)
+		gpgCheck := false
+		if len(args) > 3 {
+			gpgCheck = opsBool(args[3])
+		}
+		gpgKey := ""
+		if len(args) > 4 {
+			gpgKey, _ = args[4].(string)
+		}
+		r, err := sdkyumrepo.Add(id, name, baseURL, gpgCheck, gpgKey)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["yum_repo.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("yum_repo.remove() requires 1 argument (id)")
+		}
+		id, _ := args[0].(string)
+		r, err := sdkyumrepo.Remove(id)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
 }
 
 // toStringMap extracts a map[string]string from args starting at the given index.
@@ -2155,4 +2388,15 @@ func opsBool(v interface{}) bool {
 		return b
 	}
 	return false
+}
+
+// opsFloat extracts a float64 from an interface{} value at the given index.
+func opsFloat(args []interface{}, idx int) float64 {
+	if idx >= len(args) {
+		return 0
+	}
+	if f, ok := args[idx].(float64); ok {
+		return f
+	}
+	return 0
 }

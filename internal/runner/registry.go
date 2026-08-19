@@ -7,6 +7,7 @@ import (
 
 	"github.com/opslang/opslang/internal/ast"
 	"github.com/opslang/opslang/internal/opsspec"
+	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	opscron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
@@ -18,10 +19,12 @@ import (
 	opsjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
 	sdkkernel "github.com/opslang/opslang/pkg/ops-core-sdk/kernel"
 	sdklocale "github.com/opslang/opslang/pkg/ops-core-sdk/locale"
+	sdklogrotate "github.com/opslang/opslang/pkg/ops-core-sdk/logrotate"
 	opsnet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
 	sdkpip "github.com/opslang/opslang/pkg/ops-core-sdk/pip"
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/process"
+	sdkresolv "github.com/opslang/opslang/pkg/ops-core-sdk/resolv"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/service"
 	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/sys"
@@ -29,6 +32,7 @@ import (
 	optime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
 	opsuser "github.com/opslang/opslang/pkg/ops-core-sdk/user"
 	opsyaml "github.com/opslang/opslang/pkg/ops-core-sdk/yaml"
+	sdkyumrepo "github.com/opslang/opslang/pkg/ops-core-sdk/yum_repo"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -1232,6 +1236,146 @@ func (r *Registry) registerExtensions() {
 			return nil, fmt.Errorf("pip.uninstall: %w", err)
 		}
 		return sdkpip.Uninstall(name)
+	})
+
+	// ── apt_repo.* ──────────────────────────────────────────────────────
+	r.Register("apt_repo.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkaptrepo.List()
+	})
+	r.Register("apt_repo.exists", func(args map[string]interface{}) (interface{}, error) {
+		uri, err := argString(args, "uri")
+		if err != nil {
+			return nil, fmt.Errorf("apt_repo.exists: %w", err)
+		}
+		return sdkaptrepo.Exists(uri)
+	})
+	r.Register("apt_repo.add", func(args map[string]interface{}) (interface{}, error) {
+		uri, err := argString(args, "uri")
+		if err != nil {
+			return nil, fmt.Errorf("apt_repo.add: %w", err)
+		}
+		dist, _ := args["dist"].(string)
+		comps, _ := args["components"].(string)
+		return sdkaptrepo.Add(uri, dist, comps)
+	})
+	r.Register("apt_repo.remove", func(args map[string]interface{}) (interface{}, error) {
+		uri, err := argString(args, "uri")
+		if err != nil {
+			return nil, fmt.Errorf("apt_repo.remove: %w", err)
+		}
+		return sdkaptrepo.Remove(uri)
+	})
+	r.Register("apt_repo.update", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkaptrepo.Update()
+	})
+
+	// ── logrotate.* ─────────────────────────────────────────────────────
+	r.Register("logrotate.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdklogrotate.List()
+	})
+	r.Register("logrotate.get", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("logrotate.get: %w", err)
+		}
+		return sdklogrotate.Get(name)
+	})
+	r.Register("logrotate.set", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("logrotate.set: %w", err)
+		}
+		pattern, _ := args["pattern"].(string)
+		freq, _ := args["frequency"].(string)
+		rotate := 7
+		if v, ok := args["rotate"].(float64); ok {
+			rotate = int(v)
+		}
+		compress := getBoolArg(args, "compress", false)
+		postRotate, _ := args["post_rotate"].(string)
+		return sdklogrotate.Set(name, pattern, freq, rotate, compress, postRotate)
+	})
+	r.Register("logrotate.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("logrotate.remove: %w", err)
+		}
+		return sdklogrotate.Remove(name)
+	})
+
+	// ── resolv.* ────────────────────────────────────────────────────────
+	r.Register("resolv.get", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkresolv.Get()
+	})
+	r.Register("resolv.set", func(args map[string]interface{}) (interface{}, error) {
+		var nameservers, search, options []string
+		if ns, ok := args["nameservers"].([]interface{}); ok {
+			for _, v := range ns {
+				if s, ok := v.(string); ok {
+					nameservers = append(nameservers, s)
+				}
+			}
+		}
+		if s, ok := args["search"].([]interface{}); ok {
+			for _, v := range s {
+				if str, ok := v.(string); ok {
+					search = append(search, str)
+				}
+			}
+		}
+		if o, ok := args["options"].([]interface{}); ok {
+			for _, v := range o {
+				if str, ok := v.(string); ok {
+					options = append(options, str)
+				}
+			}
+		}
+		domain, _ := args["domain"].(string)
+		return sdkresolv.Set(nameservers, search, options, domain)
+	})
+	r.Register("resolv.add_nameserver", func(args map[string]interface{}) (interface{}, error) {
+		ns, err := argString(args, "nameserver")
+		if err != nil {
+			return nil, fmt.Errorf("resolv.add_nameserver: %w", err)
+		}
+		return sdkresolv.AddNameserver(ns)
+	})
+	r.Register("resolv.remove_nameserver", func(args map[string]interface{}) (interface{}, error) {
+		ns, err := argString(args, "nameserver")
+		if err != nil {
+			return nil, fmt.Errorf("resolv.remove_nameserver: %w", err)
+		}
+		return sdkresolv.RemoveNameserver(ns)
+	})
+
+	// ── yum_repo.* ──────────────────────────────────────────────────────
+	r.Register("yum_repo.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkyumrepo.List()
+	})
+	r.Register("yum_repo.exists", func(args map[string]interface{}) (interface{}, error) {
+		id, err := argString(args, "id")
+		if err != nil {
+			return nil, fmt.Errorf("yum_repo.exists: %w", err)
+		}
+		return sdkyumrepo.Exists(id)
+	})
+	r.Register("yum_repo.add", func(args map[string]interface{}) (interface{}, error) {
+		id, err := argString(args, "id")
+		if err != nil {
+			return nil, fmt.Errorf("yum_repo.add: %w", err)
+		}
+		name, _ := args["name"].(string)
+		baseURL, _ := args["base_url"].(string)
+		gpgCheck := getBoolArg(args, "gpg_check", false)
+		gpgKey, _ := args["gpg_key"].(string)
+		return sdkyumrepo.Add(id, name, baseURL, gpgCheck, gpgKey)
+	})
+	r.Register("yum_repo.remove", func(args map[string]interface{}) (interface{}, error) {
+		id, err := argString(args, "id")
+		if err != nil {
+			return nil, fmt.Errorf("yum_repo.remove: %w", err)
+		}
+		return sdkyumrepo.Remove(id)
 	})
 }
 

@@ -50,6 +50,13 @@ var Funcs = []Func{
 	{Name: "archive.create", Args: []string{"dest", "sources"}, Mutating: true},
 	{Name: "archive.extract", Args: []string{"src", "dest"}, Mutating: true},
 
+	// ── apt_repo ──────────────────────────────────────────────────────
+	{Name: "apt_repo.list"},
+	{Name: "apt_repo.exists", Args: []string{"uri"}},
+	{Name: "apt_repo.add", Args: []string{"uri", "dist", "components"}, Mutating: true},
+	{Name: "apt_repo.remove", Args: []string{"uri"}, Mutating: true},
+	{Name: "apt_repo.update", Mutating: true},
+
 	// ── disk ──────────────────────────────────────────────────────────
 	{Name: "disk.filesystem", Args: []string{"device", "fs_type"}, Mutating: true},
 	{Name: "disk.part_list", Args: []string{"device"}},
@@ -125,6 +132,12 @@ var Funcs = []Func{
 	{Name: "locale.available"},
 	{Name: "locale.set", Args: []string{"locale"}, Mutating: true},
 
+	// ── logrotate ─────────────────────────────────────────────────────
+	{Name: "logrotate.list"},
+	{Name: "logrotate.get", Args: []string{"name"}},
+	{Name: "logrotate.set", Args: []string{"name", "pattern", "frequency", "rotate", "compress", "post_rotate"}, Mutating: true},
+	{Name: "logrotate.remove", Args: []string{"name"}, Mutating: true},
+
 	// ── net ───────────────────────────────────────────────────────────
 	{Name: "net.dns_lookup", Args: []string{"host"}},
 	{Name: "net.download", Args: []string{"url", "dest", "checksum_algo", "checksum_expected"}, Mutating: true},
@@ -156,6 +169,12 @@ var Funcs = []Func{
 	{Name: "process.find_by_port", Args: []string{"port"}},
 	{Name: "process.kill", Args: []string{"pid", "signal"}, Mutating: true},
 	{Name: "process.list"},
+
+	// ── resolv ────────────────────────────────────────────────────────
+	{Name: "resolv.get"},
+	{Name: "resolv.set", Args: []string{"nameservers", "search", "options", "domain"}, Mutating: true},
+	{Name: "resolv.add_nameserver", Args: []string{"nameserver"}, Mutating: true},
+	{Name: "resolv.remove_nameserver", Args: []string{"nameserver"}, Mutating: true},
 
 	// ── service ───────────────────────────────────────────────────────
 	{Name: "service.disable", Args: []string{"name"}, Mutating: true},
@@ -215,6 +234,12 @@ var Funcs = []Func{
 	// ── yaml ──────────────────────────────────────────────────────────
 	{Name: "yaml.decode", Args: []string{"input"}},
 	{Name: "yaml.encode", Args: []string{"value"}},
+
+	// ── yum_repo ──────────────────────────────────────────────────────
+	{Name: "yum_repo.list"},
+	{Name: "yum_repo.exists", Args: []string{"id"}},
+	{Name: "yum_repo.add", Args: []string{"id", "name", "base_url", "gpg_check", "gpg_key"}, Mutating: true},
+	{Name: "yum_repo.remove", Args: []string{"id"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

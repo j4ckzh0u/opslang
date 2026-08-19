@@ -174,6 +174,31 @@ var sdkMapping = map[string]sdkFunc{
 	"pip.install":  {pkg: "pip", goName: "Install", args: true, params: []string{"s", "s"}},
 	"pip.uninstall": {pkg: "pip", goName: "Uninstall", args: true, params: []string{"s"}},
 
+	// apt_repo
+	"apt_repo.list":   {pkg: "apt_repo", goName: "List"},
+	"apt_repo.exists": {pkg: "apt_repo", goName: "Exists", args: true, params: []string{"s"}},
+	"apt_repo.add":    {pkg: "apt_repo", goName: "Add", args: true, params: []string{"s", "s", "s"}},
+	"apt_repo.remove": {pkg: "apt_repo", goName: "Remove", args: true, params: []string{"s"}},
+	"apt_repo.update": {pkg: "apt_repo", goName: "Update"},
+
+	// logrotate
+	"logrotate.list":   {pkg: "logrotate", goName: "List"},
+	"logrotate.get":    {pkg: "logrotate", goName: "Get", args: true, params: []string{"s"}},
+	"logrotate.set":    {pkg: "logrotate", goName: "Set", args: true, params: []string{"s", "s", "s", "i", "b", "s"}},
+	"logrotate.remove": {pkg: "logrotate", goName: "Remove", args: true, params: []string{"s"}},
+
+	// resolv
+	"resolv.get":              {pkg: "resolv", goName: "Get"},
+	"resolv.set":              {pkg: "resolv", goName: "Set", args: true, params: []string{"l", "l", "l", "s"}},
+	"resolv.add_nameserver":   {pkg: "resolv", goName: "AddNameserver", args: true, params: []string{"s"}},
+	"resolv.remove_nameserver": {pkg: "resolv", goName: "RemoveNameserver", args: true, params: []string{"s"}},
+
+	// yum_repo
+	"yum_repo.list":   {pkg: "yum_repo", goName: "List"},
+	"yum_repo.exists": {pkg: "yum_repo", goName: "Exists", args: true, params: []string{"s"}},
+	"yum_repo.add":    {pkg: "yum_repo", goName: "Add", args: true, params: []string{"s", "s", "s", "b", "s"}},
+	"yum_repo.remove": {pkg: "yum_repo", goName: "Remove", args: true, params: []string{"s"}},
+
 	// file extensions
 	"file.find":        {pkg: "file", goName: "FindFromArgs", args: true, params: []string{"l", "l", "s", "s", "i", "i64", "i64"}},
 	"file.replace":     {pkg: "file", goName: "Replace", args: true, params: []string{"s", "s", "s", "s", "s"}},
