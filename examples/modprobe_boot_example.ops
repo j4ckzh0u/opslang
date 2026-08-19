@@ -1,20 +1,24 @@
 privilege: admin
 // modprobe.set_boot 示例 - 内核模块开机加载持久化
 // modprobe.set_boot example - Kernel module boot persistence
+// 需要 root 权限 - Requires root privileges
+
+// 演示 modprobe.set_boot 功能（注释掉，避免 CI 测试时执行）
+// Demonstrating modprobe.set_boot capabilities (commented out for CI)
 
 // 确保 ip_vs 模块在开机时加载
-let result = modprobe.set_boot("ip_vs", true)
-report {
-    changed: result.changed,
-    message: result.message
-}
+// let result = modprobe.set_boot("ip_vs", true)
+// report {
+//     changed: result.changed,
+//     message: result.message
+// }
 
 // 确保 br_netfilter 模块在开机时加载
-let result2 = modprobe.set_boot("br_netfilter", true)
-report {
-    changed: result2.changed,
-    message: result2.message
-}
+// let result2 = modprobe.set_boot("br_netfilter", true)
+// report {
+//     changed: result2.changed,
+//     message: result2.message
+// }
 
 // 移除模块的开机加载配置
 // let removed = modprobe.set_boot("ip_vs", false)
@@ -22,3 +26,14 @@ report {
 //     changed: removed.changed,
 //     message: removed.message
 // }
+
+report {
+    module: "modprobe",
+    function: "set_boot",
+    description: "Persist kernel module loading at boot via /etc/modules-load.d/",
+    requires_root: true,
+    functions: [
+        "modprobe.set_boot(name, present) - Ensure module loads at boot",
+        "modprobe.set_boot(name, false) - Remove boot persistence"
+    ]
+}
