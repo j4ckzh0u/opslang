@@ -27,7 +27,15 @@ func Port(host string, port int, timeoutMs int) (*Result, error) {
 	start := time.Now()
 
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("tcp", target, 2*time.Second)
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			break
+		}
+		dialTimeout := 2 * time.Second
+		if dialTimeout > remaining {
+			dialTimeout = remaining
+		}
+		conn, err := net.DialTimeout("tcp", target, dialTimeout)
 		if err == nil {
 			conn.Close()
 			return &Result{
@@ -37,7 +45,11 @@ func Port(host string, port int, timeoutMs int) (*Result, error) {
 				Message:   fmt.Sprintf("Port %s is open", target),
 			}, nil
 		}
-		time.Sleep(500 * time.Millisecond)
+		sleepDur := 500 * time.Millisecond
+		if sleepDur > time.Until(deadline) {
+			break
+		}
+		time.Sleep(sleepDur)
 	}
 
 	return &Result{
@@ -65,7 +77,11 @@ func File(path string, timeoutMs int) (*Result, error) {
 				Message:   fmt.Sprintf("File %s exists", path),
 			}, nil
 		}
-		time.Sleep(500 * time.Millisecond)
+		sleepDur := 500 * time.Millisecond
+		if sleepDur > time.Until(deadline) {
+			break
+		}
+		time.Sleep(sleepDur)
 	}
 
 	return &Result{
@@ -83,9 +99,17 @@ func URL(url string, timeoutMs int) (*Result, error) {
 	}
 	deadline := time.Now().Add(time.Duration(timeoutMs) * time.Millisecond)
 	start := time.Now()
-	client := &http.Client{Timeout: 3 * time.Second}
 
 	for time.Now().Before(deadline) {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			break
+		}
+		httpTimeout := 3 * time.Second
+		if httpTimeout > remaining {
+			httpTimeout = remaining
+		}
+		client := &http.Client{Timeout: httpTimeout}
 		resp, err := client.Get(url)
 		if err == nil {
 			resp.Body.Close()
@@ -98,7 +122,11 @@ func URL(url string, timeoutMs int) (*Result, error) {
 				}, nil
 			}
 		}
-		time.Sleep(1 * time.Second)
+		sleepDur := 1 * time.Second
+		if sleepDur > time.Until(deadline) {
+			break
+		}
+		time.Sleep(sleepDur)
 	}
 
 	return &Result{

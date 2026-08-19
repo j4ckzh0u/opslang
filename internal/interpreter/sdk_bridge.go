@@ -130,6 +130,10 @@ import (
 	sdkdmsetup "github.com/opslang/opslang/pkg/ops-core-sdk/dmsetup"
 	sdklvm_enhanced "github.com/opslang/opslang/pkg/ops-core-sdk/lvm_enhanced"
 	sdkpuppet "github.com/opslang/opslang/pkg/ops-core-sdk/puppet"
+	sdkyarn "github.com/opslang/opslang/pkg/ops-core-sdk/yarn"
+	sdkhtpasswd "github.com/opslang/opslang/pkg/ops-core-sdk/htpasswd"
+	sdksudoers "github.com/opslang/opslang/pkg/ops-core-sdk/sudoers"
+	sdkmonit "github.com/opslang/opslang/pkg/ops-core-sdk/monit"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -6316,6 +6320,254 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			}
 		}
 		return sdksupervisor.Update(name), nil
+	}
+
+	// ── pip.freeze / pip.install_requirements ──────────────────────────
+	interp.builtins["pip.freeze"] = func(args ...interface{}) (interface{}, error) {
+		return sdkpip.Freeze()
+	}
+	interp.builtins["pip.install_requirements"] = func(args ...interface{}) (interface{}, error) {
+		req := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				req = s
+			}
+		}
+		return sdkpip.InstallRequirements(req)
+	}
+
+	// ── flatpak.add_remote ─────────────────────────────────────────────
+	interp.builtins["flatpak.add_remote"] = func(args ...interface{}) (interface{}, error) {
+		name, url := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				name = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				url = s
+			}
+		}
+		return sdkflatpak.AddRemote(name, url)
+	}
+
+	// ── yarn ───────────────────────────────────────────────────────────
+	interp.builtins["yarn.install"] = func(args ...interface{}) (interface{}, error) {
+		name, ver := "", ""
+		global := false
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				name = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				ver = s
+			}
+		}
+		if len(args) > 2 {
+			global, _ = args[2].(bool)
+		}
+		return sdkyarn.Install(name, ver, global), nil
+	}
+	interp.builtins["yarn.remove"] = func(args ...interface{}) (interface{}, error) {
+		name := ""
+		global := false
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				name = s
+			}
+		}
+		if len(args) > 1 {
+			global, _ = args[1].(bool)
+		}
+		return sdkyarn.Remove(name, global), nil
+	}
+	interp.builtins["yarn.global"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				dir = s
+			}
+		}
+		return sdkyarn.Global(dir), nil
+	}
+	interp.builtins["yarn.list"] = func(args ...interface{}) (interface{}, error) {
+		global := false
+		if len(args) > 0 {
+			global, _ = args[0].(bool)
+		}
+		return sdkyarn.List(global), nil
+	}
+
+	// ── htpasswd ───────────────────────────────────────────────────────
+	interp.builtins["htpasswd.set"] = func(args ...interface{}) (interface{}, error) {
+		path, username, password := "", "", ""
+		create := false
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				path = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				username = s
+			}
+		}
+		if len(args) > 2 {
+			if s, ok := args[2].(string); ok {
+				password = s
+			}
+		}
+		if len(args) > 3 {
+			create, _ = args[3].(bool)
+		}
+		return sdkhtpasswd.Set(path, username, password, create), nil
+	}
+	interp.builtins["htpasswd.remove"] = func(args ...interface{}) (interface{}, error) {
+		path, username := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				path = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				username = s
+			}
+		}
+		return sdkhtpasswd.Remove(path, username), nil
+	}
+	interp.builtins["htpasswd.info"] = func(args ...interface{}) (interface{}, error) {
+		path := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				path = s
+			}
+		}
+		return sdkhtpasswd.Info(path), nil
+	}
+	interp.builtins["htpasswd.hash_sha1"] = func(args ...interface{}) (interface{}, error) {
+		password := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				password = s
+			}
+		}
+		return sdkhtpasswd.HashSHA1(password), nil
+	}
+
+	// ── sudoers ────────────────────────────────────────────────────────
+	interp.builtins["sudoers.set"] = func(args ...interface{}) (interface{}, error) {
+		name, user, commands := "", "", ""
+		nopasswd := false
+		dir := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				name = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				user = s
+			}
+		}
+		if len(args) > 2 {
+			if s, ok := args[2].(string); ok {
+				commands = s
+			}
+		}
+		if len(args) > 3 {
+			nopasswd, _ = args[3].(bool)
+		}
+		if len(args) > 4 {
+			if s, ok := args[4].(string); ok {
+				dir = s
+			}
+		}
+		return sdksudoers.Set(name, user, commands, nopasswd, dir), nil
+	}
+	interp.builtins["sudoers.remove"] = func(args ...interface{}) (interface{}, error) {
+		name, dir := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				name = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				dir = s
+			}
+		}
+		return sdksudoers.Remove(name, dir), nil
+	}
+	interp.builtins["sudoers.info"] = func(args ...interface{}) (interface{}, error) {
+		name, dir := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				name = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				dir = s
+			}
+		}
+		return sdksudoers.Info(name, dir), nil
+	}
+
+	// ── monit ──────────────────────────────────────────────────────────
+	interp.builtins["monit.start"] = func(args ...interface{}) (interface{}, error) {
+		svc := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				svc = s
+			}
+		}
+		return sdkmonit.Start(svc), nil
+	}
+	interp.builtins["monit.stop"] = func(args ...interface{}) (interface{}, error) {
+		svc := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				svc = s
+			}
+		}
+		return sdkmonit.Stop(svc), nil
+	}
+	interp.builtins["monit.monitor"] = func(args ...interface{}) (interface{}, error) {
+		svc := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				svc = s
+			}
+		}
+		return sdkmonit.Monitor(svc), nil
+	}
+	interp.builtins["monit.unmonitor"] = func(args ...interface{}) (interface{}, error) {
+		svc := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				svc = s
+			}
+		}
+		return sdkmonit.Unmonitor(svc), nil
+	}
+	interp.builtins["monit.restart"] = func(args ...interface{}) (interface{}, error) {
+		svc := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				svc = s
+			}
+		}
+		return sdkmonit.Restart(svc), nil
+	}
+	interp.builtins["monit.status"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmonit.Status(), nil
+	}
+	interp.builtins["monit.reload"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmonit.Reload(), nil
 	}
 
 	// ── smartctl ──────────────────────────────────────────────────────────

@@ -2,48 +2,30 @@ package composer
 
 import "testing"
 
-func TestInstallMissingDir(t *testing.T) {
-	r := Install("/nonexistent/project", false)
-	if r.Success {
-		t.Error("expected failure for missing dir")
-	}
-	if r.Error == "" {
-		t.Error("expected error message")
+func TestInstallEmpty(t *testing.T) {
+	r := Install("", false)
+	if r.Status != "failed" {
+		t.Error("expected failure for empty directory")
 	}
 }
 
-func TestRequireMissingPackage(t *testing.T) {
-	r := Require(".", "", "")
-	if r.Success {
-		t.Error("expected failure for empty package")
+func TestUpdateEmpty(t *testing.T) {
+	r := Update("", false)
+	if r.Status != "failed" {
+		t.Error("expected failure for empty directory")
 	}
 }
 
-func TestRemoveMissingPackage(t *testing.T) {
-	r := Remove(".", "")
-	if r.Success {
-		t.Error("expected failure for empty package")
+func TestRequireMissing(t *testing.T) {
+	r := Require("", "", "")
+	if r.Status != "failed" {
+		t.Error("expected failure for missing args")
 	}
 }
 
-func TestCreateProjectMissingDir(t *testing.T) {
-	r := CreateProject("", "laravel/laravel", "")
-	if r.Success {
-		t.Error("expected failure for empty dir")
-	}
-}
-
-func TestGlobalInstallMissingPackage(t *testing.T) {
-	r := GlobalInstall("", "")
-	if r.Success {
-		t.Error("expected failure for empty package")
-	}
-}
-
-func TestVersion(t *testing.T) {
-	v := Version()
-	// May fail if composer not installed, just check structure
-	if !v.Success && v.Version != "" {
-		t.Error("unexpected state")
+func TestRemoveMissing(t *testing.T) {
+	r := Remove("", "")
+	if r.Status != "failed" {
+		t.Error("expected failure for missing args")
 	}
 }

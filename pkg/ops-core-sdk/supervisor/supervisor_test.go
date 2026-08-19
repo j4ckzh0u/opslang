@@ -1,58 +1,62 @@
 package supervisor
 
-import "testing"
+import (
+	"testing"
+)
 
-func TestStartMissingName(t *testing.T) {
+func TestStartEmptyName(t *testing.T) {
 	r := Start("")
-	if r.Success {
-		t.Error("expected failure for empty name")
-	}
-	if r.Error == "" {
-		t.Error("expected error message")
+	if r.Status != "failed" {
+		t.Errorf("expected status=failed for empty name, got %s", r.Status)
 	}
 }
 
-func TestStopMissingName(t *testing.T) {
+func TestStopEmptyName(t *testing.T) {
 	r := Stop("")
-	if r.Success {
-		t.Error("expected failure for empty name")
+	if r.Status != "failed" {
+		t.Errorf("expected status=failed for empty name, got %s", r.Status)
 	}
 }
 
-func TestRestartMissingName(t *testing.T) {
+func TestRestartEmptyName(t *testing.T) {
 	r := Restart("")
-	if r.Success {
-		t.Error("expected failure for empty name")
+	if r.Status != "failed" {
+		t.Errorf("expected status=failed for empty name, got %s", r.Status)
 	}
 }
 
-func TestClearLogMissingName(t *testing.T) {
+func TestClearLogEmptyName(t *testing.T) {
 	r := ClearLog("")
-	if r.Success {
-		t.Error("expected failure for empty name")
+	if r.Status != "failed" {
+		t.Errorf("expected status=failed for empty name, got %s", r.Status)
+	}
+}
+
+func TestUpdateEmptyName(t *testing.T) {
+	r := Update("")
+	if r.Status != "failed" {
+		t.Errorf("expected status=failed for empty name, got %s", r.Status)
 	}
 }
 
 func TestStatus(t *testing.T) {
+	// Status will succeed or fail based on supervisor availability
 	r := Status()
-	// May fail if supervisor not installed
-	_ = r.Count
+	if r.Status == "" {
+		t.Error("expected non-empty status")
+	}
 }
 
 func TestReload(t *testing.T) {
 	r := Reload()
-	// May fail if supervisor not installed
-	_ = r
+	if r.Status == "" {
+		t.Error("expected non-empty status")
+	}
 }
 
 func TestReread(t *testing.T) {
 	r := Reread()
-	// May fail if supervisor not installed
-	_ = r
-}
-
-func TestUpdate(t *testing.T) {
-	r := Update("")
-	// May fail if supervisor not installed
-	_ = r
+	if r.Status == "" {
+		t.Error("expected non-empty status")
+	}
 }

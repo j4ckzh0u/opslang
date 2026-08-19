@@ -1,10 +1,8 @@
 // process_monitor.ops - Monitor running processes
-// Demonstrates: process.find_by_name(), process.exec(), sys.cpu.usage(), sys.memory.info()
+// Demonstrates: process.list(), sys.cpu.usage(), sys.memory.info()
 // Uses real process data - works on both macOS and Linux
-// Note: process.find_by_name() is called sparingly as it enumerates all processes internally
-// Usage: opsctl run examples/process_monitor.ops
+privilege: read_only
 
-privilege: admin
 print("=== Process Monitor ===")
 
 let hostname = sys.hostname()
@@ -13,58 +11,14 @@ let mem = sys.memory.info()
 
 print("Host: " + hostname.hostname)
 print("System CPU: " + str(int(cpu.percent)) + "% | Memory: " + str(int(mem.used_percent)) + "%")
+
+// Process count from process.list()
 print("")
+print("--- Process Count ---")
+let procs = process.list()
+print("  Total processes: " + str(len(procs)))
 
-// 1. Use process.exec to get process count (cross-platform)
-print("--- Process Listing (via ps) ---")
-let ps_result = process.exec("ps", "aux")
-if ps_result.exit_code == 0 {
-    // Output is large, just report the exit code and size
-    let output_len = len(ps_result.stdout)
-    print("  ps aux returned " + str(output_len) + " chars (exit code: " + str(ps_result.exit_code) + ")")
-    // Show stderr if any
-    if len(ps_result.stderr) > 0 {
-        print("  stderr: " + ps_result.stderr)
-    }
-} else {
-    print("  ps aux failed with exit code: " + str(ps_result.exit_code))
-}
-
-// 2. Check for a specific process using find_by_name
-// We only call this once since each call enumerates all processes
-print("")
-print("--- Process Detection ---")
-
-// Try to find the init process (platform-dependent)
-let init_name = "launchd"
-let init_procs = process.find_by_name(init_name)
-if len(init_procs) > 0 {
-    let p = init_procs[0]
-    print("  [FOUND] " + init_name + " - PID: " + str(p.pid) + " Status: " + p.status + " User: " + p.username)
-} else {
-    // Try systemd on Linux
-    init_name = "systemd"
-    let init_procs2 = process.find_by_name(init_name)
-    if len(init_procs2) > 0 {
-        let p = init_procs2[0]
-        print("  [FOUND] " + init_name + " - PID: " + str(p.pid) + " Status: " + p.status + " User: " + p.username)
-    } else {
-        print("  Init process not found (launchd/systemd)")
-    }
-}
-
-// 3. Check for the opsctl process itself
-print("")
-print("--- Self-Detection ---")
-let self_procs = process.find_by_name("opsctl")
-if len(self_procs) > 0 {
-    let self_p = self_procs[0]
-    print("  opsctl running - PID: " + str(self_p.pid) + " Status: " + self_p.status + " CPU: " + str(int(self_p.cpu_percent)) + "%")
-} else {
-    print("  opsctl not found in process list (may have already exited)")
-}
-
-// 4. System resource summary
+// System resource summary
 print("")
 print("--- Resource Summary ---")
 let cpucount = sys.cpu.count()
@@ -91,6 +45,7 @@ report {
     host: hostname.hostname,
     cpu_percent: cpu.percent,
     memory_percent: mem.used_percent,
+    process_count: len(procs),
     load1: load.load1,
     load5: load.load5,
     load15: load.load15,

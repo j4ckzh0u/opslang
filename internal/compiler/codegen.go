@@ -948,6 +948,29 @@ var sdkMapping = map[string]sdkFunc{
 	"puppet.fact":           {pkg: "puppet", goName: "Fact", args: true, params: []string{"s"}},
 	"puppet.module_list":    {pkg: "puppet", goName: "ModuleList"},
 	"puppet.module_install": {pkg: "puppet", goName: "ModuleInstall", args: true, params: []string{"s", "s"}},
+
+	// new functions
+	"pip.freeze":              {pkg: "pip", goName: "Freeze", args: true, params: []string{"s"}},
+	"pip.install_requirements": {pkg: "pip", goName: "InstallRequirements", args: true, params: []string{"s", "s"}},
+	"flatpak.add_remote":      {pkg: "flatpak", goName: "AddRemote", args: true, params: []string{"s", "s"}},
+	"yarn.install":            {pkg: "yarn", goName: "Install", args: true, params: []string{"s", "s", "b"}},
+	"yarn.remove":             {pkg: "yarn", goName: "Remove", args: true, params: []string{"s", "b"}},
+	"yarn.global":             {pkg: "yarn", goName: "Global", args: true, params: []string{"s"}},
+	"yarn.list":               {pkg: "yarn", goName: "List", args: true, params: []string{"b"}},
+	"htpasswd.set":            {pkg: "htpasswd", goName: "Set", args: true, params: []string{"s", "s", "s", "b"}},
+	"htpasswd.remove":         {pkg: "htpasswd", goName: "Remove", args: true, params: []string{"s", "s"}},
+	"htpasswd.info":           {pkg: "htpasswd", goName: "Info", args: true, params: []string{"s"}},
+	"htpasswd.hash_sha1":      {pkg: "htpasswd", goName: "HashSHA1", args: true, params: []string{"s"}},
+	"sudoers.set":             {pkg: "sudoers", goName: "Set", args: true, params: []string{"s", "s", "s", "b", "s"}},
+	"sudoers.remove":          {pkg: "sudoers", goName: "Remove", args: true, params: []string{"s", "s"}},
+	"sudoers.info":            {pkg: "sudoers", goName: "Info", args: true, params: []string{"s", "s"}},
+	"monit.start":             {pkg: "monit", goName: "Start", args: true, params: []string{"s"}},
+	"monit.stop":              {pkg: "monit", goName: "Stop", args: true, params: []string{"s"}},
+	"monit.monitor":           {pkg: "monit", goName: "Monitor", args: true, params: []string{"s"}},
+	"monit.unmonitor":         {pkg: "monit", goName: "Unmonitor", args: true, params: []string{"s"}},
+	"monit.restart":           {pkg: "monit", goName: "Restart", args: true, params: []string{"s"}},
+	"monit.status":            {pkg: "monit", goName: "Status"},
+	"monit.reload":            {pkg: "monit", goName: "Reload"},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1132,6 +1155,10 @@ var pkgImportAlias = map[string]string{
 	"dmsetup":        "opsdmsetup",
 	"lvm_enhanced":   "opslvm_enhanced",
 	"puppet":         "opspuppet",
+	"yarn":           "opsyarn",
+	"htpasswd":       "opshtpasswd",
+	"sudoers":        "opssudoers",
+	"monit":          "opsmonit",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1242,6 +1269,10 @@ var pkgImportPath = map[string]string{
 	"dmsetup":        "github.com/opslang/opslang/pkg/ops-core-sdk/dmsetup",
 	"lvm_enhanced":   "github.com/opslang/opslang/pkg/ops-core-sdk/lvm_enhanced",
 	"puppet":         "github.com/opslang/opslang/pkg/ops-core-sdk/puppet",
+	"yarn":           "github.com/opslang/opslang/pkg/ops-core-sdk/yarn",
+	"htpasswd":       "github.com/opslang/opslang/pkg/ops-core-sdk/htpasswd",
+	"sudoers":        "github.com/opslang/opslang/pkg/ops-core-sdk/sudoers",
+	"monit":          "github.com/opslang/opslang/pkg/ops-core-sdk/monit",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

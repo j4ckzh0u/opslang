@@ -1,258 +1,182 @@
-// Package snap provides Snap package management operations.
+// Package snap manages snap packages.
+// Equivalent to community.general.snap module.
 package snap
 
 import (
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
 )
 
-// ActionResult represents the result of a snap operation.
-type ActionResult struct {
-	Name    string `json:"name"`
-	Channel string `json:"channel,omitempty"`
+// Result is returned by all functions.
+type Result struct {
+	Status  string `json:"status"`
 	Changed bool   `json:"changed"`
-	Success bool   `json:"success"`
+	Package string `json:"package,omitempty"`
+	Channel string `json:"channel,omitempty"`
+	Output  string `json:"output,omitempty"`
 	Error   string `json:"error,omitempty"`
 }
 
-// SnapInfo represents information about a snap package.
-type SnapInfo struct {
-	Name        string `json:"name"`
-	Version     string `json:"version"`
-	Rev         string `json:"rev"`
-	Tracking    string `json:"tracking"`
-	Publisher   string `json:"publisher"`
-	Contact     string `json:"contact,omitempty"`
-	Summary     string `json:"summary"`
-	Notes       string `json:"notes"`
-}
-
-// ListResult represents the result of listing snaps.
+// ListResult is returned by List.
 type ListResult struct {
-	Snaps []SnapInfo `json:"snaps"`
+	Status string   `json:"status"`
+	Snaps  []string `json:"snaps"`
+	Error  string   `json:"error,omitempty"`
 }
 
 // Install installs a snap package.
-func Install(name string, channel string, classic bool) (ActionResult, error) {
+func Install(name string, channel string, classic bool) (Result, error) {
 	if name == "" {
-		return ActionResult{}, fmt.Errorf("snap name is required")
+		return Result{Status: "failed", Error: "name is required"}, fmt.Errorf("name is required")
 	}
 
-	args := []string{"install", "--yes"}
+	args := []string{"install", name}
+	if channel != "" {
+		args = append(args, "--channel="+channel)
+	}
 	if classic {
 		args = append(args, "--classic")
 	}
-	if channel != "" {
-		args = append(args, "--channel", channel)
-	}
-	args = append(args, name)
 
-	out, err := exec.Command("snap", args...).CombinedOutput()
+	cmd := exec.Command("snap", args...)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return ActionResult{Name: name, Success: false, Error: string(out)}, fmt.Errorf("snap install failed: %w (output: %s)", err, string(out))
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("snap install: %v", err)}, err
 	}
-
-	return ActionResult{Name: name, Channel: channel, Changed: true, Success: true}, nil
+	return Result{Status: "success", Changed: true, Package: name, Channel: channel, Output: output}, nil
 }
 
 // Remove removes a snap package.
-func Remove(name string) (ActionResult, error) {
+func Remove(name string) (Result, error) {
 	if name == "" {
-		return ActionResult{}, fmt.Errorf("snap name is required")
+		return Result{Status: "failed", Error: "name is required"}, fmt.Errorf("name is required")
 	}
 
-	out, err := exec.Command("snap", "remove", name).CombinedOutput()
+	cmd := exec.Command("snap", "remove", name)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return ActionResult{Name: name, Success: false, Error: string(out)}, fmt.Errorf("snap remove failed: %w (output: %s)", err, string(out))
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("snap remove: %v", err)}, err
 	}
-
-	return ActionResult{Name: name, Changed: true, Success: true}, nil
+	return Result{Status: "success", Changed: true, Package: name, Output: output}, nil
 }
 
-// Refresh refreshes a snap package.
-func Refresh(name string, channel string) (ActionResult, error) {
+// Refresh updates a snap package.
+func Refresh(name string, channel string) (Result, error) {
 	if name == "" {
-		return ActionResult{}, fmt.Errorf("snap name is required")
+		return Result{Status: "failed", Error: "name is required"}, fmt.Errorf("name is required")
 	}
 
-	args := []string{"refresh"}
+	args := []string{"refresh", name}
 	if channel != "" {
-		args = append(args, "--channel", channel)
+		args = append(args, "--channel="+channel)
 	}
-	args = append(args, name)
 
-	out, err := exec.Command("snap", args...).CombinedOutput()
+	cmd := exec.Command("snap", args...)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return ActionResult{Name: name, Success: false, Error: string(out)}, fmt.Errorf("snap refresh failed: %w (output: %s)", err, string(out))
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("snap refresh: %v", err)}, err
 	}
-
-	return ActionResult{Name: name, Channel: channel, Changed: true, Success: true}, nil
+	return Result{Status: "success", Changed: true, Package: name, Channel: channel, Output: output}, nil
 }
 
 // List lists installed snaps.
 func List() (ListResult, error) {
-	out, err := exec.Command("snap", "list", "--unicode=never").CombinedOutput()
+	cmd := exec.Command("snap", "list")
+	out, err := cmd.Output()
 	if err != nil {
-		return ListResult{}, fmt.Errorf("snap list failed: %w (output: %s)", err, string(out))
+		return ListResult{Status: "failed", Error: fmt.Sprintf("snap list: %v", err)}, err
 	}
 
-	result := ListResult{Snaps: make([]SnapInfo, 0)}
-	lines := strings.Split(string(out), "\n")
-	// Skip header line
+	snaps := make([]string, 0)
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	for i, line := range lines {
-		if i == 0 || strings.TrimSpace(line) == "" {
+		if i == 0 { // skip header
 			continue
 		}
-		// Parse: Name Version Rev Tracking Publisher Notes
-		fields := strings.Fields(line)
-		if len(fields) >= 5 {
-			snap := SnapInfo{
-				Name:    fields[0],
-				Version: fields[1],
-				Rev:     fields[2],
-			}
-			if len(fields) >= 4 {
-				snap.Tracking = fields[3]
-			}
-			if len(fields) >= 5 {
-				snap.Publisher = fields[4]
-			}
-			if len(fields) >= 7 {
-				snap.Summary = strings.Join(fields[5:len(fields)-1], " ")
-				snap.Notes = fields[len(fields)-1]
-			}
-			result.Snaps = append(result.Snaps, snap)
-		}
-	}
-	return result, nil
-}
-
-// Get gets information about a specific snap.
-func Get(name string) (SnapInfo, error) {
-	if name == "" {
-		return SnapInfo{}, fmt.Errorf("snap name is required")
-	}
-
-	// snap info outputs text, we need to parse it
-	out, err := exec.Command("snap", "info", name).CombinedOutput()
-	if err != nil {
-		return SnapInfo{}, fmt.Errorf("snap info failed: %w (output: %s)", err, string(out))
-	}
-
-	snap := SnapInfo{Name: name}
-	for _, line := range strings.Split(string(out), "\n") {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "name:") {
-			snap.Name = strings.TrimSpace(strings.TrimPrefix(line, "name:"))
-		} else if strings.HasPrefix(line, "version:") {
-			snap.Version = strings.TrimSpace(strings.TrimPrefix(line, "version:"))
-		} else if strings.HasPrefix(line, "rev:") {
-			snap.Rev = strings.TrimSpace(strings.TrimPrefix(line, "rev:"))
-		} else if strings.HasPrefix(line, "tracking:") {
-			snap.Tracking = strings.TrimSpace(strings.TrimPrefix(line, "tracking:"))
-		} else if strings.HasPrefix(line, "publisher:") {
-			snap.Publisher = strings.TrimSpace(strings.TrimPrefix(line, "publisher:"))
-		} else if strings.HasPrefix(line, "contact:") {
-			snap.Contact = strings.TrimSpace(strings.TrimPrefix(line, "contact:"))
-		} else if strings.HasPrefix(line, "summary:") {
-			snap.Summary = strings.TrimSpace(strings.TrimPrefix(line, "summary:"))
+		if line != "" {
+			snaps = append(snaps, line)
 		}
 	}
-	return snap, nil
+	return ListResult{Status: "success", Snaps: snaps}, nil
 }
 
 // Enable enables a snap.
-func Enable(name string) (ActionResult, error) {
+func Enable(name string) (Result, error) {
 	if name == "" {
-		return ActionResult{}, fmt.Errorf("snap name is required")
+		return Result{Status: "failed", Error: "name is required"}, fmt.Errorf("name is required")
 	}
-
-	out, err := exec.Command("snap", "enable", name).CombinedOutput()
+	cmd := exec.Command("snap", "enable", name)
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return ActionResult{Name: name, Success: false, Error: string(out)}, fmt.Errorf("snap enable failed: %w (output: %s)", err, string(out))
+		return Result{Status: "failed", Error: fmt.Sprintf("snap enable: %v: %s", err, strings.TrimSpace(string(out)))}, err
 	}
-
-	return ActionResult{Name: name, Changed: true, Success: true}, nil
+	return Result{Status: "success", Changed: true, Package: name}, nil
 }
 
 // Disable disables a snap.
-func Disable(name string) (ActionResult, error) {
+func Disable(name string) (Result, error) {
 	if name == "" {
-		return ActionResult{}, fmt.Errorf("snap name is required")
+		return Result{Status: "failed", Error: "name is required"}, fmt.Errorf("name is required")
 	}
-
-	out, err := exec.Command("snap", "disable", name).CombinedOutput()
+	cmd := exec.Command("snap", "disable", name)
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return ActionResult{Name: name, Success: false, Error: string(out)}, fmt.Errorf("snap disable failed: %w (output: %s)", err, string(out))
+		return Result{Status: "failed", Error: fmt.Sprintf("snap disable: %v: %s", err, strings.TrimSpace(string(out)))}, err
 	}
+	return Result{Status: "success", Changed: true, Package: name}, nil
+}
 
-	return ActionResult{Name: name, Changed: true, Success: true}, nil
+// Get returns information about a snap.
+func Get(name string) (Result, error) {
+	if name == "" {
+		return Result{Status: "failed", Error: "name is required"}, fmt.Errorf("name is required")
+	}
+	cmd := exec.Command("snap", "info", name)
+	out, err := cmd.Output()
+	if err != nil {
+		return Result{Status: "failed", Error: fmt.Sprintf("snap info: %v", err)}, err
+	}
+	return Result{Status: "success", Package: name, Output: strings.TrimSpace(string(out))}, nil
 }
 
 // Switch switches a snap to a different channel.
-func Switch(name string, channel string) (ActionResult, error) {
+func Switch(name string, channel string) (Result, error) {
 	if name == "" {
-		return ActionResult{}, fmt.Errorf("snap name is required")
+		return Result{Status: "failed", Error: "name is required"}, fmt.Errorf("name is required")
 	}
 	if channel == "" {
-		return ActionResult{}, fmt.Errorf("channel is required")
+		return Result{Status: "failed", Error: "channel is required"}, fmt.Errorf("channel is required")
 	}
-
-	out, err := exec.Command("snap", "switch", "--channel", channel, name).CombinedOutput()
+	cmd := exec.Command("snap", "switch", "--channel="+channel, name)
+	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return ActionResult{Name: name, Success: false, Error: string(out)}, fmt.Errorf("snap switch failed: %w (output: %s)", err, string(out))
+		return Result{Status: "failed", Error: fmt.Sprintf("snap switch: %v: %s", err, strings.TrimSpace(string(out)))}, err
 	}
-
-	return ActionResult{Name: name, Channel: channel, Changed: true, Success: true}, nil
+	return Result{Status: "success", Changed: true, Package: name, Channel: channel}, nil
 }
 
-// Changes lists snap changes.
-type ChangeInfo struct {
-	ID      string `json:"id"`
-	Kind    string `json:"kind"`
-	Summary string `json:"summary"`
-	Status  string `json:"status"`
-}
-
-// ChangesResult represents the result of listing changes.
-type ChangesResult struct {
-	Changes []ChangeInfo `json:"changes"`
-}
-
-// Changes lists recent snap changes.
-func Changes() (ChangesResult, error) {
-	out, err := exec.Command("snap", "changes").CombinedOutput()
+// Changes returns recent snap changes.
+func Changes() (ListResult, error) {
+	cmd := exec.Command("snap", "changes")
+	out, err := cmd.Output()
 	if err != nil {
-		return ChangesResult{}, fmt.Errorf("snap changes failed: %w (output: %s)", err, string(out))
+		return ListResult{Status: "failed", Error: fmt.Sprintf("snap changes: %v", err)}, err
 	}
-
-	result := ChangesResult{Changes: make([]ChangeInfo, 0)}
-	lines := strings.Split(string(out), "\n")
+	changes := make([]string, 0)
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 	for i, line := range lines {
-		if i == 0 || strings.TrimSpace(line) == "" {
+		if i == 0 { // skip header
 			continue
 		}
-		// Parse: Id   Status   Spawn                Ready                Summary
-		fields := strings.Fields(line)
-		if len(fields) >= 5 {
-			change := ChangeInfo{
-				ID:      fields[0],
-				Status:  fields[1],
-				Summary: strings.Join(fields[4:], " "),
-			}
-			result.Changes = append(result.Changes, change)
+		line = strings.TrimSpace(line)
+		if line != "" {
+			changes = append(changes, line)
 		}
 	}
-	return result, nil
-}
-
-// JSON output helper
-func (r ListResult) JSON() (string, error) {
-	data, err := json.Marshal(r)
-	if err != nil {
-		return "", err
-	}
-	return string(data), nil
+	return ListResult{Status: "success", Snaps: changes}, nil
 }

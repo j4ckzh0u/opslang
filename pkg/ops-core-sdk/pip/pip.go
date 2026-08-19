@@ -1,137 +1,116 @@
-// Package pip provides Python package management operations via pip.
+// Package pip manages Python packages via pip.
+// Equivalent to ansible.builtin.pip module.
 package pip
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
 )
 
-// PackageInfo represents a Python package.
-type PackageInfo struct {
-	Name    string `json:"name"`
-	Version string `json:"version"`
-}
-
-// ListResult is returned by List.
-type ListResult struct {
-	Packages []PackageInfo `json:"packages"`
-}
-
-// InstallResult is returned by Install.
-type InstallResult struct {
+// Result is returned by all functions.
+type Result struct {
+	Status  string `json:"status"`
 	Changed bool   `json:"changed"`
-	Error   string `json:"error,omitempty"`
-}
-
-// UninstallResult is returned by Uninstall.
-type UninstallResult struct {
-	Changed bool   `json:"changed"`
-	Error   string `json:"error,omitempty"`
-}
-
-// ExistsResult is returned by Exists.
-type ExistsResult struct {
-	Exists  bool   `json:"exists"`
+	Package string `json:"package,omitempty"`
 	Version string `json:"version,omitempty"`
-}
-
-// List returns all installed Python packages.
-func List() (ListResult, error) {
-	cmd := exec.Command("pip", "list", "--format=json")
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return ListResult{}, fmt.Errorf("pip list failed: %w: %s", err, stderr.String())
-	}
-
-	var packages []PackageInfo
-	if err := json.Unmarshal(stdout.Bytes(), &packages); err != nil {
-		return ListResult{}, fmt.Errorf("parse pip output: %w", err)
-	}
-
-	return ListResult{Packages: packages}, nil
-}
-
-// Exists checks if a Python package is installed.
-func Exists(name string) (ExistsResult, error) {
-	result, err := List()
-	if err != nil {
-		return ExistsResult{}, err
-	}
-
-	nameLower := strings.ToLower(name)
-	for _, pkg := range result.Packages {
-		if strings.ToLower(pkg.Name) == nameLower {
-			return ExistsResult{Exists: true, Version: pkg.Version}, nil
-		}
-	}
-
-	return ExistsResult{Exists: false}, nil
+	Exists  bool   `json:"exists"`
+	Output  string `json:"output,omitempty"`
+	Error   string `json:"error,omitempty"`
 }
 
 // Install installs a Python package.
-func Install(name string, version string) (InstallResult, error) {
+func Install(name string, version string) (Result, error) {
 	if name == "" {
-		return InstallResult{Error: "package name is required"}, fmt.Errorf("package name is required")
+		return Result{Status: "failed", Error: "package name is required"}, fmt.Errorf("package name is required")
 	}
+	executable := "pip3"
 
-	// Check if already installed with correct version
+	pkg := name
 	if version != "" {
-		exists, err := Exists(name)
-		if err == nil && exists.Exists && exists.Version == version {
-			return InstallResult{Changed: false}, nil
-		}
-	} else {
-		exists, err := Exists(name)
-		if err == nil && exists.Exists {
-			return InstallResult{Changed: false}, nil
-		}
+		pkg = name + "==" + version
 	}
 
-	// Build package spec
-	packageSpec := name
-	if version != "" {
-		packageSpec = fmt.Sprintf("%s==%s", name, version)
+	cmd := exec.Command(executable, "install", pkg)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
+	if err != nil {
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("pip install: %v", err)}, err
 	}
 
-	cmd := exec.Command("pip", "install", packageSpec)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return InstallResult{Error: stderr.String()}, fmt.Errorf("pip install failed: %w: %s", err, stderr.String())
-	}
-
-	return InstallResult{Changed: true}, nil
+	changed := !strings.Contains(output, "already satisfied")
+	return Result{Status: "success", Changed: changed, Package: name, Version: version, Output: output}, nil
 }
 
 // Uninstall uninstalls a Python package.
-func Uninstall(name string) (UninstallResult, error) {
+func Uninstall(name string) (Result, error) {
 	if name == "" {
-		return UninstallResult{Error: "package name is required"}, fmt.Errorf("package name is required")
+		return Result{Status: "failed", Error: "package name is required"}, fmt.Errorf("package name is required")
 	}
+	executable := "pip3"
 
-	// Check if installed
-	exists, err := Exists(name)
+	cmd := exec.Command(executable, "uninstall", "-y", name)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return UninstallResult{Error: err.Error()}, err
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("pip uninstall: %v", err)}, err
 	}
-	if !exists.Exists {
-		return UninstallResult{Changed: false}, nil
+	return Result{Status: "success", Changed: true, Package: name, Output: output}, nil
+}
+
+// List lists installed Python packages.
+func List() (Result, error) {
+	executable := "pip3"
+
+	cmd := exec.Command(executable, "list", "--format=columns")
+	out, err := cmd.Output()
+	if err != nil {
+		return Result{Status: "failed", Error: fmt.Sprintf("pip list: %v", err)}, err
 	}
+	return Result{Status: "success", Output: strings.TrimSpace(string(out))}, nil
+}
 
-	cmd := exec.Command("pip", "uninstall", "-y", name)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		return UninstallResult{Error: stderr.String()}, fmt.Errorf("pip uninstall failed: %w: %s", err, stderr.String())
+// Exists checks if a Python package is installed.
+func Exists(name string) (Result, error) {
+	if name == "" {
+		return Result{Status: "failed", Error: "package name is required"}, fmt.Errorf("package name is required")
 	}
+	executable := "pip3"
 
-	return UninstallResult{Changed: true}, nil
+	cmd := exec.Command(executable, "show", name)
+	out, err := cmd.Output()
+	if err != nil {
+		// pip show returns non-zero if package not found
+		return Result{Status: "success", Exists: false, Package: name}, nil
+	}
+	output := strings.TrimSpace(string(out))
+	return Result{Status: "success", Exists: output != "", Package: name, Output: output}, nil
+}
+
+// Freeze returns pip freeze output.
+func Freeze() (Result, error) {
+	executable := "pip3"
+
+	cmd := exec.Command(executable, "freeze")
+	out, err := cmd.Output()
+	if err != nil {
+		return Result{Status: "failed", Error: fmt.Sprintf("pip freeze: %v", err)}, err
+	}
+	return Result{Status: "success", Output: strings.TrimSpace(string(out))}, nil
+}
+
+// InstallRequirements installs from a requirements file.
+func InstallRequirements(requirements string) (Result, error) {
+	if requirements == "" {
+		return Result{Status: "failed", Error: "requirements file is required"}, fmt.Errorf("requirements file is required")
+	}
+	executable := "pip3"
+
+	cmd := exec.Command(executable, "install", "-r", requirements)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
+	if err != nil {
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("pip install -r: %v", err)}, err
+	}
+	return Result{Status: "success", Changed: true, Package: "requirements:" + requirements, Output: output}, nil
 }

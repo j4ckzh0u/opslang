@@ -973,6 +973,29 @@ var Funcs = []Func{
 	{Name: "puppet.fact", Args: []string{"name"}},
 	{Name: "puppet.module_list"},
 	{Name: "puppet.module_install", Args: []string{"name", "version"}, Mutating: true},
+
+	// ── new functions (not in earlier batches) ──
+	{Name: "pip.freeze", Args: []string{"executable"}},
+	{Name: "pip.install_requirements", Args: []string{"requirements", "executable"}, Mutating: true},
+	{Name: "flatpak.add_remote", Args: []string{"name", "url"}, Mutating: true},
+	{Name: "yarn.install", Args: []string{"name", "version", "global"}, Mutating: true},
+	{Name: "yarn.remove", Args: []string{"name", "global"}, Mutating: true},
+	{Name: "yarn.global", Args: []string{"directory"}, Mutating: true},
+	{Name: "yarn.list", Args: []string{"global"}},
+	{Name: "htpasswd.set", Args: []string{"path", "username", "password", "create"}, Mutating: true},
+	{Name: "htpasswd.remove", Args: []string{"path", "username"}, Mutating: true},
+	{Name: "htpasswd.info", Args: []string{"path"}},
+	{Name: "htpasswd.hash_sha1", Args: []string{"password"}},
+	{Name: "sudoers.set", Args: []string{"name", "user", "commands", "nopasswd", "sudoers_dir"}, Mutating: true},
+	{Name: "sudoers.remove", Args: []string{"name", "sudoers_dir"}, Mutating: true},
+	{Name: "sudoers.info", Args: []string{"name", "sudoers_dir"}},
+	{Name: "monit.start", Args: []string{"service"}, Mutating: true},
+	{Name: "monit.stop", Args: []string{"service"}, Mutating: true},
+	{Name: "monit.monitor", Args: []string{"service"}, Mutating: true},
+	{Name: "monit.unmonitor", Args: []string{"service"}, Mutating: true},
+	{Name: "monit.restart", Args: []string{"service"}, Mutating: true},
+	{Name: "monit.status"},
+	{Name: "monit.reload", Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

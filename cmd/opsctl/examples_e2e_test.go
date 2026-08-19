@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/opslang/opslang/internal/ast"
 	opsexec "github.com/opslang/opslang/internal/exec"
@@ -79,8 +80,22 @@ func TestExamplesAllRun(t *testing.T) {
 
 			interp := interpreter.New(nil)
 			interpreter.RegisterSDKBuiltins(interp)
-			if _, err := interp.Execute(prog); err != nil {
-				t.Fatalf("execution error: %v", err)
+
+			// Per-example timeout prevents a single hanging example
+			// (network call, port wait, blocked stdin) from killing
+			// the entire suite.
+			done := make(chan error, 1)
+			go func() {
+				_, err := interp.Execute(prog)
+				done <- err
+			}()
+			select {
+			case err := <-done:
+				if err != nil {
+					t.Fatalf("execution error: %v", err)
+				}
+			case <-time.After(10 * time.Second):
+				t.Fatalf("example timed out after 10s (likely hanging on network/port wait)")
 			}
 		})
 		ran++

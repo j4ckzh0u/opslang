@@ -4,122 +4,87 @@ import (
 	"testing"
 )
 
-func TestActionResult(t *testing.T) {
-	r := ActionResult{
-		Name:    "test-snap",
-		Channel: "stable",
-		Changed: true,
-		Success: true,
-	}
-	if r.Name != "test-snap" {
-		t.Errorf("expected test-snap, got %s", r.Name)
-	}
-	if !r.Changed {
-		t.Error("expected changed")
-	}
-	if !r.Success {
-		t.Error("expected success")
-	}
-}
-
-func TestSnapInfo(t *testing.T) {
-	info := SnapInfo{
-		Name:     "test-snap",
-		Version:  "1.0.0",
-		Rev:      "123",
-		Tracking: "stable",
-		Publisher: "test",
-	}
-	if info.Name != "test-snap" {
-		t.Errorf("expected test-snap, got %s", info.Name)
-	}
-}
-
-func TestInstall_EmptyName(t *testing.T) {
-	_, err := Install("", "stable", false)
+func TestInstallEmptyName(t *testing.T) {
+	r, err := Install("", "", false)
 	if err == nil {
-		t.Error("expected error for empty name")
+		t.Fatal("expected error for empty name")
+	}
+	if r.Status != "failed" {
+		t.Errorf("expected status=failed, got %s", r.Status)
 	}
 }
 
-func TestRemove_EmptyName(t *testing.T) {
-	_, err := Remove("")
+func TestRemoveEmptyName(t *testing.T) {
+	r, err := Remove("")
 	if err == nil {
-		t.Error("expected error for empty name")
+		t.Fatal("expected error for empty name")
+	}
+	if r.Status != "failed" {
+		t.Errorf("expected status=failed, got %s", r.Status)
 	}
 }
 
-func TestRefresh_EmptyName(t *testing.T) {
-	_, err := Refresh("", "stable")
+func TestRefreshEmptyName(t *testing.T) {
+	r, err := Refresh("", "")
 	if err == nil {
-		t.Error("expected error for empty name")
+		t.Fatal("expected error for empty name")
+	}
+	if r.Status != "failed" {
+		t.Errorf("expected status=failed, got %s", r.Status)
 	}
 }
 
-func TestGet_EmptyName(t *testing.T) {
-	_, err := Get("")
+func TestEnableEmptyName(t *testing.T) {
+	r, err := Enable("")
 	if err == nil {
-		t.Error("expected error for empty name")
+		t.Fatal("expected error for empty name")
+	}
+	if r.Status != "failed" {
+		t.Errorf("expected status=failed, got %s", r.Status)
 	}
 }
 
-func TestEnable_EmptyName(t *testing.T) {
-	_, err := Enable("")
+func TestDisableEmptyName(t *testing.T) {
+	r, err := Disable("")
 	if err == nil {
-		t.Error("expected error for empty name")
+		t.Fatal("expected error for empty name")
+	}
+	if r.Status != "failed" {
+		t.Errorf("expected status=failed, got %s", r.Status)
 	}
 }
 
-func TestDisable_EmptyName(t *testing.T) {
-	_, err := Disable("")
+func TestGetEmptyName(t *testing.T) {
+	r, err := Get("")
 	if err == nil {
-		t.Error("expected error for empty name")
+		t.Fatal("expected error for empty name")
+	}
+	if r.Status != "failed" {
+		t.Errorf("expected status=failed, got %s", r.Status)
 	}
 }
 
-func TestSwitch_EmptyName(t *testing.T) {
-	_, err := Switch("", "stable")
-	if err == nil {
-		t.Error("expected error for empty name")
+func TestSwitchEmpty(t *testing.T) {
+	r, _ := Switch("", "stable")
+	if r.Status != "failed" {
+		t.Errorf("expected status=failed, got %s", r.Status)
 	}
-}
-
-func TestSwitch_EmptyChannel(t *testing.T) {
-	_, err := Switch("test-snap", "")
-	if err == nil {
-		t.Error("expected error for empty channel")
+	r2, _ := Switch("core", "")
+	if r2.Status != "failed" {
+		t.Errorf("expected status=failed for empty channel, got %s", r2.Status)
 	}
 }
 
 func TestList(t *testing.T) {
-	// May fail if snap is not installed
-	result, err := List()
-	if err != nil {
-		t.Skipf("snap not available: %v", err)
+	r, _ := List()
+	if r.Status == "" {
+		t.Error("expected non-empty status")
 	}
-	_ = result
 }
 
 func TestChanges(t *testing.T) {
-	// May fail if snap is not installed
-	result, err := Changes()
-	if err != nil {
-		t.Skipf("snap not available: %v", err)
-	}
-	_ = result
-}
-
-func TestListResultJSON(t *testing.T) {
-	r := ListResult{
-		Snaps: []SnapInfo{
-			{Name: "test", Version: "1.0"},
-		},
-	}
-	json, err := r.JSON()
-	if err != nil {
-		t.Errorf("JSON() error: %v", err)
-	}
-	if json == "" {
-		t.Error("expected non-empty JSON")
+	r, _ := Changes()
+	if r.Status == "" {
+		t.Error("expected non-empty status")
 	}
 }

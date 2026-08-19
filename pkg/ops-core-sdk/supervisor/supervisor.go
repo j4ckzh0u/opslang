@@ -1,4 +1,5 @@
-// Package supervisor provides supervisorctl management.
+// Package supervisor manages Supervisor processes.
+// Equivalent to community.general.supervisorctl module.
 package supervisor
 
 import (
@@ -7,141 +8,149 @@ import (
 	"strings"
 )
 
-// ProcessInfo represents a supervisor process.
-type ProcessInfo struct {
-	Name   string `json:"name"`
-	State  string `json:"state"`
-	Status string `json:"status,omitempty"`
-	Uptime string `json:"uptime,omitempty"`
-}
-
-// Result is returned by process operations.
+// Result is returned by all functions.
 type Result struct {
-	Process string `json:"process,omitempty"`
-	Success bool   `json:"success"`
+	Status  string `json:"status"`
 	Changed bool   `json:"changed"`
+	Service string `json:"service,omitempty"`
+	Action  string `json:"action,omitempty"`
+	Output  string `json:"output,omitempty"`
 	Error   string `json:"error,omitempty"`
 }
 
-// StatusResult is returned by status queries.
+// StatusResult is returned by Status.
 type StatusResult struct {
-	Processes []ProcessInfo `json:"processes"`
-	Count     int           `json:"count"`
-	Error     string        `json:"error,omitempty"`
+	Status   string        `json:"status"`
+	Services []ServiceInfo `json:"services"`
+	Error    string        `json:"error,omitempty"`
 }
 
-func supervisorctl(args ...string) (string, error) {
-	cmd := exec.Command("supervisorctl", args...)
-	out, err := cmd.CombinedOutput()
-	return string(out), err
+// ServiceInfo represents a supervisor service.
+type ServiceInfo struct {
+	Name   string `json:"name"`
+	State  string `json:"state"`
+	PID    string `json:"pid,omitempty"`
+	Uptime string `json:"uptime,omitempty"`
 }
 
-// Start starts a process.
+// Start starts a supervisor process.
 func Start(name string) Result {
 	if name == "" {
-		return Result{Error: "process name is required"}
+		return Result{Status: "failed", Error: "service name is required"}
 	}
-	out, err := supervisorctl("start", name)
+	cmd := exec.Command("supervisorctl", "start", name)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return Result{Process: name, Error: fmt.Sprintf("start failed: %s: %s", err, out)}
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("supervisorctl start: %v", err)}
 	}
-	return Result{Process: name, Success: true, Changed: true}
+	return Result{Status: "success", Changed: true, Service: name, Action: "start", Output: output}
 }
 
-// Stop stops a process.
+// Stop stops a supervisor process.
 func Stop(name string) Result {
 	if name == "" {
-		return Result{Error: "process name is required"}
+		return Result{Status: "failed", Error: "service name is required"}
 	}
-	out, err := supervisorctl("stop", name)
+	cmd := exec.Command("supervisorctl", "stop", name)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return Result{Process: name, Error: fmt.Sprintf("stop failed: %s: %s", err, out)}
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("supervisorctl stop: %v", err)}
 	}
-	return Result{Process: name, Success: true, Changed: true}
+	return Result{Status: "success", Changed: true, Service: name, Action: "stop", Output: output}
 }
 
-// Restart restarts a process.
+// Restart restarts a supervisor process.
 func Restart(name string) Result {
 	if name == "" {
-		return Result{Error: "process name is required"}
+		return Result{Status: "failed", Error: "service name is required"}
 	}
-	out, err := supervisorctl("restart", name)
+	cmd := exec.Command("supervisorctl", "restart", name)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return Result{Process: name, Error: fmt.Sprintf("restart failed: %s: %s", err, out)}
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("supervisorctl restart: %v", err)}
 	}
-	return Result{Process: name, Success: true, Changed: true}
+	return Result{Status: "success", Changed: true, Service: name, Action: "restart", Output: output}
 }
 
-// Reload reloads supervisor configuration.
+// Reload reloads the supervisor daemon configuration.
 func Reload() Result {
-	out, err := supervisorctl("reload")
+	cmd := exec.Command("supervisorctl", "reload")
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return Result{Error: fmt.Sprintf("reload failed: %s: %s", err, out)}
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("supervisorctl reload: %v", err)}
 	}
-	return Result{Success: true, Changed: true}
+	return Result{Status: "success", Changed: true, Action: "reload", Output: output}
 }
 
-// Status returns status of all processes.
+// Status returns the status of all supervisor processes.
 func Status() StatusResult {
-	out, err := supervisorctl("status")
+	cmd := exec.Command("supervisorctl", "status")
+	out, err := cmd.Output()
 	if err != nil {
-		return StatusResult{Error: fmt.Sprintf("status failed: %s: %s", err, out)}
+		return StatusResult{Status: "failed", Error: fmt.Sprintf("supervisorctl status: %v", err)}
 	}
-	var procs []ProcessInfo
-	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
+
+	services := make([]ServiceInfo, 0)
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-		// Format: "name          STATE    uptime info"
-		fields := strings.Fields(line)
-		if len(fields) >= 2 {
-			p := ProcessInfo{
-				Name:  fields[0],
-				State: fields[1],
+		parts := strings.Fields(line)
+		if len(parts) >= 2 {
+			svc := ServiceInfo{Name: parts[0], State: parts[1]}
+			if len(parts) >= 3 {
+				svc.PID = parts[2]
 			}
-			if len(fields) >= 3 {
-				p.Uptime = fields[2]
+			if len(parts) >= 4 {
+				svc.Uptime = parts[3]
 			}
-			if len(fields) >= 4 {
-				p.Status = strings.Join(fields[3:], " ")
-			}
-			procs = append(procs, p)
+			services = append(services, svc)
 		}
 	}
-	return StatusResult{Processes: procs, Count: len(procs)}
+	return StatusResult{Status: "success", Services: services}
 }
 
-// ClearLog clears the log for a process.
+// ClearLog clears the log for a specific supervisor process.
 func ClearLog(name string) Result {
 	if name == "" {
-		return Result{Error: "process name is required"}
+		return Result{Status: "failed", Error: "service name is required"}
 	}
-	out, err := supervisorctl("clearlog", name)
+	cmd := exec.Command("supervisorctl", "clear", name)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return Result{Process: name, Error: fmt.Sprintf("clearlog failed: %s: %s", err, out)}
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("supervisorctl clear: %v", err)}
 	}
-	return Result{Process: name, Success: true, Changed: true}
+	return Result{Status: "success", Changed: true, Service: name, Action: "clear_log", Output: output}
 }
 
-// Reread rereads the supervisor configuration.
+// Reread re-reads supervisor configuration without applying changes.
 func Reread() Result {
-	out, err := supervisorctl("reread")
+	cmd := exec.Command("supervisorctl", "reread")
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return Result{Error: fmt.Sprintf("reread failed: %s: %s", err, out)}
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("supervisorctl reread: %v", err)}
 	}
-	return Result{Success: true, Changed: true}
+	return Result{Status: "success", Changed: true, Action: "reread", Output: output}
 }
 
-// Update updates the supervisor process group.
+// Update re-reads config and applies changes for a specific process.
 func Update(name string) Result {
-	args := []string{"update"}
-	if name != "" {
-		args = append(args, name)
+	if name == "" {
+		return Result{Status: "failed", Error: "service name is required"}
 	}
-	out, err := supervisorctl(args...)
+	cmd := exec.Command("supervisorctl", "update", name)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return Result{Process: name, Error: fmt.Sprintf("update failed: %s: %s", err, out)}
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("supervisorctl update: %v", err)}
 	}
-	return Result{Process: name, Success: true, Changed: true}
+	return Result{Status: "success", Changed: true, Service: name, Action: "update", Output: output}
 }

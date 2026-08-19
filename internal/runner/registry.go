@@ -131,6 +131,10 @@ import (
 	sdkdmsetup "github.com/opslang/opslang/pkg/ops-core-sdk/dmsetup"
 	sdklvm_enhanced "github.com/opslang/opslang/pkg/ops-core-sdk/lvm_enhanced"
 	sdkpuppet "github.com/opslang/opslang/pkg/ops-core-sdk/puppet"
+	sdkyarn "github.com/opslang/opslang/pkg/ops-core-sdk/yarn"
+	sdkhtpasswd "github.com/opslang/opslang/pkg/ops-core-sdk/htpasswd"
+	sdksudoers "github.com/opslang/opslang/pkg/ops-core-sdk/sudoers"
+	sdkmonit "github.com/opslang/opslang/pkg/ops-core-sdk/monit"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -3913,6 +3917,113 @@ func (r *Registry) registerExtensions() {
 	r.Register("supervisor.update", func(args map[string]interface{}) (interface{}, error) {
 		name, _ := argString(args, "name")
 		return sdksupervisor.Update(name), nil
+	})
+
+	// ── pip.freeze / pip.install_requirements ──────────────────────────
+	r.Register("pip.freeze", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpip.Freeze()
+	})
+	r.Register("pip.install_requirements", func(args map[string]interface{}) (interface{}, error) {
+		req, _ := argString(args, "requirements")
+		return sdkpip.InstallRequirements(req)
+	})
+
+	// ── flatpak.add_remote ─────────────────────────────────────────────
+	r.Register("flatpak.add_remote", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		url, _ := argString(args, "url")
+		return sdkflatpak.AddRemote(name, url)
+	})
+
+	// ── yarn ───────────────────────────────────────────────────────────
+	r.Register("yarn.install", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		ver, _ := argString(args, "version")
+		global, _ := argBool(args, "global")
+		return sdkyarn.Install(name, ver, global), nil
+	})
+	r.Register("yarn.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		global, _ := argBool(args, "global")
+		return sdkyarn.Remove(name, global), nil
+	})
+	r.Register("yarn.global", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "directory")
+		return sdkyarn.Global(dir), nil
+	})
+	r.Register("yarn.list", func(args map[string]interface{}) (interface{}, error) {
+		global, _ := argBool(args, "global")
+		return sdkyarn.List(global), nil
+	})
+
+	// ── htpasswd ───────────────────────────────────────────────────────
+	r.Register("htpasswd.set", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		username, _ := argString(args, "username")
+		password, _ := argString(args, "password")
+		create, _ := argBool(args, "create")
+		return sdkhtpasswd.Set(path, username, password, create), nil
+	})
+	r.Register("htpasswd.remove", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		username, _ := argString(args, "username")
+		return sdkhtpasswd.Remove(path, username), nil
+	})
+	r.Register("htpasswd.info", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		return sdkhtpasswd.Info(path), nil
+	})
+	r.Register("htpasswd.hash_sha1", func(args map[string]interface{}) (interface{}, error) {
+		password, _ := argString(args, "password")
+		return sdkhtpasswd.HashSHA1(password), nil
+	})
+
+	// ── sudoers ────────────────────────────────────────────────────────
+	r.Register("sudoers.set", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		user, _ := argString(args, "user")
+		commands, _ := argString(args, "commands")
+		nopasswd, _ := argBool(args, "nopasswd")
+		dir, _ := argString(args, "sudoers_dir")
+		return sdksudoers.Set(name, user, commands, nopasswd, dir), nil
+	})
+	r.Register("sudoers.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		dir, _ := argString(args, "sudoers_dir")
+		return sdksudoers.Remove(name, dir), nil
+	})
+	r.Register("sudoers.info", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		dir, _ := argString(args, "sudoers_dir")
+		return sdksudoers.Info(name, dir), nil
+	})
+
+	// ── monit ──────────────────────────────────────────────────────────
+	r.Register("monit.start", func(args map[string]interface{}) (interface{}, error) {
+		svc, _ := argString(args, "service")
+		return sdkmonit.Start(svc), nil
+	})
+	r.Register("monit.stop", func(args map[string]interface{}) (interface{}, error) {
+		svc, _ := argString(args, "service")
+		return sdkmonit.Stop(svc), nil
+	})
+	r.Register("monit.monitor", func(args map[string]interface{}) (interface{}, error) {
+		svc, _ := argString(args, "service")
+		return sdkmonit.Monitor(svc), nil
+	})
+	r.Register("monit.unmonitor", func(args map[string]interface{}) (interface{}, error) {
+		svc, _ := argString(args, "service")
+		return sdkmonit.Unmonitor(svc), nil
+	})
+	r.Register("monit.restart", func(args map[string]interface{}) (interface{}, error) {
+		svc, _ := argString(args, "service")
+		return sdkmonit.Restart(svc), nil
+	})
+	r.Register("monit.status", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmonit.Status(), nil
+	})
+	r.Register("monit.reload", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmonit.Reload(), nil
 	})
 
 	// ── smartctl ──────────────────────────────────────────────────────────

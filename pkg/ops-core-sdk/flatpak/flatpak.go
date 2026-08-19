@@ -1,4 +1,5 @@
-// Package flatpak provides Flatpak package management operations.
+// Package flatpak manages Flatpak applications.
+// Equivalent to community.general.flatpak module.
 package flatpak
 
 import (
@@ -7,209 +8,199 @@ import (
 	"strings"
 )
 
-// ActionResult represents the result of a flatpak operation.
-type ActionResult struct {
-	Name    string `json:"name"`
+// Result is returned by all functions.
+type Result struct {
+	Status  string `json:"status"`
 	Changed bool   `json:"changed"`
-	Success bool   `json:"success"`
+	Package string `json:"package,omitempty"`
+	Output  string `json:"output,omitempty"`
 	Error   string `json:"error,omitempty"`
 }
 
-// FlatpakInfo represents information about a flatpak package.
-type FlatpakInfo struct {
-	Name       string `json:"name"`
-	AppID      string `json:"app_id"`
-	Version    string `json:"version"`
-	Branch     string `json:"branch"`
-	Origin     string `json:"origin"`
-	Installation string `json:"installation"`
-}
-
-// ListResult represents the result of listing flatpaks.
+// ListResult is returned by List.
 type ListResult struct {
-	Apps []FlatpakInfo `json:"apps"`
+	Status string   `json:"status"`
+	Apps   []string `json:"apps"`
+	Error  string   `json:"error,omitempty"`
 }
 
-// Install installs a flatpak package.
-func Install(name string, from string, user bool) (ActionResult, error) {
+// InfoResult is returned by Info.
+type InfoResult struct {
+	Status  string `json:"status"`
+	Package string `json:"package"`
+	Version string `json:"version,omitempty"`
+	Origin  string `json:"origin,omitempty"`
+	Output  string `json:"output,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+// Install installs a Flatpak application.
+func Install(name string, from string, user bool) (Result, error) {
 	if name == "" {
-		return ActionResult{}, fmt.Errorf("flatpak name is required")
+		return Result{Status: "failed", Error: "name is required"}, fmt.Errorf("name is required")
+	}
+	if from == "" {
+		from = "flathub"
 	}
 
-	args := []string{"install", "-y"}
+	args := []string{"install", "-y", from, name}
 	if user {
-		args = append(args, "--user")
-	} else {
-		args = append(args, "--system")
+		args = append([]string{"install", "-y", "--user", from, name}, args[4:]...)
+		args = []string{"install", "-y", "--user", from, name}
 	}
-	if from != "" {
-		args = append(args, from)
-	}
-	args = append(args, name)
 
-	out, err := exec.Command("flatpak", args...).CombinedOutput()
+	cmd := exec.Command("flatpak", args...)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return ActionResult{Name: name, Success: false, Error: string(out)}, fmt.Errorf("flatpak install failed: %w (output: %s)", err, string(out))
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("flatpak install: %v", err)}, err
 	}
-
-	return ActionResult{Name: name, Changed: true, Success: true}, nil
+	return Result{Status: "success", Changed: true, Package: name, Output: output}, nil
 }
 
-// Remove removes a flatpak package.
-func Remove(name string, user bool) (ActionResult, error) {
+// Remove removes a Flatpak application.
+func Remove(name string, user bool) (Result, error) {
 	if name == "" {
-		return ActionResult{}, fmt.Errorf("flatpak name is required")
+		return Result{Status: "failed", Error: "name is required"}, fmt.Errorf("name is required")
 	}
 
-	args := []string{"uninstall", "-y"}
+	args := []string{"uninstall", "-y", name}
 	if user {
-		args = append(args, "--user")
-	} else {
-		args = append(args, "--system")
+		args = []string{"uninstall", "-y", "--user", name}
 	}
-	args = append(args, name)
 
-	out, err := exec.Command("flatpak", args...).CombinedOutput()
+	cmd := exec.Command("flatpak", args...)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return ActionResult{Name: name, Success: false, Error: string(out)}, fmt.Errorf("flatpak remove failed: %w (output: %s)", err, string(out))
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("flatpak uninstall: %v", err)}, err
 	}
-
-	return ActionResult{Name: name, Changed: true, Success: true}, nil
+	return Result{Status: "success", Changed: true, Package: name, Output: output}, nil
 }
 
-// Update updates a flatpak package.
-func Update(name string, user bool) (ActionResult, error) {
-	if name == "" {
-		return ActionResult{}, fmt.Errorf("flatpak name is required")
-	}
-
-	args := []string{"update", "-y"}
-	if user {
-		args = append(args, "--user")
-	} else {
-		args = append(args, "--system")
-	}
-	args = append(args, name)
-
-	out, err := exec.Command("flatpak", args...).CombinedOutput()
-	if err != nil {
-		return ActionResult{Name: name, Success: false, Error: string(out)}, fmt.Errorf("flatpak update failed: %w (output: %s)", err, string(out))
-	}
-
-	return ActionResult{Name: name, Changed: true, Success: true}, nil
-}
-
-// List lists installed flatpaks.
+// List lists installed Flatpak applications.
 func List(user bool) (ListResult, error) {
-	args := []string{"list", "--app", "--columns=application,version,branch,origin,installation"}
+	args := []string{"list", "--app", "--columns=application"}
 	if user {
-		args = append(args, "--user")
-	} else {
-		args = append(args, "--system")
+		args = []string{"list", "--user", "--app", "--columns=application"}
 	}
 
-	out, err := exec.Command("flatpak", args...).CombinedOutput()
+	cmd := exec.Command("flatpak", args...)
+	out, err := cmd.Output()
 	if err != nil {
-		return ListResult{}, fmt.Errorf("flatpak list failed: %w (output: %s)", err, string(out))
+		return ListResult{Status: "failed", Error: fmt.Sprintf("flatpak list: %v", err)}, err
 	}
 
-	result := ListResult{Apps: make([]FlatpakInfo, 0)}
-	lines := strings.Split(string(out), "\n")
-	for i, line := range lines {
-		if i == 0 || strings.TrimSpace(line) == "" {
-			continue
-		}
-		// Parse: Application Version Branch Origin Installation
-		fields := strings.Fields(line)
-		if len(fields) >= 4 {
-			app := FlatpakInfo{
-				AppID:   fields[0],
-				Version: fields[1],
-				Branch:  fields[2],
-				Origin:  fields[3],
-			}
-			if len(fields) >= 5 {
-				app.Installation = fields[4]
-			}
-			// Try to get friendly name
-			app.Name = fields[0]
-			result.Apps = append(result.Apps, app)
+	apps := make([]string, 0)
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			apps = append(apps, line)
 		}
 	}
-	return result, nil
+	return ListResult{Status: "success", Apps: apps}, nil
 }
 
-// Info gets information about a specific flatpak.
-func Info(name string, user bool) (FlatpakInfo, error) {
+// Update updates a Flatpak application.
+func Update(name string, user bool) (Result, error) {
 	if name == "" {
-		return FlatpakInfo{}, fmt.Errorf("flatpak name is required")
+		return Result{Status: "failed", Error: "name is required"}, fmt.Errorf("name is required")
 	}
 
-	args := []string{"info", "--show-commit"}
+	args := []string{"update", "-y", name}
+	if user {
+		args = []string{"update", "-y", "--user", name}
+	}
+
+	cmd := exec.Command("flatpak", args...)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
+	if err != nil {
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("flatpak update: %v", err)}, err
+	}
+	return Result{Status: "success", Changed: true, Package: name, Output: output}, nil
+}
+
+// Info returns information about a Flatpak application.
+func Info(name string, user bool) (InfoResult, error) {
+	if name == "" {
+		return InfoResult{Status: "failed", Error: "name is required"}, fmt.Errorf("name is required")
+	}
+
+	args := []string{"info", name}
+	if user {
+		args = []string{"info", "--user", name}
+	}
+
+	cmd := exec.Command("flatpak", args...)
+	out, err := cmd.Output()
+	if err != nil {
+		return InfoResult{Status: "failed", Error: fmt.Sprintf("flatpak info: %v", err)}, err
+	}
+
+	output := strings.TrimSpace(string(out))
+	version := ""
+	origin := ""
+	for _, line := range strings.Split(output, "\n") {
+		if strings.HasPrefix(line, "version:") {
+			version = strings.TrimSpace(strings.TrimPrefix(line, "version:"))
+		}
+		if strings.HasPrefix(line, "origin:") {
+			origin = strings.TrimSpace(strings.TrimPrefix(line, "origin:"))
+		}
+	}
+	return InfoResult{Status: "success", Package: name, Version: version, Origin: origin, Output: output}, nil
+}
+
+// Run runs a Flatpak application.
+func Run(name string, runArgs []string, user bool) (Result, error) {
+	if name == "" {
+		return Result{Status: "failed", Error: "name is required"}, fmt.Errorf("name is required")
+	}
+
+	args := []string{"run"}
 	if user {
 		args = append(args, "--user")
-	} else {
-		args = append(args, "--system")
 	}
 	args = append(args, name)
+	args = append(args, runArgs...)
 
-	out, err := exec.Command("flatpak", args...).CombinedOutput()
+	cmd := exec.Command("flatpak", args...)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return FlatpakInfo{}, fmt.Errorf("flatpak info failed: %w (output: %s)", err, string(out))
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("flatpak run: %v", err)}, err
 	}
-
-	info := FlatpakInfo{Name: name, AppID: name}
-	for _, line := range strings.Split(string(out), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "ID:") {
-			info.AppID = strings.TrimSpace(strings.TrimPrefix(line, "ID:"))
-		} else if strings.HasPrefix(line, "Version:") {
-			info.Version = strings.TrimSpace(strings.TrimPrefix(line, "Version:"))
-		} else if strings.HasPrefix(line, "Branch:") {
-			info.Branch = strings.TrimSpace(strings.TrimPrefix(line, "Branch:"))
-		} else if strings.HasPrefix(line, "Origin:") {
-			info.Origin = strings.TrimSpace(strings.TrimPrefix(line, "Origin:"))
-		}
-	}
-	return info, nil
+	return Result{Status: "success", Package: name, Output: output}, nil
 }
 
-// Run runs a flatpak application.
-func Run(name string, args []string, user bool) (ActionResult, error) {
-	if name == "" {
-		return ActionResult{}, fmt.Errorf("flatpak name is required")
-	}
-
-	cmdArgs := []string{"run"}
-	if user {
-		cmdArgs = append(cmdArgs, "--user")
-	} else {
-		cmdArgs = append(cmdArgs, "--system")
-	}
-	cmdArgs = append(cmdArgs, name)
-	cmdArgs = append(cmdArgs, args...)
-
-	out, err := exec.Command("flatpak", cmdArgs...).CombinedOutput()
-	if err != nil {
-		return ActionResult{Name: name, Success: false, Error: string(out)}, fmt.Errorf("flatpak run failed: %w (output: %s)", err, string(out))
-	}
-
-	return ActionResult{Name: name, Changed: false, Success: true}, nil
-}
-
-// Repair repairs a flatpak installation.
-func Repair(user bool) (ActionResult, error) {
-	args := []string{"repair"}
+// Repair repairs a Flatpak installation.
+func Repair(user bool) (Result, error) {
+	args := []string{"repair", "--force"}
 	if user {
 		args = append(args, "--user")
-	} else {
-		args = append(args, "--system")
 	}
 
-	out, err := exec.Command("flatpak", args...).CombinedOutput()
+	cmd := exec.Command("flatpak", args...)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
 	if err != nil {
-		return ActionResult{Success: false, Error: string(out)}, fmt.Errorf("flatpak repair failed: %w (output: %s)", err, string(out))
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("flatpak repair: %v", err)}, err
+	}
+	return Result{Status: "success", Changed: true, Output: output}, nil
+}
+
+// AddRemote adds a Flatpak remote.
+func AddRemote(name string, url string) (Result, error) {
+	if name == "" || url == "" {
+		return Result{Status: "failed", Error: "name and url are required"}, fmt.Errorf("name and url are required")
 	}
 
-	return ActionResult{Changed: true, Success: true}, nil
+	cmd := exec.Command("flatpak", "remote-add", "--if-not-exists", name, url)
+	out, err := cmd.CombinedOutput()
+	output := strings.TrimSpace(string(out))
+	if err != nil {
+		return Result{Status: "failed", Output: output, Error: fmt.Sprintf("flatpak remote-add: %v", err)}, err
+	}
+	return Result{Status: "success", Changed: true, Package: name, Output: output}, nil
 }
