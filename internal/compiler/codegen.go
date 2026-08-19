@@ -414,6 +414,45 @@ var sdkMapping = map[string]sdkFunc{
 	// ── xml ──────────────────────────────────────────────────────────────
 	"xml.get_element": {pkg: "xml", goName: "GetElement", args: true, params: []string{"s", "s"}},
 	"xml.set_element": {pkg: "xml", goName: "SetElement", args: true, params: []string{"s", "s", "s"}},
+
+	// ── systemd ─────────────────────────────────────────────────────────────
+	"systemd.is_active":     {pkg: "systemd", goName: "IsActive", args: true, params: []string{"s"}},
+	"systemd.is_enabled":    {pkg: "systemd", goName: "IsEnabled", args: true, params: []string{"s"}},
+	"systemd.enable":        {pkg: "systemd", goName: "Enable", args: true, params: []string{"s"}},
+	"systemd.disable":       {pkg: "systemd", goName: "Disable", args: true, params: []string{"s"}},
+	"systemd.start":         {pkg: "systemd", goName: "Start", args: true, params: []string{"s"}},
+	"systemd.stop":          {pkg: "systemd", goName: "Stop", args: true, params: []string{"s"}},
+	"systemd.restart":       {pkg: "systemd", goName: "Restart", args: true, params: []string{"s"}},
+	"systemd.reload":        {pkg: "systemd", goName: "Reload", args: true, params: []string{"s"}},
+	"systemd.daemon_reload": {pkg: "systemd", goName: "DaemonReload", args: true, params: []string{}},
+	"systemd.mask":          {pkg: "systemd", goName: "Mask", args: true, params: []string{"s"}},
+	"systemd.unmask":        {pkg: "systemd", goName: "Unmask", args: true, params: []string{"s"}},
+	"systemd.show":          {pkg: "systemd", goName: "Show", args: true, params: []string{"s"}},
+	"systemd.list":          {pkg: "systemd", goName: "List", args: true, params: []string{"s"}},
+
+	// ── patch ───────────────────────────────────────────────────────────────
+	"patch.apply":   {pkg: "patch", goName: "Apply", args: true, params: []string{"s", "b"}},
+	"patch.dry_run": {pkg: "patch", goName: "DryRun", args: true, params: []string{"s"}},
+
+	// ── xattr ───────────────────────────────────────────────────────────────
+	"xattr.get":    {pkg: "xattr", goName: "Get", args: true, params: []string{"s", "s"}},
+	"xattr.set":    {pkg: "xattr", goName: "Set", args: true, params: []string{"s", "s", "s"}},
+	"xattr.remove": {pkg: "xattr", goName: "Remove", args: true, params: []string{"s", "s"}},
+	"xattr.list":   {pkg: "xattr", goName: "List", args: true, params: []string{"s"}},
+
+	// ── firewalld_zone ──────────────────────────────────────────────────────
+	"firewalld_zone.get_default":      {pkg: "firewalld_zone", goName: "GetDefaultZone", args: true, params: []string{}},
+	"firewalld_zone.set_default":      {pkg: "firewalld_zone", goName: "SetDefaultZone", args: true, params: []string{"s"}},
+	"firewalld_zone.add_zone":         {pkg: "firewalld_zone", goName: "AddZone", args: true, params: []string{"s"}},
+	"firewalld_zone.remove_zone":      {pkg: "firewalld_zone", goName: "RemoveZone", args: true, params: []string{"s"}},
+	"firewalld_zone.add_service":      {pkg: "firewalld_zone", goName: "AddService", args: true, params: []string{"s", "s"}},
+	"firewalld_zone.remove_service":   {pkg: "firewalld_zone", goName: "RemoveService", args: true, params: []string{"s", "s"}},
+	"firewalld_zone.add_port":         {pkg: "firewalld_zone", goName: "AddPort", args: true, params: []string{"s", "s"}},
+	"firewalld_zone.remove_port":      {pkg: "firewalld_zone", goName: "RemovePort", args: true, params: []string{"s", "s"}},
+	"firewalld_zone.add_rich_rule":   {pkg: "firewalld_zone", goName: "AddRichRule", args: true, params: []string{"s", "s"}},
+	"firewalld_zone.remove_rich_rule": {pkg: "firewalld_zone", goName: "RemoveRichRule", args: true, params: []string{"s", "s"}},
+	"firewalld_zone.info":             {pkg: "firewalld_zone", goName: "Info", args: true, params: []string{"s"}},
+	"firewalld_zone.list_zones":       {pkg: "firewalld_zone", goName: "ListZones", args: true, params: []string{}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -531,7 +570,11 @@ var pkgImportAlias = map[string]string{
 	"uri":          "opsuri",
 	"lineinfile":   "opslineinfile",
 	"replace":      "opsreplace",
-	"xml":          "opsxml",
+	"xml":            "opsxml",
+	"systemd":        "opssystemd",
+	"patch":          "opspatch",
+	"xattr":          "opsxattr",
+	"firewalld_zone": "opsfirewalldzone",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -576,6 +619,10 @@ var pkgImportPath = map[string]string{
 	"lineinfile":   "github.com/opslang/opslang/pkg/ops-core-sdk/lineinfile",
 	"replace":      "github.com/opslang/opslang/pkg/ops-core-sdk/replace",
 	"xml":          "github.com/opslang/opslang/pkg/ops-core-sdk/xml",
+	"systemd":      "github.com/opslang/opslang/pkg/ops-core-sdk/systemd",
+	"patch":        "github.com/opslang/opslang/pkg/ops-core-sdk/patch",
+	"xattr":        "github.com/opslang/opslang/pkg/ops-core-sdk/xattr",
+	"firewalld_zone": "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

@@ -1,0 +1,54 @@
+privilege: admin
+// firewalld_zone 模块示例 - 防火墙区域管理
+// firewalld_zone module example - firewalld zone management
+
+// 注意: 此示例展示 API 用法，实际调用需要 firewalld 运行环境
+// Note: This example shows API usage, actual calls require firewalld
+
+// firewalld_zone 支持的操作:
+// Supported operations:
+//
+// 区域管理 / Zone management:
+//   firewalld_zone.get_default()
+//   firewalld_zone.set_default(zone)
+//   firewalld_zone.add_zone(zone)
+//   firewalld_zone.remove_zone(zone)
+//   firewalld_zone.list_zones()
+//   firewalld_zone.info(zone)
+//
+// 服务管理 / Service management:
+//   firewalld_zone.add_service(zone, service)
+//   firewalld_zone.remove_service(zone, service)
+//
+// 端口管理 / Port management:
+//   firewalld_zone.add_port(zone, port_protocol)
+//   firewalld_zone.remove_port(zone, port_protocol)
+//
+// 富规则 / Rich rules:
+//   firewalld_zone.add_rich_rule(zone, rule)
+//   firewalld_zone.remove_rich_rule(zone, rule)
+
+// 示例用法（注释掉，需要 firewalld 环境）:
+// Example usage (commented out, requires firewalld environment):
+//
+// let default = firewalld_zone.get_default()
+// report { default_zone: default.zone }
+//
+// let info = firewalld_zone.info("public")
+// report { services: info.services, ports: info.ports }
+//
+// firewalld_zone.add_service("public", "http")
+// firewalld_zone.add_port("public", "8080/tcp")
+// firewalld_zone.add_rich_rule("public", "rule family=\"ipv4\" source address=\"10.0.0.0/8\" accept")
+
+report {
+    module: "firewalld_zone",
+    description: "Firewalld zone and service/port management",
+    features: [
+        "Zone CRUD operations",
+        "Service management",
+        "Port management",
+        "Rich language rules",
+        "Default zone control"
+    ]
+}

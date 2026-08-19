@@ -1,0 +1,50 @@
+privilege: admin
+// patch 模块示例 - 补丁文件应用
+// patch module example - apply patch files
+
+// 先创建测试文件
+file.write("/tmp/patch_target.conf", "server=old_server\nport=8080\nlog_level=info\n")
+
+// 定义补丁内容
+let patch_content = `--- a/patch_target.conf
++++ b//tmp/patch_target.conf
+@@ -1,3 +1,3 @@
+-server=old_server
++server=new_server
+ port=8080
+-log_level=info
++log_level=debug
+`
+
+// 检查补丁是否可应用（dry-run）
+let dry = patch.dry_run(patch_content)
+report {
+    can_apply: dry.can_apply,
+    hunks: dry.hunks,
+    message: dry.message
+}
+
+// 应用补丁
+let result = patch.apply(patch_content, false)
+report {
+    applied: result.applied,
+    hunks: result.hunks,
+    message: result.message
+}
+
+// 验证修改
+let content = file.read("/tmp/patch_target.conf")
+report {
+    new_content: content.content
+}
+
+// 反向补丁（还原）
+let revert = patch.apply(patch_content, true)
+report {
+    reverted: revert.reversed,
+    message: revert.message
+}
+
+// 清理
+file.delete("/tmp/patch_target.conf")
+report { cleanup: "done" }

@@ -64,6 +64,10 @@ import (
 	sdklineinfile "github.com/opslang/opslang/pkg/ops-core-sdk/lineinfile"
 	sdkreplace "github.com/opslang/opslang/pkg/ops-core-sdk/replace"
 	sdkxml "github.com/opslang/opslang/pkg/ops-core-sdk/xml"
+	sdksystemd "github.com/opslang/opslang/pkg/ops-core-sdk/systemd"
+	sdkpatch "github.com/opslang/opslang/pkg/ops-core-sdk/patch"
+	sdkxattr "github.com/opslang/opslang/pkg/ops-core-sdk/xattr"
+	sdkfirewalldzone "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -3918,9 +3922,358 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		return structToMap(r)
 	}
-}
 
-// toStringMap extracts a map[string]string from args starting at the given index.
+	// ── systemd ─────────────────────────────────────────────────────────────
+	interp.builtins["systemd.is_active"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("systemd.is_active() requires 1 argument (unit)")
+		}
+		unit, _ := args[0].(string)
+		r, err := sdksystemd.IsActive(unit)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["systemd.is_enabled"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("systemd.is_enabled() requires 1 argument (unit)")
+		}
+		unit, _ := args[0].(string)
+		r, err := sdksystemd.IsEnabled(unit)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["systemd.enable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("systemd.enable() requires 1 argument (unit)")
+		}
+		unit, _ := args[0].(string)
+		r, err := sdksystemd.Enable(unit)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["systemd.disable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("systemd.disable() requires 1 argument (unit)")
+		}
+		unit, _ := args[0].(string)
+		r, err := sdksystemd.Disable(unit)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["systemd.start"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("systemd.start() requires 1 argument (unit)")
+		}
+		unit, _ := args[0].(string)
+		r, err := sdksystemd.Start(unit)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["systemd.stop"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("systemd.stop() requires 1 argument (unit)")
+		}
+		unit, _ := args[0].(string)
+		r, err := sdksystemd.Stop(unit)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["systemd.restart"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("systemd.restart() requires 1 argument (unit)")
+		}
+		unit, _ := args[0].(string)
+		r, err := sdksystemd.Restart(unit)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["systemd.reload"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("systemd.reload() requires 1 argument (unit)")
+		}
+		unit, _ := args[0].(string)
+		r, err := sdksystemd.Reload(unit)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["systemd.daemon_reload"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksystemd.DaemonReload()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["systemd.mask"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("systemd.mask() requires 1 argument (unit)")
+		}
+		unit, _ := args[0].(string)
+		r, err := sdksystemd.Mask(unit)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["systemd.unmask"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("systemd.unmask() requires 1 argument (unit)")
+		}
+		unit, _ := args[0].(string)
+		r, err := sdksystemd.Unmask(unit)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["systemd.show"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("systemd.show() requires 1 argument (unit)")
+		}
+		unit, _ := args[0].(string)
+		r, err := sdksystemd.Show(unit)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["systemd.list"] = func(args ...interface{}) (interface{}, error) {
+		unitType := ""
+		if len(args) > 0 {
+			unitType, _ = args[0].(string)
+		}
+		r, err := sdksystemd.List(unitType)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── patch ───────────────────────────────────────────────────────────────
+	interp.builtins["patch.apply"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("patch.apply() requires at least 1 argument (patch_content)")
+		}
+		patchContent, _ := args[0].(string)
+		reverse := false
+		if len(args) > 1 {
+			reverse, _ = args[1].(bool)
+		}
+		r, err := sdkpatch.Apply(patchContent, reverse)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["patch.dry_run"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("patch.dry_run() requires 1 argument (patch_content)")
+		}
+		patchContent, _ := args[0].(string)
+		r, err := sdkpatch.DryRun(patchContent)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── xattr ───────────────────────────────────────────────────────────────
+	interp.builtins["xattr.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("xattr.get() requires 2 arguments (path, name)")
+		}
+		path, _ := args[0].(string)
+		name, _ := args[1].(string)
+		r, err := sdkxattr.Get(path, name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["xattr.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("xattr.set() requires 3 arguments (path, name, value)")
+		}
+		path, _ := args[0].(string)
+		name, _ := args[1].(string)
+		value, _ := args[2].(string)
+		r, err := sdkxattr.Set(path, name, value)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["xattr.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("xattr.remove() requires 2 arguments (path, name)")
+		}
+		path, _ := args[0].(string)
+		name, _ := args[1].(string)
+		r, err := sdkxattr.Remove(path, name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["xattr.list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("xattr.list() requires 1 argument (path)")
+		}
+		path, _ := args[0].(string)
+		r, err := sdkxattr.List(path)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── firewalld_zone ──────────────────────────────────────────────────────
+	interp.builtins["firewalld_zone.get_default"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfirewalldzone.GetDefaultZone()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld_zone.set_default"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("firewalld_zone.set_default() requires 1 argument (zone)")
+		}
+		zone, _ := args[0].(string)
+		r, err := sdkfirewalldzone.SetDefaultZone(zone)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld_zone.add_zone"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("firewalld_zone.add_zone() requires 1 argument (zone)")
+		}
+		zone, _ := args[0].(string)
+		r, err := sdkfirewalldzone.AddZone(zone)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld_zone.remove_zone"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("firewalld_zone.remove_zone() requires 1 argument (zone)")
+		}
+		zone, _ := args[0].(string)
+		r, err := sdkfirewalldzone.RemoveZone(zone)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld_zone.add_service"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewalld_zone.add_service() requires 2 arguments (zone, service)")
+		}
+		zone, _ := args[0].(string)
+		svc, _ := args[1].(string)
+		r, err := sdkfirewalldzone.AddService(zone, svc)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld_zone.remove_service"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewalld_zone.remove_service() requires 2 arguments (zone, service)")
+		}
+		zone, _ := args[0].(string)
+		svc, _ := args[1].(string)
+		r, err := sdkfirewalldzone.RemoveService(zone, svc)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld_zone.add_port"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewalld_zone.add_port() requires 2 arguments (zone, port_protocol)")
+		}
+		zone, _ := args[0].(string)
+		pp, _ := args[1].(string)
+		r, err := sdkfirewalldzone.AddPort(zone, pp)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld_zone.remove_port"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewalld_zone.remove_port() requires 2 arguments (zone, port_protocol)")
+		}
+		zone, _ := args[0].(string)
+		pp, _ := args[1].(string)
+		r, err := sdkfirewalldzone.RemovePort(zone, pp)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld_zone.add_rich_rule"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewalld_zone.add_rich_rule() requires 2 arguments (zone, rule)")
+		}
+		zone, _ := args[0].(string)
+		rule, _ := args[1].(string)
+		r, err := sdkfirewalldzone.AddRichRule(zone, rule)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld_zone.remove_rich_rule"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewalld_zone.remove_rich_rule() requires 2 arguments (zone, rule)")
+		}
+		zone, _ := args[0].(string)
+		rule, _ := args[1].(string)
+		r, err := sdkfirewalldzone.RemoveRichRule(zone, rule)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld_zone.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("firewalld_zone.info() requires 1 argument (zone)")
+		}
+		zone, _ := args[0].(string)
+		r, err := sdkfirewalldzone.Info(zone)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["firewalld_zone.list_zones"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfirewalldzone.ListZones()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+}
 // If the arg at idx is a map[string]interface{}, values are converted to strings.
 // Returns an empty map if no arg is present at idx.
 func toStringMap(args []interface{}, idx int) map[string]string {

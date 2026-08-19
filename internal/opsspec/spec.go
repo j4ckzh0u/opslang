@@ -439,6 +439,45 @@ var Funcs = []Func{
 	// ── xml ──────────────────────────────────────────────────────────────
 	{Name: "xml.get_element", Args: []string{"path", "element"}},
 	{Name: "xml.set_element", Args: []string{"path", "element", "value"}, Mutating: true},
+
+	// ── systemd ─────────────────────────────────────────────────────────────
+	{Name: "systemd.is_active", Args: []string{"unit"}},
+	{Name: "systemd.is_enabled", Args: []string{"unit"}},
+	{Name: "systemd.enable", Args: []string{"unit"}, Mutating: true},
+	{Name: "systemd.disable", Args: []string{"unit"}, Mutating: true},
+	{Name: "systemd.start", Args: []string{"unit"}, Mutating: true},
+	{Name: "systemd.stop", Args: []string{"unit"}, Mutating: true},
+	{Name: "systemd.restart", Args: []string{"unit"}, Mutating: true},
+	{Name: "systemd.reload", Args: []string{"unit"}, Mutating: true},
+	{Name: "systemd.daemon_reload", Args: []string{}, Mutating: true},
+	{Name: "systemd.mask", Args: []string{"unit"}, Mutating: true},
+	{Name: "systemd.unmask", Args: []string{"unit"}, Mutating: true},
+	{Name: "systemd.show", Args: []string{"unit"}},
+	{Name: "systemd.list", Args: []string{"unit_type"}},
+
+	// ── patch ───────────────────────────────────────────────────────────────
+	{Name: "patch.apply", Args: []string{"patch_content", "reverse"}, Mutating: true},
+	{Name: "patch.dry_run", Args: []string{"patch_content"}},
+
+	// ── xattr ───────────────────────────────────────────────────────────────
+	{Name: "xattr.get", Args: []string{"path", "name"}},
+	{Name: "xattr.set", Args: []string{"path", "name", "value"}, Mutating: true},
+	{Name: "xattr.remove", Args: []string{"path", "name"}, Mutating: true},
+	{Name: "xattr.list", Args: []string{"path"}},
+
+	// ── firewalld_zone ──────────────────────────────────────────────────────
+	{Name: "firewalld_zone.get_default", Args: []string{}},
+	{Name: "firewalld_zone.set_default", Args: []string{"zone"}, Mutating: true},
+	{Name: "firewalld_zone.add_zone", Args: []string{"zone"}, Mutating: true},
+	{Name: "firewalld_zone.remove_zone", Args: []string{"zone"}, Mutating: true},
+	{Name: "firewalld_zone.add_service", Args: []string{"zone", "service"}, Mutating: true},
+	{Name: "firewalld_zone.remove_service", Args: []string{"zone", "service"}, Mutating: true},
+	{Name: "firewalld_zone.add_port", Args: []string{"zone", "port_protocol"}, Mutating: true},
+	{Name: "firewalld_zone.remove_port", Args: []string{"zone", "port_protocol"}, Mutating: true},
+	{Name: "firewalld_zone.add_rich_rule", Args: []string{"zone", "rule"}, Mutating: true},
+	{Name: "firewalld_zone.remove_rich_rule", Args: []string{"zone", "rule"}, Mutating: true},
+	{Name: "firewalld_zone.info", Args: []string{"zone"}},
+	{Name: "firewalld_zone.list_zones", Args: []string{}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

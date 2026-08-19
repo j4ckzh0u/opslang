@@ -1,0 +1,42 @@
+privilege: admin
+// xattr 模块示例 - 扩展文件属性操作
+// xattr module example - extended file attribute operations
+
+// 注意: xattr 操作仅在支持扩展属性的文件系统上有效
+// Note: xattr operations only work on filesystems with extended attribute support
+
+// 先创建测试文件
+file.write("/tmp/xattr_test.txt", "test content")
+
+// 设置扩展属性
+let set_result = xattr.set("/tmp/xattr_test.txt", "user.comment", "managed by opslang")
+report {
+    changed: set_result.changed,
+    message: set_result.message
+}
+
+// 获取扩展属性
+let get_result = xattr.get("/tmp/xattr_test.txt", "user.comment")
+report {
+    name: get_result.name,
+    value: get_result.value,
+    size: get_result.size
+}
+
+// 列出所有扩展属性
+let list_result = xattr.list("/tmp/xattr_test.txt")
+report {
+    attributes: list_result.attributes,
+    count: list_result.count
+}
+
+// 删除扩展属性
+let rm_result = xattr.remove("/tmp/xattr_test.txt", "user.comment")
+report {
+    changed: rm_result.changed,
+    message: rm_result.message
+}
+
+// 清理
+file.delete("/tmp/xattr_test.txt")
+report { cleanup: "done" }

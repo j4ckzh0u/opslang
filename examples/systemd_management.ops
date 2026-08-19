@@ -1,0 +1,36 @@
+privilege: admin
+// systemd 模块示例 - systemd 单元管理
+// systemd module example - systemd unit management
+
+// 检查服务状态
+let status = systemd.is_active("nginx.service")
+report {
+    unit: "nginx.service",
+    active: status.active,
+    state: status.state,
+    sub_state: status.sub_state
+}
+
+// 检查是否开机启动
+let enabled = systemd.is_enabled("nginx.service")
+report {
+    unit: "nginx.service",
+    enabled: enabled.enabled
+}
+
+// 查看服务详细信息
+let info = systemd.show("sshd.service")
+report {
+    name: info.name,
+    description: info.description,
+    load_state: info.load_state,
+    active_state: info.active_state,
+    enabled: info.enabled,
+    masked: info.masked
+}
+
+// 列出所有 timer 单元
+let timers = systemd.list("timer")
+report {
+    total_timers: timers.count
+}

@@ -65,6 +65,10 @@ import (
 	sdklineinfile "github.com/opslang/opslang/pkg/ops-core-sdk/lineinfile"
 	sdkreplace "github.com/opslang/opslang/pkg/ops-core-sdk/replace"
 	sdkxml "github.com/opslang/opslang/pkg/ops-core-sdk/xml"
+	sdksystemd "github.com/opslang/opslang/pkg/ops-core-sdk/systemd"
+	sdkpatch "github.com/opslang/opslang/pkg/ops-core-sdk/patch"
+	sdkxattr "github.com/opslang/opslang/pkg/ops-core-sdk/xattr"
+	sdkfirewalldzone "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -2516,6 +2520,257 @@ func (r *Registry) registerExtensions() {
 			return nil, fmt.Errorf("xml.set_element: %w", err)
 		}
 		return sdkxml.SetElement(path, element, value)
+	})
+
+	// ── systemd ─────────────────────────────────────────────────────────────
+	r.Register("systemd.is_active", func(args map[string]interface{}) (interface{}, error) {
+		unit, err := argString(args, "unit")
+		if err != nil {
+			return nil, fmt.Errorf("systemd.is_active: %w", err)
+		}
+		return sdksystemd.IsActive(unit)
+	})
+	r.Register("systemd.is_enabled", func(args map[string]interface{}) (interface{}, error) {
+		unit, err := argString(args, "unit")
+		if err != nil {
+			return nil, fmt.Errorf("systemd.is_enabled: %w", err)
+		}
+		return sdksystemd.IsEnabled(unit)
+	})
+	r.Register("systemd.enable", func(args map[string]interface{}) (interface{}, error) {
+		unit, err := argString(args, "unit")
+		if err != nil {
+			return nil, fmt.Errorf("systemd.enable: %w", err)
+		}
+		return sdksystemd.Enable(unit)
+	})
+	r.Register("systemd.disable", func(args map[string]interface{}) (interface{}, error) {
+		unit, err := argString(args, "unit")
+		if err != nil {
+			return nil, fmt.Errorf("systemd.disable: %w", err)
+		}
+		return sdksystemd.Disable(unit)
+	})
+	r.Register("systemd.start", func(args map[string]interface{}) (interface{}, error) {
+		unit, err := argString(args, "unit")
+		if err != nil {
+			return nil, fmt.Errorf("systemd.start: %w", err)
+		}
+		return sdksystemd.Start(unit)
+	})
+	r.Register("systemd.stop", func(args map[string]interface{}) (interface{}, error) {
+		unit, err := argString(args, "unit")
+		if err != nil {
+			return nil, fmt.Errorf("systemd.stop: %w", err)
+		}
+		return sdksystemd.Stop(unit)
+	})
+	r.Register("systemd.restart", func(args map[string]interface{}) (interface{}, error) {
+		unit, err := argString(args, "unit")
+		if err != nil {
+			return nil, fmt.Errorf("systemd.restart: %w", err)
+		}
+		return sdksystemd.Restart(unit)
+	})
+	r.Register("systemd.reload", func(args map[string]interface{}) (interface{}, error) {
+		unit, err := argString(args, "unit")
+		if err != nil {
+			return nil, fmt.Errorf("systemd.reload: %w", err)
+		}
+		return sdksystemd.Reload(unit)
+	})
+	r.Register("systemd.daemon_reload", func(args map[string]interface{}) (interface{}, error) {
+		return sdksystemd.DaemonReload()
+	})
+	r.Register("systemd.mask", func(args map[string]interface{}) (interface{}, error) {
+		unit, err := argString(args, "unit")
+		if err != nil {
+			return nil, fmt.Errorf("systemd.mask: %w", err)
+		}
+		return sdksystemd.Mask(unit)
+	})
+	r.Register("systemd.unmask", func(args map[string]interface{}) (interface{}, error) {
+		unit, err := argString(args, "unit")
+		if err != nil {
+			return nil, fmt.Errorf("systemd.unmask: %w", err)
+		}
+		return sdksystemd.Unmask(unit)
+	})
+	r.Register("systemd.show", func(args map[string]interface{}) (interface{}, error) {
+		unit, err := argString(args, "unit")
+		if err != nil {
+			return nil, fmt.Errorf("systemd.show: %w", err)
+		}
+		return sdksystemd.Show(unit)
+	})
+	r.Register("systemd.list", func(args map[string]interface{}) (interface{}, error) {
+		unitType := getStringArg(args, "unit_type", "")
+		return sdksystemd.List(unitType)
+	})
+
+	// ── patch ───────────────────────────────────────────────────────────────
+	r.Register("patch.apply", func(args map[string]interface{}) (interface{}, error) {
+		patchContent, err := argString(args, "patch_content")
+		if err != nil {
+			return nil, fmt.Errorf("patch.apply: %w", err)
+		}
+		reverse, _ := argBool(args, "reverse")
+		return sdkpatch.Apply(patchContent, reverse)
+	})
+	r.Register("patch.dry_run", func(args map[string]interface{}) (interface{}, error) {
+		patchContent, err := argString(args, "patch_content")
+		if err != nil {
+			return nil, fmt.Errorf("patch.dry_run: %w", err)
+		}
+		return sdkpatch.DryRun(patchContent)
+	})
+
+	// ── xattr ───────────────────────────────────────────────────────────────
+	r.Register("xattr.get", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("xattr.get: %w", err)
+		}
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("xattr.get: %w", err)
+		}
+		return sdkxattr.Get(path, name)
+	})
+	r.Register("xattr.set", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("xattr.set: %w", err)
+		}
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("xattr.set: %w", err)
+		}
+		value, err := argString(args, "value")
+		if err != nil {
+			return nil, fmt.Errorf("xattr.set: %w", err)
+		}
+		return sdkxattr.Set(path, name, value)
+	})
+	r.Register("xattr.remove", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("xattr.remove: %w", err)
+		}
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("xattr.remove: %w", err)
+		}
+		return sdkxattr.Remove(path, name)
+	})
+	r.Register("xattr.list", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("xattr.list: %w", err)
+		}
+		return sdkxattr.List(path)
+	})
+
+	// ── firewalld_zone ──────────────────────────────────────────────────────
+	r.Register("firewalld_zone.get_default", func(args map[string]interface{}) (interface{}, error) {
+		return sdkfirewalldzone.GetDefaultZone()
+	})
+	r.Register("firewalld_zone.set_default", func(args map[string]interface{}) (interface{}, error) {
+		zone, err := argString(args, "zone")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.set_default: %w", err)
+		}
+		return sdkfirewalldzone.SetDefaultZone(zone)
+	})
+	r.Register("firewalld_zone.add_zone", func(args map[string]interface{}) (interface{}, error) {
+		zone, err := argString(args, "zone")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.add_zone: %w", err)
+		}
+		return sdkfirewalldzone.AddZone(zone)
+	})
+	r.Register("firewalld_zone.remove_zone", func(args map[string]interface{}) (interface{}, error) {
+		zone, err := argString(args, "zone")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.remove_zone: %w", err)
+		}
+		return sdkfirewalldzone.RemoveZone(zone)
+	})
+	r.Register("firewalld_zone.add_service", func(args map[string]interface{}) (interface{}, error) {
+		zone, err := argString(args, "zone")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.add_service: %w", err)
+		}
+		svc, err := argString(args, "service")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.add_service: %w", err)
+		}
+		return sdkfirewalldzone.AddService(zone, svc)
+	})
+	r.Register("firewalld_zone.remove_service", func(args map[string]interface{}) (interface{}, error) {
+		zone, err := argString(args, "zone")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.remove_service: %w", err)
+		}
+		svc, err := argString(args, "service")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.remove_service: %w", err)
+		}
+		return sdkfirewalldzone.RemoveService(zone, svc)
+	})
+	r.Register("firewalld_zone.add_port", func(args map[string]interface{}) (interface{}, error) {
+		zone, err := argString(args, "zone")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.add_port: %w", err)
+		}
+		pp, err := argString(args, "port_protocol")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.add_port: %w", err)
+		}
+		return sdkfirewalldzone.AddPort(zone, pp)
+	})
+	r.Register("firewalld_zone.remove_port", func(args map[string]interface{}) (interface{}, error) {
+		zone, err := argString(args, "zone")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.remove_port: %w", err)
+		}
+		pp, err := argString(args, "port_protocol")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.remove_port: %w", err)
+		}
+		return sdkfirewalldzone.RemovePort(zone, pp)
+	})
+	r.Register("firewalld_zone.add_rich_rule", func(args map[string]interface{}) (interface{}, error) {
+		zone, err := argString(args, "zone")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.add_rich_rule: %w", err)
+		}
+		rule, err := argString(args, "rule")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.add_rich_rule: %w", err)
+		}
+		return sdkfirewalldzone.AddRichRule(zone, rule)
+	})
+	r.Register("firewalld_zone.remove_rich_rule", func(args map[string]interface{}) (interface{}, error) {
+		zone, err := argString(args, "zone")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.remove_rich_rule: %w", err)
+		}
+		rule, err := argString(args, "rule")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.remove_rich_rule: %w", err)
+		}
+		return sdkfirewalldzone.RemoveRichRule(zone, rule)
+	})
+	r.Register("firewalld_zone.info", func(args map[string]interface{}) (interface{}, error) {
+		zone, err := argString(args, "zone")
+		if err != nil {
+			return nil, fmt.Errorf("firewalld_zone.info: %w", err)
+		}
+		return sdkfirewalldzone.Info(zone)
+	})
+	r.Register("firewalld_zone.list_zones", func(args map[string]interface{}) (interface{}, error) {
+		return sdkfirewalldzone.ListZones()
 	})
 }
 
