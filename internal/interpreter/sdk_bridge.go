@@ -68,6 +68,7 @@ import (
 	sdkpatch "github.com/opslang/opslang/pkg/ops-core-sdk/patch"
 	sdkxattr "github.com/opslang/opslang/pkg/ops-core-sdk/xattr"
 	sdkfirewalldzone "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone"
+	sdkgeturl "github.com/opslang/opslang/pkg/ops-core-sdk/get_url"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -4268,6 +4269,65 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["firewalld_zone.list_zones"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdkfirewalldzone.ListZones()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── get_url ─────────────────────────────────────────────────────────────
+	interp.builtins["get_url.download"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("get_url.download() requires at least 2 arguments (url, dest)")
+		}
+		url, _ := args[0].(string)
+		dest, _ := args[1].(string)
+		checksum := ""
+		if len(args) > 2 {
+			checksum, _ = args[2].(string)
+		}
+		force := false
+		if len(args) > 3 {
+			force, _ = args[3].(bool)
+		}
+		r, err := sdkgeturl.Download(url, dest, checksum, force)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── sys utilities ───────────────────────────────────────────────────────
+	interp.builtins["sys.uuid"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksys.UUID()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sys.random_password"] = func(args ...interface{}) (interface{}, error) {
+		length := 16
+		if len(args) > 0 {
+			switch v := args[0].(type) {
+			case int:
+				length = v
+			case float64:
+				length = int(v)
+			}
+		}
+		useSpecial := true
+		if len(args) > 1 {
+			useSpecial, _ = args[1].(bool)
+		}
+		useNumbers := true
+		if len(args) > 2 {
+			useNumbers, _ = args[2].(bool)
+		}
+		useUppercase := true
+		if len(args) > 3 {
+			useUppercase, _ = args[3].(bool)
+		}
+		r, err := sdksys.RandomPassword(length, useSpecial, useNumbers, useUppercase)
 		if err != nil {
 			return nil, err
 		}

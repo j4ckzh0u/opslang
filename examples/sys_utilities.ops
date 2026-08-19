@@ -1,0 +1,30 @@
+privilege: admin
+// sys 工具函数示例 - UUID 生成和随机密码
+// sys utility functions example - UUID generation and random password
+
+// 生成 UUID v4
+let uuid_result = sys.uuid()
+report {
+    uuid: uuid_result.uuid
+}
+
+// 再生成一个（应该不同）
+let uuid2 = sys.uuid()
+report {
+    uuid2: uuid2.uuid,
+    are_different: uuid_result.uuid != uuid2.uuid
+}
+
+// 生成随机密码（16位，包含特殊字符、数字、大写字母）
+let password = sys.random_password(16, true, true, true)
+report {
+    password_length: password.length,
+    password: password.password
+}
+
+// 生成简单密码（只有小写字母和数字）
+let simple_password = sys.random_password(12, false, true, false)
+report {
+    simple_password: simple_password.password,
+    length: simple_password.length
+}

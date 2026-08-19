@@ -453,6 +453,13 @@ var sdkMapping = map[string]sdkFunc{
 	"firewalld_zone.remove_rich_rule": {pkg: "firewalld_zone", goName: "RemoveRichRule", args: true, params: []string{"s", "s"}},
 	"firewalld_zone.info":             {pkg: "firewalld_zone", goName: "Info", args: true, params: []string{"s"}},
 	"firewalld_zone.list_zones":       {pkg: "firewalld_zone", goName: "ListZones", args: true, params: []string{}},
+
+	// ── get_url ─────────────────────────────────────────────────────────────
+	"get_url.download": {pkg: "get_url", goName: "Download", args: true, params: []string{"s", "s", "s", "b"}},
+
+	// ── sys utilities ───────────────────────────────────────────────────────
+	"sys.uuid":            {pkg: "sys", goName: "UUID", args: true, params: []string{}},
+	"sys.random_password": {pkg: "sys", goName: "RandomPassword", args: true, params: []string{"i", "b", "b", "b"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -575,6 +582,7 @@ var pkgImportAlias = map[string]string{
 	"patch":          "opspatch",
 	"xattr":          "opsxattr",
 	"firewalld_zone": "opsfirewalldzone",
+	"get_url":        "opsgeturl",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -623,6 +631,7 @@ var pkgImportPath = map[string]string{
 	"patch":        "github.com/opslang/opslang/pkg/ops-core-sdk/patch",
 	"xattr":        "github.com/opslang/opslang/pkg/ops-core-sdk/xattr",
 	"firewalld_zone": "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone",
+	"get_url":        "github.com/opslang/opslang/pkg/ops-core-sdk/get_url",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

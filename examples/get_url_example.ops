@@ -1,0 +1,46 @@
+privilege: admin
+// get_url 模块示例 - 文件下载与校验和验证
+// get_url module example - file download with checksum verification
+
+// 演示 get_url 模块功能（不执行实际下载）
+// Demonstrating get_url module capabilities (no actual download)
+
+// get_url 支持的功能:
+// - 从 HTTP/HTTPS URL 下载文件
+// - 支持 sha256/md5/sha1 校验和验证
+// - 支持强制覆盖已存在的文件
+// - 自动创建目标目录
+
+// 示例用法（注释掉，避免测试时执行）:
+// let result = get_url.download(
+//     "https://example.com/file.tar.gz",
+//     "/tmp/downloaded_file.tar.gz",
+//     "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+//     false
+// )
+// report {
+//     dest: result.dest,
+//     size: result.size,
+//     checksum: result.checksum,
+//     changed: result.changed
+// }
+
+// 不带校验和的简单下载:
+// let simple = get_url.download(
+//     "https://example.com/data.json",
+//     "/tmp/data.json",
+//     "",
+//     true
+// )
+
+report {
+    module: "get_url",
+    description: "Download files from URLs with checksum verification",
+    features: [
+        "HTTP/HTTPS downloads",
+        "SHA256/MD5/SHA1 checksum verification",
+        "Force overwrite option",
+        "Automatic directory creation",
+        "Atomic write (temp file + rename)"
+    ]
+}

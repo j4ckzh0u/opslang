@@ -69,6 +69,7 @@ import (
 	sdkpatch "github.com/opslang/opslang/pkg/ops-core-sdk/patch"
 	sdkxattr "github.com/opslang/opslang/pkg/ops-core-sdk/xattr"
 	sdkfirewalldzone "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone"
+	sdkgeturl "github.com/opslang/opslang/pkg/ops-core-sdk/get_url"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -2771,6 +2772,45 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("firewalld_zone.list_zones", func(args map[string]interface{}) (interface{}, error) {
 		return sdkfirewalldzone.ListZones()
+	})
+
+	// ── get_url ─────────────────────────────────────────────────────────────
+	r.Register("get_url.download", func(args map[string]interface{}) (interface{}, error) {
+		url, err := argString(args, "url")
+		if err != nil {
+			return nil, fmt.Errorf("get_url.download: %w", err)
+		}
+		dest, err := argString(args, "dest")
+		if err != nil {
+			return nil, fmt.Errorf("get_url.download: %w", err)
+		}
+		checksum := getStringArg(args, "checksum", "")
+		force, _ := argBool(args, "force")
+		return sdkgeturl.Download(url, dest, checksum, force)
+	})
+
+	// ── sys utilities ───────────────────────────────────────────────────────
+	r.Register("sys.uuid", func(args map[string]interface{}) (interface{}, error) {
+		return sys.UUID()
+	})
+	r.Register("sys.random_password", func(args map[string]interface{}) (interface{}, error) {
+		length := 16
+		if v, ok := args["length"]; ok {
+			switch n := v.(type) {
+			case int:
+				length = n
+			case float64:
+				length = int(n)
+			default:
+				if parsed, err := argInt(args, "length"); err == nil {
+					length = parsed
+				}
+			}
+		}
+		useSpecial := getBoolArg(args, "use_special", true)
+		useNumbers := getBoolArg(args, "use_numbers", true)
+		useUppercase := getBoolArg(args, "use_uppercase", true)
+		return sys.RandomPassword(length, useSpecial, useNumbers, useUppercase)
 	})
 }
 

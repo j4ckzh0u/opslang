@@ -478,6 +478,13 @@ var Funcs = []Func{
 	{Name: "firewalld_zone.remove_rich_rule", Args: []string{"zone", "rule"}, Mutating: true},
 	{Name: "firewalld_zone.info", Args: []string{"zone"}},
 	{Name: "firewalld_zone.list_zones", Args: []string{}},
+
+	// ── get_url ─────────────────────────────────────────────────────────────
+	{Name: "get_url.download", Args: []string{"url", "dest", "checksum", "force"}, Mutating: true},
+
+	// ── sys utilities ───────────────────────────────────────────────────────
+	{Name: "sys.uuid", Args: []string{}},
+	{Name: "sys.random_password", Args: []string{"length", "use_special", "use_numbers", "use_uppercase"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
