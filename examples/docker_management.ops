@@ -4,34 +4,56 @@ privilege: admin
 
 print("=== Docker 管理 ===")
 
-// 1. 列出所有 Docker 镜像
-print("\nDocker 镜像:")
-let images = docker.image_list()
-for img in images.images {
-    print("  " + img.repository + ":" + img.tag + " (" + img.size + ")")
-}
-if len(images.images) == 0 {
-    print("  (无镜像)")
-}
+// 检查 Docker 是否可用
+block {
+    // 1. 列出所有 Docker 镜像
+    print("\nDocker 镜像:")
+    let images = docker.image_list()
+    if images.images != nil {
+        for img in images.images {
+            print("  " + img.repository + ":" + img.tag + " (" + img.size + ")")
+        }
+        if len(images.images) == 0 {
+            print("  (无镜像)")
+        }
+    } else {
+        print("  (无法获取镜像列表)")
+    }
 
-// 2. 列出运行中的容器
-print("\n运行中的容器:")
-let running = docker.container_list(false)
-for container in running.containers {
-    print("  " + container.name + " [" + container.id + "] - " + container.status)
-}
-if len(running.containers) == 0 {
-    print("  (无运行中的容器)")
-}
+    // 2. 列出运行中的容器
+    print("\n运行中的容器:")
+    let running = docker.container_list(false)
+    if running.containers != nil {
+        for container in running.containers {
+            print("  " + container.name + " [" + container.id + "] - " + container.status)
+        }
+        if len(running.containers) == 0 {
+            print("  (无运行中的容器)")
+        }
+    } else {
+        print("  (无法获取容器列表)")
+    }
 
-// 3. 列出所有容器（包括已停止的）
-print("\n所有容器（包括已停止的）:")
-let all = docker.container_list(true)
-for container in all.containers {
-    print("  " + container.name + " [" + container.id + "] - " + container.state)
+    // 3. 列出所有容器（包括已停止的）
+    print("\n所有容器（包括已停止的）:")
+    let all = docker.container_list(true)
+    if all.containers != nil {
+        for container in all.containers {
+            print("  " + container.name + " [" + container.id + "] - " + container.state)
+        }
+        if len(all.containers) == 0 {
+            print("  (无容器)")
+        }
+    } else {
+        print("  (无法获取容器列表)")
+    }
 }
-if len(all.containers) == 0 {
-    print("  (无容器)")
+rescue {
+    print("\nDocker 不可用或权限不足")
+    print("错误信息: " + error)
+    print("\n提示：Docker 管理功能需要：")
+    print("  1. 安装 Docker")
+    print("  2. 当前用户在 docker 用户组中，或使用 root 权限")
 }
 
 // 4. 演示容器操作（不实际执行，避免副作用）
@@ -65,13 +87,18 @@ print(`
   docker.image_remove("nginx:latest", false)
 `)
 
-// 5. 实际演示：检查容器是否存在
+// 5. 实际演示：检查容器是否存在（带错误处理）
 print("\n检查容器是否存在:")
-let check = docker.container_exists("test-container")
-if check.exists {
-    print("  test-container 存在: " + check.id)
-} else {
-    print("  test-container 不存在")
+block {
+    let check = docker.container_exists("test-container")
+    if check.exists {
+        print("  test-container 存在: " + check.id)
+    } else {
+        print("  test-container 不存在")
+    }
+}
+rescue {
+    print("  ✗ Docker 不可用，跳过容器检查")
 }
 
 print("\n=== Docker 管理演示完成 ===")
