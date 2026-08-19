@@ -68,10 +68,10 @@ for group in services {
     let svc_list = services[group]
     for svc in svc_list {
         let status = service.status(svc)
-        if status.error == "" {
-            print("  " + svc + ": " + status.active)
+        if status.load_state == "loaded" {
+            print("  " + svc + ": " + status.active_state)
         } else {
-            print("  " + svc + ": 未找到")
+            print("  " + svc + ": 未安装")
         }
     }
 }

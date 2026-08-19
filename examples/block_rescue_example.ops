@@ -1,5 +1,6 @@
 // block_rescue_example.ops - 演示 block/rescue/always 错误处理
 // 类似 Ansible 的错误处理机制
+privilege: admin
 
 // ═══════════════════════════════════════════════════════════
 // 1. 基本 block/rescue 用法
@@ -18,128 +19,89 @@ rescue {
     print("错误信息: " + _error)
     // 这里可以执行恢复操作
 }
-
-// ═══════════════════════════════════════════════════════════
-// 2. block/rescue/always 完整用法
-// ═══════════════════════════════════════════════════════════
-
-print("\n=== 示例 2: 完整的 block/rescue/always ===")
-
-let task_success = false
-
-block {
-    print("执行任务...")
-    // 尝试启动一个可能不存在的的服务
-    let result = service.start("nonexistent-service")
-    if result.error != "" {
-        print("服务启动失败: " + result.error)
-    }
-    task_success = true
-}
-rescue {
-    print("任务失败，执行恢复逻辑")
-    print("错误: " + _error)
-    task_success = false
-}
 always {
     print("无论成功失败，都会执行 always 块")
-    print("任务状态: " + str(task_success))
-    // 清理操作、日志记录等
+    print("清理临时资源...")
 }
 
 // ═══════════════════════════════════════════════════════════
-// 3. 嵌套 block/rescue
+// 2. 服务管理中的错误处理
 // ═══════════════════════════════════════════════════════════
 
-print("\n=== 示例 3: 嵌套错误处理 ===")
+print("\n=== 示例 2: 服务重启 ===")
 
 block {
-    print("外层 block")
-
-    block {
-        print("内层 block")
-        // 这里会失败
-        let data = file.read("/this/does/not/exist")
-        print("不会执行到这里")
-    }
-    rescue {
-        print("内层 rescue 捕获错误: " + _error)
-        // 内层 rescue 处理后，外层继续
-    }
-
-    print("外层 block 继续执行")
+    print("重启 nginx 服务...")
+    service.restart("nginx")
+    print("服务重启成功")
 }
 rescue {
-    print("外层 rescue（不会执行，因为内层已处理）")
+    print("服务重启失败: " + _error)
+    print("尝试启动服务...")
+    service.start("nginx")
 }
 
 // ═══════════════════════════════════════════════════════════
-// 4. 实际应用场景：服务部署
+// 3. 部署场景中的错误处理
 // ═══════════════════════════════════════════════════════════
 
-print("\n=== 示例 4: 服务部署流程 ===")
+print("\n=== 示例 3: 应用部署 ===")
 
-let deploy_success = false
-let deploy_backup_path = "/tmp/app-backup-" + str(time.now().unix)
+let deploy_backup_path = "/tmp/app_backup_" + str(time.now().unix)
 
 block {
-    print("步骤 1: 备份当前版本")
+    print("步骤 1: 备份当前版本...")
     let backup = file.copy("/opt/app/current", deploy_backup_path)
-    if backup.error != "" {
-        print("备份失败: " + backup.error)
-    }
+    print("  ✓ 备份完成")
 
-    print("步骤 2: 停止服务")
-    let stop = service.stop("myapp")
+    print("\n步骤 2: 部署新版本...")
+    // 假设这里有部署逻辑
+    file.write("/opt/app/current/version.txt", "v2.0.0")
+    print("  ✓ 部署完成")
 
-    print("步骤 3: 部署新版本")
-    // 假设这里会失败
-    let deploy = file.copy("/nonexistent/new-version.tar.gz", "/opt/app/current")
+    print("\n步骤 3: 重启服务...")
+    service.restart("myapp")
+    print("  ✓ 服务重启完成")
 
-    print("步骤 4: 启动服务")
-    let start = service.start("myapp")
-
-    deploy_success = true
-    print("部署成功!")
+    print("\n部署成功!")
 }
 rescue {
-    print("部署失败，执行回滚")
-    print("错误: " + _error)
+    print("部署失败，执行回滚: " + _error)
 
     // 回滚：恢复备份
     let rollback = file.copy(deploy_backup_path, "/opt/app/current")
-    if rollback.error == "" {
-        print("回滚成功")
-        // 重启服务
-        service.start("myapp")
-    } else {
-        print("回滚失败: " + rollback.error)
-        print("需要人工介入!")
-    }
+    print("回滚完成")
+    // 重启服务
+    service.start("myapp")
 }
 always {
-    // 清理备份文件
-    if deploy_success {
-        print("清理备份文件")
-        file.delete(deploy_backup_path)
-    }
-    print("部署流程结束")
+    print("\n清理临时文件...")
+    file.delete(deploy_backup_path)
 }
 
 // ═══════════════════════════════════════════════════════════
-// 5. 仅有 block 和 always（无 rescue）
+// 4. 嵌套 block/rescue
 // ═══════════════════════════════════════════════════════════
 
-print("\n=== 示例 5: block + always（无 rescue）===")
+print("\n=== 示例 4: 嵌套错误处理 ===")
 
 block {
-    print("执行某些操作")
-    let info = sys.hostname()
-    print("主机名: " + info.hostname)
+    print("外层操作开始...")
+
+    block {
+        print("  内层操作...")
+        let result = file.read("/etc/shadow")  // 可能权限不足
+        print("  内层成功")
+    }
+    rescue {
+        print("  内层失败: " + _error)
+        print("  尝试备用方案...")
+    }
+
+    print("外层继续...")
 }
-always {
-    print("记录执行日志")
-    // 无论成功失败都记录
+rescue {
+    print("外层也失败: " + _error)
 }
 
 print("\n=== block/rescue/always 演示完成 ===")

@@ -2,57 +2,28 @@
 // 等待端口可达，常用于服务启动后等待
 privilege: admin
 
-// ═══════════════════════════════════════════════════════════
-// 1. 基本用法：等待本地端口
-// ═══════════════════════════════════════════════════════════
-
 print("=== 等待本地端口 ===")
 
 // 等待 SSH 端口（通常已开放）
 print("等待 SSH 端口 (22)...")
 let wait_ssh = net.wait_for("127.0.0.1", 22, 5)
-if wait_ssh.success {
-    print("  ✓ SSH 端口已开放 (耗时: " + str(wait_ssh.duration_ms) + "ms)")
+if wait_ssh.connected {
+    print("  ✓ SSH 端口已开放 (延迟: " + str(wait_ssh.latency_ms) + "ms)")
 } else {
     print("  ✗ SSH 端口未开放或超时")
-    print("  错误: " + wait_ssh.error)
 }
 
 // 等待 HTTP 端口（示例）
 print("\n等待 HTTP 端口 (80)...")
 let wait_http = net.wait_for("127.0.0.1", 80, 3)
-if wait_http.success {
+if wait_http.connected {
     print("  ✓ HTTP 端口已开放")
 } else {
     print("  ✗ HTTP 端口未开放 (可能未运行)")
 }
 
 // ═══════════════════════════════════════════════════════════
-// 2. 等待远程服务
-// ═══════════════════════════════════════════════════════════
-
-print("\n=== 等待远程服务 ===")
-
-// 等待远程数据库
-print("等待远程 MySQL (192.168.1.100:3306)...")
-let wait_mysql = net.wait_for("192.168.1.100", 3306, 10)
-if wait_mysql.success {
-    print("  ✓ MySQL 已就绪")
-} else {
-    print("  ✗ MySQL 未就绪或不可达")
-}
-
-// 等待 Redis
-print("\n等待 Redis (192.168.1.101:6379)...")
-let wait_redis = net.wait_for("192.168.1.101", 6379, 10)
-if wait_redis.success {
-    print("  ✓ Redis 已就绪")
-} else {
-    print("  ✗ Redis 未就绪或不可达")
-}
-
-// ═══════════════════════════════════════════════════════════
-// 3. 批量等待多个服务
+// 2. 批量等待多个服务
 // ═══════════════════════════════════════════════════════════
 
 print("\n=== 批量等待服务 ===")
@@ -60,99 +31,22 @@ print("\n=== 批量等待服务 ===")
 let services = [
     {"name": "Web Server", "host": "127.0.0.1", "port": 80},
     {"name": "API Server", "host": "127.0.0.1", "port": 8080},
-    {"name": "Database", "host": "127.0.0.1", "port": 3306},
-    {"name": "Cache", "host": "127.0.0.1", "port": 6379},
-    {"name": "Message Queue", "host": "127.0.0.1", "port": 5672}
+    {"name": "Database", "host": "127.0.0.1", "port": 3306}
 ]
 
 print("检查服务依赖...")
-let all_ready = true
 for svc in services {
     print("  等待 " + svc["name"] + " (" + svc["host"] + ":" + str(svc["port"]) + ")...")
-    let result = net.wait_for(svc["host"], svc["port"], 5)
-    if result.success {
+    let result = net.wait_for(svc["host"], svc["port"], 2)
+    if result.connected {
         print("    ✓ 就绪")
     } else {
         print("    ✗ 未就绪")
-        all_ready = false
     }
 }
 
-if all_ready {
-    print("\n✓ 所有服务依赖已就绪")
-} else {
-    print("\n✗ 部分服务未就绪")
-}
-
 // ═══════════════════════════════════════════════════════════
-// 4. 实际场景：服务启动后等待
-// ═══════════════════════════════════════════════════════════
-
-print("\n=== 实际场景：启动服务并等待 ===")
-
-// 模拟启动服务
-print("步骤 1: 启动 Nginx...")
-let start_result = service.start("nginx")
-if start_result.error == "" {
-    print("  ✓ Nginx 启动命令已执行")
-} else {
-    print("  ✗ Nginx 启动失败: " + start_result.error)
-}
-
-// 等待服务就绪
-print("\n步骤 2: 等待 Nginx 就绪...")
-let wait_nginx = net.wait_for("127.0.0.1", 80, 30)
-if wait_nginx.success {
-    print("  ✓ Nginx 已就绪 (耗时: " + str(wait_nginx.duration_ms / 1000) + "秒)")
-} else {
-    print("  ✗ Nginx 启动超时")
-}
-
-// 验证服务
-print("\n步骤 3: 验证服务...")
-let http_check = net.http_get("http://127.0.0.1/")
-if http_check.error == "" {
-    print("  ✓ HTTP 响应正常")
-    print("  状态码: " + str(http_check.status_code))
-} else {
-    print("  ✗ HTTP 请求失败: " + http_check.error)
-}
-
-// ═══════════════════════════════════════════════════════════
-// 5. 带重试的服务检查
-// ═══════════════════════════════════════════════════════════
-
-print("\n=== 带重试的服务检查 ===")
-
-let max_retries = 3
-let retry_interval = 2
-let service_ready = false
-
-for i in range(max_retries) {
-    print("检查 " + str(i + 1) + "/" + str(max_retries) + "...")
-
-    let check = net.wait_for("127.0.0.1", 80, 2)
-    if check.success {
-        print("  ✓ 服务已就绪")
-        service_ready = true
-        break
-    } else {
-        print("  ✗ 服务未就绪")
-        if i < max_retries - 1 {
-            print("  等待 " + str(retry_interval) + " 秒后重试...")
-            time.sleep(retry_interval * 1000)
-        }
-    }
-}
-
-if service_ready {
-    print("\n✓ 服务检查通过")
-} else {
-    print("\n✗ 服务检查失败，已重试 " + str(max_retries) + " 次")
-}
-
-// ═══════════════════════════════════════════════════════════
-// 6. 超时控制
+// 3. 超时控制
 // ═══════════════════════════════════════════════════════════
 
 print("\n=== 超时控制示例 ===")
@@ -160,54 +54,34 @@ print("\n=== 超时控制示例 ===")
 // 短超时（快速失败）
 print("短超时 (1秒) 测试...")
 let quick_check = net.wait_for("127.0.0.1", 9999, 1)
-if quick_check.success {
+if quick_check.connected {
     print("  ✓ 端口开放")
 } else {
-    print("  ✗ 快速失败: " + quick_check.error)
+    print("  ✗ 快速失败（端口未开放）")
 }
 
-// 长超时（等待服务启动）
-print("\n长超时 (60秒) 测试...")
-print("（仅演示，实际等待可能很长）")
-// let long_wait = net.wait_for("127.0.0.1", 80, 60)
-// 这里注释掉，避免实际等待 60 秒
-
 // ═══════════════════════════════════════════════════════════
-// 7. 综合场景：部署后验证
+// 4. 综合场景：部署后验证
 // ═══════════════════════════════════════════════════════════
 
 print("\n=== 综合场景：部署后验证 ===")
 
 let verification_steps = [
     {"name": "检查 SSH", "host": "127.0.0.1", "port": 22, "required": true},
-    {"name": "检查 HTTP", "host": "127.0.0.1", "port": 80, "required": true},
-    {"name": "检查 HTTPS", "host": "127.0.0.1", "port": 443, "required": false},
-    {"name": "检查 API", "host": "127.0.0.1", "port": 8080, "required": false}
+    {"name": "检查 HTTP", "host": "127.0.0.1", "port": 80, "required": false}
 ]
 
 print("执行部署后验证...")
-let critical_failed = false
-
 for step in verification_steps {
-    let result = net.wait_for(step["host"], step["port"], 5)
-    let status = ""
+    let result = net.wait_for(step["host"], step["port"], 3)
 
-    if result.success {
-        status = "✓ 通过"
+    if result.connected {
+        print("  " + step["name"] + ": ✓ 通过")
     } else if step["required"] {
-        status = "✗ 失败 (必需)"
-        critical_failed = true
+        print("  " + step["name"] + ": ✗ 失败 (必需)")
     } else {
-        status = "- 跳过 (可选)"
+        print("  " + step["name"] + ": - 跳过 (可选)")
     }
-
-    print("  " + step["name"] + ": " + status)
-}
-
-if critical_failed {
-    print("\n✗ 部署验证失败：必需服务未就绪")
-} else {
-    print("\n✓ 部署验证通过")
 }
 
 print("\n=== net.wait_for 演示完成 ===")

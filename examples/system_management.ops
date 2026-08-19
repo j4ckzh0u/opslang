@@ -1,16 +1,14 @@
 // 示例：系统管理 — 时区、内核模块、SSH 密钥
 // 演示 sys.timezone_get/set, kernel.module_list, ssh.authorized_key_*
 
-task "system_management" on localhost {
-    // 1. 查看/设置时区
-    let tz = sys.timezone_get()
-    report { current_timezone: tz.timezone }
+// 1. 查看/设置时区
+let tz = sys.timezone_get()
+report { current_timezone: tz.timezone }
 
-    // 2. 列出已加载内核模块
-    let mods = kernel.module_list()
-    report { loaded_modules: mods.count }
+// 2. 列出已加载内核模块
+let mods = kernel.module_list()
+report { loaded_modules: mods.count }
 
-    // 3. 列出用户 SSH 密钥
-    let keys = ssh.authorized_key_list("root")
-    report { ssh_keys: keys.count }
-}
+// 3. 列出用户 SSH 密钥
+let keys = ssh.authorized_key_list("root")
+report { ssh_keys: keys.count }
