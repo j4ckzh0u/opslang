@@ -1,0 +1,32 @@
+privilege: admin
+// replace 模块示例 - 文件内容替换
+// replace module example - file content replacement
+
+// 先创建测试文件
+file.write("/tmp/replace_test.conf", "server_name = oldserver\nport = 8080\nserver_name = oldserver\n")
+
+// 替换所有匹配项
+let result = replace.replace("/tmp/replace_test.conf", "oldserver", "newserver", false)
+report {
+    changed: result.changed,
+    replaced: result.replaced,
+    message: result.message
+}
+
+// 正则替换
+file.write("/tmp/regex_test.conf", "version = 1.2.3\nbuild = 456\n")
+let regex_result = replace.replace(
+    "/tmp/regex_test.conf",
+    "version = [0-9.]+",
+    "version = 2.0.0",
+    true
+)
+report {
+    regex_changed: regex_result.changed,
+    regex_replaced: regex_result.replaced
+}
+
+// 清理测试文件
+file.delete("/tmp/replace_test.conf")
+file.delete("/tmp/regex_test.conf")
+report { cleanup: "done" }

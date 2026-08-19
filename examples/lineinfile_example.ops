@@ -1,0 +1,36 @@
+privilege: admin
+// lineinfile 模块示例 - 行级文件编辑
+// lineinfile module example - line-level file editing
+
+// 确保文件中存在某行
+let result = lineinfile.present(
+    "/tmp/example.conf",
+    "max_connections = 100",
+    "^max_connections",
+    true
+)
+report {
+    present_changed: result.changed,
+    present_message: result.message
+}
+
+// 再次确保（幂等操作）
+let result2 = lineinfile.present(
+    "/tmp/example.conf",
+    "max_connections = 100",
+    "^max_connections",
+    true
+)
+report {
+    second_call_changed: result2.changed
+}
+
+// 确保某行不存在
+let absent = lineinfile.absent(
+    "/tmp/example.conf",
+    "^deprecated_option"
+)
+report {
+    absent_changed: absent.changed,
+    absent_message: absent.message
+}

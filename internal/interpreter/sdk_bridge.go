@@ -60,6 +60,10 @@ import (
 	sdkfetch "github.com/opslang/opslang/pkg/ops-core-sdk/fetch"
 	sdksebool "github.com/opslang/opslang/pkg/ops-core-sdk/seboolean"
 	sdkyumrepo "github.com/opslang/opslang/pkg/ops-core-sdk/yum_repo"
+	sdkuri "github.com/opslang/opslang/pkg/ops-core-sdk/uri"
+	sdklineinfile "github.com/opslang/opslang/pkg/ops-core-sdk/lineinfile"
+	sdkreplace "github.com/opslang/opslang/pkg/ops-core-sdk/replace"
+	sdkxml "github.com/opslang/opslang/pkg/ops-core-sdk/xml"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -3745,6 +3749,170 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			persistent, _ = args[2].(bool)
 		}
 		r, err := sdksebool.Set(name, state, persistent)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── uri ─────────────────────────────────────────────────────────────
+	interp.builtins["uri.do"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("uri.do() requires at least 1 argument (url)")
+		}
+		url, _ := args[0].(string)
+		method := "GET"
+		if len(args) > 1 {
+			method, _ = args[1].(string)
+		}
+		headers := toStringMap(args, 2)
+		body := ""
+		if len(args) > 3 {
+			body, _ = args[3].(string)
+		}
+		timeoutMs := 30000
+		if len(args) > 4 {
+			if f, ok := args[4].(float64); ok {
+				timeoutMs = int(f)
+			}
+		}
+		r, err := sdkuri.Do(url, method, headers, body, timeoutMs)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["uri.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("uri.get() requires 1 argument (url)")
+		}
+		url, _ := args[0].(string)
+		r, err := sdkuri.Get(url)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["uri.post"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("uri.post() requires 2 arguments (url, body)")
+		}
+		url, _ := args[0].(string)
+		r, err := sdkuri.Post(url, args[1])
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["uri.put"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("uri.put() requires 2 arguments (url, body)")
+		}
+		url, _ := args[0].(string)
+		r, err := sdkuri.Put(url, args[1])
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["uri.delete"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("uri.delete() requires 1 argument (url)")
+		}
+		url, _ := args[0].(string)
+		r, err := sdkuri.Delete(url)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["uri.download"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("uri.download() requires 2 arguments (url, dest)")
+		}
+		url, _ := args[0].(string)
+		dest, _ := args[1].(string)
+		r, err := sdkuri.Download(url, dest)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── lineinfile ──────────────────────────────────────────────────────
+	interp.builtins["lineinfile.present"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("lineinfile.ensure() requires at least 2 arguments (path, line)")
+		}
+		path, _ := args[0].(string)
+		line, _ := args[1].(string)
+		re := ""
+		if len(args) > 2 {
+			re, _ = args[2].(string)
+		}
+		create := false
+		if len(args) > 3 {
+			create, _ = args[3].(bool)
+		}
+		r, err := sdklineinfile.Ensure(path, line, re, create)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["lineinfile.absent"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("lineinfile.absent() requires 2 arguments (path, regexp)")
+		}
+		path, _ := args[0].(string)
+		re, _ := args[1].(string)
+		r, err := sdklineinfile.Absent(path, re)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── replace ─────────────────────────────────────────────────────────
+	interp.builtins["replace.replace"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("replace.replace() requires at least 3 arguments (path, pattern, replacement)")
+		}
+		path, _ := args[0].(string)
+		pattern, _ := args[1].(string)
+		replacement, _ := args[2].(string)
+		regexpMode := false
+		if len(args) > 3 {
+			regexpMode, _ = args[3].(bool)
+		}
+		r, err := sdkreplace.Replace(path, pattern, replacement, regexpMode)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── xml ─────────────────────────────────────────────────────────────
+	interp.builtins["xml.get_element"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("xml.get_element() requires 2 arguments (path, element)")
+		}
+		path, _ := args[0].(string)
+		element, _ := args[1].(string)
+		r, err := sdkxml.GetElement(path, element)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["xml.set_element"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("xml.set_element() requires 3 arguments (path, element, value)")
+		}
+		path, _ := args[0].(string)
+		element, _ := args[1].(string)
+		value, _ := args[2].(string)
+		r, err := sdkxml.SetElement(path, element, value)
 		if err != nil {
 			return nil, err
 		}

@@ -1,0 +1,34 @@
+privilege: admin
+// uri 模块示例 - 高级 HTTP 操作
+// uri module example - advanced HTTP operations
+
+// 演示 URI 模块的功能（不执行实际网络请求）
+// Demonstrating URI module capabilities (no actual network requests)
+
+// URI 模块支持的操作:
+// - uri.do(url, method, headers, body, timeout_ms)
+// - uri.get(url)
+// - uri.post(url, body)
+// - uri.put(url, body)
+// - uri.delete(url)
+// - uri.download(url, dest)
+
+// 示例用法（注释掉，避免测试时执行）:
+// let resp = uri.get("https://httpbin.org/get")
+// report { status: resp.status_code }
+
+// let data = {"name": "opslang", "version": "1.0"}
+// let post_resp = uri.post("https://httpbin.org/post", data)
+// report { post_status: post_resp.status_code }
+
+report {
+    module: "uri",
+    description: "Advanced HTTP operations with full response control",
+    features: [
+        "HTTP methods: GET, POST, PUT, DELETE",
+        "Custom headers",
+        "Timeout control",
+        "JSON body serialization",
+        "File download"
+    ]
+}

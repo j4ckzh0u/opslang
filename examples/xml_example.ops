@@ -1,0 +1,27 @@
+privilege: admin
+// xml 模块示例 - XML 操作
+// xml module example - XML operations
+
+// 注意: XML 操作目前为简化实现，需要 xmlquery 库支持完整功能
+// 示例展示了 API 用法
+
+// 获取 XML 元素（需要有效的 XML 文件路径和元素路径）
+// 先创建一个测试 XML 文件
+let xml_content = `<?xml version="1.0"?>
+<config>
+  <server>localhost</server>
+  <port>8080</port>
+</config>`
+
+file.write("/tmp/test.xml", xml_content)
+
+// 获取元素（当前为简化实现）
+let result = xml.get_element("/tmp/test.xml", "server")
+report {
+    note: "XML module provides basic operations",
+    hint: "Full XML support requires xmlquery library integration"
+}
+
+// 清理测试文件
+file.delete("/tmp/test.xml")
+report { cleanup: "done" }

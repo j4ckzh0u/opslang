@@ -421,6 +421,24 @@ var Funcs = []Func{
 	{Name: "seboolean.list"},
 	{Name: "seboolean.get", Args: []string{"name"}},
 	{Name: "seboolean.set", Args: []string{"name", "state", "persistent"}, Mutating: true},
+	// ── uri ──────────────────────────────────────────────────────────────
+	{Name: "uri.do", Args: []string{"url", "method", "headers", "body", "timeout_ms"}},
+	{Name: "uri.get", Args: []string{"url"}},
+	{Name: "uri.post", Args: []string{"url", "body"}, Mutating: true},
+	{Name: "uri.put", Args: []string{"url", "body"}, Mutating: true},
+	{Name: "uri.delete", Args: []string{"url"}, Mutating: true},
+	{Name: "uri.download", Args: []string{"url", "dest"}, Mutating: true},
+
+	// ── lineinfile ───────────────────────────────────────────────────────
+	{Name: "lineinfile.present", Args: []string{"path", "line", "regexp", "create"}, Mutating: true},
+	{Name: "lineinfile.absent", Args: []string{"path", "regexp"}, Mutating: true},
+
+	// ── replace ──────────────────────────────────────────────────────────
+	{Name: "replace.replace", Args: []string{"path", "pattern", "replacement", "regexp_mode"}, Mutating: true},
+
+	// ── xml ──────────────────────────────────────────────────────────────
+	{Name: "xml.get_element", Args: []string{"path", "element"}},
+	{Name: "xml.set_element", Args: []string{"path", "element", "value"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

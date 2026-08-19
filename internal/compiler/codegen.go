@@ -395,6 +395,25 @@ var sdkMapping = map[string]sdkFunc{
 	"seboolean.list": {pkg: "seboolean", goName: "List"},
 	"seboolean.get":  {pkg: "seboolean", goName: "Get", args: true, params: []string{"s"}},
 	"seboolean.set":  {pkg: "seboolean", goName: "Set", args: true, params: []string{"s", "b", "b"}},
+
+	// ── uri ──────────────────────────────────────────────────────────────
+	"uri.do":       {pkg: "uri", goName: "Do", args: true, params: []string{"s", "s", "ms", "s", "i"}},
+	"uri.get":      {pkg: "uri", goName: "Get", args: true, params: []string{"s"}},
+	"uri.post":     {pkg: "uri", goName: "Post", args: true, params: []string{"s", "a"}},
+	"uri.put":      {pkg: "uri", goName: "Put", args: true, params: []string{"s", "a"}},
+	"uri.delete":   {pkg: "uri", goName: "Delete", args: true, params: []string{"s"}},
+	"uri.download": {pkg: "uri", goName: "Download", args: true, params: []string{"s", "s"}},
+
+	// ── lineinfile ───────────────────────────────────────────────────────
+	"lineinfile.present": {pkg: "lineinfile", goName: "Ensure", args: true, params: []string{"s", "s", "s", "b"}},
+	"lineinfile.absent": {pkg: "lineinfile", goName: "Absent", args: true, params: []string{"s", "s"}},
+
+	// ── replace ──────────────────────────────────────────────────────────
+	"replace.replace": {pkg: "replace", goName: "Replace", args: true, params: []string{"s", "s", "s", "b"}},
+
+	// ── xml ──────────────────────────────────────────────────────────────
+	"xml.get_element": {pkg: "xml", goName: "GetElement", args: true, params: []string{"s", "s"}},
+	"xml.set_element": {pkg: "xml", goName: "SetElement", args: true, params: []string{"s", "s", "s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -509,6 +528,10 @@ var pkgImportAlias = map[string]string{
 	"synchronize":  "opssync",
 	"fetch":        "opsfetch",
 	"seboolean":    "opssebool",
+	"uri":          "opsuri",
+	"lineinfile":   "opslineinfile",
+	"replace":      "opsreplace",
+	"xml":          "opsxml",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -549,6 +572,10 @@ var pkgImportPath = map[string]string{
 	"synchronize":  "github.com/opslang/opslang/pkg/ops-core-sdk/synchronize",
 	"fetch":        "github.com/opslang/opslang/pkg/ops-core-sdk/fetch",
 	"seboolean":    "github.com/opslang/opslang/pkg/ops-core-sdk/seboolean",
+	"uri":          "github.com/opslang/opslang/pkg/ops-core-sdk/uri",
+	"lineinfile":   "github.com/opslang/opslang/pkg/ops-core-sdk/lineinfile",
+	"replace":      "github.com/opslang/opslang/pkg/ops-core-sdk/replace",
+	"xml":          "github.com/opslang/opslang/pkg/ops-core-sdk/xml",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

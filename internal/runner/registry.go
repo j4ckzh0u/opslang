@@ -61,6 +61,10 @@ import (
 	sdkfetch "github.com/opslang/opslang/pkg/ops-core-sdk/fetch"
 	sdksebool "github.com/opslang/opslang/pkg/ops-core-sdk/seboolean"
 	sdktimezone "github.com/opslang/opslang/pkg/ops-core-sdk/timezone"
+	sdkuri "github.com/opslang/opslang/pkg/ops-core-sdk/uri"
+	sdklineinfile "github.com/opslang/opslang/pkg/ops-core-sdk/lineinfile"
+	sdkreplace "github.com/opslang/opslang/pkg/ops-core-sdk/replace"
+	sdkxml "github.com/opslang/opslang/pkg/ops-core-sdk/xml"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -2385,6 +2389,133 @@ func (r *Registry) registerExtensions() {
 		}
 		persistent, _ := argBool(args, "persistent")
 		return sdksebool.Set(name, state, persistent)
+	})
+
+	// ── uri ──────────────────────────────────────────────────────────────
+	r.Register("uri.do", func(args map[string]interface{}) (interface{}, error) {
+		url, err := argString(args, "url")
+		if err != nil {
+			return nil, fmt.Errorf("uri.do: %w", err)
+		}
+		method := getStringArg(args, "method", "GET")
+		headers := toStringMapArg(args, "headers")
+		body := getStringArg(args, "body", "")
+		timeoutMs, _ := argInt(args, "timeout_ms")
+		if timeoutMs <= 0 {
+			timeoutMs = 30000
+		}
+		return sdkuri.Do(url, method, headers, body, timeoutMs)
+	})
+	r.Register("uri.get", func(args map[string]interface{}) (interface{}, error) {
+		url, err := argString(args, "url")
+		if err != nil {
+			return nil, fmt.Errorf("uri.get: %w", err)
+		}
+		return sdkuri.Get(url)
+	})
+	r.Register("uri.post", func(args map[string]interface{}) (interface{}, error) {
+		url, err := argString(args, "url")
+		if err != nil {
+			return nil, fmt.Errorf("uri.post: %w", err)
+		}
+		return sdkuri.Post(url, args["body"])
+	})
+	r.Register("uri.put", func(args map[string]interface{}) (interface{}, error) {
+		url, err := argString(args, "url")
+		if err != nil {
+			return nil, fmt.Errorf("uri.put: %w", err)
+		}
+		return sdkuri.Put(url, args["body"])
+	})
+	r.Register("uri.delete", func(args map[string]interface{}) (interface{}, error) {
+		url, err := argString(args, "url")
+		if err != nil {
+			return nil, fmt.Errorf("uri.delete: %w", err)
+		}
+		return sdkuri.Delete(url)
+	})
+	r.Register("uri.download", func(args map[string]interface{}) (interface{}, error) {
+		url, err := argString(args, "url")
+		if err != nil {
+			return nil, fmt.Errorf("uri.download: %w", err)
+		}
+		dest, err := argString(args, "dest")
+		if err != nil {
+			return nil, fmt.Errorf("uri.download: %w", err)
+		}
+		return sdkuri.Download(url, dest)
+	})
+
+	// ── lineinfile ───────────────────────────────────────────────────────
+	r.Register("lineinfile.present", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("lineinfile.ensure: %w", err)
+		}
+		line, err := argString(args, "line")
+		if err != nil {
+			return nil, fmt.Errorf("lineinfile.ensure: %w", err)
+		}
+		re := getStringArg(args, "regexp", "")
+		create, _ := argBool(args, "create")
+		return sdklineinfile.Ensure(path, line, re, create)
+	})
+	r.Register("lineinfile.absent", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("lineinfile.absent: %w", err)
+		}
+		re, err := argString(args, "regexp")
+		if err != nil {
+			return nil, fmt.Errorf("lineinfile.absent: %w", err)
+		}
+		return sdklineinfile.Absent(path, re)
+	})
+
+	// ── replace ──────────────────────────────────────────────────────────
+	r.Register("replace.replace", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("replace.replace: %w", err)
+		}
+		pattern, err := argString(args, "pattern")
+		if err != nil {
+			return nil, fmt.Errorf("replace.replace: %w", err)
+		}
+		replacement, err := argString(args, "replacement")
+		if err != nil {
+			return nil, fmt.Errorf("replace.replace: %w", err)
+		}
+		regexpMode, _ := argBool(args, "regexp_mode")
+		return sdkreplace.Replace(path, pattern, replacement, regexpMode)
+	})
+
+	// ── xml ──────────────────────────────────────────────────────────────
+	r.Register("xml.get_element", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("xml.get_element: %w", err)
+		}
+		element, err := argString(args, "element")
+		if err != nil {
+			return nil, fmt.Errorf("xml.get_element: %w", err)
+		}
+		return sdkxml.GetElement(path, element)
+	})
+	r.Register("xml.set_element", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("xml.set_element: %w", err)
+		}
+		element, err := argString(args, "element")
+		if err != nil {
+			return nil, fmt.Errorf("xml.set_element: %w", err)
+		}
+		value, err := argString(args, "value")
+		if err != nil {
+			return nil, fmt.Errorf("xml.set_element: %w", err)
+		}
+		return sdkxml.SetElement(path, element, value)
 	})
 }
 
