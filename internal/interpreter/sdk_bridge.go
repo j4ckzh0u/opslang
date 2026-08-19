@@ -22,6 +22,7 @@ import (
 	sdklimits "github.com/opslang/opslang/pkg/ops-core-sdk/limits"
 	sdklocale "github.com/opslang/opslang/pkg/ops-core-sdk/locale"
 	sdklogrotate "github.com/opslang/opslang/pkg/ops-core-sdk/logrotate"
+	sdklvg "github.com/opslang/opslang/pkg/ops-core-sdk/lvg"
 	sdknet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
 	sdkntp "github.com/opslang/opslang/pkg/ops-core-sdk/ntp"
 	sdkpip "github.com/opslang/opslang/pkg/ops-core-sdk/pip"
@@ -2442,6 +2443,107 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		r, err := sdklogrotate.Remove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── lvg.* ─────────────────────────────────────────────────────────────
+	interp.builtins["lvg.create"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("lvg.create() requires at least 2 arguments (name, pvs)")
+		}
+		name, _ := args[0].(string)
+		pvsRaw, _ := args[1].([]interface{})
+		pvs := make([]string, len(pvsRaw))
+		for i, pv := range pvsRaw {
+			pvs[i], _ = pv.(string)
+		}
+		r, err := sdklvg.Create(name, pvs)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["lvg.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("lvg.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdklvg.Remove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["lvg.extend"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("lvg.extend() requires at least 2 arguments (name, pvs)")
+		}
+		name, _ := args[0].(string)
+		pvsRaw, _ := args[1].([]interface{})
+		pvs := make([]string, len(pvsRaw))
+		for i, pv := range pvsRaw {
+			pvs[i], _ = pv.(string)
+		}
+		r, err := sdklvg.Extend(name, pvs)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["lvg.reduce"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("lvg.reduce() requires at least 2 arguments (name, pvs)")
+		}
+		name, _ := args[0].(string)
+		pvsRaw, _ := args[1].([]interface{})
+		pvs := make([]string, len(pvsRaw))
+		for i, pv := range pvsRaw {
+			pvs[i], _ = pv.(string)
+		}
+		r, err := sdklvg.Reduce(name, pvs)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["lvg.activate"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("lvg.activate() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdklvg.Activate(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["lvg.deactivate"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("lvg.deactivate() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdklvg.Deactivate(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["lvg.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdklvg.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["lvg.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("lvg.get() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdklvg.Get(name)
 		if err != nil {
 			return nil, err
 		}

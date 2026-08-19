@@ -23,6 +23,7 @@ import (
 	sdklimits "github.com/opslang/opslang/pkg/ops-core-sdk/limits"
 	sdklocale "github.com/opslang/opslang/pkg/ops-core-sdk/locale"
 	sdklogrotate "github.com/opslang/opslang/pkg/ops-core-sdk/logrotate"
+	sdklvg "github.com/opslang/opslang/pkg/ops-core-sdk/lvg"
 	opsnet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
 	sdkntp "github.com/opslang/opslang/pkg/ops-core-sdk/ntp"
 	sdkpip "github.com/opslang/opslang/pkg/ops-core-sdk/pip"
@@ -1384,6 +1385,54 @@ func (r *Registry) registerExtensions() {
 			return nil, fmt.Errorf("logrotate.remove: %w", err)
 		}
 		return sdklogrotate.Remove(name)
+	})
+
+	// ── lvg.* ─────────────────────────────────────────────────────────────
+	r.Register("lvg.create", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		pvsRaw, _ := args["pvs"].([]interface{})
+		pvs := make([]string, len(pvsRaw))
+		for i, pv := range pvsRaw {
+			pvs[i], _ = pv.(string)
+		}
+		return sdklvg.Create(name, pvs)
+	})
+	r.Register("lvg.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdklvg.Remove(name)
+	})
+	r.Register("lvg.extend", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		pvsRaw, _ := args["pvs"].([]interface{})
+		pvs := make([]string, len(pvsRaw))
+		for i, pv := range pvsRaw {
+			pvs[i], _ = pv.(string)
+		}
+		return sdklvg.Extend(name, pvs)
+	})
+	r.Register("lvg.reduce", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		pvsRaw, _ := args["pvs"].([]interface{})
+		pvs := make([]string, len(pvsRaw))
+		for i, pv := range pvsRaw {
+			pvs[i], _ = pv.(string)
+		}
+		return sdklvg.Reduce(name, pvs)
+	})
+	r.Register("lvg.activate", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdklvg.Activate(name)
+	})
+	r.Register("lvg.deactivate", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdklvg.Deactivate(name)
+	})
+	r.Register("lvg.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdklvg.List()
+	})
+	r.Register("lvg.get", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdklvg.Get(name)
 	})
 
 	// ── resolv.* ────────────────────────────────────────────────────────

@@ -217,6 +217,16 @@ var sdkMapping = map[string]sdkFunc{
 	"logrotate.set":    {pkg: "logrotate", goName: "Set", args: true, params: []string{"s", "s", "s", "i", "b", "s"}},
 	"logrotate.remove": {pkg: "logrotate", goName: "Remove", args: true, params: []string{"s"}},
 
+	// lvg
+	"lvg.create":    {pkg: "lvg", goName: "Create", args: true, params: []string{"s", "l"}},
+	"lvg.remove":    {pkg: "lvg", goName: "Remove", args: true, params: []string{"s"}},
+	"lvg.extend":    {pkg: "lvg", goName: "Extend", args: true, params: []string{"s", "l"}},
+	"lvg.reduce":    {pkg: "lvg", goName: "Reduce", args: true, params: []string{"s", "l"}},
+	"lvg.activate":  {pkg: "lvg", goName: "Activate", args: true, params: []string{"s"}},
+	"lvg.deactivate": {pkg: "lvg", goName: "Deactivate", args: true, params: []string{"s"}},
+	"lvg.list":      {pkg: "lvg", goName: "List"},
+	"lvg.get":       {pkg: "lvg", goName: "Get", args: true, params: []string{"s"}},
+
 	// resolv
 	"resolv.get":              {pkg: "resolv", goName: "Get"},
 	"resolv.set":              {pkg: "resolv", goName: "Set", args: true, params: []string{"l", "l", "l", "s"}},
@@ -609,6 +619,7 @@ var pkgImportAlias = map[string]string{
 	"get_url":        "opsgeturl",
 	"seport":         "opsseport",
 	"sefcontext":     "opssefcontext",
+	"lvg":            "opslvg",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -660,6 +671,7 @@ var pkgImportPath = map[string]string{
 	"get_url":        "github.com/opslang/opslang/pkg/ops-core-sdk/get_url",
 	"seport":         "github.com/opslang/opslang/pkg/ops-core-sdk/seport",
 	"sefcontext":     "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext",
+	"lvg":            "github.com/opslang/opslang/pkg/ops-core-sdk/lvg",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

@@ -1,0 +1,97 @@
+// lvg 卷组管理示例
+// LVM volume group management example
+
+// 列出所有卷组
+block {
+    let vgs = lvg.list()
+    report {
+        total_vgs: len(vgs.vgs)
+    }
+    for vg in vgs.vgs {
+        report {
+            name: vg.name,
+            pv_count: vg.pv_count,
+            lv_count: vg.lv_count,
+            size: vg.vg_size,
+            free: vg.vg_free
+        }
+    }
+}
+rescue {
+    print("lvg.list failed (LVM not available): " + _error)
+}
+
+// 获取特定卷组信息
+block {
+    let vg_info = lvg.get("vg0")
+    report {
+        vg_name: vg_info.name,
+        vg_uuid: vg_info.uuid,
+        pv_count: vg_info.pv_count,
+        lv_count: vg_info.lv_count
+    }
+}
+rescue {
+    print("lvg.get failed: " + _error)
+}
+
+// 创建卷组（需要 root 权限和物理卷）
+block {
+    let result = lvg.create("test_vg", ["/dev/sdb1", "/dev/sdc1"])
+    report {
+        created: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("lvg.create failed (expected without root/PVs): " + _error)
+}
+
+// 扩展卷组
+block {
+    let result = lvg.extend("test_vg", ["/dev/sdd1"])
+    report {
+        extended: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("lvg.extend failed: " + _error)
+}
+
+// 激活卷组
+block {
+    let result = lvg.activate("test_vg")
+    report {
+        activated: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("lvg.activate failed: " + _error)
+}
+
+// 停用卷组
+block {
+    let result = lvg.deactivate("test_vg")
+    report {
+        deactivated: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("lvg.deactivate failed: " + _error)
+}
+
+// 删除卷组
+block {
+    let result = lvg.remove("test_vg")
+    report {
+        removed: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("lvg.remove failed: " + _error)
+}

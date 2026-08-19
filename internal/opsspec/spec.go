@@ -160,6 +160,16 @@ var Funcs = []Func{
 	{Name: "logrotate.set", Args: []string{"name", "pattern", "frequency", "rotate", "compress", "post_rotate"}, Mutating: true},
 	{Name: "logrotate.remove", Args: []string{"name"}, Mutating: true},
 
+	// ── lvg ───────────────────────────────────────────────────────────
+	{Name: "lvg.create", Args: []string{"name", "pvs"}, Mutating: true},
+	{Name: "lvg.remove", Args: []string{"name"}, Mutating: true},
+	{Name: "lvg.extend", Args: []string{"name", "pvs"}, Mutating: true},
+	{Name: "lvg.reduce", Args: []string{"name", "pvs"}, Mutating: true},
+	{Name: "lvg.activate", Args: []string{"name"}, Mutating: true},
+	{Name: "lvg.deactivate", Args: []string{"name"}, Mutating: true},
+	{Name: "lvg.list"},
+	{Name: "lvg.get", Args: []string{"name"}},
+
 	// ── net ───────────────────────────────────────────────────────────
 	{Name: "net.dns_lookup", Args: []string{"host"}},
 	{Name: "net.download", Args: []string{"url", "dest", "checksum_algo", "checksum_expected"}, Mutating: true},
