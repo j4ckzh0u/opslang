@@ -107,3 +107,72 @@ func TestBlkDeviceJSON(t *testing.T) {
 		t.Errorf("expected sda, got %s", d.Name)
 	}
 }
+
+func TestLsUsb(t *testing.T) {
+	// LsUsb requires lsusb command
+	result, err := LsUsb()
+	if err != nil {
+		t.Skipf("lsusb not available: %v", err)
+	}
+	_ = result
+}
+
+func TestIpRoute(t *testing.T) {
+	// IpRoute requires ip command
+	result, err := IpRoute()
+	if err != nil {
+		t.Skipf("ip route not available: %v", err)
+	}
+	_ = result
+}
+
+func TestEthtool(t *testing.T) {
+	// Ethtool requires ethtool command or /sys/class/net/
+	result, err := Ethtool("eth0")
+	if err != nil {
+		t.Skipf("ethtool not available: %v", err)
+	}
+	_ = result
+}
+
+func TestEthtool_EmptyIface(t *testing.T) {
+	_, err := Ethtool("")
+	if err == nil {
+		t.Error("expected error for empty interface name")
+	}
+}
+
+func TestUsbDeviceJSON(t *testing.T) {
+	d := UsbDevice{
+		Bus:    "001",
+		Device: "002",
+		ID:     "1234:5678",
+		Name:   "Test USB Device",
+	}
+	if d.Bus != "001" {
+		t.Errorf("expected 001, got %s", d.Bus)
+	}
+}
+
+func TestRouteEntryJSON(t *testing.T) {
+	r := RouteEntry{
+		Destination: "default",
+		Gateway:     "192.168.1.1",
+		Interface:   "eth0",
+	}
+	if r.Destination != "default" {
+		t.Errorf("expected default, got %s", r.Destination)
+	}
+}
+
+func TestEthtoolInfoJSON(t *testing.T) {
+	e := EthtoolInfo{
+		Interface:    "eth0",
+		Driver:       "e1000e",
+		Speed:        "1000Mb/s",
+		LinkDetected: true,
+	}
+	if e.Interface != "eth0" {
+		t.Errorf("expected eth0, got %s", e.Interface)
+	}
+}

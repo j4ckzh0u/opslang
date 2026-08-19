@@ -1,0 +1,67 @@
+// sys.lsusb / sys.ip_route / sys.ethtool 示例 - 网络与USB诊断
+// sys network diagnostics - USB devices, routing table, interface info
+
+// USB 设备列表（需要 lsusb 命令）
+block {
+    let usb = sys.lsusb()
+    report {
+        total_usb_devices: len(usb.devices)
+    }
+    for dev in usb.devices {
+        report {
+            bus: dev.bus,
+            device: dev.device,
+            id: dev.id,
+            name: dev.name
+        }
+    }
+}
+rescue {
+    print("lsusb not available: " + _error)
+}
+
+// 路由表（需要 ip 命令，Linux only）
+block {
+    let routes = sys.ip_route()
+    report {
+        total_routes: len(routes.routes)
+    }
+    for route in routes.routes {
+        report {
+            destination: route.destination,
+            gateway: route.gateway,
+            interface: route.interface,
+            metric: route.metric
+        }
+    }
+}
+rescue {
+    print("ip route not available: " + _error)
+}
+
+// 网络接口驱动信息（需要 ethtool 命令或 /sys/class/net/）
+block {
+    let eth = sys.ethtool("eth0")
+    report {
+        interface: eth.interface,
+        driver: eth.driver,
+        speed: eth.speed,
+        duplex: eth.duplex,
+        link_detected: eth.link_detected
+    }
+}
+rescue {
+    print("ethtool for eth0 not available: " + _error)
+}
+
+// 尝试获取 lo 接口信息
+block {
+    let lo = sys.ethtool("lo")
+    report {
+        loopback_interface: lo.interface,
+        loopback_driver: lo.driver
+    }
+}
+rescue {
+    print("ethtool for lo not available: " + _error)
+}

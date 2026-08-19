@@ -354,3 +354,179 @@ func LsBlk() (LsBlkResult, error) {
 	}
 	return result, nil
 }
+
+// UsbDevice represents a USB device.
+type UsbDevice struct {
+	Bus    string `json:"bus"`
+	Device string `json:"device"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+}
+
+// LsUsbResult represents the result of listing USB devices.
+type LsUsbResult struct {
+	Devices []UsbDevice `json:"devices"`
+}
+
+// RouteEntry represents a routing table entry.
+type RouteEntry struct {
+	Destination string `json:"destination"`
+	Gateway     string `json:"gateway,omitempty"`
+	Interface   string `json:"interface,omitempty"`
+	Metric      string `json:"metric,omitempty"`
+}
+
+// IpRouteResult represents the result of showing routing table.
+type IpRouteResult struct {
+	Routes []RouteEntry `json:"routes"`
+}
+
+// EthtoolInfo represents network interface driver/link info.
+type EthtoolInfo struct {
+	Interface    string `json:"interface"`
+	Driver       string `json:"driver,omitempty"`
+	Version      string `json:"version,omitempty"`
+	Speed        string `json:"speed,omitempty"`
+	Duplex       string `json:"duplex,omitempty"`
+	LinkDetected bool   `json:"link_detected"`
+}
+
+// LsUsb lists USB devices using the lsusb command.
+func LsUsb() (LsUsbResult, error) {
+	out, err := exec.Command("lsusb").CombinedOutput()
+	if err != nil {
+		return LsUsbResult{}, fmt.Errorf("lsusb failed: %w (output: %s)", err, string(out))
+	}
+
+	result := LsUsbResult{Devices: make([]UsbDevice, 0)}
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// lsusb output: Bus 001 Device 002: ID 1234:5678 Device Name
+		dev := UsbDevice{}
+		parts := strings.Fields(line)
+		if len(parts) >= 2 {
+			dev.Bus = parts[1]
+		}
+		if len(parts) >= 4 {
+			dev.Device = parts[3]
+		}
+		// Find ID and name
+		if idx := strings.Index(line, "ID "); idx >= 0 {
+			afterID := line[idx+3:]
+			idParts := strings.SplitN(afterID, " ", 2)
+			if len(idParts) >= 1 {
+				dev.ID = idParts[0]
+			}
+			if len(idParts) >= 2 {
+				dev.Name = strings.TrimSpace(idParts[1])
+			}
+		}
+		result.Devices = append(result.Devices, dev)
+	}
+	return result, nil
+}
+
+// IpRoute shows the routing table using ip route command.
+func IpRoute() (IpRouteResult, error) {
+	out, err := exec.Command("ip", "route", "show").CombinedOutput()
+	if err != nil {
+		return IpRouteResult{}, fmt.Errorf("ip route failed: %w (output: %s)", err, string(out))
+	}
+
+	result := IpRouteResult{Routes: make([]RouteEntry, 0)}
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// ip route output: destination dev interface [options]
+		route := RouteEntry{}
+		parts := strings.Fields(line)
+		if len(parts) >= 1 {
+			route.Destination = parts[0]
+		}
+		// Find gateway, dev, metric
+		for i, p := range parts {
+			if p == "via" && i+1 < len(parts) {
+				route.Gateway = parts[i+1]
+			}
+			if p == "dev" && i+1 < len(parts) {
+				route.Interface = parts[i+1]
+			}
+			if p == "metric" && i+1 < len(parts) {
+				route.Metric = parts[i+1]
+			}
+		}
+		result.Routes = append(result.Routes, route)
+	}
+	return result, nil
+}
+
+// Ethtool gets network interface driver and link information.
+// Falls back to reading from /sys/class/net/ if ethtool command is not available.
+func Ethtool(iface string) (EthtoolInfo, error) {
+	if iface == "" {
+		return EthtoolInfo{}, fmt.Errorf("interface name is required")
+	}
+
+	result := EthtoolInfo{Interface: iface}
+
+	// Try ethtool command first
+	out, err := exec.Command("ethtool", iface).CombinedOutput()
+	if err == nil {
+		for _, line := range strings.Split(string(out), "\n") {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "driver:") {
+				result.Driver = strings.TrimSpace(strings.TrimPrefix(line, "driver:"))
+			}
+			if strings.HasPrefix(line, "version:") {
+				result.Version = strings.TrimSpace(strings.TrimPrefix(line, "version:"))
+			}
+			if strings.HasPrefix(line, "Speed:") {
+				result.Speed = strings.TrimSpace(strings.TrimPrefix(line, "Speed:"))
+			}
+			if strings.HasPrefix(line, "Duplex:") {
+				result.Duplex = strings.TrimSpace(strings.TrimPrefix(line, "Duplex:"))
+			}
+			if strings.Contains(line, "Link detected:") {
+				result.LinkDetected = strings.Contains(line, "yes")
+			}
+		}
+		return result, nil
+	}
+
+	// Fallback: read from /sys/class/net/
+	readSysFile := func(path string) string {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(data))
+	}
+
+	driverPath := fmt.Sprintf("/sys/class/net/%s/device/driver/module", iface)
+	if driver, err := os.Readlink(driverPath); err == nil {
+		parts := strings.Split(driver, "/")
+		if len(parts) > 0 {
+			result.Driver = parts[len(parts)-1]
+		}
+	}
+
+	carrier := readSysFile(fmt.Sprintf("/sys/class/net/%s/carrier", iface))
+	result.LinkDetected = carrier == "1"
+
+	speed := readSysFile(fmt.Sprintf("/sys/class/net/%s/speed", iface))
+	if speed != "" && speed != "-1" {
+		result.Speed = speed + "Mb/s"
+	}
+
+	duplex := readSysFile(fmt.Sprintf("/sys/class/net/%s/duplex", iface))
+	if duplex != "" {
+		result.Duplex = duplex
+	}
+
+	return result, nil
+}

@@ -465,6 +465,9 @@ var sdkMapping = map[string]sdkFunc{
 	"sys.dmidecode":       {pkg: "sys", goName: "Dmidecode", args: true, params: []string{}},
 	"sys.lspci":           {pkg: "sys", goName: "LsPci", args: true, params: []string{}},
 	"sys.lsblk":           {pkg: "sys", goName: "LsBlk", args: true, params: []string{}},
+	"sys.lsusb":           {pkg: "sys", goName: "LsUsb", args: true, params: []string{}},
+	"sys.ip_route":        {pkg: "sys", goName: "IpRoute", args: true, params: []string{}},
+	"sys.ethtool":         {pkg: "sys", goName: "Ethtool", args: true, params: []string{"s"}},
 
 	// ── modprobe boot ─────────────────────────────────────────────────────────
 	"modprobe.set_boot": {pkg: "modprobe", goName: "SetBoot", args: true, params: []string{"s", "b"}},

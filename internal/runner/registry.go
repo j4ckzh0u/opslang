@@ -2832,6 +2832,16 @@ func (r *Registry) registerExtensions() {
 	r.Register("sys.lsblk", func(args map[string]interface{}) (interface{}, error) {
 		return sys.LsBlk()
 	})
+	r.Register("sys.lsusb", func(args map[string]interface{}) (interface{}, error) {
+		return sys.LsUsb()
+	})
+	r.Register("sys.ip_route", func(args map[string]interface{}) (interface{}, error) {
+		return sys.IpRoute()
+	})
+	r.Register("sys.ethtool", func(args map[string]interface{}) (interface{}, error) {
+		iface, _ := argString(args, "iface")
+		return sys.Ethtool(iface)
+	})
 
 	// ── modprobe.set_boot ──────────────────────────────────────────────────────
 	r.Register("modprobe.set_boot", func(args map[string]interface{}) (interface{}, error) {
