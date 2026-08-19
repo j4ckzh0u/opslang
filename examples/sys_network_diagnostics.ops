@@ -31,7 +31,7 @@ block {
             destination: route.destination,
             gateway: route.gateway,
             interface: route.interface,
-            metric: route.metric
+            route_metric: route.metric
         }
     }
 }
