@@ -1608,103 +1608,132 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	// ── openssl_cert.* ──────────────────────────────────────────────────
 	interp.builtins["openssl_cert.create_csr"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 4 { return nil, fmt.Errorf("openssl_cert.create_csr() requires 4 arguments") }
-		return sdkopenssl.CreateCSR(args[0].(string), args[1].(string), args[2].(string), args[3].(int))
+		kp, _ := args[0].(string)
+		cp, _ := args[1].(string)
+		subj, _ := args[2].(string)
+		bitsF, _ := toFloat(args[3])
+		return sdkopenssl.CreateCSR(kp, cp, subj, int(bitsF))
 	}
 	interp.builtins["openssl_cert.generate_self_signed"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 5 { return nil, fmt.Errorf("openssl_cert.generate_self_signed() requires 5 arguments") }
-		return sdkopenssl.GenerateSelfSigned(args[0].(string), args[1].(string), args[2].(string), args[3].(int), args[4].(int))
+		cp, _ := args[0].(string)
+		kp, _ := args[1].(string)
+		subj, _ := args[2].(string)
+		daysF, _ := toFloat(args[3])
+		bitsF, _ := toFloat(args[4])
+		return sdkopenssl.GenerateSelfSigned(cp, kp, subj, int(daysF), int(bitsF))
 	}
 	interp.builtins["openssl_cert.inspect"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 { return nil, fmt.Errorf("openssl_cert.inspect() requires 1 argument") }
-		return sdkopenssl.Inspect(args[0].(string))
+		cp, _ := args[0].(string)
+		return sdkopenssl.Inspect(cp)
 	}
 	interp.builtins["openssl_cert.verify"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 2 { return nil, fmt.Errorf("openssl_cert.verify() requires 2 arguments") }
-		return sdkopenssl.Verify(args[0].(string), args[1].(string))
+		cp, _ := args[0].(string)
+		ca, _ := args[1].(string)
+		return sdkopenssl.Verify(cp, ca)
 	}
 	interp.builtins["openssl_cert.check_expiry"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 { return nil, fmt.Errorf("openssl_cert.check_expiry() requires 1 argument") }
-		return sdkopenssl.CheckExpiry(args[0].(string))
+		cp, _ := args[0].(string)
+		return sdkopenssl.CheckExpiry(cp)
 	}
 	interp.builtins["openssl_cert.convert_format"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 3 { return nil, fmt.Errorf("openssl_cert.convert_format() requires 3 arguments") }
-		return sdkopenssl.ConvertFormat(args[0].(string), args[1].(string), args[2].(string))
+		ip, _ := args[0].(string)
+		op, _ := args[1].(string)
+		of, _ := args[2].(string)
+		return sdkopenssl.ConvertFormat(ip, op, of)
 	}
 
 	// ── redis.* ─────────────────────────────────────────────────────────
 	interp.builtins["redis.ping"] = func(args ...interface{}) (interface{}, error) {
 		h, p, a := "", 0, ""
-		if len(args) > 0 { h = args[0].(string) }
-		if len(args) > 1 { p = args[1].(int) }
-		if len(args) > 2 { a = args[2].(string) }
+		if len(args) > 0 { h, _ = args[0].(string) }
+		if len(args) > 1 { pf, _ := toFloat(args[1]); p = int(pf) }
+		if len(args) > 2 { a, _ = args[2].(string) }
 		return sdkredis.Ping(h, p, a)
 	}
 	interp.builtins["redis.get"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 { return nil, fmt.Errorf("redis.get() requires key") }
+		key, _ := args[0].(string)
 		h, p, a := "", 0, ""
-		if len(args) > 1 { h = args[1].(string) }
-		if len(args) > 2 { p = args[2].(int) }
-		if len(args) > 3 { a = args[3].(string) }
-		return sdkredis.Get(args[0].(string), h, p, a)
+		if len(args) > 1 { h, _ = args[1].(string) }
+		if len(args) > 2 { pf, _ := toFloat(args[2]); p = int(pf) }
+		if len(args) > 3 { a, _ = args[3].(string) }
+		return sdkredis.Get(key, h, p, a)
 	}
 	interp.builtins["redis.set"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 2 { return nil, fmt.Errorf("redis.set() requires key and value") }
+		key, _ := args[0].(string)
+		val, _ := args[1].(string)
 		h, p, a, exp := "", 0, "", 0
-		if len(args) > 2 { h = args[2].(string) }
-		if len(args) > 3 { p = args[3].(int) }
-		if len(args) > 4 { a = args[4].(string) }
-		if len(args) > 5 { exp = args[5].(int) }
-		return sdkredis.Set(args[0].(string), args[1].(string), h, p, a, exp)
+		if len(args) > 2 { h, _ = args[2].(string) }
+		if len(args) > 3 { pf, _ := toFloat(args[3]); p = int(pf) }
+		if len(args) > 4 { a, _ = args[4].(string) }
+		if len(args) > 5 { ef, _ := toFloat(args[5]); exp = int(ef) }
+		return sdkredis.Set(key, val, h, p, a, exp)
 	}
 	interp.builtins["redis.del"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 { return nil, fmt.Errorf("redis.del() requires keys") }
+		// Convert []interface{} to []string
+		var keys []string
+		if arr, ok := args[0].([]interface{}); ok {
+			for _, v := range arr {
+				if s, ok := v.(string); ok {
+					keys = append(keys, s)
+				}
+			}
+		}
 		h, p, a := "", 0, ""
-		if len(args) > 1 { h = args[1].(string) }
-		if len(args) > 2 { p = args[2].(int) }
-		if len(args) > 3 { a = args[3].(string) }
-		keys, _ := args[0].([]string)
+		if len(args) > 1 { h, _ = args[1].(string) }
+		if len(args) > 2 { pf, _ := toFloat(args[2]); p = int(pf) }
+		if len(args) > 3 { a, _ = args[3].(string) }
 		return sdkredis.Del(keys, h, p, a)
 	}
 	interp.builtins["redis.keys"] = func(args ...interface{}) (interface{}, error) {
 		pat, h, p, a := "*", "", 0, ""
-		if len(args) > 0 { pat = args[0].(string) }
-		if len(args) > 1 { h = args[1].(string) }
-		if len(args) > 2 { p = args[2].(int) }
-		if len(args) > 3 { a = args[3].(string) }
+		if len(args) > 0 { pat, _ = args[0].(string) }
+		if len(args) > 1 { h, _ = args[1].(string) }
+		if len(args) > 2 { pf, _ := toFloat(args[2]); p = int(pf) }
+		if len(args) > 3 { a, _ = args[3].(string) }
 		return sdkredis.Keys(pat, h, p, a)
 	}
 	interp.builtins["redis.info"] = func(args ...interface{}) (interface{}, error) {
 		h, p, a := "", 0, ""
-		if len(args) > 0 { h = args[0].(string) }
-		if len(args) > 1 { p = args[1].(int) }
-		if len(args) > 2 { a = args[2].(string) }
+		if len(args) > 0 { h, _ = args[0].(string) }
+		if len(args) > 1 { pf, _ := toFloat(args[1]); p = int(pf) }
+		if len(args) > 2 { a, _ = args[2].(string) }
 		return sdkredis.Info(h, p, a)
 	}
 	interp.builtins["redis.flush_db"] = func(args ...interface{}) (interface{}, error) {
 		h, p, a := "", 0, ""
-		if len(args) > 0 { h = args[0].(string) }
-		if len(args) > 1 { p = args[1].(int) }
-		if len(args) > 2 { a = args[2].(string) }
+		if len(args) > 0 { h, _ = args[0].(string) }
+		if len(args) > 1 { pf, _ := toFloat(args[1]); p = int(pf) }
+		if len(args) > 2 { a, _ = args[2].(string) }
 		return sdkredis.FlushDB(h, p, a)
 	}
 
 	// ── gem.* ───────────────────────────────────────────────────────────
 	interp.builtins["gem.install"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 { return nil, fmt.Errorf("gem.install() requires name") }
+		name, _ := args[0].(string)
 		v, u := "", false
-		if len(args) > 1 { v = args[1].(string) }
-		if len(args) > 2 { u = args[2].(bool) }
-		return sdkgem.Install(args[0].(string), v, u)
+		if len(args) > 1 { v, _ = args[1].(string) }
+		if len(args) > 2 { u = opsBool(args[2]) }
+		return sdkgem.Install(name, v, u)
 	}
 	interp.builtins["gem.uninstall"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 { return nil, fmt.Errorf("gem.uninstall() requires name") }
+		name, _ := args[0].(string)
 		f := false
-		if len(args) > 1 { f = args[1].(bool) }
-		return sdkgem.Uninstall(args[0].(string), f)
+		if len(args) > 1 { f = opsBool(args[1]) }
+		return sdkgem.Uninstall(name, f)
 	}
 	interp.builtins["gem.update"] = func(args ...interface{}) (interface{}, error) {
 		n := ""
-		if len(args) > 0 { n = args[0].(string) }
+		if len(args) > 0 { n, _ = args[0].(string) }
 		return sdkgem.Update(n)
 	}
 	interp.builtins["gem.info"] = func(args ...interface{}) (interface{}, error) {
