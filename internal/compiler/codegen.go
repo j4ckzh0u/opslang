@@ -84,6 +84,50 @@ var sdkMapping = map[string]sdkFunc{
 	"json.decode": {pkg: "json", goName: "Decode", args: true, params: []string{"s"}},
 	"yaml.encode": {pkg: "yaml", goName: "Encode", args: true, params: []string{"a"}},
 	"yaml.decode": {pkg: "yaml", goName: "Decode", args: true, params: []string{"s"}},
+
+	// git
+	"git.clone": {pkg: "git", goName: "Clone", args: true, params: []string{"s", "s", "ms"}},
+	"git.pull":  {pkg: "git", goName: "Pull", args: true, params: []string{"s", "s", "s"}},
+
+	// user
+	"user.info":    {pkg: "user", goName: "Info", args: true, params: []string{"s"}},
+	"user.list":    {pkg: "user", goName: "List"},
+	"user.add":     {pkg: "user", goName: "Add", args: true, params: []string{"s", "ms"}},
+	"user.remove":  {pkg: "user", goName: "Remove", args: true, params: []string{"s", "b"}},
+	"user.modify":  {pkg: "user", goName: "Modify", args: true, params: []string{"s", "ms"}},
+	"user.exists":  {pkg: "user", goName: "Exists", args: true, params: []string{"s"}},
+
+	// group
+	"group.info":   {pkg: "group", goName: "Info", args: true, params: []string{"s"}},
+	"group.list":   {pkg: "group", goName: "List"},
+	"group.add":    {pkg: "group", goName: "Add", args: true, params: []string{"s", "ms"}},
+	"group.remove": {pkg: "group", goName: "Remove", args: true, params: []string{"s"}},
+	"group.exists": {pkg: "group", goName: "Exists", args: true, params: []string{"s"}},
+
+	// cron
+	"cron.list":   {pkg: "cron", goName: "List", args: true, params: []string{"s"}},
+	"cron.add":    {pkg: "cron", goName: "Add", args: true, params: []string{"s", "entry"}},
+	"cron.remove": {pkg: "cron", goName: "Remove", args: true, params: []string{"s", "s"}},
+
+	// sysctl
+	"sysctl.get":  {pkg: "sysctl", goName: "Get", args: true, params: []string{"s"}},
+	"sysctl.set":  {pkg: "sysctl", goName: "Set", args: true, params: []string{"s", "s"}},
+	"sysctl.list": {pkg: "sysctl", goName: "List"},
+
+	// file extensions
+	"file.lineinfile": {pkg: "file", goName: "LineInFile", args: true, params: []string{"s", "s", "b", "s"}},
+
+	// net extensions
+	"net.wait_for": {pkg: "net", goName: "WaitFor", args: true, params: []string{"s", "i", "i"}},
+
+	// sys extensions
+	"sys.hostname_set": {pkg: "sys", goName: "HostnameSet", args: true, params: []string{"s"}},
+	"sys.mount":        {pkg: "sys", goName: "Mount", args: true, params: []string{"s", "s", "s", "ms"}},
+	"sys.unmount":      {pkg: "sys", goName: "Unmount", args: true, params: []string{"s"}},
+	"sys.list_mounts":  {pkg: "sys", goName: "ListMounts"},
+
+	// firewall
+	"firewall.rule": {pkg: "sys", goName: "FirewallRule", args: true, params: []string{"s", "s", "i", "s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -108,6 +152,7 @@ type sdkFunc struct {
 	//   "i64"-> int64           via int64(toFloat(..))
 	//   "m"  -> uint32 file mode via opsParseMode
 	//   "d"  -> map[string]interface{} via opsToMap
+	//   "ms" -> map[string]string      via opsToStrMap
 	//   "l"  -> []string        via opsStrList
 	//   "a"  -> interface{}     as-is
 	// A nil params (with args true) means all-string convention and is
@@ -146,8 +191,14 @@ func convertArg(expr, conv string) string {
 		return fmt.Sprintf("opsParseMode(%s)", expr)
 	case "d":
 		return fmt.Sprintf("opsToMap(%s)", expr)
+	case "ms":
+		return fmt.Sprintf("opsToStrMap(%s)", expr)
 	case "l":
 		return fmt.Sprintf("opsStrList(%s)", expr)
+	case "b":
+		return fmt.Sprintf("opsBool(%s)", expr)
+	case "entry":
+		return fmt.Sprintf("opsToCronEntry(%s)", expr)
 	default: // "a"
 		return expr
 	}
@@ -164,6 +215,11 @@ var pkgImportAlias = map[string]string{
 	"time":    "opstime",
 	"json":    "opsjson",
 	"yaml":    "opsyaml",
+	"git":     "opsgit",
+	"user":    "opsuser",
+	"group":   "opsgrp",
+	"cron":    "opscron",
+	"sysctl":  "opsysctl",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -177,6 +233,11 @@ var pkgImportPath = map[string]string{
 	"time":    "github.com/opslang/opslang/pkg/ops-core-sdk/time",
 	"json":    "github.com/opslang/opslang/pkg/ops-core-sdk/json",
 	"yaml":    "github.com/opslang/opslang/pkg/ops-core-sdk/yaml",
+	"git":     "github.com/opslang/opslang/pkg/ops-core-sdk/git",
+	"user":    "github.com/opslang/opslang/pkg/ops-core-sdk/user",
+	"group":   "github.com/opslang/opslang/pkg/ops-core-sdk/group",
+	"cron":    "github.com/opslang/opslang/pkg/ops-core-sdk/cron",
+	"sysctl":  "github.com/opslang/opslang/pkg/ops-core-sdk/sysctl",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
@@ -257,11 +318,12 @@ func (g *CodeGenerator) assemble(mainCode string) (string, error) {
 	b.WriteString("\t\"encoding/json\"\n")
 	b.WriteString("\t\"fmt\"\n")
 	b.WriteString("\t\"os\"\n")
+	b.WriteString("\t\"sort\"\n")
 	b.WriteString("\t\"strings\"\n")
 	b.WriteString("\t\"sync\"\n")
 
 	// SDK imports
-	sdkOrder := []string{"sys", "file", "net", "process", "service", "pkg", "time", "json", "yaml"}
+	sdkOrder := []string{"sys", "file", "net", "process", "service", "pkg", "time", "json", "yaml", "git", "user", "group", "cron", "sysctl"}
 	for _, pkg := range sdkOrder {
 		if g.usedSDK[pkg] {
 			alias := pkgImportAlias[pkg]
@@ -277,6 +339,7 @@ func (g *CodeGenerator) assemble(mainCode string) (string, error) {
 	b.WriteString("\t_ = fmt.Println\n")
 	b.WriteString("\t_ = json.Marshal\n")
 	b.WriteString("\t_ = os.Stderr\n")
+	b.WriteString("\t_ = sort.Strings\n")
 	b.WriteString("\t_ = strings.Join\n")
 	b.WriteString("\t_ = sync.Mutex{}\n")
 	b.WriteString(")\n\n")
@@ -482,6 +545,46 @@ func opsStrList(v interface{}) []string {
 	return out
 }
 
+func opsToStrMap(v interface{}) map[string]string {
+	m, ok := v.(map[string]interface{})
+	if !ok {
+		return map[string]string{}
+	}
+	out := make(map[string]string, len(m))
+	for k, val := range m {
+		out[k] = opsStr(val)
+	}
+	return out
+}
+
+func opsBool(v interface{}) bool {
+	if b, ok := v.(bool); ok {
+		return b
+	}
+	return false
+}
+`)
+	// Only emit cron-dependent helper when cron is actually used,
+	// to avoid an unused import error for opscron.
+	if g.usedSDK["cron"] {
+		b.WriteString(`
+func opsToCronEntry(v interface{}) opscron.CronEntry {
+	m, ok := v.(map[string]interface{})
+	if !ok {
+		return opscron.CronEntry{}
+	}
+	return opscron.CronEntry{
+		Minute:     opsStr(m["minute"]),
+		Hour:       opsStr(m["hour"]),
+		DayOfMonth: opsStr(m["day_of_month"]),
+		Month:      opsStr(m["month"]),
+		DayOfWeek:  opsStr(m["day_of_week"]),
+		Command:    opsStr(m["command"]),
+	}
+}
+`)
+	}
+	b.WriteString(`
 // opsFatal aborts the compiled script: runtime SDK errors must fail the
 // deployment, not become string values that flow onward silently.
 func opsFatal(err error) {
@@ -616,6 +719,12 @@ func (g *CodeGenerator) genStatementTo(b *strings.Builder, stmt ast.Statement, i
 
 	case *ast.ForStatement:
 		return g.genFor(b, s, indent)
+
+	case *ast.ForInStatement:
+		return g.genForIn(b, s, indent)
+
+	case *ast.BlockRescueStatement:
+		return g.genBlockRescue(b, s, indent)
 
 	case *ast.WhileStatement:
 		return g.genWhile(b, s, indent)
@@ -783,6 +892,92 @@ func (g *CodeGenerator) genFor(b *strings.Builder, s *ast.ForStatement, indent i
 		}
 	}
 	b.WriteString(fmt.Sprintf("%s}\n", prefix))
+	return nil
+}
+
+func (g *CodeGenerator) genForIn(b *strings.Builder, s *ast.ForInStatement, indent int) error {
+	prefix := strings.Repeat("\t", indent)
+	iterExpr, err := g.genExpr(s.Iterable)
+	if err != nil {
+		return err
+	}
+	varName := sanitizeName(s.Var.Name)
+
+	// Emit a type-switch runtime dispatch over list/dict/string.
+	b.WriteString(fmt.Sprintf("%sfor _, _item := range func() []interface{} {\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t_v := %s\n", prefix, iterExpr))
+	b.WriteString(fmt.Sprintf("%s\tswitch _c := _v.(type) {\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\tcase []interface{}:\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\treturn _c\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\tcase map[string]interface{}:\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\t_keys := make([]string, 0, len(_c))\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\tfor _k := range _c { _keys = append(_keys, _k) }\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\tsort.Strings(_keys)\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\t_out := make([]interface{}, len(_keys))\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\tfor _i, _k := range _keys { _out[_i] = _k }\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\treturn _out\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\tcase string:\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\t_out := make([]interface{}, 0, len(_c))\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\tfor _, _r := range _c { _out = append(_out, string(_r)) }\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\treturn _out\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\tdefault:\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\topsFatal(fmt.Errorf(\"for-in requires a list, dict, or string, got %%T\", _v))\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\treturn nil\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t}\n", prefix))
+	b.WriteString(fmt.Sprintf("%s}() {\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t%s := _item\n", prefix, varName))
+	b.WriteString(fmt.Sprintf("%s\t_ = %s\n", prefix, varName))
+	for _, stmt := range s.Body.Statements {
+		if err := g.genStatementTo(b, stmt, indent+1); err != nil {
+			return err
+		}
+	}
+	b.WriteString(fmt.Sprintf("%s}\n", prefix))
+	return nil
+}
+
+func (g *CodeGenerator) genBlockRescue(b *strings.Builder, s *ast.BlockRescueStatement, indent int) error {
+	prefix := strings.Repeat("\t", indent)
+
+	if s.Rescue != nil {
+		// Wrap Body in a func that recovers panics. When there is a rescue
+		// clause, body errors are converted to Go panics internally and
+		// caught here so the rescue body can inspect _error.
+		b.WriteString(fmt.Sprintf("%sfunc() {\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\tdefer func() {\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\t\tif _r := recover(); _r != nil {\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\t\t\t_error := fmt.Sprintf(\"%%v\", _r)\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\t\t\t_ = _error\n", prefix))
+		for _, stmt := range s.Rescue.Statements {
+			if err := g.genStatementTo(b, stmt, indent+3); err != nil {
+				return err
+			}
+		}
+		b.WriteString(fmt.Sprintf("%s\t\t}\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\t}()\n", prefix))
+	}
+
+	// Block body.
+	if s.Body != nil {
+		for _, stmt := range s.Body.Statements {
+			if err := g.genStatementTo(b, stmt, indent+1); err != nil {
+				return err
+			}
+		}
+	}
+
+	if s.Rescue != nil {
+		b.WriteString(fmt.Sprintf("%s}()\n", prefix))
+	}
+
+	// Always clause (runs unconditionally after body/rescue).
+	if s.Always != nil {
+		for _, stmt := range s.Always.Statements {
+			if err := g.genStatementTo(b, stmt, indent); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 

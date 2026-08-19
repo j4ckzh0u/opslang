@@ -187,6 +187,8 @@ func (p *Parser) parseStatement() (ast.Statement, error) {
 		stmt, err = p.parseEnsureStatement()
 	case token.PARALLEL:
 		stmt, err = p.parseParallelStatement()
+	case token.BLOCK:
+		stmt, err = p.parseBlockRescueStatement()
 	default:
 		// Expression statement, possibly an assignment.
 		stmt, err = p.parseExpressionOrAssignStatement()
@@ -372,11 +374,20 @@ func (p *Parser) parseIfStatement() (*ast.IfStatement, error) {
 
 // --- For -------------------------------------------------------------------
 
-func (p *Parser) parseForStatement() (*ast.ForStatement, error) {
+// parseForStatement parses either a C-style for loop or a for-in loop.
+//   - for <ident> in <expr> { ... }            → ForInStatement
+//   - for <init>; <cond>; <post> { ... }       → ForStatement
+func (p *Parser) parseForStatement() (ast.Statement, error) {
 	pos := p.current().Pos
 	p.advance() // consume 'for'
+	p.skipNewlines()
 
-	// Init part (let or expression, possibly assignment).
+	// Peek ahead to detect for-in: `for IDENT in ...`
+	if p.current().Type == token.IDENT && p.peek().Type == token.IN {
+		return p.parseForInStatement(pos)
+	}
+
+	// C-style for loop.
 	init, err := p.parseForPart()
 	if err != nil {
 		return nil, err
@@ -416,6 +427,36 @@ func (p *Parser) parseForStatement() (*ast.ForStatement, error) {
 		Condition: cond,
 		Post:      post,
 		Body:      body,
+	}, nil
+}
+
+// parseForInStatement parses: for <Var> in <Iterable> { <Body> }
+// The 'for' keyword has already been consumed; pos is its position.
+func (p *Parser) parseForInStatement(pos token.Position) (*ast.ForInStatement, error) {
+	nameTok, err := p.expect(token.IDENT)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.expect(token.IN); err != nil {
+		return nil, err
+	}
+
+	iterable, err := p.parseExpression()
+	if err != nil {
+		return nil, err
+	}
+
+	p.skipNewlines()
+	body, err := p.parseBlockStatement()
+	if err != nil {
+		return nil, err
+	}
+
+	return &ast.ForInStatement{
+		Position: astPos(pos),
+		Var:      &ast.Identifier{Position: astPos(nameTok.Pos), Name: nameTok.Literal},
+		Iterable: iterable,
+		Body:     body,
 	}, nil
 }
 
@@ -750,6 +791,51 @@ func (p *Parser) parseParallelStatement() (*ast.ParallelStatement, error) {
 		Position: astPos(pos),
 		Body:     body,
 	}, nil
+}
+
+// --- Block / Rescue / Always -----------------------------------------------
+
+// parseBlockRescueStatement parses: block { ... } [rescue { ... }] [always { ... }]
+// At least the `block` clause is required. `rescue` and `always` are each optional.
+func (p *Parser) parseBlockRescueStatement() (*ast.BlockRescueStatement, error) {
+	pos := p.current().Pos
+	p.advance() // consume 'block'
+	p.skipNewlines()
+
+	body, err := p.parseBlockStatement()
+	if err != nil {
+		return nil, err
+	}
+
+	stmt := &ast.BlockRescueStatement{
+		Position: astPos(pos),
+		Body:     body,
+	}
+
+	// Optional rescue / always clauses (each independently optional, in order).
+	p.skipNewlines()
+	if p.current().Type == token.RESCUE {
+		p.advance()
+		p.skipNewlines()
+		rescueBody, err := p.parseBlockStatement()
+		if err != nil {
+			return nil, err
+		}
+		stmt.Rescue = rescueBody
+	}
+
+	p.skipNewlines()
+	if p.current().Type == token.ALWAYS {
+		p.advance()
+		p.skipNewlines()
+		alwaysBody, err := p.parseBlockStatement()
+		if err != nil {
+			return nil, err
+		}
+		stmt.Always = alwaysBody
+	}
+
+	return stmt, nil
 }
 
 // --- Ensure ----------------------------------------------------------------

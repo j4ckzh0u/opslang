@@ -41,27 +41,23 @@ type Func struct {
 
 // Funcs is the canonical table. Keep sorted by category then name.
 var Funcs = []Func{
-	// ── sys ───────────────────────────────────────────────────────────
-	{Name: "sys.cpu.count"},
-	{Name: "sys.cpu.info"},
-	{Name: "sys.cpu.usage"},
-	{Name: "sys.disk.partitions"},
-	{Name: "sys.disk.usage", Args: []string{"path"}},
-	{Name: "sys.hostname"},
-	{Name: "sys.load"},
-	{Name: "sys.memory.info"},
-	{Name: "sys.net.interfaces"},
-	{Name: "sys.os"},
-	{Name: "sys.uptime"},
-	{Name: "sys.users"},
+	// ── cron ──────────────────────────────────────────────────────────
+	{Name: "cron.add", Args: []string{"user", "entry"}, Mutating: true},
+	{Name: "cron.list", Args: []string{"user"}},
+	{Name: "cron.remove", Args: []string{"user", "line_match"}, Mutating: true},
 
 	// ── file ──────────────────────────────────────────────────────────
 	{Name: "file.append", Args: []string{"path", "content"}, Mutating: true},
 	{Name: "file.checksum", Args: []string{"path", "algo"}},
 	{Name: "file.chmod", Args: []string{"path", "mode"}, Mutating: true},
+	{Name: "file.collect", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly, Mutating: true},
 	{Name: "file.copy", Args: []string{"src", "dst"}, Mutating: true},
 	{Name: "file.delete", Args: []string{"path"}, Mutating: true},
+	// distribute/collect fan out from the controller over SSH; a remote
+	// runner executing them would need controller credentials.
+	{Name: "file.distribute", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly, Mutating: true},
 	{Name: "file.exists", Args: []string{"path"}},
+	{Name: "file.lineinfile", Args: []string{"path", "line", "present", "regexp"}, Mutating: true},
 	{Name: "file.list", Args: []string{"dir"}},
 	{Name: "file.mkdir", Args: []string{"path"}, Mutating: true},
 	{Name: "file.move", Args: []string{"src", "dst"}, Mutating: true},
@@ -71,10 +67,24 @@ var Funcs = []Func{
 	// it never writes a file, so it is not mutating.
 	{Name: "file.template", Args: []string{"path", "vars"}},
 	{Name: "file.write", Args: []string{"path", "content"}, Mutating: true},
-	// distribute/collect fan out from the controller over SSH; a remote
-	// runner executing them would need controller credentials.
-	{Name: "file.distribute", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly, Mutating: true},
-	{Name: "file.collect", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly, Mutating: true},
+
+	// ── firewall ──────────────────────────────────────────────────────
+	{Name: "firewall.rule", Args: []string{"action", "protocol", "port", "source"}, Mutating: true},
+
+	// ── git ───────────────────────────────────────────────────────────
+	{Name: "git.clone", Args: []string{"url", "dest", "opts"}, Mutating: true},
+	{Name: "git.pull", Args: []string{"repo_path", "remote", "branch"}, Mutating: true},
+
+	// ── group ─────────────────────────────────────────────────────────
+	{Name: "group.add", Args: []string{"name", "opts"}, Mutating: true},
+	{Name: "group.exists", Args: []string{"name"}},
+	{Name: "group.info", Args: []string{"name"}},
+	{Name: "group.list"},
+	{Name: "group.remove", Args: []string{"name"}, Mutating: true},
+
+	// ── json ──────────────────────────────────────────────────────────
+	{Name: "json.decode", Args: []string{"input"}},
+	{Name: "json.encode", Args: []string{"value"}},
 
 	// ── net ───────────────────────────────────────────────────────────
 	{Name: "net.dns_lookup", Args: []string{"host"}},
@@ -85,6 +95,13 @@ var Funcs = []Func{
 	{Name: "net.http_post", Args: []string{"url", "body"}, Mutating: true},
 	{Name: "net.interfaces"},
 	{Name: "net.tcp_check", Args: []string{"host", "port"}},
+	{Name: "net.wait_for", Args: []string{"host", "port", "timeout"}},
+
+	// ── pkg ───────────────────────────────────────────────────────────
+	{Name: "pkg.info", Args: []string{"name"}},
+	{Name: "pkg.install", Args: []string{"name"}, Mutating: true},
+	{Name: "pkg.list"},
+	{Name: "pkg.remove", Args: []string{"name"}, Mutating: true},
 
 	// ── process ───────────────────────────────────────────────────────
 	{Name: "process.exec", Args: []string{"command", "args"}, Mutating: true},
@@ -101,11 +118,28 @@ var Funcs = []Func{
 	{Name: "service.status", Args: []string{"name"}},
 	{Name: "service.stop", Args: []string{"name"}, Mutating: true},
 
-	// ── pkg ───────────────────────────────────────────────────────────
-	{Name: "pkg.info", Args: []string{"name"}},
-	{Name: "pkg.install", Args: []string{"name"}, Mutating: true},
-	{Name: "pkg.list"},
-	{Name: "pkg.remove", Args: []string{"name"}, Mutating: true},
+	// ── sys ───────────────────────────────────────────────────────────
+	{Name: "sys.cpu.count"},
+	{Name: "sys.cpu.info"},
+	{Name: "sys.cpu.usage"},
+	{Name: "sys.disk.partitions"},
+	{Name: "sys.disk.usage", Args: []string{"path"}},
+	{Name: "sys.hostname"},
+	{Name: "sys.hostname_set", Args: []string{"name"}, Mutating: true},
+	{Name: "sys.list_mounts"},
+	{Name: "sys.load"},
+	{Name: "sys.memory.info"},
+	{Name: "sys.mount", Args: []string{"device", "mountpoint", "fs_type", "opts"}, Mutating: true},
+	{Name: "sys.net.interfaces"},
+	{Name: "sys.os"},
+	{Name: "sys.unmount", Args: []string{"mountpoint"}, Mutating: true},
+	{Name: "sys.uptime"},
+	{Name: "sys.users"},
+
+	// ── sysctl ────────────────────────────────────────────────────────
+	{Name: "sysctl.get", Args: []string{"name"}},
+	{Name: "sysctl.list"},
+	{Name: "sysctl.set", Args: []string{"name", "value"}, Mutating: true},
 
 	// ── time ──────────────────────────────────────────────────────────
 	{Name: "time.diff", Args: []string{"t1", "t2"}},
@@ -115,9 +149,15 @@ var Funcs = []Func{
 	{Name: "time.since", Args: []string{"ts"}},
 	{Name: "time.sleep", Args: []string{"ms"}},
 
-	// ── json / yaml ───────────────────────────────────────────────────
-	{Name: "json.decode", Args: []string{"input"}},
-	{Name: "json.encode", Args: []string{"value"}},
+	// ── user ──────────────────────────────────────────────────────────
+	{Name: "user.add", Args: []string{"username", "opts"}, Mutating: true},
+	{Name: "user.exists", Args: []string{"username"}},
+	{Name: "user.info", Args: []string{"username"}},
+	{Name: "user.list"},
+	{Name: "user.modify", Args: []string{"username", "opts"}, Mutating: true},
+	{Name: "user.remove", Args: []string{"username", "remove_home"}, Mutating: true},
+
+	// ── yaml ──────────────────────────────────────────────────────────
 	{Name: "yaml.decode", Args: []string{"input"}},
 	{Name: "yaml.encode", Args: []string{"value"}},
 }

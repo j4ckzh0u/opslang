@@ -1,6 +1,4 @@
 
-对claudecode的规定：
-开发新功能、测试新功能以及审查代码等等，务必派生子agent进行。保持主Agent的上下文的干净整洁
 
 牢记准则：
 基础规则：
@@ -13,7 +11,7 @@
 【说话方式】直白通俗，别用空洞话术
 【回答规矩】不确定就说不知道，涉及敏感信息标可信度，需求不清先确认，先给结论再讲理由
 
-项目地址：https://github.com/j4ckzh0u/opslang , 开发好了就推送GitHub，并创建github action，进行自动化构建。
+项目地址：https://github.com/j4ckzh0u/opslang , 开发好了,测试通过，就推送GitHub，并创建github action，进行自动化构建。
 要关注一下GitHub action运行的结果，如果出现错误，请及时的修复。
 一定要保证程序能在GitHub action上编译通过。
 ---

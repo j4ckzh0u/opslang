@@ -6,14 +6,19 @@ import (
 	"fmt"
 
 	"github.com/opslang/opslang/internal/opsspec"
+	sdkcron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkfile "github.com/opslang/opslang/pkg/ops-core-sdk/file"
+	sdkgit "github.com/opslang/opslang/pkg/ops-core-sdk/git"
+	sdkgroup "github.com/opslang/opslang/pkg/ops-core-sdk/group"
 	sdkjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
 	sdknet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	sdkprocess "github.com/opslang/opslang/pkg/ops-core-sdk/process"
 	sdkservice "github.com/opslang/opslang/pkg/ops-core-sdk/service"
 	sdksys "github.com/opslang/opslang/pkg/ops-core-sdk/sys"
+	sdksysctl "github.com/opslang/opslang/pkg/ops-core-sdk/sysctl"
 	sdktime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
+	sdkuser "github.com/opslang/opslang/pkg/ops-core-sdk/user"
 	sdkyaml "github.com/opslang/opslang/pkg/ops-core-sdk/yaml"
 )
 
@@ -926,6 +931,485 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		r := sdktime.Diff(int64(t1F), int64(t2F))
 		return structToMap(r)
 	}
+
+	// ── user.* ─────────────────────────────────────────────────────────
+	interp.builtins["user.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("user.info() requires 1 argument (username)")
+		}
+		username, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("user.info(): username must be string")
+		}
+		r, err := sdkuser.Info(username)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["user.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkuser.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["user.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("user.add() requires at least 1 argument (username)")
+		}
+		username, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("user.add(): username must be string")
+		}
+		opts := toStringMap(args, 1)
+		r, err := sdkuser.Add(username, opts)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["user.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("user.remove() requires at least 1 argument (username)")
+		}
+		username, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("user.remove(): username must be string")
+		}
+		removeHome := false
+		if len(args) > 1 {
+			removeHome, _ = args[1].(bool)
+		}
+		r, err := sdkuser.Remove(username, removeHome)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["user.modify"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("user.modify() requires at least 1 argument (username)")
+		}
+		username, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("user.modify(): username must be string")
+		}
+		opts := toStringMap(args, 1)
+		r, err := sdkuser.Modify(username, opts)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["user.exists"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("user.exists() requires 1 argument (username)")
+		}
+		username, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("user.exists(): username must be string")
+		}
+		r, err := sdkuser.Exists(username)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── group.* ────────────────────────────────────────────────────────
+	interp.builtins["group.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("group.info() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("group.info(): name must be string")
+		}
+		r, err := sdkgroup.Info(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["group.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkgroup.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["group.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("group.add() requires at least 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("group.add(): name must be string")
+		}
+		opts := toStringMap(args, 1)
+		r, err := sdkgroup.Add(name, opts)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["group.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("group.remove() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("group.remove(): name must be string")
+		}
+		r, err := sdkgroup.Remove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["group.exists"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("group.exists() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("group.exists(): name must be string")
+		}
+		r, err := sdkgroup.Exists(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── cron.* ─────────────────────────────────────────────────────────
+	interp.builtins["cron.list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("cron.list() requires 1 argument (user)")
+		}
+		user, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("cron.list(): user must be string")
+		}
+		r, err := sdkcron.List(user)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["cron.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("cron.add() requires 2 arguments (user, entry)")
+		}
+		user, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("cron.add(): user must be string")
+		}
+		entryMap, ok := args[1].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("cron.add(): entry must be a dict")
+		}
+		entry := sdkcron.CronEntry{
+			Minute:     mapStr(entryMap, "minute", "*"),
+			Hour:       mapStr(entryMap, "hour", "*"),
+			DayOfMonth: mapStr(entryMap, "day_of_month", "*"),
+			Month:      mapStr(entryMap, "month", "*"),
+			DayOfWeek:  mapStr(entryMap, "day_of_week", "*"),
+			Command:    mapStr(entryMap, "command", ""),
+		}
+		r, err := sdkcron.Add(user, entry)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["cron.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("cron.remove() requires 2 arguments (user, line_match)")
+		}
+		user, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("cron.remove(): user must be string")
+		}
+		lineMatch, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("cron.remove(): line_match must be string")
+		}
+		r, err := sdkcron.Remove(user, lineMatch)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── sysctl.* ───────────────────────────────────────────────────────
+	interp.builtins["sysctl.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysctl.get() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysctl.get(): name must be string")
+		}
+		r, err := sdksysctl.Get(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysctl.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("sysctl.set() requires 2 arguments (name, value)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysctl.set(): name must be string")
+		}
+		value, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysctl.set(): value must be string")
+		}
+		r, err := sdksysctl.Set(name, value)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysctl.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksysctl.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── git.* ──────────────────────────────────────────────────────────
+	interp.builtins["git.clone"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("git.clone() requires at least 2 arguments (url, dest)")
+		}
+		url, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("git.clone(): url must be string")
+		}
+		dest, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("git.clone(): dest must be string")
+		}
+		opts := toStringMap(args, 2)
+		r, err := sdkgit.Clone(url, dest, opts)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["git.pull"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("git.pull() requires at least 1 argument (repo_path)")
+		}
+		repoPath, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("git.pull(): repo_path must be string")
+		}
+		remote := getStringArgBridge(args, 1, "origin")
+		branch := getStringArgBridge(args, 2, "")
+		r, err := sdkgit.Pull(repoPath, remote, branch)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── file.lineinfile ────────────────────────────────────────────────
+	interp.builtins["file.lineinfile"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("file.lineinfile() requires at least 2 arguments (path, line)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.lineinfile(): path must be string")
+		}
+		line, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.lineinfile(): line must be string")
+		}
+		present := true
+		if len(args) > 2 {
+			present, _ = args[2].(bool)
+		}
+		rx := ""
+		if len(args) > 3 {
+			rx, _ = args[3].(string)
+		}
+		r, err := sdkfile.LineInFile(path, line, present, rx)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── net.wait_for ───────────────────────────────────────────────────
+	interp.builtins["net.wait_for"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("net.wait_for() requires at least 2 arguments (host, port)")
+		}
+		host, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("net.wait_for(): host must be string")
+		}
+		portF, err := toFloat(args[1])
+		if err != nil {
+			return nil, fmt.Errorf("net.wait_for(): port must be number")
+		}
+		timeout := 30
+		if len(args) > 2 {
+			tF, err := toFloat(args[2])
+			if err != nil {
+				return nil, fmt.Errorf("net.wait_for(): timeout must be number")
+			}
+			timeout = int(tF)
+		}
+		r, err := sdknet.WaitFor(host, int(portF), timeout)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── sys.mount / sys.unmount / sys.list_mounts ──────────────────────
+	interp.builtins["sys.mount"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("sys.mount() requires at least 3 arguments (device, mountpoint, fs_type)")
+		}
+		device, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sys.mount(): device must be string")
+		}
+		mountpoint, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("sys.mount(): mountpoint must be string")
+		}
+		fsType, ok := args[2].(string)
+		if !ok {
+			return nil, fmt.Errorf("sys.mount(): fs_type must be string")
+		}
+		opts := toStringMap(args, 3)
+		r, err := sdksys.Mount(device, mountpoint, fsType, opts)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sys.unmount"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sys.unmount() requires 1 argument (mountpoint)")
+		}
+		mountpoint, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sys.unmount(): mountpoint must be string")
+		}
+		r, err := sdksys.Unmount(mountpoint)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sys.list_mounts"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksys.ListMounts()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── sys.hostname_set ───────────────────────────────────────────────
+	interp.builtins["sys.hostname_set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sys.hostname_set() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sys.hostname_set(): name must be string")
+		}
+		r, err := sdksys.HostnameSet(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── firewall.rule ──────────────────────────────────────────────────
+	interp.builtins["firewall.rule"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewall.rule() requires at least 2 arguments (action, protocol)")
+		}
+		action, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("firewall.rule(): action must be string")
+		}
+		protocol, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("firewall.rule(): protocol must be string")
+		}
+		port := 0
+		if len(args) > 2 {
+			pF, err := toFloat(args[2])
+			if err != nil {
+				return nil, fmt.Errorf("firewall.rule(): port must be number")
+			}
+			port = int(pF)
+		}
+		source := ""
+		if len(args) > 3 {
+			source, _ = args[3].(string)
+		}
+		r, err := sdksys.FirewallRule(action, protocol, port, source)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+}
+
+// toStringMap extracts a map[string]string from args starting at the given index.
+// If the arg at idx is a map[string]interface{}, values are converted to strings.
+// Returns an empty map if no arg is present at idx.
+func toStringMap(args []interface{}, idx int) map[string]string {
+	result := make(map[string]string)
+	if idx >= len(args) {
+		return result
+	}
+	m, ok := args[idx].(map[string]interface{})
+	if !ok {
+		return result
+	}
+	for k, v := range m {
+		result[k] = fmt.Sprintf("%v", v)
+	}
+	return result
+}
+
+// mapStr extracts a string value from a map with a default fallback.
+func mapStr(m map[string]interface{}, key string, def string) string {
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+		return fmt.Sprintf("%v", v)
+	}
+	return def
+}
+
+// getStringArgBridge extracts a string argument at the given index with a default.
+func getStringArgBridge(args []interface{}, idx int, def string) string {
+	if idx >= len(args) {
+		return def
+	}
+	if s, ok := args[idx].(string); ok {
+		return s
+	}
+	return def
 }
 
 // verifyBridgeCoverage is a self-check that every function the canonical

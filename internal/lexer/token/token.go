@@ -21,7 +21,7 @@ const (
 	FALSE  // false
 	NIL    // nil
 
-	// Keywords (19)
+	// Keywords (21)
 	LET
 	FN
 	IF
@@ -39,6 +39,12 @@ const (
 	METRIC
 	LOG
 	PARALLEL
+
+	// Error handling / iteration
+	IN      // in
+	BLOCK   // block
+	RESCUE  // rescue
+	ALWAYS  // always
 
 	// Operators
 	PLUS    // +
@@ -97,6 +103,10 @@ var tokenNames = map[TokenType]string{
 	ENSURE:    "ENSURE",
 	METRIC:    "METRIC",
 	LOG:       "LOG",
+	IN:        "IN",
+	BLOCK:     "BLOCK",
+	RESCUE:    "RESCUE",
+	ALWAYS:    "ALWAYS",
 	PLUS:      "PLUS",
 	MINUS:     "MINUS",
 	STAR:      "STAR",
@@ -180,6 +190,10 @@ var keywords = map[string]TokenType{
 	"metric":    METRIC,
 	"log":       LOG,
 	"parallel":  PARALLEL,
+	"in":        IN,
+	"block":     BLOCK,
+	"rescue":    RESCUE,
+	"always":    ALWAYS,
 }
 
 // LookupKeyword returns the token type for an identifier,

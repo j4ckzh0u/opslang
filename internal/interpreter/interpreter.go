@@ -314,6 +314,8 @@ func (interp *Interpreter) execStatement(stmt ast.Statement, env *Environment) (
 		return interp.execIf(s, env)
 	case *ast.ForStatement:
 		return interp.execFor(s, env)
+	case *ast.ForInStatement:
+		return interp.execForIn(s, env)
 	case *ast.WhileStatement:
 		return interp.execWhile(s, env)
 	case *ast.ReturnStatement:
@@ -351,6 +353,8 @@ func (interp *Interpreter) execStatement(stmt ast.Statement, env *Environment) (
 		return interp.execLog(s, env)
 	case *ast.ParallelStatement:
 		return interp.execParallel(s, env)
+	case *ast.BlockRescueStatement:
+		return interp.execBlockRescue(s, env)
 	case *ast.BlockStatement:
 		blockEnv := newEnv(env)
 		return interp.execBlock(s, blockEnv)
@@ -445,6 +449,114 @@ func (interp *Interpreter) execFor(s *ast.ForStatement, env *Environment) (inter
 		}
 	}
 
+	return nil, nil
+}
+
+// execForIn iterates over a list, dict, or string. For lists and strings the
+// loop variable receives each element; for dicts it receives each key (sorted
+// for determinism). The loop variable is scoped to the body.
+func (interp *Interpreter) execForIn(s *ast.ForInStatement, env *Environment) (interface{}, error) {
+	iterVal, err := interp.evalExpression(s.Iterable, env)
+	if err != nil {
+		return nil, err
+	}
+
+	var items []interface{}
+	switch v := iterVal.(type) {
+	case []interface{}:
+		items = v
+	case map[string]interface{}:
+		// Deterministic key order: sort the keys.
+		keys := make([]string, 0, len(v))
+		for k := range v {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		items = make([]interface{}, len(keys))
+		for i, k := range keys {
+			items[i] = k
+		}
+	case string:
+		// Iterate characters as single-rune strings.
+		items = make([]interface{}, 0, len(v))
+		for _, r := range v {
+			items = append(items, string(r))
+		}
+	default:
+		return nil, &RuntimeError{
+			Pos: s.Pos(),
+			Msg: fmt.Sprintf("for-in requires a list, dict, or string, got %T", iterVal),
+		}
+	}
+
+	for _, item := range items {
+		bodyEnv := newEnv(env)
+		bodyEnv.set(s.Var.Name, item)
+
+		_, err := interp.execBlock(s.Body, bodyEnv)
+		if err != nil {
+			if _, ok := err.(*returnSignal); ok {
+				return nil, err
+			}
+			return nil, err
+		}
+	}
+
+	return nil, nil
+}
+
+// execBlockRescue runs Body, catches any runtime error into Rescue (with
+// _error set to the error message), and always runs Always. If Rescue is
+// absent and Body fails, the error propagates after Always runs.
+func (interp *Interpreter) execBlockRescue(s *ast.BlockRescueStatement, env *Environment) (interface{}, error) {
+	var blockErr error
+
+	if s.Body != nil {
+		blockEnv := newEnv(env)
+		_, blockErr = interp.execBlock(s.Body, blockEnv)
+	}
+
+	if blockErr != nil && s.Rescue != nil {
+		// If the error is a return signal, do not catch it - let it propagate.
+		if _, isReturn := blockErr.(*returnSignal); isReturn {
+			// Still run always, then propagate.
+			if s.Always != nil {
+				alwaysEnv := newEnv(env)
+				if _, alwaysErr := interp.execBlock(s.Always, alwaysEnv); alwaysErr != nil {
+					return nil, alwaysErr
+				}
+			}
+			return nil, blockErr
+		}
+
+		rescueEnv := newEnv(env)
+		rescueEnv.set("_error", blockErr.Error())
+		if _, err := interp.execBlock(s.Rescue, rescueEnv); err != nil {
+			if _, ok := err.(*returnSignal); ok {
+				// Still run always before returning.
+				if s.Always != nil {
+					alwaysEnv := newEnv(env)
+					if _, alwaysErr := interp.execBlock(s.Always, alwaysEnv); alwaysErr != nil {
+						return nil, alwaysErr
+					}
+				}
+				return nil, err
+			}
+			return nil, err
+		}
+		blockErr = nil
+	}
+
+	if s.Always != nil {
+		alwaysEnv := newEnv(env)
+		if _, err := interp.execBlock(s.Always, alwaysEnv); err != nil {
+			return nil, err
+		}
+	}
+
+	if blockErr != nil {
+		return nil, blockErr
+	}
 	return nil, nil
 }
 

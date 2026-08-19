@@ -7,14 +7,19 @@ import (
 
 	"github.com/opslang/opslang/internal/ast"
 	"github.com/opslang/opslang/internal/opsspec"
+	opscron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/file"
+	opsgit "github.com/opslang/opslang/pkg/ops-core-sdk/git"
+	opsgrp "github.com/opslang/opslang/pkg/ops-core-sdk/group"
 	opsjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
 	opsnet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/process"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/service"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/sys"
+	sdksysctl "github.com/opslang/opslang/pkg/ops-core-sdk/sysctl"
 	optime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
+	opsuser "github.com/opslang/opslang/pkg/ops-core-sdk/user"
 	opsyaml "github.com/opslang/opslang/pkg/ops-core-sdk/yaml"
 )
 
@@ -77,7 +82,9 @@ func (r *Registry) registerAll() {
 	r.registerTimeOps()
 	r.registerJSONOps()
 	r.registerYAMLOps()
+	r.registerGitOps()
 	r.registerBuiltinOps()
+	r.registerPlatformOps()
 }
 
 // ============================================================
@@ -249,6 +256,22 @@ func (r *Registry) registerFileOps() {
 		algo := getStringArg(args, "algo", "sha256")
 		return file.Checksum(path, algo)
 	})
+	r.Register("file.lineinfile", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("file.lineinfile: %w", err)
+		}
+		line, err := argString(args, "line")
+		if err != nil {
+			return nil, fmt.Errorf("file.lineinfile: %w", err)
+		}
+		present, err := argBool(args, "present")
+		if err != nil {
+			return nil, fmt.Errorf("file.lineinfile: %w", err)
+		}
+		rx := getStringArg(args, "regexp", "")
+		return file.LineInFile(path, line, present, rx)
+	})
 }
 
 // ============================================================
@@ -294,6 +317,21 @@ func (r *Registry) registerNetOps() {
 	})
 	r.Register("net.interfaces", func(_ map[string]interface{}) (interface{}, error) {
 		return opsnet.Interfaces()
+	})
+	r.Register("net.wait_for", func(args map[string]interface{}) (interface{}, error) {
+		host, err := argString(args, "host")
+		if err != nil {
+			return nil, fmt.Errorf("net.wait_for: %w", err)
+		}
+		port, err := argInt(args, "port")
+		if err != nil {
+			return nil, fmt.Errorf("net.wait_for: %w", err)
+		}
+		timeout, err := argInt(args, "timeout")
+		if err != nil {
+			return nil, fmt.Errorf("net.wait_for: %w", err)
+		}
+		return opsnet.WaitFor(host, port, timeout)
 	})
 }
 
@@ -504,6 +542,261 @@ func (r *Registry) registerYAMLOps() {
 }
 
 // ============================================================
+// git operations
+// ============================================================
+
+func (r *Registry) registerGitOps() {
+	r.Register("git.clone", func(args map[string]interface{}) (interface{}, error) {
+		url, err := argString(args, "url")
+		if err != nil {
+			return nil, fmt.Errorf("git.clone: %w", err)
+		}
+		dest, err := argString(args, "dest")
+		if err != nil {
+			return nil, fmt.Errorf("git.clone: %w", err)
+		}
+		var opts map[string]string
+		if raw, ok := args["opts"]; ok && raw != nil {
+			if m, ok := raw.(map[string]interface{}); ok {
+				opts = make(map[string]string, len(m))
+				for k, v := range m {
+					opts[k] = fmt.Sprintf("%v", v)
+				}
+			}
+		}
+		return opsgit.Clone(url, dest, opts)
+	})
+	r.Register("git.pull", func(args map[string]interface{}) (interface{}, error) {
+		repoPath, err := argString(args, "repo_path")
+		if err != nil {
+			return nil, fmt.Errorf("git.pull: %w", err)
+		}
+		remote := getStringArg(args, "remote", "")
+		branch := getStringArg(args, "branch", "")
+		return opsgit.Pull(repoPath, remote, branch)
+	})
+}
+
+// ============================================================
+// platform operations (user, group, cron, sysctl, mount, firewall, etc.)
+// ============================================================
+
+func (r *Registry) registerPlatformOps() {
+	// ── user.* ─────────────────────────────────────────────────────────
+	r.Register("user.info", func(args map[string]interface{}) (interface{}, error) {
+		username, err := argString(args, "username")
+		if err != nil {
+			return nil, fmt.Errorf("user.info: %w", err)
+		}
+		return opsuser.Info(username)
+	})
+	r.Register("user.list", func(_ map[string]interface{}) (interface{}, error) {
+		return opsuser.List()
+	})
+	r.Register("user.add", func(args map[string]interface{}) (interface{}, error) {
+		username, err := argString(args, "username")
+		if err != nil {
+			return nil, fmt.Errorf("user.add: %w", err)
+		}
+		opts := toStringMapArg(args, "opts")
+		return opsuser.Add(username, opts)
+	})
+	r.Register("user.remove", func(args map[string]interface{}) (interface{}, error) {
+		username, err := argString(args, "username")
+		if err != nil {
+			return nil, fmt.Errorf("user.remove: %w", err)
+		}
+		removeHome, _ := args["remove_home"].(bool)
+		return opsuser.Remove(username, removeHome)
+	})
+	r.Register("user.modify", func(args map[string]interface{}) (interface{}, error) {
+		username, err := argString(args, "username")
+		if err != nil {
+			return nil, fmt.Errorf("user.modify: %w", err)
+		}
+		opts := toStringMapArg(args, "opts")
+		return opsuser.Modify(username, opts)
+	})
+	r.Register("user.exists", func(args map[string]interface{}) (interface{}, error) {
+		username, err := argString(args, "username")
+		if err != nil {
+			return nil, fmt.Errorf("user.exists: %w", err)
+		}
+		return opsuser.Exists(username)
+	})
+
+	// ── group.* ────────────────────────────────────────────────────────
+	r.Register("group.info", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("group.info: %w", err)
+		}
+		return opsgrp.Info(name)
+	})
+	r.Register("group.list", func(_ map[string]interface{}) (interface{}, error) {
+		return opsgrp.List()
+	})
+	r.Register("group.add", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("group.add: %w", err)
+		}
+		opts := toStringMapArg(args, "opts")
+		return opsgrp.Add(name, opts)
+	})
+	r.Register("group.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("group.remove: %w", err)
+		}
+		return opsgrp.Remove(name)
+	})
+	r.Register("group.exists", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("group.exists: %w", err)
+		}
+		return opsgrp.Exists(name)
+	})
+
+	// ── cron.* ─────────────────────────────────────────────────────────
+	r.Register("cron.list", func(args map[string]interface{}) (interface{}, error) {
+		user, err := argString(args, "user")
+		if err != nil {
+			return nil, fmt.Errorf("cron.list: %w", err)
+		}
+		return opscron.List(user)
+	})
+	r.Register("cron.add", func(args map[string]interface{}) (interface{}, error) {
+		user, err := argString(args, "user")
+		if err != nil {
+			return nil, fmt.Errorf("cron.add: %w", err)
+		}
+		entryMap, _ := args["entry"].(map[string]interface{})
+		entry := opscron.CronEntry{
+			Minute:     mapStrArg(entryMap, "minute", "*"),
+			Hour:       mapStrArg(entryMap, "hour", "*"),
+			DayOfMonth: mapStrArg(entryMap, "day_of_month", "*"),
+			Month:      mapStrArg(entryMap, "month", "*"),
+			DayOfWeek:  mapStrArg(entryMap, "day_of_week", "*"),
+			Command:    mapStrArg(entryMap, "command", ""),
+		}
+		return opscron.Add(user, entry)
+	})
+	r.Register("cron.remove", func(args map[string]interface{}) (interface{}, error) {
+		user, err := argString(args, "user")
+		if err != nil {
+			return nil, fmt.Errorf("cron.remove: %w", err)
+		}
+		lineMatch, err := argString(args, "line_match")
+		if err != nil {
+			return nil, fmt.Errorf("cron.remove: %w", err)
+		}
+		return opscron.Remove(user, lineMatch)
+	})
+
+	// ── sysctl.* ───────────────────────────────────────────────────────
+	r.Register("sysctl.get", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sysctl.get: %w", err)
+		}
+		return sdksysctl.Get(name)
+	})
+	r.Register("sysctl.set", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sysctl.set: %w", err)
+		}
+		value, err := argString(args, "value")
+		if err != nil {
+			return nil, fmt.Errorf("sysctl.set: %w", err)
+		}
+		return sdksysctl.Set(name, value)
+	})
+	r.Register("sysctl.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdksysctl.List()
+	})
+
+	// ── sys.mount / sys.unmount / sys.list_mounts ──────────────────────
+	r.Register("sys.mount", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("sys.mount: %w", err)
+		}
+		mountpoint, err := argString(args, "mountpoint")
+		if err != nil {
+			return nil, fmt.Errorf("sys.mount: %w", err)
+		}
+		fsType := getStringArg(args, "fs_type", "")
+		opts := toStringMapArg(args, "opts")
+		return sys.Mount(device, mountpoint, fsType, opts)
+	})
+	r.Register("sys.unmount", func(args map[string]interface{}) (interface{}, error) {
+		mountpoint, err := argString(args, "mountpoint")
+		if err != nil {
+			return nil, fmt.Errorf("sys.unmount: %w", err)
+		}
+		return sys.Unmount(mountpoint)
+	})
+	r.Register("sys.list_mounts", func(_ map[string]interface{}) (interface{}, error) {
+		return sys.ListMounts()
+	})
+
+	// ── sys.hostname_set ───────────────────────────────────────────────
+	r.Register("sys.hostname_set", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sys.hostname_set: %w", err)
+		}
+		return sys.HostnameSet(name)
+	})
+
+	// ── firewall.rule ──────────────────────────────────────────────────
+	r.Register("firewall.rule", func(args map[string]interface{}) (interface{}, error) {
+		action, err := argString(args, "action")
+		if err != nil {
+			return nil, fmt.Errorf("firewall.rule: %w", err)
+		}
+		protocol, err := argString(args, "protocol")
+		if err != nil {
+			return nil, fmt.Errorf("firewall.rule: %w", err)
+		}
+		port, _ := argInt(args, "port")
+		source := getStringArg(args, "source", "")
+		return sys.FirewallRule(action, protocol, port, source)
+	})
+}
+
+// toStringMapArg extracts a map[string]string from args[key].
+func toStringMapArg(args map[string]interface{}, key string) map[string]string {
+	result := make(map[string]string)
+	raw, ok := args[key]
+	if !ok || raw == nil {
+		return result
+	}
+	m, ok := raw.(map[string]interface{})
+	if !ok {
+		return result
+	}
+	for k, v := range m {
+		result[k] = fmt.Sprintf("%v", v)
+	}
+	return result
+}
+
+// mapStrArg extracts a string from a map with a default.
+func mapStrArg(m map[string]interface{}, key string, def string) string {
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+		return fmt.Sprintf("%v", v)
+	}
+	return def
+}
+
+// ============================================================
 // built-in operations (log, alert, set, report, binary.exec)
 // ============================================================
 
@@ -643,6 +936,22 @@ func argInt64(args map[string]interface{}, key string) (int64, error) {
 		return n, nil
 	default:
 		return 0, fmt.Errorf("argument %q must be a number, got %T", key, v)
+	}
+}
+
+// argBool returns a boolean arg, defaulting to false if missing.
+func argBool(args map[string]interface{}, key string) (bool, error) {
+	v, ok := args[key]
+	if !ok {
+		return false, nil
+	}
+	switch b := v.(type) {
+	case bool:
+		return b, nil
+	case float64:
+		return b != 0, nil
+	default:
+		return false, fmt.Errorf("argument %q must be a boolean, got %T", key, v)
 	}
 }
 

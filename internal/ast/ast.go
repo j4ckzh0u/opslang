@@ -348,6 +348,42 @@ func (s *AssignStatement) String() string {
 	return fmt.Sprintf("%s = %s", s.Target, s.Value)
 }
 
+// ForInStatement represents: for <Var> in <Iterable> { <Body> }
+type ForInStatement struct {
+	Position Position
+	Var      *Identifier
+	Iterable Expression
+	Body     *BlockStatement
+}
+
+func (s *ForInStatement) Pos() Position  { return s.Position }
+func (s *ForInStatement) statementNode() {}
+func (s *ForInStatement) String() string {
+	return fmt.Sprintf("for %s in %s { ... }", s.Var, s.Iterable)
+}
+
+// BlockRescueStatement represents: block { ... } [rescue { ... }] [always { ... }]
+// At least one of Body, Rescue, Always must be non-nil.
+type BlockRescueStatement struct {
+	Position Position
+	Body     *BlockStatement // nil when no block clause
+	Rescue   *BlockStatement // nil when no rescue clause
+	Always   *BlockStatement // nil when no always clause
+}
+
+func (s *BlockRescueStatement) Pos() Position  { return s.Position }
+func (s *BlockRescueStatement) statementNode() {}
+func (s *BlockRescueStatement) String() string {
+	out := "block { ... }"
+	if s.Rescue != nil {
+		out += " rescue { ... }"
+	}
+	if s.Always != nil {
+		out += " always { ... }"
+	}
+	return out
+}
+
 // ---------------------------------------------------------------------------
 // Expression types
 // ---------------------------------------------------------------------------
