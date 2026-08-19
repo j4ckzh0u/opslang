@@ -1,0 +1,47 @@
+// locale_management.ops - 演示系统语言环境管理
+// 新增 SDK: locale.*
+privilege: admin
+
+print("=== 系统语言环境管理 ===")
+
+// 1. 获取当前语言环境
+print("\n当前语言环境:")
+let current = locale.get()
+print("  LANG: " + current.lang)
+
+// 2. 列出可用的语言环境
+print("\n可用的语言环境（前 10 个）:")
+let available = locale.available()
+let count = 0
+let total = len(available.locales)
+let i = 0
+while i < total && count < 10 {
+    print("  " + available.locales[i])
+    count = count + 1
+    i = i + 1
+}
+print("  ... 共 " + str(total) + " 个可用语言环境")
+
+// 3. 检查常用语言环境
+print("\n检查常用语言环境:")
+let common_locales = ["en_US.UTF-8", "zh_CN.UTF-8", "C.UTF-8"]
+for loc in common_locales {
+    let found = false
+    for available_loc in available.locales {
+        if available_loc == loc {
+            found = true
+        }
+    }
+    if found {
+        print("  ✓ " + loc + " 可用")
+    } else {
+        print("  ✗ " + loc + " 不可用")
+    }
+}
+
+// 注意：实际设置语言环境需要谨慎，这里只做演示
+print("\n注意：修改系统语言环境可能影响系统行为")
+print("当前语言环境: " + current.lang)
+print("如需修改，请使用: locale.set(\"en_US.UTF-8\")")
+
+print("\n=== locale 管理演示完成 ===")

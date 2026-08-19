@@ -1,0 +1,77 @@
+// docker_management.ops - 演示 Docker 容器和镜像管理
+// 新增 SDK: docker.*
+privilege: admin
+
+print("=== Docker 管理 ===")
+
+// 1. 列出所有 Docker 镜像
+print("\nDocker 镜像:")
+let images = docker.image_list()
+for img in images.images {
+    print("  " + img.repository + ":" + img.tag + " (" + img.size + ")")
+}
+if len(images.images) == 0 {
+    print("  (无镜像)")
+}
+
+// 2. 列出运行中的容器
+print("\n运行中的容器:")
+let running = docker.container_list(false)
+for container in running.containers {
+    print("  " + container.name + " [" + container.id + "] - " + container.status)
+}
+if len(running.containers) == 0 {
+    print("  (无运行中的容器)")
+}
+
+// 3. 列出所有容器（包括已停止的）
+print("\n所有容器（包括已停止的）:")
+let all = docker.container_list(true)
+for container in all.containers {
+    print("  " + container.name + " [" + container.id + "] - " + container.state)
+}
+if len(all.containers) == 0 {
+    print("  (无容器)")
+}
+
+// 4. 演示容器操作（不实际执行，避免副作用）
+print("\n容器操作示例（伪代码）:")
+print(`
+  // 拉取镜像
+  docker.image_pull("nginx:latest")
+
+  // 运行容器
+  docker.container_run("my-nginx", "nginx:latest", {
+      "ports": "8080:80",
+      "volumes": "/data:/usr/share/nginx/html"
+  })
+
+  // 检查容器是否存在
+  let exists = docker.container_exists("my-nginx")
+  if exists.exists {
+      print("容器正在运行: " + exists.id)
+  }
+
+  // 停止容器
+  docker.container_stop("my-nginx")
+
+  // 移除容器
+  docker.container_remove("my-nginx", false)
+
+  // 强制移除容器
+  docker.container_remove("my-nginx", true)
+
+  // 移除镜像
+  docker.image_remove("nginx:latest", false)
+`)
+
+// 5. 实际演示：检查容器是否存在
+print("\n检查容器是否存在:")
+let check = docker.container_exists("test-container")
+if check.exists {
+    print("  test-container 存在: " + check.id)
+} else {
+    print("  test-container 不存在")
+}
+
+print("\n=== Docker 管理演示完成 ===")

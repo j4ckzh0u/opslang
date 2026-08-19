@@ -10,12 +10,16 @@ import (
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	opscron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
+	sdkdocker "github.com/opslang/opslang/pkg/ops-core-sdk/docker"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/file"
 	opsgit "github.com/opslang/opslang/pkg/ops-core-sdk/git"
 	opsgrp "github.com/opslang/opslang/pkg/ops-core-sdk/group"
+	opshosts "github.com/opslang/opslang/pkg/ops-core-sdk/hosts"
 	opsjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
 	sdkkernel "github.com/opslang/opslang/pkg/ops-core-sdk/kernel"
+	sdklocale "github.com/opslang/opslang/pkg/ops-core-sdk/locale"
 	opsnet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
+	sdkpip "github.com/opslang/opslang/pkg/ops-core-sdk/pip"
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/process"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/service"
@@ -1060,6 +1064,175 @@ func (r *Registry) registerExtensions() {
 		}
 		return sdkdisk.PartList(device)
 	})
+
+	// ── docker.container_list ─────────────────────────────────────────────
+	r.Register("docker.container_list", func(args map[string]interface{}) (interface{}, error) {
+		all := getBoolArg(args, "all", false)
+		return sdkdocker.ContainerList(all)
+	})
+
+	// ── docker.container_exists ───────────────────────────────────────────
+	r.Register("docker.container_exists", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("docker.container_exists: %w", err)
+		}
+		return sdkdocker.ContainerExists(name)
+	})
+
+	// ── docker.container_run ──────────────────────────────────────────────
+	r.Register("docker.container_run", func(args map[string]interface{}) (interface{}, error) {
+		name := getStringArg(args, "name", "")
+		image, err := argString(args, "image")
+		if err != nil {
+			return nil, fmt.Errorf("docker.container_run: %w", err)
+		}
+		opts := toStringMapArg(args, "opts")
+		return sdkdocker.ContainerRun(name, image, opts)
+	})
+
+	// ── docker.container_stop ─────────────────────────────────────────────
+	r.Register("docker.container_stop", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("docker.container_stop: %w", err)
+		}
+		return sdkdocker.ContainerStop(name)
+	})
+
+	// ── docker.container_remove ───────────────────────────────────────────
+	r.Register("docker.container_remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("docker.container_remove: %w", err)
+		}
+		force := getBoolArg(args, "force", false)
+		return sdkdocker.ContainerRemove(name, force)
+	})
+
+	// ── docker.image_list ─────────────────────────────────────────────────
+	r.Register("docker.image_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkdocker.ImageList()
+	})
+
+	// ── docker.image_pull ─────────────────────────────────────────────────
+	r.Register("docker.image_pull", func(args map[string]interface{}) (interface{}, error) {
+		image, err := argString(args, "image")
+		if err != nil {
+			return nil, fmt.Errorf("docker.image_pull: %w", err)
+		}
+		return sdkdocker.ImagePull(image)
+	})
+
+	// ── docker.image_remove ───────────────────────────────────────────────
+	r.Register("docker.image_remove", func(args map[string]interface{}) (interface{}, error) {
+		image, err := argString(args, "image")
+		if err != nil {
+			return nil, fmt.Errorf("docker.image_remove: %w", err)
+		}
+		force := getBoolArg(args, "force", false)
+		return sdkdocker.ImageRemove(image, force)
+	})
+
+	// ── hosts.list ────────────────────────────────────────────────────────
+	r.Register("hosts.list", func(args map[string]interface{}) (interface{}, error) {
+		return opshosts.List()
+	})
+
+	// ── hosts.exists ──────────────────────────────────────────────────────
+	r.Register("hosts.exists", func(args map[string]interface{}) (interface{}, error) {
+		hostname, err := argString(args, "hostname")
+		if err != nil {
+			return nil, fmt.Errorf("hosts.exists: %w", err)
+		}
+		return opshosts.Exists(hostname)
+	})
+
+	// ── hosts.add ─────────────────────────────────────────────────────────
+	r.Register("hosts.add", func(args map[string]interface{}) (interface{}, error) {
+		ip, err := argString(args, "ip")
+		if err != nil {
+			return nil, fmt.Errorf("hosts.add: %w", err)
+		}
+		hostnamesRaw, ok := args["hostnames"].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("hosts.add: hostnames must be an array")
+		}
+		hostnames := make([]string, len(hostnamesRaw))
+		for i, v := range hostnamesRaw {
+			if s, ok := v.(string); ok {
+				hostnames[i] = s
+			}
+		}
+		return opshosts.Add(ip, hostnames)
+	})
+
+	// ── hosts.remove ──────────────────────────────────────────────────────
+	r.Register("hosts.remove", func(args map[string]interface{}) (interface{}, error) {
+		hostnamesRaw, ok := args["hostnames"].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("hosts.remove: hostnames must be an array")
+		}
+		hostnames := make([]string, len(hostnamesRaw))
+		for i, v := range hostnamesRaw {
+			if s, ok := v.(string); ok {
+				hostnames[i] = s
+			}
+		}
+		return opshosts.Remove(hostnames)
+	})
+
+	// ── locale.get ────────────────────────────────────────────────────────
+	r.Register("locale.get", func(args map[string]interface{}) (interface{}, error) {
+		return sdklocale.Get()
+	})
+
+	// ── locale.available ──────────────────────────────────────────────────
+	r.Register("locale.available", func(args map[string]interface{}) (interface{}, error) {
+		return sdklocale.Available()
+	})
+
+	// ── locale.set ────────────────────────────────────────────────────────
+	r.Register("locale.set", func(args map[string]interface{}) (interface{}, error) {
+		locale, err := argString(args, "locale")
+		if err != nil {
+			return nil, fmt.Errorf("locale.set: %w", err)
+		}
+		return sdklocale.Set(locale)
+	})
+
+	// ── pip.list ──────────────────────────────────────────────────────────
+	r.Register("pip.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpip.List()
+	})
+
+	// ── pip.exists ────────────────────────────────────────────────────────
+	r.Register("pip.exists", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("pip.exists: %w", err)
+		}
+		return sdkpip.Exists(name)
+	})
+
+	// ── pip.install ───────────────────────────────────────────────────────
+	r.Register("pip.install", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("pip.install: %w", err)
+		}
+		version := getStringArg(args, "version", "")
+		return sdkpip.Install(name, version)
+	})
+
+	// ── pip.uninstall ─────────────────────────────────────────────────────
+	r.Register("pip.uninstall", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("pip.uninstall: %w", err)
+		}
+		return sdkpip.Uninstall(name)
+	})
 }
 
 // toStringMapArg extracts a map[string]string from args[key].
@@ -1175,6 +1348,16 @@ func getStringArg(args map[string]interface{}, key string, defaultVal string) st
 	if v, ok := args[key]; ok {
 		if s, ok := v.(string); ok {
 			return s
+		}
+	}
+	return defaultVal
+}
+
+// getBoolArg returns the bool value of an optional arg, or defaultVal.
+func getBoolArg(args map[string]interface{}, key string, defaultVal bool) bool {
+	if v, ok := args[key]; ok {
+		if b, ok := v.(bool); ok {
+			return b
 		}
 	}
 	return defaultVal

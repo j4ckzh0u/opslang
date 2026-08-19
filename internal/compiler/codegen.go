@@ -147,6 +147,33 @@ var sdkMapping = map[string]sdkFunc{
 	"ssh.authorized_key_remove": {pkg: "ssh", goName: "AuthorizedKeyRemove", args: true, params: []string{"s", "s"}},
 	"ssh.authorized_key_list":   {pkg: "ssh", goName: "AuthorizedKeyList", args: true, params: []string{"s"}},
 
+	// docker
+	"docker.container_list":   {pkg: "docker", goName: "ContainerList", args: true, params: []string{"b"}},
+	"docker.container_exists": {pkg: "docker", goName: "ContainerExists", args: true, params: []string{"s"}},
+	"docker.container_run":    {pkg: "docker", goName: "ContainerRun", args: true, params: []string{"s", "s", "ms"}},
+	"docker.container_stop":   {pkg: "docker", goName: "ContainerStop", args: true, params: []string{"s"}},
+	"docker.container_remove": {pkg: "docker", goName: "ContainerRemove", args: true, params: []string{"s", "b"}},
+	"docker.image_list":       {pkg: "docker", goName: "ImageList"},
+	"docker.image_pull":       {pkg: "docker", goName: "ImagePull", args: true, params: []string{"s"}},
+	"docker.image_remove":     {pkg: "docker", goName: "ImageRemove", args: true, params: []string{"s", "b"}},
+
+	// hosts
+	"hosts.list":   {pkg: "hosts", goName: "List"},
+	"hosts.exists": {pkg: "hosts", goName: "Exists", args: true, params: []string{"s"}},
+	"hosts.add":    {pkg: "hosts", goName: "Add", args: true, params: []string{"s", "l"}},
+	"hosts.remove": {pkg: "hosts", goName: "Remove", args: true, params: []string{"l"}},
+
+	// locale
+	"locale.get":       {pkg: "locale", goName: "Get"},
+	"locale.available": {pkg: "locale", goName: "Available"},
+	"locale.set":       {pkg: "locale", goName: "Set", args: true, params: []string{"s"}},
+
+	// pip
+	"pip.list":     {pkg: "pip", goName: "List"},
+	"pip.exists":   {pkg: "pip", goName: "Exists", args: true, params: []string{"s"}},
+	"pip.install":  {pkg: "pip", goName: "Install", args: true, params: []string{"s", "s"}},
+	"pip.uninstall": {pkg: "pip", goName: "Uninstall", args: true, params: []string{"s"}},
+
 	// file extensions
 	"file.find":        {pkg: "file", goName: "FindFromArgs", args: true, params: []string{"l", "l", "s", "s", "i", "i64", "i64"}},
 	"file.replace":     {pkg: "file", goName: "Replace", args: true, params: []string{"s", "s", "s", "s", "s"}},

@@ -1,0 +1,63 @@
+// pip_management.ops - 演示 Python 包管理
+// 新增 SDK: pip.*
+privilege: admin
+
+print("=== Python 包管理 ===")
+
+// 1. 列出已安装的 Python 包
+print("\n已安装的 Python 包（前 10 个）:")
+let packages = pip.list()
+let count = 0
+let total = len(packages.packages)
+let i = 0
+while i < total && count < 10 {
+    print("  " + packages.packages[i].name + " (" + packages.packages[i].version + ")")
+    count = count + 1
+    i = i + 1
+}
+print("  ... 共 " + str(total) + " 个包")
+
+// 2. 检查特定包是否存在
+print("\n检查 requests 包:")
+let exists = pip.exists("requests")
+if exists.exists {
+    print("  ✓ requests 已安装，版本: " + exists.version)
+} else {
+    print("  ✗ requests 未安装")
+}
+
+// 3. 安装一个包（如果未安装）
+print("\n安装 cowsay 包:")
+let install_result = pip.install("cowsay", "")
+if install_result.changed {
+    print("  ✓ cowsay 已安装")
+} else {
+    print("  - cowsay 已存在，无需安装")
+}
+
+// 4. 验证安装
+print("\n验证安装:")
+let verify = pip.exists("cowsay")
+if verify.exists {
+    print("  ✓ cowsay 版本: " + verify.version)
+}
+
+// 5. 卸载测试包
+print("\n卸载 cowsay 包:")
+let uninstall_result = pip.uninstall("cowsay")
+if uninstall_result.changed {
+    print("  ✓ cowsay 已卸载")
+} else {
+    print("  - cowsay 未安装，无需卸载")
+}
+
+// 6. 最终验证
+print("\n最终验证:")
+let final_check = pip.exists("cowsay")
+if !final_check.exists {
+    print("  ✓ cowsay 已成功卸载")
+} else {
+    print("  ✗ cowsay 仍然存在")
+}
+
+print("\n=== pip 管理演示完成 ===")

@@ -1,0 +1,70 @@
+// hosts_management.ops - 演示 /etc/hosts 文件管理
+// 新增 SDK: hosts.*
+privilege: admin
+
+print("=== /etc/hosts 管理 ===")
+
+// 1. 列出当前 hosts 条目
+print("\n当前 hosts 条目:")
+let hosts = hosts.list()
+for entry in hosts.entries {
+    print("  " + entry.ip + " -> " + str(entry.hostnames))
+}
+
+// 2. 检查特定主机是否存在
+print("\n检查 localhost 是否存在:")
+let exists = hosts.exists("localhost")
+print("  localhost 存在: " + str(exists.exists))
+
+// 3. 添加新的 hosts 条目
+print("\n添加测试主机:")
+block {
+    let add_result = hosts.add("192.168.1.100", ["test-server", "test-server.local"])
+    if add_result.changed {
+        print("  ✓ 已添加 192.168.1.100 -> test-server, test-server.local")
+    } else {
+        print("  - 条目已存在，无需修改")
+    }
+}
+rescue {
+    print("  ✗ 权限不足，无法修改 /etc/hosts（需要 root 权限）")
+}
+
+// 4. 验证添加结果
+print("\n验证添加结果:")
+let verify = hosts.exists("test-server")
+if verify.exists {
+    print("  ✓ test-server 已成功添加")
+} else {
+    print("  ✗ test-server 未找到")
+}
+
+// 5. 移除测试条目
+print("\n移除测试主机:")
+block {
+    let remove_result = hosts.remove(["test-server", "test-server.local"])
+    if remove_result.changed {
+        print("  ✓ 已移除测试主机")
+    } else {
+        print("  - 条目不存在，无需移除")
+    }
+}
+rescue {
+    print("  ✗ 权限不足，无法修改 /etc/hosts（需要 root 权限）")
+}
+
+// 6. 最终验证
+print("\n最终验证:")
+block {
+    let final_check = hosts.exists("test-server")
+    if !final_check.exists {
+        print("  ✓ test-server 已成功移除")
+    } else {
+        print("  ✗ test-server 仍然存在")
+    }
+}
+rescue {
+    print("  - 验证跳过（权限问题）")
+}
+
+print("\n=== hosts 管理演示完成 ===")

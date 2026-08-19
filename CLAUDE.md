@@ -8,12 +8,31 @@
 4. 先给结论再讲理由，别铺垫半天没重点
 5. 我需求没说清先问我，别自己瞎猜
 
-【说话方式】直白通俗，别用空洞话术
+【说话方式】直白通俗，别用空洞话术，简明扼要。
 【回答规矩】不确定就说不知道，涉及敏感信息标可信度，需求不清先确认，先给结论再讲理由
+
+代码编写准则：
+# Code Quality Directives (Anti-Hallucination)
+
+1. **No Silent Failures**: Forbid `try: ... except: pass` or `except Exception`. Must log or re-raise.
+
+2. **Null Safety**: Explicitly handle `None`, empty lists, and out-of-bounds. Never assume valid input.
+
+3. **No Fake APIs**: Do not invent function/class names. If unsure about a library method, ask before coding. No extra params.
+
+4. **Tests Must Assert**: Provide `assert` statements. Include at least one edge-case test (null, overflow, empty).
+
+5. **Design First**: For >100 lines, output pseudo-code/logic first. Wait for confirmation before full code.
+
+6. **Honest Ignorance**: If uncertain about implementation details, add `# UNCERTAIN: verify this logic`. Do not bluff.
+
+7. **Comments on "Why"**: Explain why, not what. Keep under 3 lines unless strictly necessary.
+
 
 项目地址：https://github.com/j4ckzh0u/opslang , 开发好了,测试通过，就推送GitHub，并创建github action，进行自动化构建。
 要关注一下GitHub action运行的结果，如果出现错误，请及时的修复。
 一定要保证程序能在GitHub action上编译通过。
+
 ---
 项目要求：
 # OpsLang 项目完整开发计划
@@ -477,6 +496,10 @@ type CollectResult struct {
 | Phase 5 | 安全与生产化 | 4 周 | 企业级特性 |
 | **合计** | | **26 周** | 可产品化 MVP |
 
+
+# 对标产品
+最重要：OpsLang对标产品是ansible，功能一定要覆盖且增强于ansbile。OpsLang是可以在没有python、shell的环境中正常运行。而且速度很快，支持海量服务器并发操作。
+
 ---
 
 ## 附录 A：标准库函数列表
@@ -617,4 +640,3 @@ task "collect_logs" on group("role=web") {
 
 ---
 
-**本计划已整合所有讨论要点，可直接作为 Claude Code 的开发指导。建议从 Phase 0 开始，逐步构建，每个阶段独立验证，确保最终交付符合预期。**

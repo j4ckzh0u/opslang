@@ -9,12 +9,16 @@ import (
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	sdkcron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
+	sdkdocker "github.com/opslang/opslang/pkg/ops-core-sdk/docker"
 	sdkfile "github.com/opslang/opslang/pkg/ops-core-sdk/file"
 	sdkgit "github.com/opslang/opslang/pkg/ops-core-sdk/git"
 	sdkgroup "github.com/opslang/opslang/pkg/ops-core-sdk/group"
+	sdkhosts "github.com/opslang/opslang/pkg/ops-core-sdk/hosts"
 	sdkjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
 	sdkkernel "github.com/opslang/opslang/pkg/ops-core-sdk/kernel"
+	sdklocale "github.com/opslang/opslang/pkg/ops-core-sdk/locale"
 	sdknet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
+	sdkpip "github.com/opslang/opslang/pkg/ops-core-sdk/pip"
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	sdkprocess "github.com/opslang/opslang/pkg/ops-core-sdk/process"
 	sdkservice "github.com/opslang/opslang/pkg/ops-core-sdk/service"
@@ -1820,6 +1824,268 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, fmt.Errorf("disk.part_list(): device must be string")
 		}
 		r, err := sdkdisk.PartList(device)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── docker.* ────────────────────────────────────────────────────────
+	interp.builtins["docker.container_list"] = func(args ...interface{}) (interface{}, error) {
+		all := false
+		if len(args) > 0 {
+			all, _ = args[0].(bool)
+		}
+		r, err := sdkdocker.ContainerList(all)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker.container_exists"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker.container_exists() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("docker.container_exists(): name must be string")
+		}
+		r, err := sdkdocker.ContainerExists(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker.container_run"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("docker.container_run() requires at least 2 arguments (name, image)")
+		}
+		name, _ := args[0].(string)
+		image, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("docker.container_run(): image must be string")
+		}
+		opts := toStringMap(args, 2)
+		r, err := sdkdocker.ContainerRun(name, image, opts)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker.container_stop"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker.container_stop() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("docker.container_stop(): name must be string")
+		}
+		r, err := sdkdocker.ContainerStop(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker.container_remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker.container_remove() requires at least 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("docker.container_remove(): name must be string")
+		}
+		force := false
+		if len(args) > 1 {
+			force, _ = args[1].(bool)
+		}
+		r, err := sdkdocker.ContainerRemove(name, force)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker.image_list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkdocker.ImageList()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker.image_pull"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker.image_pull() requires 1 argument (image)")
+		}
+		image, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("docker.image_pull(): image must be string")
+		}
+		r, err := sdkdocker.ImagePull(image)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker.image_remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker.image_remove() requires at least 1 argument (image)")
+		}
+		image, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("docker.image_remove(): image must be string")
+		}
+		force := false
+		if len(args) > 1 {
+			force, _ = args[1].(bool)
+		}
+		r, err := sdkdocker.ImageRemove(image, force)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── hosts.* ─────────────────────────────────────────────────────────
+	interp.builtins["hosts.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkhosts.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["hosts.exists"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("hosts.exists() requires 1 argument (hostname)")
+		}
+		hostname, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("hosts.exists(): hostname must be string")
+		}
+		r, err := sdkhosts.Exists(hostname)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["hosts.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("hosts.add() requires 2 arguments (ip, hostnames)")
+		}
+		ip, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("hosts.add(): ip must be string")
+		}
+		hostnamesRaw, ok := args[1].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("hosts.add(): hostnames must be array")
+		}
+		hostnames := make([]string, len(hostnamesRaw))
+		for i, h := range hostnamesRaw {
+			hostnames[i], _ = h.(string)
+		}
+		r, err := sdkhosts.Add(ip, hostnames)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["hosts.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("hosts.remove() requires 1 argument (hostnames)")
+		}
+		hostnamesRaw, ok := args[0].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("hosts.remove(): hostnames must be array")
+		}
+		hostnames := make([]string, len(hostnamesRaw))
+		for i, h := range hostnamesRaw {
+			hostnames[i], _ = h.(string)
+		}
+		r, err := sdkhosts.Remove(hostnames)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── locale.* ────────────────────────────────────────────────────────
+	interp.builtins["locale.get"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdklocale.Get()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["locale.available"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdklocale.Available()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["locale.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("locale.set() requires 1 argument (locale)")
+		}
+		locale, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("locale.set(): locale must be string")
+		}
+		r, err := sdklocale.Set(locale)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── pip.* ───────────────────────────────────────────────────────────
+	interp.builtins["pip.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpip.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pip.exists"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pip.exists() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("pip.exists(): name must be string")
+		}
+		r, err := sdkpip.Exists(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pip.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pip.install() requires at least 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("pip.install(): name must be string")
+		}
+		version := ""
+		if len(args) > 1 {
+			version, _ = args[1].(string)
+		}
+		r, err := sdkpip.Install(name, version)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pip.uninstall"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pip.uninstall() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("pip.uninstall(): name must be string")
+		}
+		r, err := sdkpip.Uninstall(name)
 		if err != nil {
 			return nil, err
 		}

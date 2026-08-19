@@ -54,6 +54,16 @@ var Funcs = []Func{
 	{Name: "disk.filesystem", Args: []string{"device", "fs_type"}, Mutating: true},
 	{Name: "disk.part_list", Args: []string{"device"}},
 
+	// ── docker ────────────────────────────────────────────────────────
+	{Name: "docker.container_list", Args: []string{"all"}},
+	{Name: "docker.container_exists", Args: []string{"name"}},
+	{Name: "docker.container_run", Args: []string{"name", "image", "opts"}, Mutating: true},
+	{Name: "docker.container_stop", Args: []string{"name"}, Mutating: true},
+	{Name: "docker.container_remove", Args: []string{"name", "force"}, Mutating: true},
+	{Name: "docker.image_list"},
+	{Name: "docker.image_pull", Args: []string{"image"}, Mutating: true},
+	{Name: "docker.image_remove", Args: []string{"image", "force"}, Mutating: true},
+
 	// ── file ──────────────────────────────────────────────────────────
 	{Name: "file.append", Args: []string{"path", "content"}, Mutating: true},
 	{Name: "file.blockinfile", Args: []string{"path", "marker", "content", "present", "insert_after", "insert_before"}, Mutating: true},
@@ -95,6 +105,12 @@ var Funcs = []Func{
 	{Name: "group.list"},
 	{Name: "group.remove", Args: []string{"name"}, Mutating: true},
 
+	// ── hosts ─────────────────────────────────────────────────────────
+	{Name: "hosts.list"},
+	{Name: "hosts.exists", Args: []string{"hostname"}},
+	{Name: "hosts.add", Args: []string{"ip", "hostnames"}, Mutating: true},
+	{Name: "hosts.remove", Args: []string{"hostnames"}, Mutating: true},
+
 	// ── json ──────────────────────────────────────────────────────────
 	{Name: "json.decode", Args: []string{"input"}},
 	{Name: "json.encode", Args: []string{"value"}},
@@ -103,6 +119,11 @@ var Funcs = []Func{
 	{Name: "kernel.module_list"},
 	{Name: "kernel.module_load", Args: []string{"name"}, Mutating: true},
 	{Name: "kernel.module_unload", Args: []string{"name"}, Mutating: true},
+
+	// ── locale ────────────────────────────────────────────────────────
+	{Name: "locale.get"},
+	{Name: "locale.available"},
+	{Name: "locale.set", Args: []string{"locale"}, Mutating: true},
 
 	// ── net ───────────────────────────────────────────────────────────
 	{Name: "net.dns_lookup", Args: []string{"host"}},
@@ -122,6 +143,12 @@ var Funcs = []Func{
 	{Name: "pkg.install", Args: []string{"name"}, Mutating: true},
 	{Name: "pkg.list"},
 	{Name: "pkg.remove", Args: []string{"name"}, Mutating: true},
+
+	// ── pip ───────────────────────────────────────────────────────────
+	{Name: "pip.list"},
+	{Name: "pip.exists", Args: []string{"name"}},
+	{Name: "pip.install", Args: []string{"name", "version"}, Mutating: true},
+	{Name: "pip.uninstall", Args: []string{"name"}, Mutating: true},
 
 	// ── process ───────────────────────────────────────────────────────
 	{Name: "process.exec", Args: []string{"command", "args"}, Mutating: true},
