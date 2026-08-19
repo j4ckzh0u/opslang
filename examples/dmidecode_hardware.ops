@@ -1,0 +1,70 @@
+// DMI 硬件信息采集示例
+// DMI hardware information collection example
+
+// 获取系统信息
+block {
+    let sys = dmidecode.system()
+    report {
+        manufacturer: sys.manufacturer,
+        product_name: sys.product_name,
+        serial_number: sys.serial_number,
+        uuid: sys.uuid
+    }
+}
+rescue {
+    print("dmidecode.system failed: " + _error)
+}
+
+// 获取 BIOS 信息
+block {
+    let bios = dmidecode.bios()
+    report {
+        vendor: bios.vendor,
+        version: bios.version,
+        release_date: bios.release_date
+    }
+}
+rescue {
+    print("dmidecode.bios failed: " + _error)
+}
+
+// 获取机箱信息
+block {
+    let chassis = dmidecode.chassis()
+    report {
+        manufacturer: chassis.manufacturer,
+        chassis_type: chassis.type,
+        serial_number: chassis.serial_number,
+        asset_tag: chassis.asset_tag
+    }
+}
+rescue {
+    print("dmidecode.chassis failed: " + _error)
+}
+
+// 获取处理器信息
+block {
+    let cpu = dmidecode.processor()
+    report {
+        manufacturer: cpu.manufacturer,
+        version: cpu.version,
+        max_speed: cpu.max_speed,
+        current_speed: cpu.current_speed,
+        core_count: cpu.core_count,
+        thread_count: cpu.thread_count
+    }
+}
+rescue {
+    print("dmidecode.processor failed: " + _error)
+}
+
+// 查询特定 DMI 关键字
+block {
+    let result = dmidecode.keyword("system-serial-number")
+    report {
+        value: result.value
+    }
+}
+rescue {
+    print("dmidecode.keyword failed: " + _error)
+}

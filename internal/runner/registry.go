@@ -88,6 +88,13 @@ import (
 	sdkrabbitmq "github.com/opslang/opslang/pkg/ops-core-sdk/rabbitmq"
 	sdkconsul "github.com/opslang/opslang/pkg/ops-core-sdk/consul"
 	sdkmemcached "github.com/opslang/opslang/pkg/ops-core-sdk/memcached"
+	sdkcomposer "github.com/opslang/opslang/pkg/ops-core-sdk/composer"
+	sdkcargo "github.com/opslang/opslang/pkg/ops-core-sdk/cargo"
+	sdkrpmkey "github.com/opslang/opslang/pkg/ops-core-sdk/rpmkey"
+	sdkaptkey "github.com/opslang/opslang/pkg/ops-core-sdk/aptkey"
+	sdkdmidecode "github.com/opslang/opslang/pkg/ops-core-sdk/dmidecode"
+	sdktuned "github.com/opslang/opslang/pkg/ops-core-sdk/tuned"
+	sdksupervisor "github.com/opslang/opslang/pkg/ops-core-sdk/supervisor"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -3697,6 +3704,179 @@ func (r *Registry) registerExtensions() {
 		host, _ := argString(args, "host")
 		port, _ := argInt(args, "port")
 		return sdkmemcached.Version(host, port), nil
+	})
+
+	// ── composer ───────────────────────────────────────────────────────
+	r.Register("composer.install", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "dir")
+		noDev, _ := argBool(args, "no_dev")
+		return sdkcomposer.Install(dir, noDev), nil
+	})
+	r.Register("composer.update", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "dir")
+		noDev, _ := argBool(args, "no_dev")
+		return sdkcomposer.Update(dir, noDev), nil
+	})
+	r.Register("composer.require", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "dir")
+		pkg, _ := argString(args, "package")
+		ver, _ := argString(args, "version")
+		return sdkcomposer.Require(dir, pkg, ver), nil
+	})
+	r.Register("composer.remove", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "dir")
+		pkg, _ := argString(args, "package")
+		return sdkcomposer.Remove(dir, pkg), nil
+	})
+	r.Register("composer.create_project", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "dir")
+		pkg, _ := argString(args, "package")
+		ver, _ := argString(args, "version")
+		return sdkcomposer.CreateProject(dir, pkg, ver), nil
+	})
+	r.Register("composer.global_install", func(args map[string]interface{}) (interface{}, error) {
+		pkg, _ := argString(args, "package")
+		ver, _ := argString(args, "version")
+		return sdkcomposer.GlobalInstall(pkg, ver), nil
+	})
+	r.Register("composer.version", func(args map[string]interface{}) (interface{}, error) {
+		return sdkcomposer.Version(), nil
+	})
+
+	// ── cargo ─────────────────────────────────────────────────────────
+	r.Register("cargo.install", func(args map[string]interface{}) (interface{}, error) {
+		pkg, _ := argString(args, "package")
+		ver, _ := argString(args, "version")
+		force, _ := argBool(args, "force")
+		return sdkcargo.Install(pkg, ver, force), nil
+	})
+	r.Register("cargo.uninstall", func(args map[string]interface{}) (interface{}, error) {
+		pkg, _ := argString(args, "package")
+		return sdkcargo.Uninstall(pkg), nil
+	})
+	r.Register("cargo.update", func(args map[string]interface{}) (interface{}, error) {
+		pkg, _ := argString(args, "package")
+		return sdkcargo.Update(pkg), nil
+	})
+	r.Register("cargo.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkcargo.List()
+	})
+	r.Register("cargo.build", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "dir")
+		release, _ := argBool(args, "release")
+		return sdkcargo.Build(dir, release), nil
+	})
+	r.Register("cargo.test", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "dir")
+		return sdkcargo.Test(dir), nil
+	})
+	r.Register("cargo.version", func(args map[string]interface{}) (interface{}, error) {
+		return sdkcargo.Version(), nil
+	})
+
+	// ── rpmkey ────────────────────────────────────────────────────────
+	r.Register("rpmkey.import", func(args map[string]interface{}) (interface{}, error) {
+		keyPath, _ := argString(args, "key_path")
+		return sdkrpmkey.Import(keyPath), nil
+	})
+	r.Register("rpmkey.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkrpmkey.List(), nil
+	})
+	r.Register("rpmkey.remove", func(args map[string]interface{}) (interface{}, error) {
+		keyID, _ := argString(args, "key_id")
+		return sdkrpmkey.Remove(keyID), nil
+	})
+
+	// ── aptkey ────────────────────────────────────────────────────────
+	r.Register("aptkey.add", func(args map[string]interface{}) (interface{}, error) {
+		url, _ := argString(args, "url")
+		keyring, _ := argString(args, "keyring")
+		return sdkaptkey.Add(url, keyring), nil
+	})
+	r.Register("aptkey.add_from_key", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		keyring, _ := argString(args, "keyring")
+		return sdkaptkey.AddFromKey(path, keyring), nil
+	})
+	r.Register("aptkey.remove", func(args map[string]interface{}) (interface{}, error) {
+		keyID, _ := argString(args, "key_id")
+		keyring, _ := argString(args, "keyring")
+		return sdkaptkey.Remove(keyID, keyring), nil
+	})
+	r.Register("aptkey.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkaptkey.List(), nil
+	})
+
+	// ── dmidecode ─────────────────────────────────────────────────────
+	r.Register("dmidecode.system", func(args map[string]interface{}) (interface{}, error) {
+		return sdkdmidecode.System(), nil
+	})
+	r.Register("dmidecode.bios", func(args map[string]interface{}) (interface{}, error) {
+		return sdkdmidecode.BIOS(), nil
+	})
+	r.Register("dmidecode.chassis", func(args map[string]interface{}) (interface{}, error) {
+		return sdkdmidecode.Chassis(), nil
+	})
+	r.Register("dmidecode.processor", func(args map[string]interface{}) (interface{}, error) {
+		return sdkdmidecode.Processor(), nil
+	})
+	r.Register("dmidecode.keyword", func(args map[string]interface{}) (interface{}, error) {
+		keyword, _ := argString(args, "keyword")
+		v, err := sdkdmidecode.Keyword(keyword)
+		return map[string]interface{}{"value": v}, err
+	})
+
+	// ── tuned ─────────────────────────────────────────────────────────
+	r.Register("tuned.set", func(args map[string]interface{}) (interface{}, error) {
+		profile, _ := argString(args, "profile")
+		return sdktuned.Set(profile), nil
+	})
+	r.Register("tuned.status", func(args map[string]interface{}) (interface{}, error) {
+		return sdktuned.Status(), nil
+	})
+	r.Register("tuned.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdktuned.List(), nil
+	})
+	r.Register("tuned.off", func(args map[string]interface{}) (interface{}, error) {
+		return sdktuned.Off(), nil
+	})
+	r.Register("tuned.profile", func(args map[string]interface{}) (interface{}, error) {
+		p, err := sdktuned.Profile()
+		return map[string]interface{}{"profile": p}, err
+	})
+	r.Register("tuned.verify", func(args map[string]interface{}) (interface{}, error) {
+		return sdktuned.Verify(), nil
+	})
+
+	// ── supervisor ────────────────────────────────────────────────────
+	r.Register("supervisor.start", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdksupervisor.Start(name), nil
+	})
+	r.Register("supervisor.stop", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdksupervisor.Stop(name), nil
+	})
+	r.Register("supervisor.restart", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdksupervisor.Restart(name), nil
+	})
+	r.Register("supervisor.reload", func(args map[string]interface{}) (interface{}, error) {
+		return sdksupervisor.Reload(), nil
+	})
+	r.Register("supervisor.status", func(args map[string]interface{}) (interface{}, error) {
+		return sdksupervisor.Status(), nil
+	})
+	r.Register("supervisor.clear_log", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdksupervisor.ClearLog(name), nil
+	})
+	r.Register("supervisor.reread", func(args map[string]interface{}) (interface{}, error) {
+		return sdksupervisor.Reread(), nil
+	})
+	r.Register("supervisor.update", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdksupervisor.Update(name), nil
 	})
 }
 

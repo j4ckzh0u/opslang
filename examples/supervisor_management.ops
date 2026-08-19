@@ -1,0 +1,87 @@
+// Supervisor 进程管理示例
+// Supervisor process management example
+
+// 启动进程
+block {
+    let result = supervisor.start("myapp")
+    report {
+        process: result.process,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("supervisor.start failed: " + _error)
+}
+
+// 停止进程
+block {
+    let result = supervisor.stop("myapp")
+    report {
+        process: result.process,
+        success: result.success
+    }
+}
+rescue {
+    print("supervisor.stop failed: " + _error)
+}
+
+// 重启进程
+block {
+    let result = supervisor.restart("myapp")
+    report {
+        process: result.process,
+        success: result.success
+    }
+}
+rescue {
+    print("supervisor.restart failed: " + _error)
+}
+
+// 查看所有进程状态
+block {
+    let result = supervisor.status()
+    report {
+        count: result.count,
+        processes: result.processes
+    }
+}
+rescue {
+    print("supervisor.status failed: " + _error)
+}
+
+// 重新加载配置
+block {
+    let result = supervisor.reload()
+    report {
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("supervisor.reload failed: " + _error)
+}
+
+// 清除日志
+block {
+    let result = supervisor.clear_log("myapp")
+    report {
+        process: result.process,
+        success: result.success
+    }
+}
+rescue {
+    print("supervisor.clear_log failed: " + _error)
+}
+
+// 更新进程组
+block {
+    let result = supervisor.update("mygroup")
+    report {
+        process: result.process,
+        success: result.success
+    }
+}
+rescue {
+    print("supervisor.update failed: " + _error)
+}

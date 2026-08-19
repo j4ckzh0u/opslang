@@ -654,6 +654,60 @@ var sdkMapping = map[string]sdkFunc{
 	"memcached.flush_all":  {pkg: "memcached", goName: "FlushAll", args: true, params: []string{"s", "i"}},
 	"memcached.stats":      {pkg: "memcached", goName: "Stats", args: true, params: []string{"s", "i"}},
 	"memcached.version":    {pkg: "memcached", goName: "Version", args: true, params: []string{"s", "i"}},
+
+	// composer
+	"composer.install":       {pkg: "composer", goName: "Install", args: true, params: []string{"s", "b"}},
+	"composer.update":        {pkg: "composer", goName: "Update", args: true, params: []string{"s", "b"}},
+	"composer.require":       {pkg: "composer", goName: "Require", args: true, params: []string{"s", "s", "s"}},
+	"composer.remove":        {pkg: "composer", goName: "Remove", args: true, params: []string{"s", "s"}},
+	"composer.create_project": {pkg: "composer", goName: "CreateProject", args: true, params: []string{"s", "s", "s"}},
+	"composer.global_install": {pkg: "composer", goName: "GlobalInstall", args: true, params: []string{"s", "s"}},
+	"composer.version":       {pkg: "composer", goName: "Version", args: true},
+
+	// cargo
+	"cargo.install":    {pkg: "cargo", goName: "Install", args: true, params: []string{"s", "s", "b"}},
+	"cargo.uninstall":  {pkg: "cargo", goName: "Uninstall", args: true, params: []string{"s"}},
+	"cargo.update":     {pkg: "cargo", goName: "Update", args: true, params: []string{"s"}},
+	"cargo.list":       {pkg: "cargo", goName: "List", args: true},
+	"cargo.build":      {pkg: "cargo", goName: "Build", args: true, params: []string{"s", "b"}},
+	"cargo.test":       {pkg: "cargo", goName: "Test", args: true, params: []string{"s"}},
+	"cargo.version":    {pkg: "cargo", goName: "Version", args: true},
+
+	// rpmkey
+	"rpmkey.import": {pkg: "rpmkey", goName: "Import", args: true, params: []string{"s"}},
+	"rpmkey.list":   {pkg: "rpmkey", goName: "List", args: true},
+	"rpmkey.remove": {pkg: "rpmkey", goName: "Remove", args: true, params: []string{"s"}},
+
+	// aptkey
+	"aptkey.add":          {pkg: "aptkey", goName: "Add", args: true, params: []string{"s", "s"}},
+	"aptkey.add_from_key": {pkg: "aptkey", goName: "AddFromKey", args: true, params: []string{"s", "s"}},
+	"aptkey.remove":       {pkg: "aptkey", goName: "Remove", args: true, params: []string{"s", "s"}},
+	"aptkey.list":         {pkg: "aptkey", goName: "List", args: true},
+
+	// dmidecode
+	"dmidecode.system":    {pkg: "dmidecode", goName: "System", args: true},
+	"dmidecode.bios":      {pkg: "dmidecode", goName: "BIOS", args: true},
+	"dmidecode.chassis":   {pkg: "dmidecode", goName: "Chassis", args: true},
+	"dmidecode.processor": {pkg: "dmidecode", goName: "Processor", args: true},
+	"dmidecode.keyword":   {pkg: "dmidecode", goName: "Keyword", args: true, params: []string{"s"}},
+
+	// tuned
+	"tuned.set":    {pkg: "tuned", goName: "Set", args: true, params: []string{"s"}},
+	"tuned.status": {pkg: "tuned", goName: "Status", args: true},
+	"tuned.list":   {pkg: "tuned", goName: "List", args: true},
+	"tuned.off":    {pkg: "tuned", goName: "Off", args: true},
+	"tuned.profile": {pkg: "tuned", goName: "Profile", args: true},
+	"tuned.verify": {pkg: "tuned", goName: "Verify", args: true},
+
+	// supervisor
+	"supervisor.start":      {pkg: "supervisor", goName: "Start", args: true, params: []string{"s"}},
+	"supervisor.stop":       {pkg: "supervisor", goName: "Stop", args: true, params: []string{"s"}},
+	"supervisor.restart":    {pkg: "supervisor", goName: "Restart", args: true, params: []string{"s"}},
+	"supervisor.reload":     {pkg: "supervisor", goName: "Reload", args: true},
+	"supervisor.status":     {pkg: "supervisor", goName: "Status", args: true},
+	"supervisor.clear_log":  {pkg: "supervisor", goName: "ClearLog", args: true, params: []string{"s"}},
+	"supervisor.reread":     {pkg: "supervisor", goName: "Reread", args: true},
+	"supervisor.update":     {pkg: "supervisor", goName: "Update", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -795,6 +849,13 @@ var pkgImportAlias = map[string]string{
 	"rabbitmq":       "opsrabbitmq",
 	"consul":         "opsconsul",
 	"memcached":      "opsmemcached",
+	"composer":       "opscomposer",
+	"cargo":          "opscargo",
+	"rpmkey":         "opsrpmkey",
+	"aptkey":         "opsaptkey",
+	"dmidecode":      "opsdmidecode",
+	"tuned":          "opstuned",
+	"supervisor":     "opssupervisor",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -862,6 +923,13 @@ var pkgImportPath = map[string]string{
 	"rabbitmq":       "github.com/opslang/opslang/pkg/ops-core-sdk/rabbitmq",
 	"consul":         "github.com/opslang/opslang/pkg/ops-core-sdk/consul",
 	"memcached":      "github.com/opslang/opslang/pkg/ops-core-sdk/memcached",
+	"composer":       "github.com/opslang/opslang/pkg/ops-core-sdk/composer",
+	"cargo":          "github.com/opslang/opslang/pkg/ops-core-sdk/cargo",
+	"rpmkey":         "github.com/opslang/opslang/pkg/ops-core-sdk/rpmkey",
+	"aptkey":         "github.com/opslang/opslang/pkg/ops-core-sdk/aptkey",
+	"dmidecode":      "github.com/opslang/opslang/pkg/ops-core-sdk/dmidecode",
+	"tuned":          "github.com/opslang/opslang/pkg/ops-core-sdk/tuned",
+	"supervisor":     "github.com/opslang/opslang/pkg/ops-core-sdk/supervisor",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

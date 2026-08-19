@@ -1,0 +1,96 @@
+// Composer PHP 包管理示例
+// Composer PHP package management example
+
+// 安装项目依赖
+block {
+    let result = composer.install("/var/www/myapp", false)
+    report {
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("composer.install failed: " + _error)
+}
+
+// 安装项目依赖（不含开发包）
+block {
+    let result = composer.install("/var/www/myapp", true)
+    report {
+        success: result.success
+    }
+}
+rescue {
+    print("composer.install --no-dev failed: " + _error)
+}
+
+// 更新依赖
+block {
+    let result = composer.update("/var/www/myapp", false)
+    report {
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("composer.update failed: " + _error)
+}
+
+// 添加新依赖
+block {
+    let result = composer.require("/var/www/myapp", "monolog/monolog", "^3.0")
+    report {
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("composer.require failed: " + _error)
+}
+
+// 移除依赖
+block {
+    let result = composer.remove("/var/www/myapp", "monolog/monolog")
+    report {
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("composer.remove failed: " + _error)
+}
+
+// 创建新项目
+block {
+    let result = composer.create_project("/var/www/newapp", "laravel/laravel", "^10.0")
+    report {
+        success: result.success,
+        dir: result.dir
+    }
+}
+rescue {
+    print("composer.create_project failed: " + _error)
+}
+
+// 全局安装包
+block {
+    let result = composer.global_install("phpunit/phpunit", "^10.0")
+    report {
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("composer.global_install failed: " + _error)
+}
+
+// 获取版本
+block {
+    let result = composer.version()
+    report {
+        version: result.version
+    }
+}
+rescue {
+    print("composer.version failed: " + _error)
+}

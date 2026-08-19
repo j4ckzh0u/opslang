@@ -87,6 +87,13 @@ import (
 	sdkrabbitmq "github.com/opslang/opslang/pkg/ops-core-sdk/rabbitmq"
 	sdkconsul "github.com/opslang/opslang/pkg/ops-core-sdk/consul"
 	sdkmemcached "github.com/opslang/opslang/pkg/ops-core-sdk/memcached"
+	sdkcomposer "github.com/opslang/opslang/pkg/ops-core-sdk/composer"
+	sdkcargo "github.com/opslang/opslang/pkg/ops-core-sdk/cargo"
+	sdkrpmkey "github.com/opslang/opslang/pkg/ops-core-sdk/rpmkey"
+	sdkaptkey "github.com/opslang/opslang/pkg/ops-core-sdk/aptkey"
+	sdkdmidecode "github.com/opslang/opslang/pkg/ops-core-sdk/dmidecode"
+	sdktuned "github.com/opslang/opslang/pkg/ops-core-sdk/tuned"
+	sdksupervisor "github.com/opslang/opslang/pkg/ops-core-sdk/supervisor"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -5925,6 +5932,354 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return structToMap(r)
+	}
+
+	// ── composer ──────────────────────────────────────────────────────────
+	interp.builtins["composer.install"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		noDev := false
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				dir = s
+			}
+		}
+		if len(args) > 1 {
+			if b, ok := args[1].(bool); ok {
+				noDev = b
+			}
+		}
+		return sdkcomposer.Install(dir, noDev), nil
+	}
+	interp.builtins["composer.update"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		noDev := false
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				dir = s
+			}
+		}
+		if len(args) > 1 {
+			if b, ok := args[1].(bool); ok {
+				noDev = b
+			}
+		}
+		return sdkcomposer.Update(dir, noDev), nil
+	}
+	interp.builtins["composer.require"] = func(args ...interface{}) (interface{}, error) {
+		dir, pkg, ver := "", "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				dir = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				pkg = s
+			}
+		}
+		if len(args) > 2 {
+			if s, ok := args[2].(string); ok {
+				ver = s
+			}
+		}
+		return sdkcomposer.Require(dir, pkg, ver), nil
+	}
+	interp.builtins["composer.remove"] = func(args ...interface{}) (interface{}, error) {
+		dir, pkg := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				dir = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				pkg = s
+			}
+		}
+		return sdkcomposer.Remove(dir, pkg), nil
+	}
+	interp.builtins["composer.create_project"] = func(args ...interface{}) (interface{}, error) {
+		dir, pkg, ver := "", "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				dir = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				pkg = s
+			}
+		}
+		if len(args) > 2 {
+			if s, ok := args[2].(string); ok {
+				ver = s
+			}
+		}
+		return sdkcomposer.CreateProject(dir, pkg, ver), nil
+	}
+	interp.builtins["composer.global_install"] = func(args ...interface{}) (interface{}, error) {
+		pkg, ver := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				pkg = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				ver = s
+			}
+		}
+		return sdkcomposer.GlobalInstall(pkg, ver), nil
+	}
+	interp.builtins["composer.version"] = func(args ...interface{}) (interface{}, error) {
+		return sdkcomposer.Version(), nil
+	}
+
+	// ── cargo ─────────────────────────────────────────────────────────────
+	interp.builtins["cargo.install"] = func(args ...interface{}) (interface{}, error) {
+		pkg, ver := "", ""
+		force := false
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				pkg = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				ver = s
+			}
+		}
+		if len(args) > 2 {
+			if b, ok := args[2].(bool); ok {
+				force = b
+			}
+		}
+		return sdkcargo.Install(pkg, ver, force), nil
+	}
+	interp.builtins["cargo.uninstall"] = func(args ...interface{}) (interface{}, error) {
+		pkg := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				pkg = s
+			}
+		}
+		return sdkcargo.Uninstall(pkg), nil
+	}
+	interp.builtins["cargo.update"] = func(args ...interface{}) (interface{}, error) {
+		pkg := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				pkg = s
+			}
+		}
+		return sdkcargo.Update(pkg), nil
+	}
+	interp.builtins["cargo.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkcargo.List()
+	}
+	interp.builtins["cargo.build"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		release := false
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				dir = s
+			}
+		}
+		if len(args) > 1 {
+			if b, ok := args[1].(bool); ok {
+				release = b
+			}
+		}
+		return sdkcargo.Build(dir, release), nil
+	}
+	interp.builtins["cargo.test"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				dir = s
+			}
+		}
+		return sdkcargo.Test(dir), nil
+	}
+	interp.builtins["cargo.version"] = func(args ...interface{}) (interface{}, error) {
+		return sdkcargo.Version(), nil
+	}
+
+	// ── rpmkey ────────────────────────────────────────────────────────────
+	interp.builtins["rpmkey.import"] = func(args ...interface{}) (interface{}, error) {
+		keyPath := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				keyPath = s
+			}
+		}
+		return sdkrpmkey.Import(keyPath), nil
+	}
+	interp.builtins["rpmkey.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkrpmkey.List(), nil
+	}
+	interp.builtins["rpmkey.remove"] = func(args ...interface{}) (interface{}, error) {
+		keyID := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				keyID = s
+			}
+		}
+		return sdkrpmkey.Remove(keyID), nil
+	}
+
+	// ── aptkey ────────────────────────────────────────────────────────────
+	interp.builtins["aptkey.add"] = func(args ...interface{}) (interface{}, error) {
+		url, keyring := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				url = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				keyring = s
+			}
+		}
+		return sdkaptkey.Add(url, keyring), nil
+	}
+	interp.builtins["aptkey.add_from_key"] = func(args ...interface{}) (interface{}, error) {
+		path, keyring := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				path = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				keyring = s
+			}
+		}
+		return sdkaptkey.AddFromKey(path, keyring), nil
+	}
+	interp.builtins["aptkey.remove"] = func(args ...interface{}) (interface{}, error) {
+		keyID, keyring := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				keyID = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				keyring = s
+			}
+		}
+		return sdkaptkey.Remove(keyID, keyring), nil
+	}
+	interp.builtins["aptkey.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkaptkey.List(), nil
+	}
+
+	// ── dmidecode ─────────────────────────────────────────────────────────
+	interp.builtins["dmidecode.system"] = func(args ...interface{}) (interface{}, error) {
+		return sdkdmidecode.System(), nil
+	}
+	interp.builtins["dmidecode.bios"] = func(args ...interface{}) (interface{}, error) {
+		return sdkdmidecode.BIOS(), nil
+	}
+	interp.builtins["dmidecode.chassis"] = func(args ...interface{}) (interface{}, error) {
+		return sdkdmidecode.Chassis(), nil
+	}
+	interp.builtins["dmidecode.processor"] = func(args ...interface{}) (interface{}, error) {
+		return sdkdmidecode.Processor(), nil
+	}
+	interp.builtins["dmidecode.keyword"] = func(args ...interface{}) (interface{}, error) {
+		keyword := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				keyword = s
+			}
+		}
+		v, err := sdkdmidecode.Keyword(keyword)
+		return map[string]interface{}{"value": v}, err
+	}
+
+	// ── tuned ─────────────────────────────────────────────────────────────
+	interp.builtins["tuned.set"] = func(args ...interface{}) (interface{}, error) {
+		profile := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				profile = s
+			}
+		}
+		return sdktuned.Set(profile), nil
+	}
+	interp.builtins["tuned.status"] = func(args ...interface{}) (interface{}, error) {
+		return sdktuned.Status(), nil
+	}
+	interp.builtins["tuned.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdktuned.List(), nil
+	}
+	interp.builtins["tuned.off"] = func(args ...interface{}) (interface{}, error) {
+		return sdktuned.Off(), nil
+	}
+	interp.builtins["tuned.profile"] = func(args ...interface{}) (interface{}, error) {
+		p, err := sdktuned.Profile()
+		return map[string]interface{}{"profile": p}, err
+	}
+	interp.builtins["tuned.verify"] = func(args ...interface{}) (interface{}, error) {
+		return sdktuned.Verify(), nil
+	}
+
+	// ── supervisor ────────────────────────────────────────────────────────
+	interp.builtins["supervisor.start"] = func(args ...interface{}) (interface{}, error) {
+		name := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				name = s
+			}
+		}
+		return sdksupervisor.Start(name), nil
+	}
+	interp.builtins["supervisor.stop"] = func(args ...interface{}) (interface{}, error) {
+		name := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				name = s
+			}
+		}
+		return sdksupervisor.Stop(name), nil
+	}
+	interp.builtins["supervisor.restart"] = func(args ...interface{}) (interface{}, error) {
+		name := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				name = s
+			}
+		}
+		return sdksupervisor.Restart(name), nil
+	}
+	interp.builtins["supervisor.reload"] = func(args ...interface{}) (interface{}, error) {
+		return sdksupervisor.Reload(), nil
+	}
+	interp.builtins["supervisor.status"] = func(args ...interface{}) (interface{}, error) {
+		return sdksupervisor.Status(), nil
+	}
+	interp.builtins["supervisor.clear_log"] = func(args ...interface{}) (interface{}, error) {
+		name := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				name = s
+			}
+		}
+		return sdksupervisor.ClearLog(name), nil
+	}
+	interp.builtins["supervisor.reread"] = func(args ...interface{}) (interface{}, error) {
+		return sdksupervisor.Reread(), nil
+	}
+	interp.builtins["supervisor.update"] = func(args ...interface{}) (interface{}, error) {
+		name := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				name = s
+			}
+		}
+		return sdksupervisor.Update(name), nil
 	}
 }
 // If the arg at idx is a map[string]interface{}, values are converted to strings.

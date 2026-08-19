@@ -679,6 +679,60 @@ var Funcs = []Func{
 	{Name: "sefcontext.remove", Args: []string{"filespec"}, Mutating: true},
 	{Name: "sefcontext.list", Args: []string{}},
 	{Name: "sefcontext.apply", Args: []string{"filespec", "recursive"}, Mutating: true},
+
+	// ── composer ─────────────────────────────────────────────────────────────
+	{Name: "composer.install", Args: []string{"dir", "no_dev"}, Mutating: true},
+	{Name: "composer.update", Args: []string{"dir", "no_dev"}, Mutating: true},
+	{Name: "composer.require", Args: []string{"dir", "package", "version"}, Mutating: true},
+	{Name: "composer.remove", Args: []string{"dir", "package"}, Mutating: true},
+	{Name: "composer.create_project", Args: []string{"dir", "package", "version"}, Mutating: true},
+	{Name: "composer.global_install", Args: []string{"package", "version"}, Mutating: true},
+	{Name: "composer.version"},
+
+	// ── cargo ────────────────────────────────────────────────────────────────
+	{Name: "cargo.install", Args: []string{"package", "version", "force"}, Mutating: true},
+	{Name: "cargo.uninstall", Args: []string{"package"}, Mutating: true},
+	{Name: "cargo.update", Args: []string{"package"}, Mutating: true},
+	{Name: "cargo.list"},
+	{Name: "cargo.build", Args: []string{"dir", "release"}},
+	{Name: "cargo.test", Args: []string{"dir"}},
+	{Name: "cargo.version"},
+
+	// ── rpmkey ───────────────────────────────────────────────────────────────
+	{Name: "rpmkey.import", Args: []string{"key_path"}, Mutating: true},
+	{Name: "rpmkey.list"},
+	{Name: "rpmkey.remove", Args: []string{"key_id"}, Mutating: true},
+
+	// ── aptkey ───────────────────────────────────────────────────────────────
+	{Name: "aptkey.add", Args: []string{"url", "keyring"}, Mutating: true},
+	{Name: "aptkey.add_from_key", Args: []string{"path", "keyring"}, Mutating: true},
+	{Name: "aptkey.remove", Args: []string{"key_id", "keyring"}, Mutating: true},
+	{Name: "aptkey.list"},
+
+	// ── dmidecode ────────────────────────────────────────────────────────────
+	{Name: "dmidecode.system"},
+	{Name: "dmidecode.bios"},
+	{Name: "dmidecode.chassis"},
+	{Name: "dmidecode.processor"},
+	{Name: "dmidecode.keyword", Args: []string{"keyword"}},
+
+	// ── tuned ────────────────────────────────────────────────────────────────
+	{Name: "tuned.set", Args: []string{"profile"}, Mutating: true},
+	{Name: "tuned.status"},
+	{Name: "tuned.list"},
+	{Name: "tuned.off", Mutating: true},
+	{Name: "tuned.profile"},
+	{Name: "tuned.verify"},
+
+	// ── supervisor ───────────────────────────────────────────────────────────
+	{Name: "supervisor.start", Args: []string{"name"}, Mutating: true},
+	{Name: "supervisor.stop", Args: []string{"name"}, Mutating: true},
+	{Name: "supervisor.restart", Args: []string{"name"}, Mutating: true},
+	{Name: "supervisor.reload", Mutating: true},
+	{Name: "supervisor.status"},
+	{Name: "supervisor.clear_log", Args: []string{"name"}, Mutating: true},
+	{Name: "supervisor.reread", Mutating: true},
+	{Name: "supervisor.update", Args: []string{"name"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
