@@ -81,6 +81,9 @@ import (
 	sdkpamd "github.com/opslang/opslang/pkg/ops-core-sdk/pamd"
 	sdkgetent "github.com/opslang/opslang/pkg/ops-core-sdk/getent"
 	sdkhaproxy "github.com/opslang/opslang/pkg/ops-core-sdk/haproxy"
+	sdkopenssl "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_cert"
+	sdkredis "github.com/opslang/opslang/pkg/ops-core-sdk/redis"
+	sdkgem "github.com/opslang/opslang/pkg/ops-core-sdk/gem"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -1600,6 +1603,119 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["haproxy.version"] = func(args ...interface{}) (interface{}, error) {
 		return sdkhaproxy.Version()
+	}
+
+	// ── openssl_cert.* ──────────────────────────────────────────────────
+	interp.builtins["openssl_cert.create_csr"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 { return nil, fmt.Errorf("openssl_cert.create_csr() requires 4 arguments") }
+		return sdkopenssl.CreateCSR(args[0].(string), args[1].(string), args[2].(string), args[3].(int))
+	}
+	interp.builtins["openssl_cert.generate_self_signed"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 { return nil, fmt.Errorf("openssl_cert.generate_self_signed() requires 5 arguments") }
+		return sdkopenssl.GenerateSelfSigned(args[0].(string), args[1].(string), args[2].(string), args[3].(int), args[4].(int))
+	}
+	interp.builtins["openssl_cert.inspect"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("openssl_cert.inspect() requires 1 argument") }
+		return sdkopenssl.Inspect(args[0].(string))
+	}
+	interp.builtins["openssl_cert.verify"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("openssl_cert.verify() requires 2 arguments") }
+		return sdkopenssl.Verify(args[0].(string), args[1].(string))
+	}
+	interp.builtins["openssl_cert.check_expiry"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("openssl_cert.check_expiry() requires 1 argument") }
+		return sdkopenssl.CheckExpiry(args[0].(string))
+	}
+	interp.builtins["openssl_cert.convert_format"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 { return nil, fmt.Errorf("openssl_cert.convert_format() requires 3 arguments") }
+		return sdkopenssl.ConvertFormat(args[0].(string), args[1].(string), args[2].(string))
+	}
+
+	// ── redis.* ─────────────────────────────────────────────────────────
+	interp.builtins["redis.ping"] = func(args ...interface{}) (interface{}, error) {
+		h, p, a := "", 0, ""
+		if len(args) > 0 { h = args[0].(string) }
+		if len(args) > 1 { p = args[1].(int) }
+		if len(args) > 2 { a = args[2].(string) }
+		return sdkredis.Ping(h, p, a)
+	}
+	interp.builtins["redis.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("redis.get() requires key") }
+		h, p, a := "", 0, ""
+		if len(args) > 1 { h = args[1].(string) }
+		if len(args) > 2 { p = args[2].(int) }
+		if len(args) > 3 { a = args[3].(string) }
+		return sdkredis.Get(args[0].(string), h, p, a)
+	}
+	interp.builtins["redis.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("redis.set() requires key and value") }
+		h, p, a, exp := "", 0, "", 0
+		if len(args) > 2 { h = args[2].(string) }
+		if len(args) > 3 { p = args[3].(int) }
+		if len(args) > 4 { a = args[4].(string) }
+		if len(args) > 5 { exp = args[5].(int) }
+		return sdkredis.Set(args[0].(string), args[1].(string), h, p, a, exp)
+	}
+	interp.builtins["redis.del"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("redis.del() requires keys") }
+		h, p, a := "", 0, ""
+		if len(args) > 1 { h = args[1].(string) }
+		if len(args) > 2 { p = args[2].(int) }
+		if len(args) > 3 { a = args[3].(string) }
+		keys, _ := args[0].([]string)
+		return sdkredis.Del(keys, h, p, a)
+	}
+	interp.builtins["redis.keys"] = func(args ...interface{}) (interface{}, error) {
+		pat, h, p, a := "*", "", 0, ""
+		if len(args) > 0 { pat = args[0].(string) }
+		if len(args) > 1 { h = args[1].(string) }
+		if len(args) > 2 { p = args[2].(int) }
+		if len(args) > 3 { a = args[3].(string) }
+		return sdkredis.Keys(pat, h, p, a)
+	}
+	interp.builtins["redis.info"] = func(args ...interface{}) (interface{}, error) {
+		h, p, a := "", 0, ""
+		if len(args) > 0 { h = args[0].(string) }
+		if len(args) > 1 { p = args[1].(int) }
+		if len(args) > 2 { a = args[2].(string) }
+		return sdkredis.Info(h, p, a)
+	}
+	interp.builtins["redis.flush_db"] = func(args ...interface{}) (interface{}, error) {
+		h, p, a := "", 0, ""
+		if len(args) > 0 { h = args[0].(string) }
+		if len(args) > 1 { p = args[1].(int) }
+		if len(args) > 2 { a = args[2].(string) }
+		return sdkredis.FlushDB(h, p, a)
+	}
+
+	// ── gem.* ───────────────────────────────────────────────────────────
+	interp.builtins["gem.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("gem.install() requires name") }
+		v, u := "", false
+		if len(args) > 1 { v = args[1].(string) }
+		if len(args) > 2 { u = args[2].(bool) }
+		return sdkgem.Install(args[0].(string), v, u)
+	}
+	interp.builtins["gem.uninstall"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("gem.uninstall() requires name") }
+		f := false
+		if len(args) > 1 { f = args[1].(bool) }
+		return sdkgem.Uninstall(args[0].(string), f)
+	}
+	interp.builtins["gem.update"] = func(args ...interface{}) (interface{}, error) {
+		n := ""
+		if len(args) > 0 { n = args[0].(string) }
+		return sdkgem.Update(n)
+	}
+	interp.builtins["gem.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("gem.info() requires name") }
+		return sdkgem.Info(args[0].(string))
+	}
+	interp.builtins["gem.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkgem.List()
+	}
+	interp.builtins["gem.version"] = func(args ...interface{}) (interface{}, error) {
+		return sdkgem.Version()
 	}
 
 	// ── selinux.* ────────────────────────────────────────────────────────

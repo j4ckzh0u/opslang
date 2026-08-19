@@ -1,0 +1,88 @@
+// Redis 管理示例
+// Redis management example
+
+// 检查 Redis 连通性
+block {
+    let ping = redis.ping("127.0.0.1", 6379, "")
+    report {
+        up: ping.up,
+        response: ping.response
+    }
+}
+rescue {
+    print("redis.ping failed: " + _error)
+}
+
+// 获取 Redis 信息
+block {
+    let info = redis.info("127.0.0.1", 6379, "")
+    report {
+        version: info.version,
+        uptime: info.uptime_seconds,
+        clients: info.connected_clients,
+        memory: info.used_memory
+    }
+}
+rescue {
+    print("redis.info failed: " + _error)
+}
+
+// 设置键值
+block {
+    let result = redis.set("mykey", "hello world", "127.0.0.1", 6379, "", 300)
+    report {
+        key: result.key,
+        success: result.success
+    }
+}
+rescue {
+    print("redis.set failed: " + _error)
+}
+
+// 获取键值
+block {
+    let result = redis.get("mykey", "127.0.0.1", 6379, "")
+    report {
+        key: result.key,
+        found: result.found,
+        value: result.value
+    }
+}
+rescue {
+    print("redis.get failed: " + _error)
+}
+
+// 列出键
+block {
+    let result = redis.keys("*", "127.0.0.1", 6379, "")
+    report {
+        pattern: result.pattern,
+        count: result.count
+    }
+}
+rescue {
+    print("redis.keys failed: " + _error)
+}
+
+// 删除键
+block {
+    let result = redis.del(["mykey"], "127.0.0.1", 6379, "")
+    report {
+        deleted: result.deleted,
+        success: result.success
+    }
+}
+rescue {
+    print("redis.del failed: " + _error)
+}
+
+// 清空数据库
+block {
+    let result = redis.flush_db("127.0.0.1", 6379, "")
+    report {
+        success: result.success
+    }
+}
+rescue {
+    print("redis.flush_db failed: " + _error)
+}

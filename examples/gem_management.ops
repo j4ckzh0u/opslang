@@ -1,0 +1,101 @@
+// Ruby Gem 包管理示例
+// Ruby gem package management example
+
+// 获取 gem 版本
+block {
+    let ver = gem.version()
+    report {
+        version: ver.version
+    }
+}
+rescue {
+    print("gem.version failed (ruby may not be installed): " + _error)
+}
+
+// 列出已安装的 gem
+block {
+    let gems = gem.list()
+    report {
+        total_gems: gems.count
+    }
+}
+rescue {
+    print("gem.list failed: " + _error)
+}
+
+// 查询 gem 信息
+block {
+    let info = gem.info("bundler")
+    report {
+        name: "bundler",
+        found: info.found,
+        version: info.info.version
+    }
+}
+rescue {
+    print("gem.info failed: " + _error)
+}
+
+// 安装 gem
+block {
+    let result = gem.install("rake", "", false)
+    report {
+        name: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("gem.install failed (expected without root): " + _error)
+}
+
+// 安装指定版本
+block {
+    let result = gem.install("json", "2.6.0", false)
+    report {
+        name: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("gem.install with version failed: " + _error)
+}
+
+// 用户级安装
+block {
+    let result = gem.install("rubocop", "", true)
+    report {
+        name: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("gem.install --user-install failed: " + _error)
+}
+
+// 卸载 gem
+block {
+    let result = gem.uninstall("old-gem", true)
+    report {
+        name: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("gem.uninstall failed: " + _error)
+}
+
+// 更新 gem
+block {
+    let result = gem.update("bundler")
+    report {
+        name: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("gem.update failed: " + _error)
+}

@@ -1,0 +1,81 @@
+// SSL/TLS 证书管理示例
+// SSL/TLS certificate management example
+
+// 检查证书是否存在
+block {
+    let info = openssl_cert.inspect("/etc/ssl/certs/ca-certificates.crt")
+    report {
+        exists: info.exists,
+        subject: info.info.subject
+    }
+}
+rescue {
+    print("openssl_cert.inspect failed: " + _error)
+}
+
+// 生成自签名证书
+block {
+    let result = openssl_cert.generate_self_signed(
+        "/tmp/test.crt", "/tmp/test.key",
+        "/CN=test.example.com/O=Test", 365, 2048
+    )
+    report {
+        success: result.success,
+        cert_path: result.cert_path,
+        key_path: result.key_path
+    }
+}
+rescue {
+    print("openssl_cert.generate_self_signed failed: " + _error)
+}
+
+// 创建 CSR
+block {
+    let result = openssl_cert.create_csr(
+        "/tmp/test.key", "/tmp/test.csr",
+        "/CN=example.com/O=Example Inc", 2048
+    )
+    report {
+        success: result.success,
+        csr_path: result.csr_path
+    }
+}
+rescue {
+    print("openssl_cert.create_csr failed: " + _error)
+}
+
+// 检查证书过期时间
+block {
+    let expiry = openssl_cert.check_expiry("/etc/ssl/certs/ca-certificates.crt")
+    report {
+        path: expiry.path,
+        days_left: expiry.days_left,
+        expired: expiry.expired
+    }
+}
+rescue {
+    print("openssl_cert.check_expiry failed: " + _error)
+}
+
+// 验证证书
+block {
+    let result = openssl_cert.verify("/tmp/test.crt", "")
+    report {
+        valid: result.valid
+    }
+}
+rescue {
+    print("openssl_cert.verify failed: " + _error)
+}
+
+// 转换证书格式
+block {
+    let result = openssl_cert.convert_format("/tmp/test.crt", "/tmp/test.der", "der")
+    report {
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("openssl_cert.convert_format failed: " + _error)
+}

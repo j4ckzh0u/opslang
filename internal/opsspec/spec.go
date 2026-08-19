@@ -315,6 +315,31 @@ var Funcs = []Func{
 	{Name: "haproxy.restart", Mutating: true},
 	{Name: "haproxy.version"},
 
+	// ── openssl_cert ────────────────────────────────────────────────────
+	{Name: "openssl_cert.create_csr", Args: []string{"key_path", "csr_path", "subject", "key_bits"}, Mutating: true},
+	{Name: "openssl_cert.generate_self_signed", Args: []string{"cert_path", "key_path", "subject", "days", "key_bits"}, Mutating: true},
+	{Name: "openssl_cert.inspect", Args: []string{"cert_path"}},
+	{Name: "openssl_cert.verify", Args: []string{"cert_path", "ca_path"}},
+	{Name: "openssl_cert.check_expiry", Args: []string{"cert_path"}},
+	{Name: "openssl_cert.convert_format", Args: []string{"input_path", "output_path", "output_format"}, Mutating: true},
+
+	// ── redis ───────────────────────────────────────────────────────────
+	{Name: "redis.ping", Args: []string{"host", "port", "auth"}},
+	{Name: "redis.get", Args: []string{"key", "host", "port", "auth"}},
+	{Name: "redis.set", Args: []string{"key", "value", "host", "port", "auth", "expiry_sec"}, Mutating: true},
+	{Name: "redis.del", Args: []string{"keys", "host", "port", "auth"}, Mutating: true},
+	{Name: "redis.keys", Args: []string{"pattern", "host", "port", "auth"}},
+	{Name: "redis.info", Args: []string{"host", "port", "auth"}},
+	{Name: "redis.flush_db", Mutating: true},
+
+	// ── gem ─────────────────────────────────────────────────────────────
+	{Name: "gem.install", Args: []string{"name", "version", "user_install"}, Mutating: true},
+	{Name: "gem.uninstall", Args: []string{"name", "force"}, Mutating: true},
+	{Name: "gem.update", Args: []string{"name"}, Mutating: true},
+	{Name: "gem.info", Args: []string{"name"}},
+	{Name: "gem.list"},
+	{Name: "gem.version"},
+
 	// ── selinux ───────────────────────────────────────────────────────
 	{Name: "selinux.get"},
 	{Name: "selinux.set", Args: []string{"mode"}, Mutating: true},

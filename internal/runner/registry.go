@@ -82,6 +82,9 @@ import (
 	sdkpamd "github.com/opslang/opslang/pkg/ops-core-sdk/pamd"
 	sdkgetent "github.com/opslang/opslang/pkg/ops-core-sdk/getent"
 	sdkhaproxy "github.com/opslang/opslang/pkg/ops-core-sdk/haproxy"
+	sdkopenssl "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_cert"
+	sdkredis "github.com/opslang/opslang/pkg/ops-core-sdk/redis"
+	sdkgem "github.com/opslang/opslang/pkg/ops-core-sdk/gem"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -3379,6 +3382,129 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("haproxy.version", func(args map[string]interface{}) (interface{}, error) {
 		return sdkhaproxy.Version()
+	})
+
+	// ── openssl_cert.* ──────────────────────────────────────────────────
+	r.Register("openssl_cert.create_csr", func(args map[string]interface{}) (interface{}, error) {
+		kp, _ := argString(args, "key_path")
+		cp, _ := argString(args, "csr_path")
+		subj, _ := argString(args, "subject")
+		bits, _ := argInt(args, "key_bits")
+		if bits <= 0 { bits = 2048 }
+		return sdkopenssl.CreateCSR(kp, cp, subj, bits)
+	})
+	r.Register("openssl_cert.generate_self_signed", func(args map[string]interface{}) (interface{}, error) {
+		cp, _ := argString(args, "cert_path")
+		kp, _ := argString(args, "key_path")
+		subj, _ := argString(args, "subject")
+		days, _ := argInt(args, "days")
+		bits, _ := argInt(args, "key_bits")
+		return sdkopenssl.GenerateSelfSigned(cp, kp, subj, days, bits)
+	})
+	r.Register("openssl_cert.inspect", func(args map[string]interface{}) (interface{}, error) {
+		cp, _ := argString(args, "cert_path")
+		return sdkopenssl.Inspect(cp)
+	})
+	r.Register("openssl_cert.verify", func(args map[string]interface{}) (interface{}, error) {
+		cp, _ := argString(args, "cert_path")
+		ca, _ := argString(args, "ca_path")
+		return sdkopenssl.Verify(cp, ca)
+	})
+	r.Register("openssl_cert.check_expiry", func(args map[string]interface{}) (interface{}, error) {
+		cp, _ := argString(args, "cert_path")
+		return sdkopenssl.CheckExpiry(cp)
+	})
+	r.Register("openssl_cert.convert_format", func(args map[string]interface{}) (interface{}, error) {
+		ip, _ := argString(args, "input_path")
+		op, _ := argString(args, "output_path")
+		of, _ := argString(args, "output_format")
+		return sdkopenssl.ConvertFormat(ip, op, of)
+	})
+
+	// ── redis.* ─────────────────────────────────────────────────────────
+	r.Register("redis.ping", func(args map[string]interface{}) (interface{}, error) {
+		h, _ := argString(args, "host")
+		p, _ := argInt(args, "port")
+		a, _ := argString(args, "auth")
+		return sdkredis.Ping(h, p, a)
+	})
+	r.Register("redis.get", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		h, _ := argString(args, "host")
+		p, _ := argInt(args, "port")
+		a, _ := argString(args, "auth")
+		return sdkredis.Get(key, h, p, a)
+	})
+	r.Register("redis.set", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		val, _ := argString(args, "value")
+		h, _ := argString(args, "host")
+		p, _ := argInt(args, "port")
+		a, _ := argString(args, "auth")
+		exp, _ := argInt(args, "expiry_sec")
+		return sdkredis.Set(key, val, h, p, a, exp)
+	})
+	r.Register("redis.del", func(args map[string]interface{}) (interface{}, error) {
+		var keys []string
+		if raw, ok := args["keys"]; ok && raw != nil {
+			if arr, ok := raw.([]interface{}); ok {
+				for _, v := range arr {
+					if s, ok := v.(string); ok {
+						keys = append(keys, s)
+					}
+				}
+			}
+		}
+		h, _ := argString(args, "host")
+		p, _ := argInt(args, "port")
+		a, _ := argString(args, "auth")
+		return sdkredis.Del(keys, h, p, a)
+	})
+	r.Register("redis.keys", func(args map[string]interface{}) (interface{}, error) {
+		pat, _ := argString(args, "pattern")
+		h, _ := argString(args, "host")
+		p, _ := argInt(args, "port")
+		a, _ := argString(args, "auth")
+		return sdkredis.Keys(pat, h, p, a)
+	})
+	r.Register("redis.info", func(args map[string]interface{}) (interface{}, error) {
+		h, _ := argString(args, "host")
+		p, _ := argInt(args, "port")
+		a, _ := argString(args, "auth")
+		return sdkredis.Info(h, p, a)
+	})
+	r.Register("redis.flush_db", func(args map[string]interface{}) (interface{}, error) {
+		h, _ := argString(args, "host")
+		p, _ := argInt(args, "port")
+		a, _ := argString(args, "auth")
+		return sdkredis.FlushDB(h, p, a)
+	})
+
+	// ── gem.* ───────────────────────────────────────────────────────────
+	r.Register("gem.install", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		ver, _ := argString(args, "version")
+		user, _ := argBool(args, "user_install")
+		return sdkgem.Install(name, ver, user)
+	})
+	r.Register("gem.uninstall", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		force, _ := argBool(args, "force")
+		return sdkgem.Uninstall(name, force)
+	})
+	r.Register("gem.update", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkgem.Update(name)
+	})
+	r.Register("gem.info", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkgem.Info(name)
+	})
+	r.Register("gem.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkgem.List()
+	})
+	r.Register("gem.version", func(args map[string]interface{}) (interface{}, error) {
+		return sdkgem.Version()
 	})
 }
 

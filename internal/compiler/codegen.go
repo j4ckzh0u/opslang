@@ -589,6 +589,31 @@ var sdkMapping = map[string]sdkFunc{
 	"haproxy.reload":          {pkg: "haproxy", goName: "Reload", args: true, params: []string{"s"}},
 	"haproxy.restart":         {pkg: "haproxy", goName: "Restart", args: true},
 	"haproxy.version":         {pkg: "haproxy", goName: "Version", args: true},
+
+	// openssl_cert
+	"openssl_cert.create_csr":          {pkg: "openssl_cert", goName: "CreateCSR", args: true, params: []string{"s", "s", "s", "i"}},
+	"openssl_cert.generate_self_signed": {pkg: "openssl_cert", goName: "GenerateSelfSigned", args: true, params: []string{"s", "s", "s", "i", "i"}},
+	"openssl_cert.inspect":             {pkg: "openssl_cert", goName: "Inspect", args: true, params: []string{"s"}},
+	"openssl_cert.verify":              {pkg: "openssl_cert", goName: "Verify", args: true, params: []string{"s", "s"}},
+	"openssl_cert.check_expiry":        {pkg: "openssl_cert", goName: "CheckExpiry", args: true, params: []string{"s"}},
+	"openssl_cert.convert_format":      {pkg: "openssl_cert", goName: "ConvertFormat", args: true, params: []string{"s", "s", "s"}},
+
+	// redis
+	"redis.ping":    {pkg: "redis", goName: "Ping", args: true, params: []string{"s", "i", "s"}},
+	"redis.get":     {pkg: "redis", goName: "Get", args: true, params: []string{"s", "s", "i", "s"}},
+	"redis.set":     {pkg: "redis", goName: "Set", args: true, params: []string{"s", "s", "s", "i", "s", "i"}},
+	"redis.del":     {pkg: "redis", goName: "Del", args: true, params: []string{"l", "s", "i", "s"}},
+	"redis.keys":    {pkg: "redis", goName: "Keys", args: true, params: []string{"s", "s", "i", "s"}},
+	"redis.info":    {pkg: "redis", goName: "Info", args: true, params: []string{"s", "i", "s"}},
+	"redis.flush_db": {pkg: "redis", goName: "FlushDB", args: true, params: []string{"s", "i", "s"}},
+
+	// gem
+	"gem.install":   {pkg: "gem", goName: "Install", args: true, params: []string{"s", "s", "b"}},
+	"gem.uninstall": {pkg: "gem", goName: "Uninstall", args: true, params: []string{"s", "b"}},
+	"gem.update":    {pkg: "gem", goName: "Update", args: true, params: []string{"s"}},
+	"gem.info":      {pkg: "gem", goName: "Info", args: true, params: []string{"s"}},
+	"gem.list":      {pkg: "gem", goName: "List", args: true},
+	"gem.version":   {pkg: "gem", goName: "Version", args: true},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -724,6 +749,9 @@ var pkgImportAlias = map[string]string{
 	"pamd":           "opspamd",
 	"getent":         "opsgetent",
 	"haproxy":        "opshaproxy",
+	"openssl_cert":   "opsopenssl",
+	"redis":          "opsredis",
+	"gem":            "opsgem",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -785,6 +813,9 @@ var pkgImportPath = map[string]string{
 	"pamd":           "github.com/opslang/opslang/pkg/ops-core-sdk/pamd",
 	"getent":         "github.com/opslang/opslang/pkg/ops-core-sdk/getent",
 	"haproxy":        "github.com/opslang/opslang/pkg/ops-core-sdk/haproxy",
+	"openssl_cert":   "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_cert",
+	"redis":          "github.com/opslang/opslang/pkg/ops-core-sdk/redis",
+	"gem":            "github.com/opslang/opslang/pkg/ops-core-sdk/gem",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
