@@ -462,6 +462,9 @@ var sdkMapping = map[string]sdkFunc{
 	"sys.random_password": {pkg: "sys", goName: "RandomPassword", args: true, params: []string{"i", "b", "b", "b"}},
 	"sys.mac_address":     {pkg: "sys", goName: "MACAddress", args: true, params: []string{"s"}},
 	"sys.mac_addresses":   {pkg: "sys", goName: "MACAddresses", args: true, params: []string{}},
+	"sys.dmidecode":       {pkg: "sys", goName: "Dmidecode", args: true, params: []string{}},
+	"sys.lspci":           {pkg: "sys", goName: "LsPci", args: true, params: []string{}},
+	"sys.lsblk":           {pkg: "sys", goName: "LsBlk", args: true, params: []string{}},
 
 	// ── modprobe boot ─────────────────────────────────────────────────────────
 	"modprobe.set_boot": {pkg: "modprobe", goName: "SetBoot", args: true, params: []string{"s", "b"}},

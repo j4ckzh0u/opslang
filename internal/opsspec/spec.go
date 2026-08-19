@@ -487,6 +487,9 @@ var Funcs = []Func{
 	{Name: "sys.random_password", Args: []string{"length", "use_special", "use_numbers", "use_uppercase"}},
 	{Name: "sys.mac_address", Args: []string{"interface"}},
 	{Name: "sys.mac_addresses", Args: []string{}},
+	{Name: "sys.dmidecode", Args: []string{}},
+	{Name: "sys.lspci", Args: []string{}},
+	{Name: "sys.lsblk", Args: []string{}},
 
 	// ── modprobe boot ─────────────────────────────────────────────────────────
 	{Name: "modprobe.set_boot", Args: []string{"name", "present"}, Mutating: true},

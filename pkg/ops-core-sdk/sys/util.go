@@ -3,9 +3,12 @@ package sys
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"net"
+	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -168,6 +171,186 @@ func MACAddresses() (MACListResult, error) {
 				MAC:       ifi.HardwareAddr.String(),
 			})
 		}
+	}
+	return result, nil
+}
+
+// DmidecodeResult represents SMBIOS/DMI hardware information.
+type DmidecodeResult struct {
+	BiosVendor     string `json:"bios_vendor"`
+	BiosVersion    string `json:"bios_version"`
+	SystemVendor   string `json:"system_vendor"`
+	ProductName    string `json:"product_name"`
+	SerialNumber   string `json:"serial_number"`
+	BoardVendor    string `json:"board_vendor"`
+	BoardName      string `json:"board_name"`
+	ChassisType    string `json:"chassis_type"`
+}
+
+// PciDevice represents a PCI device.
+type PciDevice struct {
+	Slot        string `json:"slot"`
+	Class       string `json:"class"`
+	Vendor      string `json:"vendor"`
+	Device      string `json:"device"`
+	SVendor     string `json:"svendor,omitempty"`
+	SDevice     string `json:"sdevice,omitempty"`
+	Revision    string `json:"revision,omitempty"`
+}
+
+// LsPciResult represents the result of listing PCI devices.
+type LsPciResult struct {
+	Devices []PciDevice `json:"devices"`
+}
+
+// BlkDevice represents a block device.
+type BlkDevice struct {
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Size       string `json:"size"`
+	MountPoint string `json:"mountpoint,omitempty"`
+	FsType     string `json:"fstype,omitempty"`
+	Label      string `json:"label,omitempty"`
+	UUID       string `json:"uuid,omitempty"`
+	Model      string `json:"model,omitempty"`
+	Children   []BlkDevice `json:"children,omitempty"`
+}
+
+// LsBlkResult represents the result of listing block devices.
+type LsBlkResult struct {
+	Devices []BlkDevice `json:"devices"`
+}
+
+// Dmidecode reads hardware information from /sys/class/dmi/id/ files.
+// Falls back to running dmidecode command if available.
+func Dmidecode() (DmidecodeResult, error) {
+	result := DmidecodeResult{}
+	readDMIField := func(path string) string {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return ""
+		}
+		return strings.TrimSpace(string(data))
+	}
+
+	result.BiosVendor = readDMIField("/sys/class/dmi/id/bios_vendor")
+	result.BiosVersion = readDMIField("/sys/class/dmi/id/bios_version")
+	result.SystemVendor = readDMIField("/sys/class/dmi/id/sys_vendor")
+	result.ProductName = readDMIField("/sys/class/dmi/id/product_name")
+	result.SerialNumber = readDMIField("/sys/class/dmi/id/product_serial")
+	result.BoardVendor = readDMIField("/sys/class/dmi/id/board_vendor")
+	result.BoardName = readDMIField("/sys/class/dmi/id/board_name")
+	result.ChassisType = readDMIField("/sys/class/dmi/id/chassis_type")
+
+	return result, nil
+}
+
+// LsPci lists PCI devices using the lspci command.
+func LsPci() (LsPciResult, error) {
+	out, err := exec.Command("lspci", "-mm").CombinedOutput()
+	if err != nil {
+		return LsPciResult{}, fmt.Errorf("lspci failed: %w (output: %s)", err, string(out))
+	}
+
+	result := LsPciResult{Devices: make([]PciDevice, 0)}
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// lspci -mm outputs: "slot" "class" "vendor" "device" "svendor" "sdevice" "revision"
+		dev := PciDevice{}
+		// Parse quoted fields
+		quoted := strings.Split(line, "\"")
+		if len(quoted) >= 7 {
+			dev.Slot = quoted[1]
+			dev.Class = quoted[3]
+			dev.Vendor = quoted[5]
+			if len(quoted) >= 9 {
+				dev.Device = quoted[7]
+			}
+			if len(quoted) >= 11 {
+				dev.SVendor = quoted[9]
+			}
+			if len(quoted) >= 13 {
+				dev.SDevice = quoted[11]
+			}
+			if len(quoted) >= 15 {
+				dev.Revision = quoted[13]
+			}
+		} else {
+			// Fallback for non-quoted output
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				dev.Slot = parts[0]
+				dev.Class = strings.Join(parts[1:], " ")
+			}
+		}
+		result.Devices = append(result.Devices, dev)
+	}
+	return result, nil
+}
+
+// LsBlk lists block devices using the lsblk command with JSON output.
+func LsBlk() (LsBlkResult, error) {
+	out, err := exec.Command("lsblk", "--json", "-o", "NAME,TYPE,SIZE,MOUNTPOINT,FSTYPE,LABEL,UUID,MODEL").CombinedOutput()
+	if err != nil {
+		return LsBlkResult{}, fmt.Errorf("lsblk failed: %w (output: %s)", err, string(out))
+	}
+
+	// Parse JSON output from lsblk
+	var lsblkOut struct {
+		BlockDevices []struct {
+			Name       string `json:"name"`
+			Type       string `json:"type"`
+			Size       string `json:"size"`
+			MountPoint string `json:"mountpoint"`
+			FsType     string `json:"fstype"`
+			Label      string `json:"label"`
+			UUID       string `json:"uuid"`
+			Model      string `json:"model"`
+			Children   []struct {
+				Name       string `json:"name"`
+				Type       string `json:"type"`
+				Size       string `json:"size"`
+				MountPoint string `json:"mountpoint"`
+				FsType     string `json:"fstype"`
+				Label      string `json:"label"`
+				UUID       string `json:"uuid"`
+				Model      string `json:"model"`
+			} `json:"children"`
+		} `json:"blockdevices"`
+	}
+
+	if err := json.Unmarshal(out, &lsblkOut); err != nil {
+		return LsBlkResult{}, fmt.Errorf("failed to parse lsblk output: %w", err)
+	}
+
+	result := LsBlkResult{Devices: make([]BlkDevice, 0, len(lsblkOut.BlockDevices))}
+	for _, bd := range lsblkOut.BlockDevices {
+		dev := BlkDevice{
+			Name:       bd.Name,
+			Type:       bd.Type,
+			Size:       bd.Size,
+			MountPoint: bd.MountPoint,
+			FsType:     bd.FsType,
+			Label:      bd.Label,
+			UUID:       bd.UUID,
+			Model:      bd.Model,
+		}
+		for _, child := range bd.Children {
+			dev.Children = append(dev.Children, BlkDevice{
+				Name:       child.Name,
+				Type:       child.Type,
+				Size:       child.Size,
+				MountPoint: child.MountPoint,
+				FsType:     child.FsType,
+				Label:      child.Label,
+				UUID:       child.UUID,
+				Model:      child.Model,
+			})
+		}
+		result.Devices = append(result.Devices, dev)
 	}
 	return result, nil
 }

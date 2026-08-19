@@ -2823,6 +2823,15 @@ func (r *Registry) registerExtensions() {
 	r.Register("sys.mac_addresses", func(args map[string]interface{}) (interface{}, error) {
 		return sys.MACAddresses()
 	})
+	r.Register("sys.dmidecode", func(args map[string]interface{}) (interface{}, error) {
+		return sys.Dmidecode()
+	})
+	r.Register("sys.lspci", func(args map[string]interface{}) (interface{}, error) {
+		return sys.LsPci()
+	})
+	r.Register("sys.lsblk", func(args map[string]interface{}) (interface{}, error) {
+		return sys.LsBlk()
+	})
 
 	// ── modprobe.set_boot ──────────────────────────────────────────────────────
 	r.Register("modprobe.set_boot", func(args map[string]interface{}) (interface{}, error) {

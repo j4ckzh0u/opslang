@@ -1,0 +1,46 @@
+// sys.dmidecode / sys.lspci / sys.lsblk 示例 - 硬件信息采集
+// sys hardware info example - hardware inventory gathering
+
+// DMI/SMBIOS 硬件信息
+let dmi = sys.dmidecode()
+report {
+    bios_vendor: dmi.bios_vendor,
+    bios_version: dmi.bios_version,
+    system_vendor: dmi.system_vendor,
+    product_name: dmi.product_name,
+    board_vendor: dmi.board_vendor,
+    board_name: dmi.board_name
+}
+
+// PCI 设备列表（需要 lspci 命令）
+block {
+    let pci = sys.lspci()
+    report {
+        total_pci_devices: len(pci.devices)
+    }
+    if len(pci.devices) > 0 {
+        report { first_pci: pci.devices[0] }
+    }
+}
+rescue {
+    print("lspci not available: " + _error)
+}
+
+// 块设备列表（需要 lsblk 命令）
+block {
+    let blk = sys.lsblk()
+    report {
+        total_block_devices: len(blk.devices)
+    }
+    for dev in blk.devices {
+        report {
+            name: dev.name,
+            type: dev.type,
+            size: dev.size,
+            mountpoint: dev.mountpoint
+        }
+    }
+}
+rescue {
+    print("lsblk not available: " + _error)
+}

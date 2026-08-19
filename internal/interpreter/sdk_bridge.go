@@ -4355,6 +4355,27 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		return structToMap(r)
 	}
+	interp.builtins["sys.dmidecode"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksys.Dmidecode()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sys.lspci"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksys.LsPci()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sys.lsblk"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksys.LsBlk()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
 
 	// ── modprobe.set_boot ──────────────────────────────────────────────────────
 	interp.builtins["modprobe.set_boot"] = func(args ...interface{}) (interface{}, error) {
