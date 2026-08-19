@@ -18,9 +18,12 @@ import (
 	sdkhosts "github.com/opslang/opslang/pkg/ops-core-sdk/hosts"
 	sdkjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
 	sdkkernel "github.com/opslang/opslang/pkg/ops-core-sdk/kernel"
+	sdkknownhosts "github.com/opslang/opslang/pkg/ops-core-sdk/known_hosts"
+	sdklimits "github.com/opslang/opslang/pkg/ops-core-sdk/limits"
 	sdklocale "github.com/opslang/opslang/pkg/ops-core-sdk/locale"
 	sdklogrotate "github.com/opslang/opslang/pkg/ops-core-sdk/logrotate"
 	sdknet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
+	sdkntp "github.com/opslang/opslang/pkg/ops-core-sdk/ntp"
 	sdkpip "github.com/opslang/opslang/pkg/ops-core-sdk/pip"
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	sdkprocess "github.com/opslang/opslang/pkg/ops-core-sdk/process"
@@ -760,6 +763,57 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, fmt.Errorf("json.decode(): argument must be string")
 		}
 		r, err := sdkjson.Decode(input)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── known_hosts.* ────────────────────────────────────────────────────
+	interp.builtins["known_hosts.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkknownhosts.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["known_hosts.check"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("known_hosts.check() requires 1 argument (host)")
+		}
+		host, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("known_hosts.check(): argument must be string")
+		}
+		r, err := sdkknownhosts.Check(host)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["known_hosts.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("known_hosts.add() requires 1 argument (host)")
+		}
+		host, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("known_hosts.add(): argument must be string")
+		}
+		r, err := sdkknownhosts.Add(host)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["known_hosts.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("known_hosts.remove() requires 1 argument (host)")
+		}
+		host, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("known_hosts.remove(): argument must be string")
+		}
+		r, err := sdkknownhosts.Remove(host)
 		if err != nil {
 			return nil, err
 		}
@@ -1749,6 +1803,29 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return structToMap(r)
 	}
 
+	// ── ntp.* ────────────────────────────────────────────────────────────
+	interp.builtins["ntp.get"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkntp.Get()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["ntp.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("ntp.set() requires 1 argument (server)")
+		}
+		server, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("ntp.set(): argument must be string")
+		}
+		r, err := sdkntp.Set(server)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
 	// ── sys.timezone_get ─────────────────────────────────────────────────
 	interp.builtins["sys.timezone_get"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdksys.TimezoneGet()
@@ -1878,6 +1955,57 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, fmt.Errorf("kernel.module_unload(): name must be string")
 		}
 		r, err := sdkkernel.ModuleUnload(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── limits.* ─────────────────────────────────────────────────────────
+	interp.builtins["limits.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdklimits.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["limits.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("limits.get() requires 1 argument (domain)")
+		}
+		domain, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("limits.get(): argument must be string")
+		}
+		r, err := sdklimits.Get(domain)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["limits.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("limits.set() requires 4 arguments (domain, type, item, value)")
+		}
+		domain, _ := args[0].(string)
+		typ, _ := args[1].(string)
+		item, _ := args[2].(string)
+		value, _ := args[3].(string)
+		r, err := sdklimits.Set(domain, typ, item, value)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["limits.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("limits.remove() requires 1 argument (domain)")
+		}
+		domain, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("limits.remove(): argument must be string")
+		}
+		r, err := sdklimits.Remove(domain)
 		if err != nil {
 			return nil, err
 		}

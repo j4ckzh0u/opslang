@@ -132,10 +132,22 @@ var Funcs = []Func{
 	{Name: "json.decode", Args: []string{"input"}},
 	{Name: "json.encode", Args: []string{"value"}},
 
+	// ── known_hosts ───────────────────────────────────────────────────
+	{Name: "known_hosts.list"},
+	{Name: "known_hosts.check", Args: []string{"host"}},
+	{Name: "known_hosts.add", Args: []string{"host"}, Mutating: true},
+	{Name: "known_hosts.remove", Args: []string{"host"}, Mutating: true},
+
 	// ── kernel ────────────────────────────────────────────────────────
 	{Name: "kernel.module_list"},
 	{Name: "kernel.module_load", Args: []string{"name"}, Mutating: true},
 	{Name: "kernel.module_unload", Args: []string{"name"}, Mutating: true},
+
+	// ── limits ────────────────────────────────────────────────────────
+	{Name: "limits.list"},
+	{Name: "limits.get", Args: []string{"domain"}},
+	{Name: "limits.set", Args: []string{"domain", "type", "item", "value"}, Mutating: true},
+	{Name: "limits.remove", Args: []string{"domain"}, Mutating: true},
 
 	// ── locale ────────────────────────────────────────────────────────
 	{Name: "locale.get"},
@@ -160,6 +172,10 @@ var Funcs = []Func{
 	{Name: "net.tcp_check", Args: []string{"host", "port"}},
 	{Name: "net.wait_for", Args: []string{"host", "port", "timeout"}},
 	{Name: "net.wait_for_connection", Args: []string{"host", "port", "timeout"}},
+
+	// ── ntp ───────────────────────────────────────────────────────────
+	{Name: "ntp.get"},
+	{Name: "ntp.set", Args: []string{"server"}, Mutating: true},
 
 	// ── pkg ───────────────────────────────────────────────────────────
 	{Name: "pkg.info", Args: []string{"name"}},

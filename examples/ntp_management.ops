@@ -1,0 +1,41 @@
+// ntp_management.ops - 演示 NTP 时间同步管理
+// 新增 SDK: ntp.*
+privilege: admin
+
+print("=== NTP 时间同步管理 ===")
+
+// 1. 获取当前 NTP 状态
+print("\n当前 NTP 状态:")
+block {
+    let status = ntp.get()
+    print("  已同步: " + str(status.status.synchronized))
+    if status.status.daemon != "" {
+        print("  守护进程: " + status.status.daemon)
+    }
+    if status.status.server != "" {
+        print("  服务器: " + status.status.server)
+    }
+    if status.status.offset != "" {
+        print("  时间偏移: " + status.status.offset)
+    }
+}
+rescue {
+    print("  ✗ 无法获取 NTP 状态（可能未安装 NTP 守护进程）")
+}
+
+// 2. 演示设置 NTP 服务器（伪代码）
+print("\n设置 NTP 服务器示例（伪代码）:")
+print(`
+  // 使用 chrony
+  ntp.set("pool.ntp.org")
+  ntp.set("time.google.com")
+  ntp.set("ntp.aliyun.com")
+`)
+
+print("\n注意：ntp.set 仅支持 chrony 守护进程")
+print("支持的 NTP 守护进程:")
+print("  - chronyd (chrony)")
+print("  - ntpd (NTP)")
+print("  - systemd-timesyncd (systemd)")
+
+print("\n=== ntp 管理演示完成 ===")

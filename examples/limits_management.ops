@@ -1,0 +1,68 @@
+// limits_management.ops - 演示系统资源限制管理
+// 新增 SDK: limits.*
+privilege: admin
+
+print("=== 系统资源限制管理 ===")
+
+// 1. 列出当前限制
+print("\n当前 limits.conf 配置:")
+block {
+    let entries = limits.list()
+    if len(entries.entries) == 0 {
+        print("  (无自定义限制配置)")
+    } else {
+        let count = 0
+        let total = len(entries.entries)
+        let i = 0
+        while i < total && count < 10 {
+            let e = entries.entries[i]
+            print("  " + e.domain + "\t" + e.type + "\t" + e.item + "\t" + e.value)
+            count = count + 1
+            i = i + 1
+        }
+        if total > 10 {
+            print("  ... 共 " + str(total) + " 条配置")
+        }
+    }
+}
+rescue {
+    print("  ✗ 无法读取 limits.conf（需要 Linux 系统）")
+}
+
+// 2. 获取特定用户/组的限制
+print("\nroot 用户的限制:")
+block {
+    let root_limits = limits.get("root")
+    if len(root_limits.entries) == 0 {
+        print("  (无自定义限制)")
+    } else {
+        for e in root_limits.entries {
+            print("  " + e.type + "\t" + e.item + "\t" + e.value)
+        }
+    }
+}
+rescue {
+    print("  ✗ 无法获取 root 限制")
+}
+
+// 3. 演示设置限制（伪代码）
+print("\n设置限制示例（伪代码）:")
+print(`
+  // 设置 root 用户最大进程数
+  limits.set("root", "hard", "nproc", "65535")
+
+  // 设置所有用户最大打开文件数
+  limits.set("*", "soft", "nofile", "65535")
+  limits.set("*", "hard", "nofile", "65535")
+
+  // 设置 @staff 组的核心转储限制
+  limits.set("@staff", "hard", "core", "unlimited")
+`)
+
+// 4. 演示移除限制
+print("\n移除限制示例（伪代码）:")
+print(`
+  limits.remove("myuser")
+`)
+
+print("\n=== limits 管理演示完成 ===")

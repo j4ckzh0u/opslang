@@ -19,9 +19,12 @@ import (
 	opshosts "github.com/opslang/opslang/pkg/ops-core-sdk/hosts"
 	opsjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
 	sdkkernel "github.com/opslang/opslang/pkg/ops-core-sdk/kernel"
+	sdkknownhosts "github.com/opslang/opslang/pkg/ops-core-sdk/known_hosts"
+	sdklimits "github.com/opslang/opslang/pkg/ops-core-sdk/limits"
 	sdklocale "github.com/opslang/opslang/pkg/ops-core-sdk/locale"
 	sdklogrotate "github.com/opslang/opslang/pkg/ops-core-sdk/logrotate"
 	opsnet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
+	sdkntp "github.com/opslang/opslang/pkg/ops-core-sdk/ntp"
 	sdkpip "github.com/opslang/opslang/pkg/ops-core-sdk/pip"
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/process"
@@ -1422,6 +1425,70 @@ func (r *Registry) registerExtensions() {
 			return nil, fmt.Errorf("yum_repo.remove: %w", err)
 		}
 		return sdkyumrepo.Remove(id)
+	})
+
+	// ── known_hosts ──────────────────────────────────────────────────────
+	r.Register("known_hosts.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkknownhosts.List()
+	})
+	r.Register("known_hosts.check", func(args map[string]interface{}) (interface{}, error) {
+		host, err := argString(args, "host")
+		if err != nil {
+			return nil, fmt.Errorf("known_hosts.check: %w", err)
+		}
+		return sdkknownhosts.Check(host)
+	})
+	r.Register("known_hosts.add", func(args map[string]interface{}) (interface{}, error) {
+		host, err := argString(args, "host")
+		if err != nil {
+			return nil, fmt.Errorf("known_hosts.add: %w", err)
+		}
+		return sdkknownhosts.Add(host)
+	})
+	r.Register("known_hosts.remove", func(args map[string]interface{}) (interface{}, error) {
+		host, err := argString(args, "host")
+		if err != nil {
+			return nil, fmt.Errorf("known_hosts.remove: %w", err)
+		}
+		return sdkknownhosts.Remove(host)
+	})
+
+	// ── limits ───────────────────────────────────────────────────────────
+	r.Register("limits.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdklimits.List()
+	})
+	r.Register("limits.get", func(args map[string]interface{}) (interface{}, error) {
+		domain, err := argString(args, "domain")
+		if err != nil {
+			return nil, fmt.Errorf("limits.get: %w", err)
+		}
+		return sdklimits.Get(domain)
+	})
+	r.Register("limits.set", func(args map[string]interface{}) (interface{}, error) {
+		domain, _ := argString(args, "domain")
+		typ, _ := argString(args, "type")
+		item, _ := argString(args, "item")
+		value, _ := argString(args, "value")
+		return sdklimits.Set(domain, typ, item, value)
+	})
+	r.Register("limits.remove", func(args map[string]interface{}) (interface{}, error) {
+		domain, err := argString(args, "domain")
+		if err != nil {
+			return nil, fmt.Errorf("limits.remove: %w", err)
+		}
+		return sdklimits.Remove(domain)
+	})
+
+	// ── ntp ──────────────────────────────────────────────────────────────
+	r.Register("ntp.get", func(args map[string]interface{}) (interface{}, error) {
+		return sdkntp.Get()
+	})
+	r.Register("ntp.set", func(args map[string]interface{}) (interface{}, error) {
+		server, err := argString(args, "server")
+		if err != nil {
+			return nil, fmt.Errorf("ntp.set: %w", err)
+		}
+		return sdkntp.Set(server)
 	})
 }
 

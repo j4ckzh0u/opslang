@@ -75,6 +75,10 @@ var sdkMapping = map[string]sdkFunc{
 	"pkg.info":    {pkg: "pkg", goName: "Info", args: true, params: []string{"s"}},
 	"pkg.list":    {pkg: "pkg", goName: "List"},
 
+	// ntp
+	"ntp.get": {pkg: "ntp", goName: "Get"},
+	"ntp.set": {pkg: "ntp", goName: "Set", args: true, params: []string{"s"}},
+
 	// time
 	"time.now":    {pkg: "time", goName: "Now", noErr: true},
 	"time.format": {pkg: "time", goName: "Format", args: true, params: []string{"i64", "s"}},
@@ -155,6 +159,18 @@ var sdkMapping = map[string]sdkFunc{
 	"kernel.module_list":   {pkg: "kernel", goName: "ModuleList"},
 	"kernel.module_load":   {pkg: "kernel", goName: "ModuleLoad", args: true, params: []string{"s"}},
 	"kernel.module_unload": {pkg: "kernel", goName: "ModuleUnload", args: true, params: []string{"s"}},
+
+	// known_hosts
+	"known_hosts.list":   {pkg: "known_hosts", goName: "List"},
+	"known_hosts.check":  {pkg: "known_hosts", goName: "Check", args: true, params: []string{"s"}},
+	"known_hosts.add":    {pkg: "known_hosts", goName: "Add", args: true, params: []string{"s"}},
+	"known_hosts.remove": {pkg: "known_hosts", goName: "Remove", args: true, params: []string{"s"}},
+
+	// limits
+	"limits.list":   {pkg: "limits", goName: "List"},
+	"limits.get":    {pkg: "limits", goName: "Get", args: true, params: []string{"s"}},
+	"limits.set":    {pkg: "limits", goName: "Set", args: true, params: []string{"s", "s", "s", "s"}},
+	"limits.remove": {pkg: "limits", goName: "Remove", args: true, params: []string{"s"}},
 
 	// ssh
 	"ssh.authorized_key_add":    {pkg: "ssh", goName: "AuthorizedKeyAdd", args: true, params: []string{"s", "s", "b"}},

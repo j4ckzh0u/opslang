@@ -1,0 +1,62 @@
+// known_hosts_management.ops - 演示 SSH 已知主机管理
+// 新增 SDK: known_hosts.*
+privilege: admin
+
+print("=== SSH 已知主机管理 ===")
+
+// 1. 列出已知主机
+print("\n已知主机列表:")
+block {
+    let hosts = known_hosts.list()
+    if len(hosts.entries) == 0 {
+        print("  (无已知主机)")
+    } else {
+        let count = 0
+        let total = len(hosts.entries)
+        let i = 0
+        while i < total && count < 10 {
+            let e = hosts.entries[i]
+            print("  " + e.host)
+            count = count + 1
+            i = i + 1
+        }
+        if total > 10 {
+            print("  ... 共 " + str(total) + " 个已知主机")
+        }
+    }
+}
+rescue {
+    print("  ✗ 无法读取 known_hosts 文件")
+}
+
+// 2. 检查特定主机
+print("\n检查 github.com:")
+block {
+    let check = known_hosts.check("github.com")
+    if check.found {
+        print("  ✓ github.com 在已知主机中")
+    } else {
+        print("  ✗ github.com 不在已知主机中")
+    }
+}
+rescue {
+    print("  ✗ 无法检查主机")
+}
+
+// 3. 演示添加主机（伪代码）
+print("\n添加主机示例（伪代码）:")
+print(`
+  known_hosts.add("github.com")
+  known_hosts.add("gitlab.example.com")
+`)
+
+// 4. 演示移除主机
+print("\n移除主机示例（伪代码）:")
+print(`
+  known_hosts.remove("old-server.example.com")
+`)
+
+print("\n注意：known_hosts.add 使用 ssh-keyscan 获取密钥")
+print("需要网络连接和 SSH 客户端")
+
+print("\n=== known_hosts 管理演示完成 ===")
