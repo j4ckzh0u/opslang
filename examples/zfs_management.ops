@@ -1,0 +1,140 @@
+// zfs 文件系统管理示例
+// ZFS filesystem management example
+
+// 列出所有 ZFS 数据集
+block {
+    let datasets = zfs.list()
+    report {
+        total_datasets: len(datasets.datasets)
+    }
+    for ds in datasets.datasets {
+        report {
+            name: ds.name,
+            type: ds.type,
+            used: ds.used,
+            avail: ds.avail,
+            mountpoint: ds.mountpoint
+        }
+    }
+}
+rescue {
+    print("zfs not available: " + _error)
+}
+
+// 列出所有 ZFS 存储池
+block {
+    let pools = zfs.list_pools()
+    report {
+        total_pools: len(pools.pools)
+    }
+    for pool in pools.pools {
+        report {
+            name: pool.name,
+            size: pool.size,
+            used: pool.used,
+            avail: pool.avail,
+            health: pool.health
+        }
+    }
+}
+rescue {
+    print("zpool list failed: " + _error)
+}
+
+// 获取特定存储池状态
+block {
+    let status = zfs.get_pool_status("tank")
+    report {
+        pool_status: status
+    }
+}
+rescue {
+    print("zfs.get_pool_status failed: " + _error)
+}
+
+// 检查数据集是否存在
+block {
+    let exists = zfs.exists("tank/data")
+    report {
+        dataset: "tank/data",
+        exists: exists.exists
+    }
+}
+rescue {
+    print("zfs.exists failed: " + _error)
+}
+
+// 获取数据集属性
+block {
+    let props = zfs.get("tank/data", "mountpoint")
+    report {
+        dataset: "tank/data",
+        mountpoint: props.mountpoint
+    }
+}
+rescue {
+    print("zfs.get failed: " + _error)
+}
+
+// 创建 ZFS 数据集
+block {
+    let result = zfs.create("tank/newdata", {"mountpoint": "/newdata", "compression": "lz4"})
+    report {
+        created: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("zfs.create failed (expected without root): " + _error)
+}
+
+// 设置数据集属性
+block {
+    let result = zfs.set("tank/data", "compression", "lz4")
+    report {
+        dataset: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("zfs.set failed: " + _error)
+}
+
+// 创建快照
+block {
+    let result = zfs.snapshot("tank/data", "snap1")
+    report {
+        snapshot: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("zfs.snapshot failed: " + _error)
+}
+
+// 删除快照
+block {
+    let result = zfs.destroy_snapshot("tank/data", "snap1")
+    report {
+        destroyed: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("zfs.destroy_snapshot failed: " + _error)
+}
+
+// 删除数据集
+block {
+    let result = zfs.destroy("tank/newdata", false)
+    report {
+        destroyed: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("zfs.destroy failed: " + _error)
+}

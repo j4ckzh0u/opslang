@@ -75,6 +75,7 @@ import (
 	sdkseport "github.com/opslang/opslang/pkg/ops-core-sdk/seport"
 	sdksefcontext "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext"
 	sdkflatpak "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak"
+	sdkzfs "github.com/opslang/opslang/pkg/ops-core-sdk/zfs"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -3043,6 +3044,67 @@ func (r *Registry) registerExtensions() {
 	r.Register("flatpak.repair", func(args map[string]interface{}) (interface{}, error) {
 		user, _ := argBool(args, "user")
 		return sdkflatpak.Repair(user)
+	})
+
+	// ── zfs ─────────────────────────────────────────────────────────────
+	r.Register("zfs.create", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		var props map[string]string
+		if propsRaw, ok := args["properties"]; ok && propsRaw != nil {
+			if m, ok := propsRaw.(map[string]interface{}); ok {
+				props = make(map[string]string)
+				for k, v := range m {
+					if s, ok := v.(string); ok {
+						props[k] = s
+					}
+				}
+			}
+		}
+		return sdkzfs.Create(name, props)
+	})
+	r.Register("zfs.destroy", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		recursive, _ := argBool(args, "recursive")
+		return sdkzfs.Destroy(name, recursive)
+	})
+	r.Register("zfs.set", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		property, _ := argString(args, "property")
+		value, _ := argString(args, "value")
+		return sdkzfs.Set(name, property, value)
+	})
+	r.Register("zfs.get", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		property, _ := argString(args, "property")
+		return sdkzfs.Get(name, property)
+	})
+	r.Register("zfs.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkzfs.List()
+	})
+	r.Register("zfs.exists", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		exists, err := sdkzfs.Exists(name)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"exists": exists}, nil
+	})
+	r.Register("zfs.list_pools", func(args map[string]interface{}) (interface{}, error) {
+		return sdkzfs.ListPools()
+	})
+	r.Register("zfs.get_pool_status", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkzfs.GetPoolStatus(name)
+	})
+	r.Register("zfs.snapshot", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		snapName, _ := argString(args, "snapshot_name")
+		return sdkzfs.Snapshot(name, snapName)
+	})
+	r.Register("zfs.destroy_snapshot", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		snapName, _ := argString(args, "snapshot_name")
+		return sdkzfs.DestroySnapshot(name, snapName)
 	})
 }
 

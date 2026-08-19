@@ -240,6 +240,18 @@ var Funcs = []Func{
 	{Name: "flatpak.run", Args: []string{"name", "args", "user"}, Mutating: true},
 	{Name: "flatpak.repair", Args: []string{"user"}, Mutating: true},
 
+	// ── zfs ────────────────────────────────────────────────────────────
+	{Name: "zfs.create", Args: []string{"name", "properties"}, Mutating: true},
+	{Name: "zfs.destroy", Args: []string{"name", "recursive"}, Mutating: true},
+	{Name: "zfs.set", Args: []string{"name", "property", "value"}, Mutating: true},
+	{Name: "zfs.get", Args: []string{"name", "property"}},
+	{Name: "zfs.list"},
+	{Name: "zfs.exists", Args: []string{"name"}},
+	{Name: "zfs.list_pools"},
+	{Name: "zfs.get_pool_status", Args: []string{"name"}},
+	{Name: "zfs.snapshot", Args: []string{"name", "snapshot_name"}, Mutating: true},
+	{Name: "zfs.destroy_snapshot", Args: []string{"name", "snapshot_name"}, Mutating: true},
+
 	// ── selinux ───────────────────────────────────────────────────────
 	{Name: "selinux.get"},
 	{Name: "selinux.set", Args: []string{"mode"}, Mutating: true},

@@ -74,6 +74,7 @@ import (
 	seport "github.com/opslang/opslang/pkg/ops-core-sdk/seport"
 	sefcontext "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext"
 	sdkflatpak "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak"
+	sdkzfs "github.com/opslang/opslang/pkg/ops-core-sdk/zfs"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -932,6 +933,166 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			user, _ = args[0].(bool)
 		}
 		r, err := sdkflatpak.Repair(user)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── zfs.* ────────────────────────────────────────────────────────
+	interp.builtins["zfs.create"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("zfs.create() requires 1-2 arguments (name, properties)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("zfs.create(): first argument must be string")
+		}
+		var props map[string]string
+		if len(args) > 1 && args[1] != nil {
+			if m, ok := args[1].(map[string]interface{}); ok {
+				props = make(map[string]string)
+				for k, v := range m {
+					if s, ok := v.(string); ok {
+						props[k] = s
+					}
+				}
+			}
+		}
+		r, err := sdkzfs.Create(name, props)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zfs.destroy"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("zfs.destroy() requires 1-2 arguments (name, recursive)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("zfs.destroy(): first argument must be string")
+		}
+		recursive := false
+		if len(args) > 1 {
+			recursive, _ = args[1].(bool)
+		}
+		r, err := sdkzfs.Destroy(name, recursive)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zfs.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("zfs.set() requires 3 arguments (name, property, value)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("zfs.set(): first argument must be string")
+		}
+		property, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("zfs.set(): second argument must be string")
+		}
+		value, ok := args[2].(string)
+		if !ok {
+			return nil, fmt.Errorf("zfs.set(): third argument must be string")
+		}
+		r, err := sdkzfs.Set(name, property, value)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zfs.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("zfs.get() requires 1-2 arguments (name, property)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("zfs.get(): first argument must be string")
+		}
+		property := ""
+		if len(args) > 1 {
+			property, _ = args[1].(string)
+		}
+		r, err := sdkzfs.Get(name, property)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["zfs.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkzfs.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zfs.exists"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("zfs.exists() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("zfs.exists(): first argument must be string")
+		}
+		r, err := sdkzfs.Exists(name)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"exists": r}, nil
+	}
+	interp.builtins["zfs.list_pools"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkzfs.ListPools()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zfs.get_pool_status"] = func(args ...interface{}) (interface{}, error) {
+		name := ""
+		if len(args) > 0 {
+			name, _ = args[0].(string)
+		}
+		r, err := sdkzfs.GetPoolStatus(name)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["zfs.snapshot"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("zfs.snapshot() requires 2 arguments (name, snapshot_name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("zfs.snapshot(): first argument must be string")
+		}
+		snapName, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("zfs.snapshot(): second argument must be string")
+		}
+		r, err := sdkzfs.Snapshot(name, snapName)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zfs.destroy_snapshot"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("zfs.destroy_snapshot() requires 2 arguments (name, snapshot_name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("zfs.destroy_snapshot(): first argument must be string")
+		}
+		snapName, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("zfs.destroy_snapshot(): second argument must be string")
+		}
+		r, err := sdkzfs.DestroySnapshot(name, snapName)
 		if err != nil {
 			return nil, err
 		}

@@ -514,6 +514,18 @@ var sdkMapping = map[string]sdkFunc{
 	"flatpak.info":    {pkg: "flatpak", goName: "Info", args: true, params: []string{"s", "b"}},
 	"flatpak.run":     {pkg: "flatpak", goName: "Run", args: true, params: []string{"s", "l", "b"}},
 	"flatpak.repair":  {pkg: "flatpak", goName: "Repair", args: true, params: []string{"b"}},
+
+	// ── zfs ─────────────────────────────────────────────────────────────
+	"zfs.create":           {pkg: "zfs", goName: "Create", args: true, params: []string{"s", "ms"}},
+	"zfs.destroy":          {pkg: "zfs", goName: "Destroy", args: true, params: []string{"s", "b"}},
+	"zfs.set":              {pkg: "zfs", goName: "Set", args: true, params: []string{"s", "s", "s"}},
+	"zfs.get":              {pkg: "zfs", goName: "Get", args: true, params: []string{"s", "s"}},
+	"zfs.list":             {pkg: "zfs", goName: "List"},
+	"zfs.exists":           {pkg: "zfs", goName: "Exists", args: true, params: []string{"s"}},
+	"zfs.list_pools":       {pkg: "zfs", goName: "ListPools"},
+	"zfs.get_pool_status":  {pkg: "zfs", goName: "GetPoolStatus", args: true, params: []string{"s"}},
+	"zfs.snapshot":         {pkg: "zfs", goName: "Snapshot", args: true, params: []string{"s", "s"}},
+	"zfs.destroy_snapshot": {pkg: "zfs", goName: "DestroySnapshot", args: true, params: []string{"s", "s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -642,6 +654,7 @@ var pkgImportAlias = map[string]string{
 	"lvg":            "opslvg",
 	"snap":           "opssnap",
 	"flatpak":        "opsflatpak",
+	"zfs":            "opszfs",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -696,6 +709,7 @@ var pkgImportPath = map[string]string{
 	"lvg":            "github.com/opslang/opslang/pkg/ops-core-sdk/lvg",
 	"snap":           "github.com/opslang/opslang/pkg/ops-core-sdk/snap",
 	"flatpak":        "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak",
+	"zfs":            "github.com/opslang/opslang/pkg/ops-core-sdk/zfs",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
