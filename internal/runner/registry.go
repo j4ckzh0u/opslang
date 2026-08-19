@@ -74,6 +74,7 @@ import (
 	sdkgeturl "github.com/opslang/opslang/pkg/ops-core-sdk/get_url"
 	sdkseport "github.com/opslang/opslang/pkg/ops-core-sdk/seport"
 	sdksefcontext "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext"
+	sdkflatpak "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -2996,6 +2997,52 @@ func (r *Registry) registerExtensions() {
 		}
 		filespec, _ := argString(args, "filespec")
 		return sdksefcontext.Apply(filespec, recursive)
+	})
+
+	// ── flatpak ─────────────────────────────────────────────────────────────
+	r.Register("flatpak.install", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		from, _ := argString(args, "from")
+		user, _ := argBool(args, "user")
+		return sdkflatpak.Install(name, from, user)
+	})
+	r.Register("flatpak.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		user, _ := argBool(args, "user")
+		return sdkflatpak.Remove(name, user)
+	})
+	r.Register("flatpak.update", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		user, _ := argBool(args, "user")
+		return sdkflatpak.Update(name, user)
+	})
+	r.Register("flatpak.list", func(args map[string]interface{}) (interface{}, error) {
+		user, _ := argBool(args, "user")
+		return sdkflatpak.List(user)
+	})
+	r.Register("flatpak.info", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		user, _ := argBool(args, "user")
+		return sdkflatpak.Info(name, user)
+	})
+	r.Register("flatpak.run", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		var runArgs []string
+		if argsList, ok := args["args"]; ok && argsList != nil {
+			if list, ok := argsList.([]interface{}); ok {
+				for _, item := range list {
+					if s, ok := item.(string); ok {
+						runArgs = append(runArgs, s)
+					}
+				}
+			}
+		}
+		user, _ := argBool(args, "user")
+		return sdkflatpak.Run(name, runArgs, user)
+	})
+	r.Register("flatpak.repair", func(args map[string]interface{}) (interface{}, error) {
+		user, _ := argBool(args, "user")
+		return sdkflatpak.Repair(user)
 	})
 }
 

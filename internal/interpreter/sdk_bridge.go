@@ -73,6 +73,7 @@ import (
 	sdkgeturl "github.com/opslang/opslang/pkg/ops-core-sdk/get_url"
 	seport "github.com/opslang/opslang/pkg/ops-core-sdk/seport"
 	sefcontext "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext"
+	sdkflatpak "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -803,6 +804,134 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["snap.changes"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdksnap.Changes()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── flatpak.* ────────────────────────────────────────────────────────
+	interp.builtins["flatpak.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("flatpak.install() requires 1-3 arguments (name, from, user)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("flatpak.install(): first argument must be string")
+		}
+		from := ""
+		if len(args) > 1 {
+			from, _ = args[1].(string)
+		}
+		user := false
+		if len(args) > 2 {
+			user, _ = args[2].(bool)
+		}
+		r, err := sdkflatpak.Install(name, from, user)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["flatpak.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("flatpak.remove() requires 1-2 arguments (name, user)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("flatpak.remove(): first argument must be string")
+		}
+		user := false
+		if len(args) > 1 {
+			user, _ = args[1].(bool)
+		}
+		r, err := sdkflatpak.Remove(name, user)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["flatpak.update"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("flatpak.update() requires 1-2 arguments (name, user)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("flatpak.update(): first argument must be string")
+		}
+		user := false
+		if len(args) > 1 {
+			user, _ = args[1].(bool)
+		}
+		r, err := sdkflatpak.Update(name, user)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["flatpak.list"] = func(args ...interface{}) (interface{}, error) {
+		user := false
+		if len(args) > 0 {
+			user, _ = args[0].(bool)
+		}
+		r, err := sdkflatpak.List(user)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["flatpak.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("flatpak.info() requires 1-2 arguments (name, user)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("flatpak.info(): first argument must be string")
+		}
+		user := false
+		if len(args) > 1 {
+			user, _ = args[1].(bool)
+		}
+		r, err := sdkflatpak.Info(name, user)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["flatpak.run"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("flatpak.run() requires 1-3 arguments (name, args, user)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("flatpak.run(): first argument must be string")
+		}
+		var runArgs []string
+		if len(args) > 1 && args[1] != nil {
+			if argList, ok := args[1].([]interface{}); ok {
+				for _, a := range argList {
+					if s, ok := a.(string); ok {
+						runArgs = append(runArgs, s)
+					}
+				}
+			}
+		}
+		user := false
+		if len(args) > 2 {
+			user, _ = args[2].(bool)
+		}
+		r, err := sdkflatpak.Run(name, runArgs, user)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["flatpak.repair"] = func(args ...interface{}) (interface{}, error) {
+		user := false
+		if len(args) > 0 {
+			user, _ = args[0].(bool)
+		}
+		r, err := sdkflatpak.Repair(user)
 		if err != nil {
 			return nil, err
 		}

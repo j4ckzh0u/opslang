@@ -231,6 +231,15 @@ var Funcs = []Func{
 	{Name: "snap.switch", Args: []string{"name", "channel"}, Mutating: true},
 	{Name: "snap.changes"},
 
+	// ── flatpak ──────────────────────────────────────────────────────
+	{Name: "flatpak.install", Args: []string{"name", "from", "user"}, Mutating: true},
+	{Name: "flatpak.remove", Args: []string{"name", "user"}, Mutating: true},
+	{Name: "flatpak.update", Args: []string{"name", "user"}, Mutating: true},
+	{Name: "flatpak.list", Args: []string{"user"}},
+	{Name: "flatpak.info", Args: []string{"name", "user"}},
+	{Name: "flatpak.run", Args: []string{"name", "args", "user"}, Mutating: true},
+	{Name: "flatpak.repair", Args: []string{"user"}, Mutating: true},
+
 	// ── selinux ───────────────────────────────────────────────────────
 	{Name: "selinux.get"},
 	{Name: "selinux.set", Args: []string{"mode"}, Mutating: true},

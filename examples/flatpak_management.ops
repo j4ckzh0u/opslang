@@ -1,0 +1,98 @@
+// flatpak 包管理示例
+// Flatpak package management example
+
+// 列出已安装的 flatpak 应用
+block {
+    let apps = flatpak.list(false)
+    report {
+        total_apps: len(apps.apps)
+    }
+    for app in apps.apps {
+        report {
+            name: app.name,
+            app_id: app.app_id,
+            version: app.version,
+            branch: app.branch,
+            origin: app.origin
+        }
+    }
+}
+rescue {
+    print("flatpak not available: " + _error)
+}
+
+// 获取特定 flatpak 信息
+block {
+    let info = flatpak.info("org.gnome.Calculator", false)
+    report {
+        app_name: info.name,
+        app_id: info.app_id,
+        version: info.version,
+        branch: info.branch,
+        origin: info.origin
+    }
+}
+rescue {
+    print("flatpak.info failed: " + _error)
+}
+
+// 安装 flatpak 应用
+block {
+    let result = flatpak.install("org.gnome.Calculator", "flathub", false)
+    report {
+        installed: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("flatpak.install failed (expected without root): " + _error)
+}
+
+// 更新 flatpak 应用
+block {
+    let result = flatpak.update("org.gnome.Calculator", false)
+    report {
+        updated: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("flatpak.update failed: " + _error)
+}
+
+// 运行 flatpak 应用
+block {
+    let result = flatpak.run("org.gnome.Calculator", [], false)
+    report {
+        ran: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("flatpak.run failed: " + _error)
+}
+
+// 删除 flatpak 应用
+block {
+    let result = flatpak.remove("org.gnome.Calculator", false)
+    report {
+        removed: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("flatpak.remove failed: " + _error)
+}
+
+// 修复 flatpak 安装
+block {
+    let result = flatpak.repair(false)
+    report {
+        repaired: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("flatpak.repair failed: " + _error)
+}

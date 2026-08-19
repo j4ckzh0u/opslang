@@ -505,6 +505,15 @@ var sdkMapping = map[string]sdkFunc{
 	"sefcontext.remove": {pkg: "sefcontext", goName: "Remove", args: true, params: []string{"s"}},
 	"sefcontext.list":   {pkg: "sefcontext", goName: "List", args: true, params: []string{}},
 	"sefcontext.apply":  {pkg: "sefcontext", goName: "Apply", args: true, params: []string{"s", "b"}},
+
+	// ── flatpak ─────────────────────────────────────────────────────────────
+	"flatpak.install": {pkg: "flatpak", goName: "Install", args: true, params: []string{"s", "s", "b"}},
+	"flatpak.remove":  {pkg: "flatpak", goName: "Remove", args: true, params: []string{"s", "b"}},
+	"flatpak.update":  {pkg: "flatpak", goName: "Update", args: true, params: []string{"s", "b"}},
+	"flatpak.list":    {pkg: "flatpak", goName: "List", args: true, params: []string{"b"}},
+	"flatpak.info":    {pkg: "flatpak", goName: "Info", args: true, params: []string{"s", "b"}},
+	"flatpak.run":     {pkg: "flatpak", goName: "Run", args: true, params: []string{"s", "l", "b"}},
+	"flatpak.repair":  {pkg: "flatpak", goName: "Repair", args: true, params: []string{"b"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -632,6 +641,7 @@ var pkgImportAlias = map[string]string{
 	"sefcontext":     "opssefcontext",
 	"lvg":            "opslvg",
 	"snap":           "opssnap",
+	"flatpak":        "opsflatpak",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -685,6 +695,7 @@ var pkgImportPath = map[string]string{
 	"sefcontext":     "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext",
 	"lvg":            "github.com/opslang/opslang/pkg/ops-core-sdk/lvg",
 	"snap":           "github.com/opslang/opslang/pkg/ops-core-sdk/snap",
+	"flatpak":        "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
