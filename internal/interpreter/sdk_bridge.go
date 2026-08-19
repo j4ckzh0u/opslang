@@ -6,15 +6,19 @@ import (
 	"fmt"
 
 	"github.com/opslang/opslang/internal/opsspec"
+	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	sdkcron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
+	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
 	sdkfile "github.com/opslang/opslang/pkg/ops-core-sdk/file"
 	sdkgit "github.com/opslang/opslang/pkg/ops-core-sdk/git"
 	sdkgroup "github.com/opslang/opslang/pkg/ops-core-sdk/group"
 	sdkjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
+	sdkkernel "github.com/opslang/opslang/pkg/ops-core-sdk/kernel"
 	sdknet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	sdkprocess "github.com/opslang/opslang/pkg/ops-core-sdk/process"
 	sdkservice "github.com/opslang/opslang/pkg/ops-core-sdk/service"
+	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
 	sdksys "github.com/opslang/opslang/pkg/ops-core-sdk/sys"
 	sdksysctl "github.com/opslang/opslang/pkg/ops-core-sdk/sysctl"
 	sdktime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
@@ -1370,6 +1374,457 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		return structToMap(r)
 	}
+
+	// ── file.find ────────────────────────────────────────────────────────
+	interp.builtins["file.find"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("file.find() requires at least 1 argument (paths)")
+		}
+		opts := sdkfile.FindOptions{}
+		// paths: string or []string
+		switch v := args[0].(type) {
+		case string:
+			opts.Paths = []string{v}
+		case []interface{}:
+			for _, p := range v {
+				if s, ok := p.(string); ok {
+					opts.Paths = append(opts.Paths, s)
+				}
+			}
+		case []string:
+			opts.Paths = v
+		}
+		// patterns: optional string or []string
+		if len(args) > 1 {
+			switch v := args[1].(type) {
+			case string:
+				if v != "" {
+					opts.Patterns = []string{v}
+				}
+			case []interface{}:
+				for _, p := range v {
+					if s, ok := p.(string); ok {
+						opts.Patterns = append(opts.Patterns, s)
+					}
+				}
+			case []string:
+				opts.Patterns = v
+			}
+		}
+		// regex
+		if len(args) > 2 {
+			if s, ok := args[2].(string); ok {
+				opts.Regex = s
+			}
+		}
+		// file_type
+		if len(args) > 3 {
+			if s, ok := args[3].(string); ok {
+				opts.FileType = s
+			}
+		}
+		// max_depth
+		if len(args) > 4 {
+			if f, err := toFloat(args[4]); err == nil {
+				opts.MaxDepth = int(f)
+			}
+		}
+		// age
+		if len(args) > 5 {
+			if f, err := toFloat(args[5]); err == nil {
+				opts.Age = int64(f)
+			}
+		}
+		// size
+		if len(args) > 6 {
+			if f, err := toFloat(args[6]); err == nil {
+				opts.Size = int64(f)
+			}
+		}
+		r, err := sdkfile.Find(opts)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── file.replace ─────────────────────────────────────────────────────
+	interp.builtins["file.replace"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("file.replace() requires at least 3 arguments (path, pattern, replacement)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.replace(): path must be string")
+		}
+		pattern, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.replace(): pattern must be string")
+		}
+		replacement, ok := args[2].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.replace(): replacement must be string")
+		}
+		after := getStringArgBridge(args, 3, "")
+		before := getStringArgBridge(args, 4, "")
+		r, err := sdkfile.Replace(path, pattern, replacement, after, before)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── file.blockinfile ─────────────────────────────────────────────────
+	interp.builtins["file.blockinfile"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("file.blockinfile() requires at least 3 arguments (path, marker, content)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.blockinfile(): path must be string")
+		}
+		marker, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.blockinfile(): marker must be string")
+		}
+		content, ok := args[2].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.blockinfile(): content must be string")
+		}
+		present := true
+		if len(args) > 3 {
+			present = opsBool(args[3])
+		}
+		insertAfter := getStringArgBridge(args, 4, "")
+		insertBefore := getStringArgBridge(args, 5, "")
+		r, err := sdkfile.BlockInFile(path, marker, content, present, insertAfter, insertBefore)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── file.ini_get ─────────────────────────────────────────────────────
+	interp.builtins["file.ini_get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("file.ini_get() requires 3 arguments (path, section, key)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.ini_get(): path must be string")
+		}
+		section, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.ini_get(): section must be string")
+		}
+		key, ok := args[2].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.ini_get(): key must be string")
+		}
+		r, err := sdkfile.IniGet(path, section, key)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── file.ini_set ─────────────────────────────────────────────────────
+	interp.builtins["file.ini_set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("file.ini_set() requires 4 arguments (path, section, key, value)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.ini_set(): path must be string")
+		}
+		section, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.ini_set(): section must be string")
+		}
+		key, ok := args[2].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.ini_set(): key must be string")
+		}
+		value, ok := args[3].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.ini_set(): value must be string")
+		}
+		r, err := sdkfile.IniSet(path, section, key, value)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── archive.create ───────────────────────────────────────────────────
+	interp.builtins["archive.create"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("archive.create() requires 2 arguments (dest, sources)")
+		}
+		dest, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("archive.create(): dest must be string")
+		}
+		var sources []string
+		switch v := args[1].(type) {
+		case string:
+			sources = []string{v}
+		case []interface{}:
+			for _, s := range v {
+				if str, ok := s.(string); ok {
+					sources = append(sources, str)
+				}
+			}
+		case []string:
+			sources = v
+		default:
+			return nil, fmt.Errorf("archive.create(): sources must be string or list")
+		}
+		r, err := sdkarchive.Create(dest, sources)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── archive.extract ──────────────────────────────────────────────────
+	interp.builtins["archive.extract"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("archive.extract() requires 2 arguments (src, dest)")
+		}
+		src, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("archive.extract(): src must be string")
+		}
+		dest, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("archive.extract(): dest must be string")
+		}
+		r, err := sdkarchive.Extract(src, dest)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── net.download ─────────────────────────────────────────────────────
+	interp.builtins["net.download"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("net.download() requires at least 2 arguments (url, dest)")
+		}
+		url, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("net.download(): url must be string")
+		}
+		dest, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("net.download(): dest must be string")
+		}
+		algo := getStringArgBridge(args, 2, "")
+		expected := getStringArgBridge(args, 3, "")
+		r, err := sdknet.Download(url, dest, algo, expected)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── net.wait_for_connection ──────────────────────────────────────────
+	interp.builtins["net.wait_for_connection"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("net.wait_for_connection() requires at least 2 arguments (host, port)")
+		}
+		host, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("net.wait_for_connection(): host must be string")
+		}
+		portF, err := toFloat(args[1])
+		if err != nil {
+			return nil, fmt.Errorf("net.wait_for_connection(): port must be number")
+		}
+		port := int(portF)
+		timeout := 30
+		if len(args) > 2 {
+			tF, err := toFloat(args[2])
+			if err != nil {
+				return nil, fmt.Errorf("net.wait_for_connection(): timeout must be number")
+			}
+			timeout = int(tF)
+		}
+		r, err := sdknet.WaitForConnection(host, port, timeout)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── sys.timezone_get ─────────────────────────────────────────────────
+	interp.builtins["sys.timezone_get"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksys.TimezoneGet()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── sys.timezone_set ─────────────────────────────────────────────────
+	interp.builtins["sys.timezone_set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sys.timezone_set() requires 1 argument (timezone)")
+		}
+		tz, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sys.timezone_set(): timezone must be string")
+		}
+		r, err := sdksys.TimezoneSet(tz)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── sys.reboot ───────────────────────────────────────────────────────
+	interp.builtins["sys.reboot"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksys.Reboot()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── ssh.authorized_key_add ───────────────────────────────────────────
+	interp.builtins["ssh.authorized_key_add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("ssh.authorized_key_add() requires at least 2 arguments (user, key)")
+		}
+		user, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("ssh.authorized_key_add(): user must be string")
+		}
+		key, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("ssh.authorized_key_add(): key must be string")
+		}
+		exclusive := false
+		if len(args) > 2 {
+			exclusive = opsBool(args[2])
+		}
+		r, err := sdkssh.AuthorizedKeyAdd(user, key, exclusive)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── ssh.authorized_key_remove ────────────────────────────────────────
+	interp.builtins["ssh.authorized_key_remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("ssh.authorized_key_remove() requires 2 arguments (user, key)")
+		}
+		user, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("ssh.authorized_key_remove(): user must be string")
+		}
+		key, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("ssh.authorized_key_remove(): key must be string")
+		}
+		r, err := sdkssh.AuthorizedKeyRemove(user, key)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── ssh.authorized_key_list ──────────────────────────────────────────
+	interp.builtins["ssh.authorized_key_list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("ssh.authorized_key_list() requires 1 argument (user)")
+		}
+		user, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("ssh.authorized_key_list(): user must be string")
+		}
+		r, err := sdkssh.AuthorizedKeyList(user)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── kernel.module_list ───────────────────────────────────────────────
+	interp.builtins["kernel.module_list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkkernel.ModuleList()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── kernel.module_load ───────────────────────────────────────────────
+	interp.builtins["kernel.module_load"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("kernel.module_load() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("kernel.module_load(): name must be string")
+		}
+		r, err := sdkkernel.ModuleLoad(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── kernel.module_unload ─────────────────────────────────────────────
+	interp.builtins["kernel.module_unload"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("kernel.module_unload() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("kernel.module_unload(): name must be string")
+		}
+		r, err := sdkkernel.ModuleUnload(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── disk.filesystem ──────────────────────────────────────────────────
+	interp.builtins["disk.filesystem"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("disk.filesystem() requires at least 1 argument (device)")
+		}
+		device, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("disk.filesystem(): device must be string")
+		}
+		fsType := getStringArgBridge(args, 1, "ext4")
+		r, err := sdkdisk.FilesystemCreate(device, fsType)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── disk.part_list ───────────────────────────────────────────────────
+	interp.builtins["disk.part_list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("disk.part_list() requires 1 argument (device)")
+		}
+		device, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("disk.part_list(): device must be string")
+		}
+		r, err := sdkdisk.PartList(device)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
 }
 
 // toStringMap extracts a map[string]string from args starting at the given index.
@@ -1426,4 +1881,12 @@ func init() {
 			panic(fmt.Sprintf("opsspec/interpreter mismatch: %s is in the spec but not registered in the interpreter bridge", f.Name))
 		}
 	}
+}
+
+// opsBool extracts a bool from an interface{} value.
+func opsBool(v interface{}) bool {
+	if b, ok := v.(bool); ok {
+		return b
+	}
+	return false
 }

@@ -15,7 +15,7 @@ block {
 }
 rescue {
     print("操作失败，进入 rescue 块")
-    print("错误信息: " + _error.message)
+    print("错误信息: " + _error)
     // 这里可以执行恢复操作
 }
 
@@ -38,7 +38,7 @@ block {
 }
 rescue {
     print("任务失败，执行恢复逻辑")
-    print("错误: " + _error.message)
+    print("错误: " + _error)
     task_success = false
 }
 always {
@@ -63,7 +63,7 @@ block {
         print("不会执行到这里")
     }
     rescue {
-        print("内层 rescue 捕获错误: " + _error.message)
+        print("内层 rescue 捕获错误: " + _error)
         // 内层 rescue 处理后，外层继续
     }
 
@@ -104,7 +104,7 @@ block {
 }
 rescue {
     print("部署失败，执行回滚")
-    print("错误: " + _error.message)
+    print("错误: " + _error)
 
     // 回滚：恢复备份
     let rollback = file.copy(deploy_backup_path, "/opt/app/current")

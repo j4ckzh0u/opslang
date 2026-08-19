@@ -1,5 +1,6 @@
 // system_config.ops - 演示系统配置管理
 // 新增 SDK: sysctl.*, firewall.rule, sys.hostname_set, sys.mount/unmount
+privilege: admin
 
 // ═══════════════════════════════════════════════════════════
 // 1. 内核参数管理 (sysctl)

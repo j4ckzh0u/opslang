@@ -46,8 +46,17 @@ var Funcs = []Func{
 	{Name: "cron.list", Args: []string{"user"}},
 	{Name: "cron.remove", Args: []string{"user", "line_match"}, Mutating: true},
 
+	// ── archive ───────────────────────────────────────────────────────
+	{Name: "archive.create", Args: []string{"dest", "sources"}, Mutating: true},
+	{Name: "archive.extract", Args: []string{"src", "dest"}, Mutating: true},
+
+	// ── disk ──────────────────────────────────────────────────────────
+	{Name: "disk.filesystem", Args: []string{"device", "fs_type"}, Mutating: true},
+	{Name: "disk.part_list", Args: []string{"device"}},
+
 	// ── file ──────────────────────────────────────────────────────────
 	{Name: "file.append", Args: []string{"path", "content"}, Mutating: true},
+	{Name: "file.blockinfile", Args: []string{"path", "marker", "content", "present", "insert_after", "insert_before"}, Mutating: true},
 	{Name: "file.checksum", Args: []string{"path", "algo"}},
 	{Name: "file.chmod", Args: []string{"path", "mode"}, Mutating: true},
 	{Name: "file.collect", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly, Mutating: true},
@@ -57,11 +66,15 @@ var Funcs = []Func{
 	// runner executing them would need controller credentials.
 	{Name: "file.distribute", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly, Mutating: true},
 	{Name: "file.exists", Args: []string{"path"}},
+	{Name: "file.find", Args: []string{"paths", "patterns", "regex", "file_type", "max_depth", "age", "size"}},
+	{Name: "file.ini_get", Args: []string{"path", "section", "key"}},
+	{Name: "file.ini_set", Args: []string{"path", "section", "key", "value"}, Mutating: true},
 	{Name: "file.lineinfile", Args: []string{"path", "line", "present", "regexp"}, Mutating: true},
 	{Name: "file.list", Args: []string{"dir"}},
 	{Name: "file.mkdir", Args: []string{"path"}, Mutating: true},
 	{Name: "file.move", Args: []string{"src", "dst"}, Mutating: true},
 	{Name: "file.read", Args: []string{"path"}},
+	{Name: "file.replace", Args: []string{"path", "pattern", "replacement", "after", "before"}, Mutating: true},
 	{Name: "file.stat", Args: []string{"path"}},
 	// file.template only READS the template and returns the rendered text;
 	// it never writes a file, so it is not mutating.
@@ -86,8 +99,14 @@ var Funcs = []Func{
 	{Name: "json.decode", Args: []string{"input"}},
 	{Name: "json.encode", Args: []string{"value"}},
 
+	// ── kernel ────────────────────────────────────────────────────────
+	{Name: "kernel.module_list"},
+	{Name: "kernel.module_load", Args: []string{"name"}, Mutating: true},
+	{Name: "kernel.module_unload", Args: []string{"name"}, Mutating: true},
+
 	// ── net ───────────────────────────────────────────────────────────
 	{Name: "net.dns_lookup", Args: []string{"host"}},
+	{Name: "net.download", Args: []string{"url", "dest", "checksum_algo", "checksum_expected"}, Mutating: true},
 	{Name: "net.http_get", Args: []string{"url"}},
 	// net.http_post is classified as mutating even though it only changes
 	// REMOTE state: a POST submits data (deploys, webhooks, form
@@ -96,6 +115,7 @@ var Funcs = []Func{
 	{Name: "net.interfaces"},
 	{Name: "net.tcp_check", Args: []string{"host", "port"}},
 	{Name: "net.wait_for", Args: []string{"host", "port", "timeout"}},
+	{Name: "net.wait_for_connection", Args: []string{"host", "port", "timeout"}},
 
 	// ── pkg ───────────────────────────────────────────────────────────
 	{Name: "pkg.info", Args: []string{"name"}},
@@ -118,6 +138,11 @@ var Funcs = []Func{
 	{Name: "service.status", Args: []string{"name"}},
 	{Name: "service.stop", Args: []string{"name"}, Mutating: true},
 
+	// ── ssh ───────────────────────────────────────────────────────────
+	{Name: "ssh.authorized_key_add", Args: []string{"user", "key", "exclusive"}, Mutating: true},
+	{Name: "ssh.authorized_key_list", Args: []string{"user"}},
+	{Name: "ssh.authorized_key_remove", Args: []string{"user", "key"}, Mutating: true},
+
 	// ── sys ───────────────────────────────────────────────────────────
 	{Name: "sys.cpu.count"},
 	{Name: "sys.cpu.info"},
@@ -132,6 +157,9 @@ var Funcs = []Func{
 	{Name: "sys.mount", Args: []string{"device", "mountpoint", "fs_type", "opts"}, Mutating: true},
 	{Name: "sys.net.interfaces"},
 	{Name: "sys.os"},
+	{Name: "sys.reboot", Mutating: true},
+	{Name: "sys.timezone_get"},
+	{Name: "sys.timezone_set", Args: []string{"timezone"}, Mutating: true},
 	{Name: "sys.unmount", Args: []string{"mountpoint"}, Mutating: true},
 	{Name: "sys.uptime"},
 	{Name: "sys.users"},

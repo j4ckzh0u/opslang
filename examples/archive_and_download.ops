@@ -1,0 +1,25 @@
+// 示例：归档操作 + 文件下载
+// 演示 archive.create / archive.extract / net.download
+
+task "archive_and_download" on localhost {
+    // 1. 创建归档
+    file.mkdir("/tmp/archive_demo")
+    file.write("/tmp/archive_demo/file1.txt", "hello")
+    file.write("/tmp/archive_demo/file2.txt", "world")
+    let created = archive.create("/tmp/demo.tar.gz", ["/tmp/archive_demo"])
+    report { archive_size: created.size, format: created.format }
+
+    // 2. 解压归档
+    file.mkdir("/tmp/archive_extracted")
+    let extracted = archive.extract("/tmp/demo.tar.gz", "/tmp/archive_extracted")
+    report { extracted_count: extracted.count }
+
+    // 3. 下载文件（带 checksum 校验）
+    let dl = net.download(
+        "https://www.google.com/favicon.ico",
+        "/tmp/google_favicon.ico",
+        "",    // no checksum verification for demo
+        ""
+    )
+    report { download_size: dl.size, status: dl.status_code }
+}

@@ -7,15 +7,19 @@ import (
 
 	"github.com/opslang/opslang/internal/ast"
 	"github.com/opslang/opslang/internal/opsspec"
+	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	opscron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
+	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/file"
 	opsgit "github.com/opslang/opslang/pkg/ops-core-sdk/git"
 	opsgrp "github.com/opslang/opslang/pkg/ops-core-sdk/group"
 	opsjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
+	sdkkernel "github.com/opslang/opslang/pkg/ops-core-sdk/kernel"
 	opsnet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/process"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/service"
+	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/sys"
 	sdksysctl "github.com/opslang/opslang/pkg/ops-core-sdk/sysctl"
 	optime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
@@ -85,6 +89,7 @@ func (r *Registry) registerAll() {
 	r.registerGitOps()
 	r.registerBuiltinOps()
 	r.registerPlatformOps()
+	r.registerExtensions()
 }
 
 // ============================================================
@@ -765,6 +770,295 @@ func (r *Registry) registerPlatformOps() {
 		port, _ := argInt(args, "port")
 		source := getStringArg(args, "source", "")
 		return sys.FirewallRule(action, protocol, port, source)
+	})
+}
+
+// ============================================================
+// extension operations (Ansible-aligned capabilities)
+// ============================================================
+
+func (r *Registry) registerExtensions() {
+	// ── file.find ────────────────────────────────────────────────────────
+	r.Register("file.find", func(args map[string]interface{}) (interface{}, error) {
+		opts := file.FindOptions{}
+		if paths, ok := args["paths"].([]interface{}); ok {
+			for _, p := range paths {
+				if s, ok := p.(string); ok {
+					opts.Paths = append(opts.Paths, s)
+				}
+			}
+		} else if p, ok := args["paths"].(string); ok {
+			opts.Paths = []string{p}
+		}
+		if pats, ok := args["patterns"].([]interface{}); ok {
+			for _, p := range pats {
+				if s, ok := p.(string); ok {
+					opts.Patterns = append(opts.Patterns, s)
+				}
+			}
+		} else if p, ok := args["patterns"].(string); ok {
+			if p != "" {
+				opts.Patterns = []string{p}
+			}
+		}
+		if rx, ok := args["regex"].(string); ok {
+			opts.Regex = rx
+		}
+		if ft, ok := args["file_type"].(string); ok {
+			opts.FileType = ft
+		}
+		if md, ok := args["max_depth"].(float64); ok {
+			opts.MaxDepth = int(md)
+		}
+		if age, ok := args["age"].(float64); ok {
+			opts.Age = int64(age)
+		}
+		if sz, ok := args["size"].(float64); ok {
+			opts.Size = int64(sz)
+		}
+		return file.Find(opts)
+	})
+
+	// ── file.replace ─────────────────────────────────────────────────────
+	r.Register("file.replace", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("file.replace: %w", err)
+		}
+		pattern, err := argString(args, "pattern")
+		if err != nil {
+			return nil, fmt.Errorf("file.replace: %w", err)
+		}
+		replacement, err := argString(args, "replacement")
+		if err != nil {
+			return nil, fmt.Errorf("file.replace: %w", err)
+		}
+		after := getStringArg(args, "after", "")
+		before := getStringArg(args, "before", "")
+		return file.Replace(path, pattern, replacement, after, before)
+	})
+
+	// ── file.blockinfile ─────────────────────────────────────────────────
+	r.Register("file.blockinfile", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("file.blockinfile: %w", err)
+		}
+		marker, err := argString(args, "marker")
+		if err != nil {
+			return nil, fmt.Errorf("file.blockinfile: %w", err)
+		}
+		content, err := argString(args, "content")
+		if err != nil {
+			return nil, fmt.Errorf("file.blockinfile: %w", err)
+		}
+		present := true
+		if v, ok := args["present"].(bool); ok {
+			present = v
+		}
+		insertAfter := getStringArg(args, "insert_after", "")
+		insertBefore := getStringArg(args, "insert_before", "")
+		return file.BlockInFile(path, marker, content, present, insertAfter, insertBefore)
+	})
+
+	// ── file.ini_get ─────────────────────────────────────────────────────
+	r.Register("file.ini_get", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("file.ini_get: %w", err)
+		}
+		section, err := argString(args, "section")
+		if err != nil {
+			return nil, fmt.Errorf("file.ini_get: %w", err)
+		}
+		key, err := argString(args, "key")
+		if err != nil {
+			return nil, fmt.Errorf("file.ini_get: %w", err)
+		}
+		return file.IniGet(path, section, key)
+	})
+
+	// ── file.ini_set ─────────────────────────────────────────────────────
+	r.Register("file.ini_set", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("file.ini_set: %w", err)
+		}
+		section, err := argString(args, "section")
+		if err != nil {
+			return nil, fmt.Errorf("file.ini_set: %w", err)
+		}
+		key, err := argString(args, "key")
+		if err != nil {
+			return nil, fmt.Errorf("file.ini_set: %w", err)
+		}
+		value, err := argString(args, "value")
+		if err != nil {
+			return nil, fmt.Errorf("file.ini_set: %w", err)
+		}
+		return file.IniSet(path, section, key, value)
+	})
+
+	// ── archive.create ───────────────────────────────────────────────────
+	r.Register("archive.create", func(args map[string]interface{}) (interface{}, error) {
+		dest, err := argString(args, "dest")
+		if err != nil {
+			return nil, fmt.Errorf("archive.create: %w", err)
+		}
+		var sources []string
+		switch v := args["sources"].(type) {
+		case string:
+			sources = []string{v}
+		case []interface{}:
+			for _, s := range v {
+				if str, ok := s.(string); ok {
+					sources = append(sources, str)
+				}
+			}
+		}
+		return sdkarchive.Create(dest, sources)
+	})
+
+	// ── archive.extract ──────────────────────────────────────────────────
+	r.Register("archive.extract", func(args map[string]interface{}) (interface{}, error) {
+		src, err := argString(args, "src")
+		if err != nil {
+			return nil, fmt.Errorf("archive.extract: %w", err)
+		}
+		dest, err := argString(args, "dest")
+		if err != nil {
+			return nil, fmt.Errorf("archive.extract: %w", err)
+		}
+		return sdkarchive.Extract(src, dest)
+	})
+
+	// ── net.download ─────────────────────────────────────────────────────
+	r.Register("net.download", func(args map[string]interface{}) (interface{}, error) {
+		url, err := argString(args, "url")
+		if err != nil {
+			return nil, fmt.Errorf("net.download: %w", err)
+		}
+		dest, err := argString(args, "dest")
+		if err != nil {
+			return nil, fmt.Errorf("net.download: %w", err)
+		}
+		algo := getStringArg(args, "checksum_algo", "")
+		expected := getStringArg(args, "checksum_expected", "")
+		return opsnet.Download(url, dest, algo, expected)
+	})
+
+	// ── net.wait_for_connection ──────────────────────────────────────────
+	r.Register("net.wait_for_connection", func(args map[string]interface{}) (interface{}, error) {
+		host, err := argString(args, "host")
+		if err != nil {
+			return nil, fmt.Errorf("net.wait_for_connection: %w", err)
+		}
+		port, err := argInt(args, "port")
+		if err != nil {
+			return nil, fmt.Errorf("net.wait_for_connection: %w", err)
+		}
+		timeout := 30
+		if t, ok := args["timeout"].(float64); ok {
+			timeout = int(t)
+		}
+		return opsnet.WaitForConnection(host, port, timeout)
+	})
+
+	// ── sys.timezone_get ─────────────────────────────────────────────────
+	r.Register("sys.timezone_get", func(_ map[string]interface{}) (interface{}, error) {
+		return sys.TimezoneGet()
+	})
+
+	// ── sys.timezone_set ─────────────────────────────────────────────────
+	r.Register("sys.timezone_set", func(args map[string]interface{}) (interface{}, error) {
+		tz, err := argString(args, "timezone")
+		if err != nil {
+			return nil, fmt.Errorf("sys.timezone_set: %w", err)
+		}
+		return sys.TimezoneSet(tz)
+	})
+
+	// ── sys.reboot ───────────────────────────────────────────────────────
+	r.Register("sys.reboot", func(_ map[string]interface{}) (interface{}, error) {
+		return sys.Reboot()
+	})
+
+	// ── ssh.authorized_key_add ───────────────────────────────────────────
+	r.Register("ssh.authorized_key_add", func(args map[string]interface{}) (interface{}, error) {
+		user, err := argString(args, "user")
+		if err != nil {
+			return nil, fmt.Errorf("ssh.authorized_key_add: %w", err)
+		}
+		key, err := argString(args, "key")
+		if err != nil {
+			return nil, fmt.Errorf("ssh.authorized_key_add: %w", err)
+		}
+		exclusive, _ := args["exclusive"].(bool)
+		return sdkssh.AuthorizedKeyAdd(user, key, exclusive)
+	})
+
+	// ── ssh.authorized_key_remove ────────────────────────────────────────
+	r.Register("ssh.authorized_key_remove", func(args map[string]interface{}) (interface{}, error) {
+		user, err := argString(args, "user")
+		if err != nil {
+			return nil, fmt.Errorf("ssh.authorized_key_remove: %w", err)
+		}
+		key, err := argString(args, "key")
+		if err != nil {
+			return nil, fmt.Errorf("ssh.authorized_key_remove: %w", err)
+		}
+		return sdkssh.AuthorizedKeyRemove(user, key)
+	})
+
+	// ── ssh.authorized_key_list ──────────────────────────────────────────
+	r.Register("ssh.authorized_key_list", func(args map[string]interface{}) (interface{}, error) {
+		user, err := argString(args, "user")
+		if err != nil {
+			return nil, fmt.Errorf("ssh.authorized_key_list: %w", err)
+		}
+		return sdkssh.AuthorizedKeyList(user)
+	})
+
+	// ── kernel.module_list ───────────────────────────────────────────────
+	r.Register("kernel.module_list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkkernel.ModuleList()
+	})
+
+	// ── kernel.module_load ───────────────────────────────────────────────
+	r.Register("kernel.module_load", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("kernel.module_load: %w", err)
+		}
+		return sdkkernel.ModuleLoad(name)
+	})
+
+	// ── kernel.module_unload ─────────────────────────────────────────────
+	r.Register("kernel.module_unload", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("kernel.module_unload: %w", err)
+		}
+		return sdkkernel.ModuleUnload(name)
+	})
+
+	// ── disk.filesystem ──────────────────────────────────────────────────
+	r.Register("disk.filesystem", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("disk.filesystem: %w", err)
+		}
+		fsType := getStringArg(args, "fs_type", "ext4")
+		return sdkdisk.FilesystemCreate(device, fsType)
+	})
+
+	// ── disk.part_list ───────────────────────────────────────────────────
+	r.Register("disk.part_list", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("disk.part_list: %w", err)
+		}
+		return sdkdisk.PartList(device)
 	})
 }
 

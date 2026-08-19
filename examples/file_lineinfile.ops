@@ -1,5 +1,6 @@
 // file_lineinfile.ops - 演示 file.lineinfile 操作
 // 确保文件中存在或不存在特定行
+privilege: admin
 
 // ═══════════════════════════════════════════════════════════
 // 1. 确保行存在 (present: true)

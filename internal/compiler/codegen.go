@@ -128,6 +128,40 @@ var sdkMapping = map[string]sdkFunc{
 
 	// firewall
 	"firewall.rule": {pkg: "sys", goName: "FirewallRule", args: true, params: []string{"s", "s", "i", "s"}},
+
+	// archive
+	"archive.create":  {pkg: "archive", goName: "Create", args: true, params: []string{"s", "l"}},
+	"archive.extract": {pkg: "archive", goName: "Extract", args: true, params: []string{"s", "s"}},
+
+	// disk
+	"disk.filesystem": {pkg: "disk", goName: "FilesystemCreate", args: true, params: []string{"s", "s"}},
+	"disk.part_list":  {pkg: "disk", goName: "PartList", args: true, params: []string{"s"}},
+
+	// kernel
+	"kernel.module_list":   {pkg: "kernel", goName: "ModuleList"},
+	"kernel.module_load":   {pkg: "kernel", goName: "ModuleLoad", args: true, params: []string{"s"}},
+	"kernel.module_unload": {pkg: "kernel", goName: "ModuleUnload", args: true, params: []string{"s"}},
+
+	// ssh
+	"ssh.authorized_key_add":    {pkg: "ssh", goName: "AuthorizedKeyAdd", args: true, params: []string{"s", "s", "b"}},
+	"ssh.authorized_key_remove": {pkg: "ssh", goName: "AuthorizedKeyRemove", args: true, params: []string{"s", "s"}},
+	"ssh.authorized_key_list":   {pkg: "ssh", goName: "AuthorizedKeyList", args: true, params: []string{"s"}},
+
+	// file extensions
+	"file.find":        {pkg: "file", goName: "FindFromArgs", args: true, params: []string{"l", "l", "s", "s", "i", "i64", "i64"}},
+	"file.replace":     {pkg: "file", goName: "Replace", args: true, params: []string{"s", "s", "s", "s", "s"}},
+	"file.blockinfile": {pkg: "file", goName: "BlockInFile", args: true, params: []string{"s", "s", "s", "b", "s", "s"}},
+	"file.ini_get":     {pkg: "file", goName: "IniGet", args: true, params: []string{"s", "s", "s"}},
+	"file.ini_set":     {pkg: "file", goName: "IniSet", args: true, params: []string{"s", "s", "s", "s"}},
+
+	// net extensions
+	"net.download":             {pkg: "net", goName: "Download", args: true, params: []string{"s", "s", "s", "s"}},
+	"net.wait_for_connection":  {pkg: "net", goName: "WaitForConnection", args: true, params: []string{"s", "i", "i"}},
+
+	// sys extensions
+	"sys.timezone_get": {pkg: "sys", goName: "TimezoneGet"},
+	"sys.timezone_set": {pkg: "sys", goName: "TimezoneSet", args: true, params: []string{"s"}},
+	"sys.reboot":       {pkg: "sys", goName: "Reboot"},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -220,6 +254,10 @@ var pkgImportAlias = map[string]string{
 	"group":   "opsgrp",
 	"cron":    "opscron",
 	"sysctl":  "opsysctl",
+	"archive": "opsarchive",
+	"disk":    "opsdisk",
+	"kernel":  "opskernel",
+	"ssh":     "opsssh",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -238,6 +276,10 @@ var pkgImportPath = map[string]string{
 	"group":   "github.com/opslang/opslang/pkg/ops-core-sdk/group",
 	"cron":    "github.com/opslang/opslang/pkg/ops-core-sdk/cron",
 	"sysctl":  "github.com/opslang/opslang/pkg/ops-core-sdk/sysctl",
+	"archive": "github.com/opslang/opslang/pkg/ops-core-sdk/archive",
+	"disk":    "github.com/opslang/opslang/pkg/ops-core-sdk/disk",
+	"kernel":  "github.com/opslang/opslang/pkg/ops-core-sdk/kernel",
+	"ssh":     "github.com/opslang/opslang/pkg/ops-core-sdk/ssh",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

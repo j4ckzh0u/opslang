@@ -1708,6 +1708,264 @@ print("相差: " + diff.human_readable)
 
 ---
 
+## 11. archive 包 - 归档操作
+
+### 11.1 archive.create(dest, sources)
+
+创建归档文件。格式由目标路径扩展名决定：`.tar`、`.tar.gz`/`.tgz`、`.zip`。
+
+**参数**：
+| 名称 | 类型 | 说明 |
+|------|------|------|
+| dest | string | 目标归档路径 |
+| sources | list[string] | 源文件/目录列表 |
+
+**返回**：`archive.CreateResult`
+
+```
+let result = archive.create("/tmp/backup.tar.gz", ["/etc/nginx", "/var/log/app.log"])
+print("归档大小: " + str(result.size) + " 字节")
+```
+
+### 11.2 archive.extract(src, dest)
+
+解压归档文件到目标目录。支持 tar、tar.gz、zip。包含路径遍历防护。
+
+**参数**：
+| 名称 | 类型 | 说明 |
+|------|------|------|
+| src | string | 归档文件路径 |
+| dest | string | 解压目标目录 |
+
+**返回**：`archive.ExtractResult`
+
+```
+let result = archive.extract("/tmp/backup.tar.gz", "/tmp/restored")
+print("解压文件数: " + str(result.count))
+```
+
+---
+
+## 12. ssh 包 - SSH 密钥管理
+
+### 12.1 ssh.authorized_key_add(user, key, exclusive)
+
+为用户添加 SSH 公钥到 authorized_keys。exclusive=true 时清除其他密钥。
+
+**参数**：
+| 名称 | 类型 | 说明 |
+|------|------|------|
+| user | string | 用户名 |
+| key | string | SSH 公钥内容 |
+| exclusive | bool | 是否独占（清除其他密钥） |
+
+**返回**：`ssh.AuthorizedKeyResult`
+
+```
+ssh.authorized_key_add("deploy", "ssh-rsa AAAA...", false)
+```
+
+### 12.2 ssh.authorized_key_remove(user, key)
+
+从用户 authorized_keys 中移除指定公钥。
+
+**返回**：`ssh.AuthorizedKeyResult`
+
+### 12.3 ssh.authorized_key_list(user)
+
+列出用户的所有 SSH 公钥。
+
+**返回**：`ssh.AuthorizedKeyListResult` — 包含 `keys`（列表）和 `count`。
+
+---
+
+## 13. kernel 包 - 内核模块管理
+
+### 13.1 kernel.module_list()
+
+列出当前已加载的内核模块（读取 /proc/modules）。
+
+**返回**：`kernel.ModuleListResult` — 包含 `modules`（模块名列表）和 `count`。
+
+```
+let mods = kernel.module_list()
+print("已加载模块: " + str(mods.count))
+```
+
+### 13.2 kernel.module_load(name)
+
+加载指定内核模块（使用 modprobe）。
+
+**返回**：`kernel.ModuleLoadResult`
+
+```
+kernel.module_load("br_netfilter")
+```
+
+### 13.3 kernel.module_unload(name)
+
+卸载指定内核模块（使用 modprobe -r）。
+
+**返回**：`kernel.ModuleLoadResult`
+
+---
+
+## 14. disk 包 - 磁盘管理
+
+### 14.1 disk.filesystem(device, fs_type)
+
+在设备上创建文件系统。支持 ext2/ext3/ext4/xfs/btrfs/vfat/swap。
+
+**参数**：
+| 名称 | 类型 | 说明 |
+|------|------|------|
+| device | string | 设备路径（如 /dev/sdb1） |
+| fs_type | string | 文件系统类型 |
+
+**返回**：`disk.FilesystemResult`
+
+```
+disk.filesystem("/dev/sdb1", "ext4")
+```
+
+### 14.2 disk.part_list(device)
+
+列出设备的分区信息（使用 lsblk）。
+
+**返回**：`disk.PartListResult` — 包含 `partitions` 列表，每项含 name、size、type、fstype、mountpoint。
+
+```
+let parts = disk.part_list("/dev/sda")
+for p in parts.partitions {
+    print(p.name + " " + p.size + " " + p.fstype)
+}
+```
+
+---
+
+## 15. file 扩展操作
+
+### 15.1 file.find(paths, patterns, regex, file_type, max_depth, age, size)
+
+在指定路径中查找匹配的文件/目录。
+
+**参数**：
+| 名称 | 类型 | 说明 |
+|------|------|------|
+| paths | list[string] | 搜索根目录列表 |
+| patterns | list[string] | glob 模式列表（如 `["*.log"]`） |
+| regex | string | 正则表达式过滤（可选，传 `""` 跳过） |
+| file_type | string | `"file"` / `"directory"` / `"any"` |
+| max_depth | int | 最大递归深度（0=无限） |
+| age | int64 | 仅匹配 N 秒前修改的（0=不限） |
+| size | int64 | 仅匹配大于 N 字节的（0=不限） |
+
+**返回**：`file.FindResult` — 包含 `matched`（匹配路径列表）和 `count`。
+
+```
+let logs = file.find(["/var/log"], ["*.log"], "", "file", 3, 0, 0)
+print("找到 " + str(logs.count) + " 个日志文件")
+```
+
+### 15.2 file.replace(path, pattern, replacement, after, before)
+
+正则替换文件内容。可选 `after`/`before` 限定替换范围。
+
+**返回**：`file.ReplaceResult` — 包含 `replacements`（替换次数）和 `changed`。
+
+```
+let r = file.replace("/etc/app.conf", "old_value", "new_value", "", "")
+```
+
+### 15.3 file.blockinfile(path, marker, content, present, insert_after, insert_before)
+
+在文件中插入/更新一个由标记包裹的文本块。标记支持 `{mark}` 占位符（Ansible 风格）。
+
+**返回**：`file.BlockInFileResult`
+
+```
+file.blockinfile(
+    "/etc/ssh/sshd_config",
+    "# {mark} MANAGED BY OPSLANG",
+    "PermitRootLogin no\nPasswordAuthentication no",
+    true, "", ""
+)
+```
+
+### 15.4 file.ini_get(path, section, key)
+
+读取 INI 文件中指定 section/key 的值。
+
+**返回**：`file.IniGetResult` — 包含 `value` 和 `found`。
+
+### 15.5 file.ini_set(path, section, key, value)
+
+设置 INI 文件中指定 section/key 的值。自动创建缺失的 section 和 key。
+
+**返回**：`file.IniSetResult`
+
+```
+file.ini_set("/etc/my.cnf", "mysqld", "max_connections", "500")
+```
+
+---
+
+## 16. net 扩展操作
+
+### 16.1 net.download(url, dest, checksum_algo, checksum_expected)
+
+下载文件到本地。支持 checksum 校验（md5/sha1/sha256）。
+
+**参数**：
+| 名称 | 类型 | 说明 |
+|------|------|------|
+| url | string | 下载 URL |
+| dest | string | 本地目标路径 |
+| checksum_algo | string | 校验算法（`""` 跳过校验） |
+| checksum_expected | string | 期望的校验值 |
+
+**返回**：`net.DownloadResult` — 包含 `dest`、`size`、`status_code`、`checksum`。
+
+```
+let dl = net.download("https://example.com/app.tar.gz", "/tmp/app.tar.gz", "sha256", "abc123...")
+```
+
+### 16.2 net.wait_for_connection(host, port, timeout)
+
+等待 TCP 端口可达。轮询间隔 1 秒，超时后报错。
+
+**返回**：`net.WaitForConnectionResult` — 包含 `connected`（bool）和 `elapsed_ms`。
+
+```
+net.wait_for_connection("db.internal", 5432, 60)
+```
+
+---
+
+## 17. sys 扩展操作
+
+### 17.1 sys.timezone_get()
+
+获取当前系统时区。
+
+**返回**：`sys.TimezoneResult` — 包含 `timezone` 字段。
+
+### 17.2 sys.timezone_set(timezone)
+
+设置系统时区（需要 root）。写入 /etc/timezone 并更新 /etc/localtime 软链接。
+
+```
+sys.timezone_set("Asia/Shanghai")
+```
+
+### 17.3 sys.reboot()
+
+重启系统。使用 `shutdown -r now`，回退到 `reboot`。
+
+**返回**：`sys.RebootResult`
+
+---
+
 ## 附录：类型速查表
 
 ### 完整类型定义汇总
