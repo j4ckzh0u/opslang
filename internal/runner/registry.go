@@ -79,6 +79,9 @@ import (
 	sdknmcli "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli"
 	sdkcrypttab "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab"
 	sdksysfs "github.com/opslang/opslang/pkg/ops-core-sdk/sysfs"
+	sdkpamd "github.com/opslang/opslang/pkg/ops-core-sdk/pamd"
+	sdkgetent "github.com/opslang/opslang/pkg/ops-core-sdk/getent"
+	sdkhaproxy "github.com/opslang/opslang/pkg/ops-core-sdk/haproxy"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -3268,6 +3271,114 @@ func (r *Registry) registerExtensions() {
 			return nil, err
 		}
 		return map[string]interface{}{"value": value}, nil
+	})
+
+	// ── pamd.* ──────────────────────────────────────────────────────────
+	r.Register("pamd.get", func(args map[string]interface{}) (interface{}, error) {
+		service, _ := argString(args, "service")
+		return sdkpamd.Get(service)
+	})
+	r.Register("pamd.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpamd.List()
+	})
+	r.Register("pamd.add_rule", func(args map[string]interface{}) (interface{}, error) {
+		service, _ := argString(args, "service")
+		rtype, _ := argString(args, "type")
+		control, _ := argString(args, "control")
+		module, _ := argString(args, "module")
+		a, _ := argString(args, "args")
+		return sdkpamd.AddRule(service, rtype, control, module, a)
+	})
+	r.Register("pamd.remove_rule", func(args map[string]interface{}) (interface{}, error) {
+		service, _ := argString(args, "service")
+		rtype, _ := argString(args, "type")
+		module, _ := argString(args, "module")
+		return sdkpamd.RemoveRule(service, rtype, module)
+	})
+	r.Register("pamd.modify_rule", func(args map[string]interface{}) (interface{}, error) {
+		service, _ := argString(args, "service")
+		rtype, _ := argString(args, "type")
+		module, _ := argString(args, "module")
+		nc, _ := argString(args, "new_control")
+		na, _ := argString(args, "new_args")
+		return sdkpamd.ModifyRule(service, rtype, module, nc, na)
+	})
+	r.Register("pamd.validate", func(args map[string]interface{}) (interface{}, error) {
+		service, _ := argString(args, "service")
+		return sdkpamd.Validate(service)
+	})
+	r.Register("pamd.backup", func(args map[string]interface{}) (interface{}, error) {
+		service, _ := argString(args, "service")
+		dir, _ := argString(args, "backup_dir")
+		return sdkpamd.Backup(service, dir)
+	})
+
+	// ── getent.* ────────────────────────────────────────────────────────
+	r.Register("getent.passwd", func(args map[string]interface{}) (interface{}, error) {
+		return sdkgetent.GetPasswd()
+	})
+	r.Register("getent.lookup_user", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		return sdkgetent.LookupUser(key)
+	})
+	r.Register("getent.groups", func(args map[string]interface{}) (interface{}, error) {
+		return sdkgetent.GetGroups()
+	})
+	r.Register("getent.lookup_group", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		return sdkgetent.LookupGroup(key)
+	})
+	r.Register("getent.services", func(args map[string]interface{}) (interface{}, error) {
+		return sdkgetent.GetServices()
+	})
+	r.Register("getent.lookup_service", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		return sdkgetent.LookupService(key)
+	})
+	r.Register("getent.protocols", func(args map[string]interface{}) (interface{}, error) {
+		return sdkgetent.GetProtocols()
+	})
+	r.Register("getent.lookup_protocol", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		return sdkgetent.LookupProtocol(key)
+	})
+	r.Register("getent.shells", func(args map[string]interface{}) (interface{}, error) {
+		return sdkgetent.Shells()
+	})
+
+	// ── haproxy.* ───────────────────────────────────────────────────────
+	r.Register("haproxy.get_status", func(args map[string]interface{}) (interface{}, error) {
+		return sdkhaproxy.GetStatus()
+	})
+	r.Register("haproxy.list_backends", func(args map[string]interface{}) (interface{}, error) {
+		socket, _ := argString(args, "socket")
+		return sdkhaproxy.ListBackends(socket)
+	})
+	r.Register("haproxy.enable_backend", func(args map[string]interface{}) (interface{}, error) {
+		backend, _ := argString(args, "backend")
+		server, _ := argString(args, "server")
+		socket, _ := argString(args, "socket")
+		return sdkhaproxy.EnableBackend(backend, server, socket)
+	})
+	r.Register("haproxy.disable_backend", func(args map[string]interface{}) (interface{}, error) {
+		backend, _ := argString(args, "backend")
+		server, _ := argString(args, "server")
+		socket, _ := argString(args, "socket")
+		return sdkhaproxy.DisableBackend(backend, server, socket)
+	})
+	r.Register("haproxy.validate_config", func(args map[string]interface{}) (interface{}, error) {
+		configFile, _ := argString(args, "config_file")
+		return sdkhaproxy.ValidateConfig(configFile)
+	})
+	r.Register("haproxy.reload", func(args map[string]interface{}) (interface{}, error) {
+		configFile, _ := argString(args, "config_file")
+		return sdkhaproxy.Reload(configFile)
+	})
+	r.Register("haproxy.restart", func(args map[string]interface{}) (interface{}, error) {
+		return sdkhaproxy.Restart()
+	})
+	r.Register("haproxy.version", func(args map[string]interface{}) (interface{}, error) {
+		return sdkhaproxy.Version()
 	})
 }
 

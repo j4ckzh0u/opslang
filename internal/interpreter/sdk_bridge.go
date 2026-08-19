@@ -78,6 +78,9 @@ import (
 	sdknmcli "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli"
 	sdkcrypttab "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab"
 	sdksysfs "github.com/opslang/opslang/pkg/ops-core-sdk/sysfs"
+	sdkpamd "github.com/opslang/opslang/pkg/ops-core-sdk/pamd"
+	sdkgetent "github.com/opslang/opslang/pkg/ops-core-sdk/getent"
+	sdkhaproxy "github.com/opslang/opslang/pkg/ops-core-sdk/haproxy"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -1501,6 +1504,102 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return map[string]interface{}{"value": r}, nil
+	}
+
+	// ── pamd.* ──────────────────────────────────────────────────────────
+	interp.builtins["pamd.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("pamd.get() requires 1 argument (service)") }
+		service, ok := args[0].(string)
+		if !ok { return nil, fmt.Errorf("pamd.get(): first argument must be string") }
+		return sdkpamd.Get(service)
+	}
+	interp.builtins["pamd.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkpamd.List()
+	}
+	interp.builtins["pamd.add_rule"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 { return nil, fmt.Errorf("pamd.add_rule() requires 5 arguments") }
+		svc := args[0].(string); rt := args[1].(string); ctrl := args[2].(string); mod := args[3].(string); a := args[4].(string)
+		return sdkpamd.AddRule(svc, rt, ctrl, mod, a)
+	}
+	interp.builtins["pamd.remove_rule"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 { return nil, fmt.Errorf("pamd.remove_rule() requires 3 arguments") }
+		return sdkpamd.RemoveRule(args[0].(string), args[1].(string), args[2].(string))
+	}
+	interp.builtins["pamd.modify_rule"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 { return nil, fmt.Errorf("pamd.modify_rule() requires 5 arguments") }
+		return sdkpamd.ModifyRule(args[0].(string), args[1].(string), args[2].(string), args[3].(string), args[4].(string))
+	}
+	interp.builtins["pamd.validate"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("pamd.validate() requires 1 argument") }
+		return sdkpamd.Validate(args[0].(string))
+	}
+	interp.builtins["pamd.backup"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 { return nil, fmt.Errorf("pamd.backup() requires 2 arguments") }
+		return sdkpamd.Backup(args[0].(string), args[1].(string))
+	}
+
+	// ── getent.* ────────────────────────────────────────────────────────
+	interp.builtins["getent.passwd"] = func(args ...interface{}) (interface{}, error) {
+		return sdkgetent.GetPasswd()
+	}
+	interp.builtins["getent.lookup_user"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("getent.lookup_user() requires 1 argument") }
+		return sdkgetent.LookupUser(args[0].(string))
+	}
+	interp.builtins["getent.groups"] = func(args ...interface{}) (interface{}, error) {
+		return sdkgetent.GetGroups()
+	}
+	interp.builtins["getent.lookup_group"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("getent.lookup_group() requires 1 argument") }
+		return sdkgetent.LookupGroup(args[0].(string))
+	}
+	interp.builtins["getent.services"] = func(args ...interface{}) (interface{}, error) {
+		return sdkgetent.GetServices()
+	}
+	interp.builtins["getent.lookup_service"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("getent.lookup_service() requires 1 argument") }
+		return sdkgetent.LookupService(args[0].(string))
+	}
+	interp.builtins["getent.protocols"] = func(args ...interface{}) (interface{}, error) {
+		return sdkgetent.GetProtocols()
+	}
+	interp.builtins["getent.lookup_protocol"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("getent.lookup_protocol() requires 1 argument") }
+		return sdkgetent.LookupProtocol(args[0].(string))
+	}
+	interp.builtins["getent.shells"] = func(args ...interface{}) (interface{}, error) {
+		return sdkgetent.Shells()
+	}
+
+	// ── haproxy.* ───────────────────────────────────────────────────────
+	interp.builtins["haproxy.get_status"] = func(args ...interface{}) (interface{}, error) {
+		return sdkhaproxy.GetStatus()
+	}
+	interp.builtins["haproxy.list_backends"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("haproxy.list_backends() requires 1 argument") }
+		return sdkhaproxy.ListBackends(args[0].(string))
+	}
+	interp.builtins["haproxy.enable_backend"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 { return nil, fmt.Errorf("haproxy.enable_backend() requires 3 arguments") }
+		return sdkhaproxy.EnableBackend(args[0].(string), args[1].(string), args[2].(string))
+	}
+	interp.builtins["haproxy.disable_backend"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 { return nil, fmt.Errorf("haproxy.disable_backend() requires 3 arguments") }
+		return sdkhaproxy.DisableBackend(args[0].(string), args[1].(string), args[2].(string))
+	}
+	interp.builtins["haproxy.validate_config"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("haproxy.validate_config() requires 1 argument") }
+		return sdkhaproxy.ValidateConfig(args[0].(string))
+	}
+	interp.builtins["haproxy.reload"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 { return nil, fmt.Errorf("haproxy.reload() requires 1 argument") }
+		return sdkhaproxy.Reload(args[0].(string))
+	}
+	interp.builtins["haproxy.restart"] = func(args ...interface{}) (interface{}, error) {
+		return sdkhaproxy.Restart()
+	}
+	interp.builtins["haproxy.version"] = func(args ...interface{}) (interface{}, error) {
+		return sdkhaproxy.Version()
 	}
 
 	// ── selinux.* ────────────────────────────────────────────────────────

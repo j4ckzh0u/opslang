@@ -559,6 +559,36 @@ var sdkMapping = map[string]sdkFunc{
 	"sysfs.get_device_power":    {pkg: "sysfs", goName: "GetDevicePower", args: true, params: []string{"s"}},
 	"sysfs.set_kernel_parameter": {pkg: "sysfs", goName: "SetKernelParameter", args: true, params: []string{"s", "s"}},
 	"sysfs.get_kernel_parameter": {pkg: "sysfs", goName: "GetKernelParameter", args: true, params: []string{"s"}},
+
+	// pamd
+	"pamd.get":          {pkg: "pamd", goName: "Get", args: true, params: []string{"s"}},
+	"pamd.list":         {pkg: "pamd", goName: "List", args: true},
+	"pamd.add_rule":     {pkg: "pamd", goName: "AddRule", args: true, params: []string{"s", "s", "s", "s", "s"}},
+	"pamd.remove_rule":  {pkg: "pamd", goName: "RemoveRule", args: true, params: []string{"s", "s", "s"}},
+	"pamd.modify_rule":  {pkg: "pamd", goName: "ModifyRule", args: true, params: []string{"s", "s", "s", "s", "s"}},
+	"pamd.validate":     {pkg: "pamd", goName: "Validate", args: true, params: []string{"s"}},
+	"pamd.backup":       {pkg: "pamd", goName: "Backup", args: true, params: []string{"s", "s"}},
+
+	// getent
+	"getent.passwd":           {pkg: "getent", goName: "GetPasswd", args: true},
+	"getent.lookup_user":      {pkg: "getent", goName: "LookupUser", args: true, params: []string{"s"}},
+	"getent.groups":           {pkg: "getent", goName: "GetGroups", args: true},
+	"getent.lookup_group":     {pkg: "getent", goName: "LookupGroup", args: true, params: []string{"s"}},
+	"getent.services":         {pkg: "getent", goName: "GetServices", args: true},
+	"getent.lookup_service":   {pkg: "getent", goName: "LookupService", args: true, params: []string{"s"}},
+	"getent.protocols":        {pkg: "getent", goName: "GetProtocols", args: true},
+	"getent.lookup_protocol":  {pkg: "getent", goName: "LookupProtocol", args: true, params: []string{"s"}},
+	"getent.shells":           {pkg: "getent", goName: "Shells", args: true},
+
+	// haproxy
+	"haproxy.get_status":      {pkg: "haproxy", goName: "GetStatus", args: true},
+	"haproxy.list_backends":   {pkg: "haproxy", goName: "ListBackends", args: true, params: []string{"s"}},
+	"haproxy.enable_backend":  {pkg: "haproxy", goName: "EnableBackend", args: true, params: []string{"s", "s", "s"}},
+	"haproxy.disable_backend": {pkg: "haproxy", goName: "DisableBackend", args: true, params: []string{"s", "s", "s"}},
+	"haproxy.validate_config": {pkg: "haproxy", goName: "ValidateConfig", args: true, params: []string{"s"}},
+	"haproxy.reload":          {pkg: "haproxy", goName: "Reload", args: true, params: []string{"s"}},
+	"haproxy.restart":         {pkg: "haproxy", goName: "Restart", args: true},
+	"haproxy.version":         {pkg: "haproxy", goName: "Version", args: true},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -691,6 +721,9 @@ var pkgImportAlias = map[string]string{
 	"nmcli":          "opsnmcli",
 	"crypttab":       "opscrypttab",
 	"sysfs":          "opssysfs",
+	"pamd":           "opspamd",
+	"getent":         "opsgetent",
+	"haproxy":        "opshaproxy",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -749,6 +782,9 @@ var pkgImportPath = map[string]string{
 	"nmcli":          "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli",
 	"crypttab":       "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab",
 	"sysfs":          "github.com/opslang/opslang/pkg/ops-core-sdk/sysfs",
+	"pamd":           "github.com/opslang/opslang/pkg/ops-core-sdk/pamd",
+	"getent":         "github.com/opslang/opslang/pkg/ops-core-sdk/getent",
+	"haproxy":        "github.com/opslang/opslang/pkg/ops-core-sdk/haproxy",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

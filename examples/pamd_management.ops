@@ -1,0 +1,91 @@
+// PAM 配置管理示例
+// PAM configuration management example
+
+// 列出所有 PAM 服务
+block {
+    let services = pamd.list()
+    report {
+        total_services: services.count
+    }
+}
+rescue {
+    print("pamd.list failed (expected without root): " + _error)
+}
+
+// 获取 SSH PAM 配置
+block {
+    let config = pamd.get("sshd")
+    report {
+        service: "sshd",
+        exists: config.exists,
+        rules: len(config.rules)
+    }
+}
+rescue {
+    print("pamd.get failed: " + _error)
+}
+
+// 验证 PAM 配置
+block {
+    let result = pamd.validate("sshd")
+    report {
+        service: "sshd",
+        valid: result.valid,
+        errors: len(result.errors)
+    }
+}
+rescue {
+    print("pamd.validate failed: " + _error)
+}
+
+// 备份 PAM 配置
+block {
+    let result = pamd.backup("sshd", "/tmp")
+    report {
+        service: "sshd",
+        success: result.success,
+        backup_path: result.backup_path
+    }
+}
+rescue {
+    print("pamd.backup failed (expected without root): " + _error)
+}
+
+// 添加 PAM 规则（需要 root 权限）
+block {
+    let result = pamd.add_rule("sshd", "auth", "required", "pam_unix.so", "")
+    report {
+        service: "sshd",
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("pamd.add_rule failed (expected without root): " + _error)
+}
+
+// 移除 PAM 规则（需要 root 权限）
+block {
+    let result = pamd.remove_rule("sshd", "auth", "pam_permit.so")
+    report {
+        service: "sshd",
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("pamd.remove_rule failed (expected without root): " + _error)
+}
+
+// 修改 PAM 规则（需要 root 权限）
+block {
+    let result = pamd.modify_rule("sshd", "auth", "pam_unix.so", "sufficient", "")
+    report {
+        service: "sshd",
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("pamd.modify_rule failed (expected without root): " + _error)
+}

@@ -1,0 +1,98 @@
+// HAProxy 管理示例
+// HAProxy management example
+
+// 检查 HAProxy 状态
+block {
+    let status = haproxy.get_status()
+    report {
+        up: status.up,
+        pid: status.pid
+    }
+}
+rescue {
+    print("haproxy.get_status failed: " + _error)
+}
+
+// 获取 HAProxy 版本
+block {
+    let ver = haproxy.version()
+    report {
+        version: ver.version,
+        raw: ver.raw
+    }
+}
+rescue {
+    print("haproxy.version failed: " + _error)
+}
+
+// 验证 HAProxy 配置
+block {
+    let result = haproxy.validate_config("/etc/haproxy/haproxy.cfg")
+    report {
+        valid: result.valid,
+        errors: len(result.errors)
+    }
+}
+rescue {
+    print("haproxy.validate_config failed: " + _error)
+}
+
+// 列出后端
+block {
+    let backends = haproxy.list_backends("/var/run/haproxy.sock")
+    report {
+        count: backends.count
+    }
+}
+rescue {
+    print("haproxy.list_backends failed: " + _error)
+}
+
+// 启用后端服务器（需要 stats socket）
+block {
+    let result = haproxy.enable_backend("web_servers", "web1", "/var/run/haproxy.sock")
+    report {
+        backend: result.backend,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("haproxy.enable_backend failed: " + _error)
+}
+
+// 禁用后端服务器（需要 stats socket）
+block {
+    let result = haproxy.disable_backend("web_servers", "web2", "/var/run/haproxy.sock")
+    report {
+        backend: result.backend,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("haproxy.disable_backend failed: " + _error)
+}
+
+// 重载 HAProxy 配置（需要 root 权限）
+block {
+    let result = haproxy.reload("/etc/haproxy/haproxy.cfg")
+    report {
+        success: result.success
+    }
+}
+rescue {
+    print("haproxy.reload failed (expected without root): " + _error)
+}
+
+// 重启 HAProxy（需要 root 权限）
+block {
+    let result = haproxy.restart()
+    report {
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("haproxy.restart failed (expected without root): " + _error)
+}

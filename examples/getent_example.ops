@@ -1,0 +1,124 @@
+// 系统数据库查询示例 (getent)
+// System database enumeration example (getent)
+
+// 查询 root 用户信息
+block {
+    let user = getent.lookup_user("root")
+    report {
+        database: "passwd",
+        key: "root",
+        found: user.found,
+        count: user.count
+    }
+}
+rescue {
+    print("getent.lookup_user failed: " + _error)
+}
+
+// 按 UID 查询用户
+block {
+    let user = getent.lookup_user("0")
+    report {
+        database: "passwd",
+        key: "0",
+        found: user.found
+    }
+}
+rescue {
+    print("getent.lookup_user by UID failed: " + _error)
+}
+
+// 列出所有用户
+block {
+    let users = getent.passwd()
+    report {
+        total_users: len(users)
+    }
+}
+rescue {
+    print("getent.passwd failed: " + _error)
+}
+
+// 查询 GID 0 的组
+block {
+    let group = getent.lookup_group("0")
+    report {
+        database: "group",
+        key: "0",
+        found: group.found
+    }
+}
+rescue {
+    print("getent.lookup_group failed: " + _error)
+}
+
+// 列出所有组
+block {
+    let groups = getent.groups()
+    report {
+        total_groups: len(groups)
+    }
+}
+rescue {
+    print("getent.groups failed: " + _error)
+}
+
+// 查询 SSH 服务
+block {
+    let svc = getent.lookup_service("ssh")
+    report {
+        database: "services",
+        key: "ssh",
+        found: svc.found,
+        count: svc.count
+    }
+}
+rescue {
+    print("getent.lookup_service failed: " + _error)
+}
+
+// 列出所有服务
+block {
+    let svcs = getent.services()
+    report {
+        total_services: len(svcs)
+    }
+}
+rescue {
+    print("getent.services failed: " + _error)
+}
+
+// 查询 TCP 协议
+block {
+    let proto = getent.lookup_protocol("tcp")
+    report {
+        database: "protocols",
+        key: "tcp",
+        found: proto.found
+    }
+}
+rescue {
+    print("getent.lookup_protocol failed: " + _error)
+}
+
+// 列出所有协议
+block {
+    let protos = getent.protocols()
+    report {
+        total_protocols: len(protos)
+    }
+}
+rescue {
+    print("getent.protocols failed: " + _error)
+}
+
+// 列出所有可用 shell
+block {
+    let shells = getent.shells()
+    report {
+        total_shells: shells.count
+    }
+}
+rescue {
+    print("getent.shells failed: " + _error)
+}

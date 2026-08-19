@@ -285,6 +285,36 @@ var Funcs = []Func{
 	{Name: "sysfs.set_kernel_parameter", Args: []string{"param", "value"}, Mutating: true},
 	{Name: "sysfs.get_kernel_parameter", Args: []string{"param"}},
 
+	// ── pamd ──────────────────────────────────────────────────────────
+	{Name: "pamd.get", Args: []string{"service"}},
+	{Name: "pamd.list"},
+	{Name: "pamd.add_rule", Args: []string{"service", "type", "control", "module", "args"}, Mutating: true},
+	{Name: "pamd.remove_rule", Args: []string{"service", "type", "module"}, Mutating: true},
+	{Name: "pamd.modify_rule", Args: []string{"service", "type", "module", "new_control", "new_args"}, Mutating: true},
+	{Name: "pamd.validate", Args: []string{"service"}},
+	{Name: "pamd.backup", Args: []string{"service", "backup_dir"}},
+
+	// ── getent ────────────────────────────────────────────────────────
+	{Name: "getent.passwd"},
+	{Name: "getent.lookup_user", Args: []string{"key"}},
+	{Name: "getent.groups"},
+	{Name: "getent.lookup_group", Args: []string{"key"}},
+	{Name: "getent.services"},
+	{Name: "getent.lookup_service", Args: []string{"key"}},
+	{Name: "getent.protocols"},
+	{Name: "getent.lookup_protocol", Args: []string{"key"}},
+	{Name: "getent.shells"},
+
+	// ── haproxy ───────────────────────────────────────────────────────
+	{Name: "haproxy.get_status"},
+	{Name: "haproxy.list_backends", Args: []string{"socket"}},
+	{Name: "haproxy.enable_backend", Args: []string{"backend", "server", "socket"}, Mutating: true},
+	{Name: "haproxy.disable_backend", Args: []string{"backend", "server", "socket"}, Mutating: true},
+	{Name: "haproxy.validate_config", Args: []string{"config_file"}},
+	{Name: "haproxy.reload", Args: []string{"config_file"}, Mutating: true},
+	{Name: "haproxy.restart", Mutating: true},
+	{Name: "haproxy.version"},
+
 	// ── selinux ───────────────────────────────────────────────────────
 	{Name: "selinux.get"},
 	{Name: "selinux.set", Args: []string{"mode"}, Mutating: true},
