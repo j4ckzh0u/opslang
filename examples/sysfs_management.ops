@@ -1,0 +1,119 @@
+// sysfs 系统属性管理示例
+// sysfs attribute management example
+
+// 读取 sysfs 属性
+block {
+    let mtu = sysfs.read("/sys/class/net/lo/mtu")
+    report {
+        path: "/sys/class/net/lo/mtu",
+        value: mtu.value
+    }
+}
+rescue {
+    print("sysfs.read failed: " + _error)
+}
+
+// 检查 sysfs 属性是否存在
+block {
+    let exists = sysfs.exists("/sys/class/net/lo/mtu")
+    report {
+        path: "/sys/class/net/lo/mtu",
+        exists: exists.exists
+    }
+}
+rescue {
+    print("sysfs.exists failed: " + _error)
+}
+
+// 获取 sysfs 属性详细信息
+block {
+    let attr = sysfs.get("/sys/class/net/lo/mtu")
+    report {
+        path: attr.path,
+        value: attr.value,
+        mode: attr.mode
+    }
+}
+rescue {
+    print("sysfs.get failed: " + _error)
+}
+
+// 列出 sysfs 目录中的所有属性
+block {
+    let attrs = sysfs.list("/sys/class/net/lo")
+    report {
+        directory: "/sys/class/net/lo",
+        total_attributes: len(attrs.attributes)
+    }
+    for attr in attrs.attributes {
+        report {
+            path: attr.path,
+            value: attr.value
+        }
+    }
+}
+rescue {
+    print("sysfs.list failed: " + _error)
+}
+
+// 写入 sysfs 属性（需要 root 权限）
+block {
+    let result = sysfs.write("/sys/class/net/lo/mtu", "1500")
+    report {
+        path: result.path,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("sysfs.write failed (expected without root): " + _error)
+}
+
+// 获取设备电源管理状态
+block {
+    let state = sysfs.get_device_power("/sys/devices/pci0000:00/0000:00:1f.0")
+    report {
+        device: "/sys/devices/pci0000:00/0000:00:1f.0",
+        power_state: state.state
+    }
+}
+rescue {
+    print("sysfs.get_device_power failed: " + _error)
+}
+
+// 设置设备电源管理状态（需要 root 权限）
+block {
+    let result = sysfs.set_device_power("/sys/devices/pci0000:00/0000:00:1f.0", "auto")
+    report {
+        path: result.path,
+        success: result.success
+    }
+}
+rescue {
+    print("sysfs.set_device_power failed: " + _error)
+}
+
+// 读取内核参数
+block {
+    let value = sysfs.get_kernel_parameter("net.ipv4.ip_forward")
+    report {
+        parameter: "net.ipv4.ip_forward",
+        value: value.value
+    }
+}
+rescue {
+    print("sysfs.get_kernel_parameter failed: " + _error)
+}
+
+// 设置内核参数（需要 root 权限）
+block {
+    let result = sysfs.set_kernel_parameter("net.ipv4.ip_forward", "1")
+    report {
+        path: result.path,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("sysfs.set_kernel_parameter failed (expected without root): " + _error)
+}

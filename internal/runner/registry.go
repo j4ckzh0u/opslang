@@ -78,6 +78,7 @@ import (
 	sdkzfs "github.com/opslang/opslang/pkg/ops-core-sdk/zfs"
 	sdknmcli "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli"
 	sdkcrypttab "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab"
+	sdksysfs "github.com/opslang/opslang/pkg/ops-core-sdk/sysfs"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -3210,6 +3211,63 @@ func (r *Registry) registerExtensions() {
 	r.Register("crypttab.backup", func(args map[string]interface{}) (interface{}, error) {
 		backupDir, _ := argString(args, "backup_dir")
 		return sdkcrypttab.Backup(backupDir)
+	})
+
+	// ── sysfs ─────────────────────────────────────────────────────────────
+	r.Register("sysfs.read", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		value, err := sdksysfs.Read(path)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"value": value}, nil
+	})
+	r.Register("sysfs.write", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		value, _ := argString(args, "value")
+		return sdksysfs.Write(path, value)
+	})
+	r.Register("sysfs.exists", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		exists, err := sdksysfs.Exists(path)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"exists": exists}, nil
+	})
+	r.Register("sysfs.get", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		return sdksysfs.Get(path)
+	})
+	r.Register("sysfs.list", func(args map[string]interface{}) (interface{}, error) {
+		dirPath, _ := argString(args, "dir_path")
+		return sdksysfs.List(dirPath)
+	})
+	r.Register("sysfs.set_device_power", func(args map[string]interface{}) (interface{}, error) {
+		devicePath, _ := argString(args, "device_path")
+		state, _ := argString(args, "state")
+		return sdksysfs.SetDevicePower(devicePath, state)
+	})
+	r.Register("sysfs.get_device_power", func(args map[string]interface{}) (interface{}, error) {
+		devicePath, _ := argString(args, "device_path")
+		state, err := sdksysfs.GetDevicePower(devicePath)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"state": state}, nil
+	})
+	r.Register("sysfs.set_kernel_parameter", func(args map[string]interface{}) (interface{}, error) {
+		param, _ := argString(args, "param")
+		value, _ := argString(args, "value")
+		return sdksysfs.SetKernelParameter(param, value)
+	})
+	r.Register("sysfs.get_kernel_parameter", func(args map[string]interface{}) (interface{}, error) {
+		param, _ := argString(args, "param")
+		value, err := sdksysfs.GetKernelParameter(param)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"value": value}, nil
 	})
 }
 

@@ -77,6 +77,7 @@ import (
 	sdkzfs "github.com/opslang/opslang/pkg/ops-core-sdk/zfs"
 	sdknmcli "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli"
 	sdkcrypttab "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab"
+	sdksysfs "github.com/opslang/opslang/pkg/ops-core-sdk/sysfs"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -1360,6 +1361,146 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return r, nil
+	}
+
+	// ── sysfs.* ────────────────────────────────────────────────────────
+	interp.builtins["sysfs.read"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysfs.read() requires 1 argument (path)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysfs.read(): first argument must be string")
+		}
+		r, err := sdksysfs.Read(path)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"value": r}, nil
+	}
+	interp.builtins["sysfs.write"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("sysfs.write() requires 2 arguments (path, value)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysfs.write(): first argument must be string")
+		}
+		value, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysfs.write(): second argument must be string")
+		}
+		r, err := sdksysfs.Write(path, value)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysfs.exists"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysfs.exists() requires 1 argument (path)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysfs.exists(): first argument must be string")
+		}
+		r, err := sdksysfs.Exists(path)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"exists": r}, nil
+	}
+	interp.builtins["sysfs.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysfs.get() requires 1 argument (path)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysfs.get(): first argument must be string")
+		}
+		r, err := sdksysfs.Get(path)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysfs.list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysfs.list() requires 1 argument (dir_path)")
+		}
+		dirPath, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysfs.list(): first argument must be string")
+		}
+		r, err := sdksysfs.List(dirPath)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysfs.set_device_power"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("sysfs.set_device_power() requires 2 arguments (device_path, state)")
+		}
+		devicePath, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysfs.set_device_power(): first argument must be string")
+		}
+		state, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysfs.set_device_power(): second argument must be string")
+		}
+		r, err := sdksysfs.SetDevicePower(devicePath, state)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysfs.get_device_power"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysfs.get_device_power() requires 1 argument (device_path)")
+		}
+		devicePath, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysfs.get_device_power(): first argument must be string")
+		}
+		r, err := sdksysfs.GetDevicePower(devicePath)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"state": r}, nil
+	}
+	interp.builtins["sysfs.set_kernel_parameter"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("sysfs.set_kernel_parameter() requires 2 arguments (param, value)")
+		}
+		param, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysfs.set_kernel_parameter(): first argument must be string")
+		}
+		value, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysfs.set_kernel_parameter(): second argument must be string")
+		}
+		r, err := sdksysfs.SetKernelParameter(param, value)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysfs.get_kernel_parameter"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysfs.get_kernel_parameter() requires 1 argument (param)")
+		}
+		param, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("sysfs.get_kernel_parameter(): first argument must be string")
+		}
+		r, err := sdksysfs.GetKernelParameter(param)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"value": r}, nil
 	}
 
 	// ── selinux.* ────────────────────────────────────────────────────────

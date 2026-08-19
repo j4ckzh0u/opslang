@@ -274,6 +274,17 @@ var Funcs = []Func{
 	{Name: "crypttab.validate"},
 	{Name: "crypttab.backup", Args: []string{"backup_dir"}, Mutating: true},
 
+	// ── sysfs ────────────────────────────────────────────────────────────
+	{Name: "sysfs.read", Args: []string{"path"}},
+	{Name: "sysfs.write", Args: []string{"path", "value"}, Mutating: true},
+	{Name: "sysfs.exists", Args: []string{"path"}},
+	{Name: "sysfs.get", Args: []string{"path"}},
+	{Name: "sysfs.list", Args: []string{"dir_path"}},
+	{Name: "sysfs.set_device_power", Args: []string{"device_path", "state"}, Mutating: true},
+	{Name: "sysfs.get_device_power", Args: []string{"device_path"}},
+	{Name: "sysfs.set_kernel_parameter", Args: []string{"param", "value"}, Mutating: true},
+	{Name: "sysfs.get_kernel_parameter", Args: []string{"param"}},
+
 	// ── selinux ───────────────────────────────────────────────────────
 	{Name: "selinux.get"},
 	{Name: "selinux.set", Args: []string{"mode"}, Mutating: true},

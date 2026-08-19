@@ -548,6 +548,17 @@ var sdkMapping = map[string]sdkFunc{
 	"crypttab.exists":   {pkg: "crypttab", goName: "Exists", args: true, params: []string{"s"}},
 	"crypttab.validate": {pkg: "crypttab", goName: "Validate"},
 	"crypttab.backup":   {pkg: "crypttab", goName: "Backup", args: true, params: []string{"s"}},
+
+	// ── sysfs ─────────────────────────────────────────────────────────────
+	"sysfs.read":                {pkg: "sysfs", goName: "Read", args: true, params: []string{"s"}},
+	"sysfs.write":               {pkg: "sysfs", goName: "Write", args: true, params: []string{"s", "s"}},
+	"sysfs.exists":              {pkg: "sysfs", goName: "Exists", args: true, params: []string{"s"}},
+	"sysfs.get":                 {pkg: "sysfs", goName: "Get", args: true, params: []string{"s"}},
+	"sysfs.list":                {pkg: "sysfs", goName: "List", args: true, params: []string{"s"}},
+	"sysfs.set_device_power":    {pkg: "sysfs", goName: "SetDevicePower", args: true, params: []string{"s", "s"}},
+	"sysfs.get_device_power":    {pkg: "sysfs", goName: "GetDevicePower", args: true, params: []string{"s"}},
+	"sysfs.set_kernel_parameter": {pkg: "sysfs", goName: "SetKernelParameter", args: true, params: []string{"s", "s"}},
+	"sysfs.get_kernel_parameter": {pkg: "sysfs", goName: "GetKernelParameter", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -679,6 +690,7 @@ var pkgImportAlias = map[string]string{
 	"zfs":            "opszfs",
 	"nmcli":          "opsnmcli",
 	"crypttab":       "opscrypttab",
+	"sysfs":          "opssysfs",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -736,6 +748,7 @@ var pkgImportPath = map[string]string{
 	"zfs":            "github.com/opslang/opslang/pkg/ops-core-sdk/zfs",
 	"nmcli":          "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli",
 	"crypttab":       "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab",
+	"sysfs":          "github.com/opslang/opslang/pkg/ops-core-sdk/sysfs",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
