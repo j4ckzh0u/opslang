@@ -10,9 +10,11 @@ fn analyze_boot_performance() {
     // 获取启动最慢的服务
     let blame = systemd_analyze.blame()
     print("\n启动最慢的前 10 个服务:")
-    for i, entry in blame.entries {
-        if i < 10 {
+    let count = 0
+    for entry in blame.entries {
+        if count < 10 {
             print(entry.time + " - " + entry.unit)
+            count = count + 1
         }
     }
 

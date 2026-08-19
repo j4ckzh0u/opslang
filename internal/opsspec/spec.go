@@ -792,6 +792,41 @@ var Funcs = []Func{
 	{Name: "ipaddr.links"},
 	{Name: "ipaddr.link_up", Args: []string{"interface"}, Mutating: true},
 	{Name: "ipaddr.link_down", Args: []string{"interface"}, Mutating: true},
+
+	// ── udevadm ───────────────────────────────────────────────────────────
+	{Name: "udevadm.control", Args: []string{"action"}, Mutating: true},
+	{Name: "udevadm.trigger", Args: []string{"subsystem"}, Mutating: true},
+	{Name: "udevadm.settle", Args: []string{"timeout"}},
+	{Name: "udevadm.info", Args: []string{"query", "device"}},
+	{Name: "udevadm.monitor"},
+
+	// ── modinfo ───────────────────────────────────────────────────────────
+	{Name: "modinfo.info", Args: []string{"module"}},
+	{Name: "modinfo.list"},
+	{Name: "modinfo.version"},
+
+	// ── dconf ─────────────────────────────────────────────────────────────
+	{Name: "dconf.read", Args: []string{"key"}},
+	{Name: "dconf.write", Args: []string{"key", "value"}, Mutating: true},
+	{Name: "dconf.list", Args: []string{"dir"}},
+	{Name: "dconf.reset", Args: []string{"key"}, Mutating: true},
+
+	// ── locale_gen ────────────────────────────────────────────────────────
+	{Name: "locale_gen.generate", Args: []string{"locale"}, Mutating: true},
+	{Name: "locale_gen.list"},
+	{Name: "locale_gen.remove", Args: []string{"locale"}, Mutating: true},
+
+	// ── pam_limits ────────────────────────────────────────────────────────
+	{Name: "pam_limits.set", Args: []string{"domain", "type", "item", "value"}, Mutating: true},
+	{Name: "pam_limits.list"},
+
+	// ── motd ──────────────────────────────────────────────────────────────
+	{Name: "motd.read"},
+	{Name: "motd.write", Args: []string{"content"}, Mutating: true},
+
+	// ── issue ─────────────────────────────────────────────────────────────
+	{Name: "issue.read"},
+	{Name: "issue.write", Args: []string{"content"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

@@ -102,6 +102,13 @@ import (
 	sdknvme "github.com/opslang/opslang/pkg/ops-core-sdk/nvme"
 	sdkslshw "github.com/opslang/opslang/pkg/ops-core-sdk/lshw"
 	sdkipaddr "github.com/opslang/opslang/pkg/ops-core-sdk/ipaddr"
+	sdkudevadm "github.com/opslang/opslang/pkg/ops-core-sdk/udevadm"
+	sdkmodinfo "github.com/opslang/opslang/pkg/ops-core-sdk/modinfo"
+	sdkdconf "github.com/opslang/opslang/pkg/ops-core-sdk/dconf"
+	sdklocale_gen "github.com/opslang/opslang/pkg/ops-core-sdk/locale_gen"
+	sdkpam_limits "github.com/opslang/opslang/pkg/ops-core-sdk/pam_limits"
+	sdkmotd "github.com/opslang/opslang/pkg/ops-core-sdk/motd"
+	sdkissue "github.com/opslang/opslang/pkg/ops-core-sdk/issue"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -4085,6 +4092,102 @@ func (r *Registry) registerExtensions() {
 	r.Register("ipaddr.link_down", func(args map[string]interface{}) (interface{}, error) {
 		iface, _ := argString(args, "interface")
 		return sdkipaddr.LinkDown(iface), nil
+	})
+
+	// ── udevadm ───────────────────────────────────────────────────────────
+	r.Register("udevadm.control", func(args map[string]interface{}) (interface{}, error) {
+		action, _ := argString(args, "action")
+		return sdkudevadm.Control(action), nil
+	})
+	r.Register("udevadm.trigger", func(args map[string]interface{}) (interface{}, error) {
+		subsystem, _ := argString(args, "subsystem")
+		return sdkudevadm.Trigger(subsystem), nil
+	})
+	r.Register("udevadm.settle", func(args map[string]interface{}) (interface{}, error) {
+		timeout, _ := argInt(args, "timeout")
+		return sdkudevadm.Settle(timeout), nil
+	})
+	r.Register("udevadm.info", func(args map[string]interface{}) (interface{}, error) {
+		query, _ := argString(args, "query")
+		device, _ := argString(args, "device")
+		return sdkudevadm.Info(query, device), nil
+	})
+	r.Register("udevadm.monitor", func(args map[string]interface{}) (interface{}, error) {
+		return sdkudevadm.Monitor(), nil
+	})
+
+	// ── modinfo ───────────────────────────────────────────────────────────
+	r.Register("modinfo.info", func(args map[string]interface{}) (interface{}, error) {
+		module, _ := argString(args, "module")
+		return sdkmodinfo.Info(module), nil
+	})
+	r.Register("modinfo.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmodinfo.List(), nil
+	})
+	r.Register("modinfo.version", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmodinfo.Version(), nil
+	})
+
+	// ── dconf ─────────────────────────────────────────────────────────────
+	r.Register("dconf.read", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		return sdkdconf.Read(key), nil
+	})
+	r.Register("dconf.write", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		value, _ := argString(args, "value")
+		return sdkdconf.Write(key, value), nil
+	})
+	r.Register("dconf.list", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "dir")
+		return sdkdconf.List(dir), nil
+	})
+	r.Register("dconf.reset", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := argString(args, "key")
+		return sdkdconf.Reset(key), nil
+	})
+
+	// ── locale_gen ────────────────────────────────────────────────────────
+	r.Register("locale_gen.generate", func(args map[string]interface{}) (interface{}, error) {
+		locale, _ := argString(args, "locale")
+		return sdklocale_gen.Generate(locale), nil
+	})
+	r.Register("locale_gen.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdklocale_gen.List(), nil
+	})
+	r.Register("locale_gen.remove", func(args map[string]interface{}) (interface{}, error) {
+		locale, _ := argString(args, "locale")
+		return sdklocale_gen.Remove(locale), nil
+	})
+
+	// ── pam_limits ────────────────────────────────────────────────────────
+	r.Register("pam_limits.set", func(args map[string]interface{}) (interface{}, error) {
+		domain, _ := argString(args, "domain")
+		limitType, _ := argString(args, "type")
+		item, _ := argString(args, "item")
+		value, _ := argString(args, "value")
+		return sdkpam_limits.Set(domain, limitType, item, value), nil
+	})
+	r.Register("pam_limits.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpam_limits.List(), nil
+	})
+
+	// ── motd ──────────────────────────────────────────────────────────────
+	r.Register("motd.read", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmotd.Read(), nil
+	})
+	r.Register("motd.write", func(args map[string]interface{}) (interface{}, error) {
+		content, _ := argString(args, "content")
+		return sdkmotd.Write(content), nil
+	})
+
+	// ── issue ─────────────────────────────────────────────────────────────
+	r.Register("issue.read", func(args map[string]interface{}) (interface{}, error) {
+		return sdkissue.Read(), nil
+	})
+	r.Register("issue.write", func(args map[string]interface{}) (interface{}, error) {
+		content, _ := argString(args, "content")
+		return sdkissue.Write(content), nil
 	})
 }
 

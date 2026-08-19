@@ -767,6 +767,41 @@ var sdkMapping = map[string]sdkFunc{
 	"ipaddr.links":          {pkg: "ipaddr", goName: "Links"},
 	"ipaddr.link_up":        {pkg: "ipaddr", goName: "LinkUp", args: true, params: []string{"s"}},
 	"ipaddr.link_down":      {pkg: "ipaddr", goName: "LinkDown", args: true, params: []string{"s"}},
+
+	// udevadm
+	"udevadm.control": {pkg: "udevadm", goName: "Control", args: true, params: []string{"s"}},
+	"udevadm.trigger": {pkg: "udevadm", goName: "Trigger", args: true, params: []string{"s"}},
+	"udevadm.settle":  {pkg: "udevadm", goName: "Settle", args: true, params: []string{"i"}},
+	"udevadm.info":    {pkg: "udevadm", goName: "Info", args: true, params: []string{"s", "s"}},
+	"udevadm.monitor": {pkg: "udevadm", goName: "Monitor"},
+
+	// modinfo
+	"modinfo.info":    {pkg: "modinfo", goName: "Info", args: true, params: []string{"s"}},
+	"modinfo.list":    {pkg: "modinfo", goName: "List"},
+	"modinfo.version": {pkg: "modinfo", goName: "Version"},
+
+	// dconf
+	"dconf.read":  {pkg: "dconf", goName: "Read", args: true, params: []string{"s"}},
+	"dconf.write": {pkg: "dconf", goName: "Write", args: true, params: []string{"s", "s"}},
+	"dconf.list":  {pkg: "dconf", goName: "List", args: true, params: []string{"s"}},
+	"dconf.reset": {pkg: "dconf", goName: "Reset", args: true, params: []string{"s"}},
+
+	// locale_gen
+	"locale_gen.generate": {pkg: "locale_gen", goName: "Generate", args: true, params: []string{"s"}},
+	"locale_gen.list":     {pkg: "locale_gen", goName: "List"},
+	"locale_gen.remove":   {pkg: "locale_gen", goName: "Remove", args: true, params: []string{"s"}},
+
+	// pam_limits
+	"pam_limits.set":  {pkg: "pam_limits", goName: "Set", args: true, params: []string{"s", "s", "s", "s"}},
+	"pam_limits.list": {pkg: "pam_limits", goName: "List"},
+
+	// motd
+	"motd.read":  {pkg: "motd", goName: "Read"},
+	"motd.write": {pkg: "motd", goName: "Write", args: true, params: []string{"s"}},
+
+	// issue
+	"issue.read":  {pkg: "issue", goName: "Read"},
+	"issue.write": {pkg: "issue", goName: "Write", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -922,6 +957,13 @@ var pkgImportAlias = map[string]string{
 	"nvme":           "opsnvme",
 	"lshw":           "opslshw",
 	"ipaddr":         "opsipaddr",
+	"udevadm":        "opsudevadm",
+	"modinfo":        "opsmodinfo",
+	"dconf":          "opsdconf",
+	"locale_gen":     "opslocale_gen",
+	"pam_limits":     "opspam_limits",
+	"motd":           "opsmotd",
+	"issue":          "opsissue",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1003,6 +1045,13 @@ var pkgImportPath = map[string]string{
 	"nvme":           "github.com/opslang/opslang/pkg/ops-core-sdk/nvme",
 	"lshw":           "github.com/opslang/opslang/pkg/ops-core-sdk/lshw",
 	"ipaddr":         "github.com/opslang/opslang/pkg/ops-core-sdk/ipaddr",
+	"udevadm":        "github.com/opslang/opslang/pkg/ops-core-sdk/udevadm",
+	"modinfo":        "github.com/opslang/opslang/pkg/ops-core-sdk/modinfo",
+	"dconf":          "github.com/opslang/opslang/pkg/ops-core-sdk/dconf",
+	"locale_gen":     "github.com/opslang/opslang/pkg/ops-core-sdk/locale_gen",
+	"pam_limits":     "github.com/opslang/opslang/pkg/ops-core-sdk/pam_limits",
+	"motd":           "github.com/opslang/opslang/pkg/ops-core-sdk/motd",
+	"issue":          "github.com/opslang/opslang/pkg/ops-core-sdk/issue",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

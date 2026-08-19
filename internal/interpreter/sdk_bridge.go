@@ -101,6 +101,13 @@ import (
 	sdknvme "github.com/opslang/opslang/pkg/ops-core-sdk/nvme"
 	sdkslshw "github.com/opslang/opslang/pkg/ops-core-sdk/lshw"
 	sdkipaddr "github.com/opslang/opslang/pkg/ops-core-sdk/ipaddr"
+	sdkudevadm "github.com/opslang/opslang/pkg/ops-core-sdk/udevadm"
+	sdkmodinfo "github.com/opslang/opslang/pkg/ops-core-sdk/modinfo"
+	sdkdconf "github.com/opslang/opslang/pkg/ops-core-sdk/dconf"
+	sdklocale_gen "github.com/opslang/opslang/pkg/ops-core-sdk/locale_gen"
+	sdkpam_limits "github.com/opslang/opslang/pkg/ops-core-sdk/pam_limits"
+	sdkmotd "github.com/opslang/opslang/pkg/ops-core-sdk/motd"
+	sdkissue "github.com/opslang/opslang/pkg/ops-core-sdk/issue"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -6669,6 +6676,192 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			}
 		}
 		return sdkipaddr.LinkDown(iface), nil
+	}
+
+	// ── udevadm ───────────────────────────────────────────────────────────
+	interp.builtins["udevadm.control"] = func(args ...interface{}) (interface{}, error) {
+		action := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				action = s
+			}
+		}
+		return sdkudevadm.Control(action), nil
+	}
+	interp.builtins["udevadm.trigger"] = func(args ...interface{}) (interface{}, error) {
+		subsystem := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				subsystem = s
+			}
+		}
+		return sdkudevadm.Trigger(subsystem), nil
+	}
+	interp.builtins["udevadm.settle"] = func(args ...interface{}) (interface{}, error) {
+		timeout := 120
+		if len(args) > 0 {
+			if i, ok := args[0].(int); ok {
+				timeout = i
+			}
+		}
+		return sdkudevadm.Settle(timeout), nil
+	}
+	interp.builtins["udevadm.info"] = func(args ...interface{}) (interface{}, error) {
+		query, device := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				query = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				device = s
+			}
+		}
+		return sdkudevadm.Info(query, device), nil
+	}
+	interp.builtins["udevadm.monitor"] = func(args ...interface{}) (interface{}, error) {
+		return sdkudevadm.Monitor(), nil
+	}
+
+	// ── modinfo ───────────────────────────────────────────────────────────
+	interp.builtins["modinfo.info"] = func(args ...interface{}) (interface{}, error) {
+		module := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				module = s
+			}
+		}
+		return sdkmodinfo.Info(module), nil
+	}
+	interp.builtins["modinfo.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmodinfo.List(), nil
+	}
+	interp.builtins["modinfo.version"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmodinfo.Version(), nil
+	}
+
+	// ── dconf ─────────────────────────────────────────────────────────────
+	interp.builtins["dconf.read"] = func(args ...interface{}) (interface{}, error) {
+		key := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				key = s
+			}
+		}
+		return sdkdconf.Read(key), nil
+	}
+	interp.builtins["dconf.write"] = func(args ...interface{}) (interface{}, error) {
+		key, value := "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				key = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				value = s
+			}
+		}
+		return sdkdconf.Write(key, value), nil
+	}
+	interp.builtins["dconf.list"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				dir = s
+			}
+		}
+		return sdkdconf.List(dir), nil
+	}
+	interp.builtins["dconf.reset"] = func(args ...interface{}) (interface{}, error) {
+		key := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				key = s
+			}
+		}
+		return sdkdconf.Reset(key), nil
+	}
+
+	// ── locale_gen ────────────────────────────────────────────────────────
+	interp.builtins["locale_gen.generate"] = func(args ...interface{}) (interface{}, error) {
+		locale := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				locale = s
+			}
+		}
+		return sdklocale_gen.Generate(locale), nil
+	}
+	interp.builtins["locale_gen.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdklocale_gen.List(), nil
+	}
+	interp.builtins["locale_gen.remove"] = func(args ...interface{}) (interface{}, error) {
+		locale := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				locale = s
+			}
+		}
+		return sdklocale_gen.Remove(locale), nil
+	}
+
+	// ── pam_limits ────────────────────────────────────────────────────────
+	interp.builtins["pam_limits.set"] = func(args ...interface{}) (interface{}, error) {
+		domain, limitType, item, value := "", "", "", ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				domain = s
+			}
+		}
+		if len(args) > 1 {
+			if s, ok := args[1].(string); ok {
+				limitType = s
+			}
+		}
+		if len(args) > 2 {
+			if s, ok := args[2].(string); ok {
+				item = s
+			}
+		}
+		if len(args) > 3 {
+			if s, ok := args[3].(string); ok {
+				value = s
+			}
+		}
+		return sdkpam_limits.Set(domain, limitType, item, value), nil
+	}
+	interp.builtins["pam_limits.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkpam_limits.List(), nil
+	}
+
+	// ── motd ──────────────────────────────────────────────────────────────
+	interp.builtins["motd.read"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmotd.Read(), nil
+	}
+	interp.builtins["motd.write"] = func(args ...interface{}) (interface{}, error) {
+		content := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				content = s
+			}
+		}
+		return sdkmotd.Write(content), nil
+	}
+
+	// ── issue ─────────────────────────────────────────────────────────────
+	interp.builtins["issue.read"] = func(args ...interface{}) (interface{}, error) {
+		return sdkissue.Read(), nil
+	}
+	interp.builtins["issue.write"] = func(args ...interface{}) (interface{}, error) {
+		content := ""
+		if len(args) > 0 {
+			if s, ok := args[0].(string); ok {
+				content = s
+			}
+		}
+		return sdkissue.Write(content), nil
 	}
 }
 // If the arg at idx is a map[string]interface{}, values are converted to strings.
