@@ -1,0 +1,14 @@
+// apache2_management.ops - Apache2 web server management
+block {
+    let test = apache2.config_test()
+    report { config_test: test }
+
+    let sites = apache2.sites_list()
+    report { sites: sites }
+
+    let mods = apache2.modules_list()
+    report { modules: mods }
+}
+rescue {
+    print("Apache2 not available: " + _error)
+}

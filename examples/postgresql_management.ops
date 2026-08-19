@@ -1,0 +1,11 @@
+// postgresql_management.ops - PostgreSQL database management
+block {
+    let dbs = postgresql.databases()
+    report { databases: dbs }
+
+    let users = postgresql.users()
+    report { users: users }
+}
+rescue {
+    print("PostgreSQL not available: " + _error)
+}

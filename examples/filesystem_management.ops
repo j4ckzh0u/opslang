@@ -1,0 +1,9 @@
+// filesystem_management.ops - Filesystem creation and management
+block {
+    // Check filesystem integrity (read-only)
+    let check = filesystem.check("/dev/sda1")
+    report { check: check }
+}
+rescue {
+    print("Filesystem tools not available: " + _error)
+}

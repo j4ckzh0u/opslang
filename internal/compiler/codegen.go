@@ -334,6 +334,43 @@ var sdkMapping = map[string]sdkFunc{
 	"at.list":     {pkg: "at", goName: "List"},
 	"at.schedule": {pkg: "at", goName: "Schedule", args: true, params: []string{"s", "s"}},
 	"at.remove":   {pkg: "at", goName: "Remove", args: true, params: []string{"s"}},
+
+	// ── postgresql ─────────────────────────────────────────────────────
+	"postgresql.databases":      {pkg: "postgresql", goName: "Databases"},
+	"postgresql.create_database": {pkg: "postgresql", goName: "CreateDatabase", args: true, params: []string{"s"}},
+	"postgresql.drop_database":  {pkg: "postgresql", goName: "DropDatabase", args: true, params: []string{"s"}},
+	"postgresql.users":          {pkg: "postgresql", goName: "Users"},
+	"postgresql.create_user":    {pkg: "postgresql", goName: "CreateUser", args: true, params: []string{"s", "s"}},
+	"postgresql.drop_user":      {pkg: "postgresql", goName: "DropUser", args: true, params: []string{"s"}},
+	"postgresql.grant":          {pkg: "postgresql", goName: "Grant", args: true, params: []string{"s", "s", "s"}},
+
+	// ── apache2 ────────────────────────────────────────────────────────
+	"apache2.config_test":  {pkg: "apache2", goName: "ConfigTest"},
+	"apache2.reload":       {pkg: "apache2", goName: "Reload"},
+	"apache2.sites_list":   {pkg: "apache2", goName: "SitesList"},
+	"apache2.site_enable":  {pkg: "apache2", goName: "SiteEnable", args: true, params: []string{"s"}},
+	"apache2.site_disable": {pkg: "apache2", goName: "SiteDisable", args: true, params: []string{"s"}},
+	"apache2.modules_list": {pkg: "apache2", goName: "ModulesList"},
+	"apache2.module_enable": {pkg: "apache2", goName: "ModuleEnable", args: true, params: []string{"s"}},
+	"apache2.module_disable": {pkg: "apache2", goName: "ModuleDisable", args: true, params: []string{"s"}},
+
+	// ── filesystem ─────────────────────────────────────────────────────
+	"filesystem.mkfs":        {pkg: "filesystem", goName: "Mkfs", args: true, params: []string{"s", "s", "s"}},
+	"filesystem.resize_ext4": {pkg: "filesystem", goName: "ResizeExt4", args: true, params: []string{"s"}},
+	"filesystem.resize_xfs":  {pkg: "filesystem", goName: "ResizeXFS", args: true, params: []string{"s"}},
+	"filesystem.check":       {pkg: "filesystem", goName: "Check", args: true, params: []string{"s"}},
+
+	// ── parted ─────────────────────────────────────────────────────────
+	"parted.list":   {pkg: "parted", goName: "List", args: true, params: []string{"s"}},
+	"parted.mklabel": {pkg: "parted", goName: "MkLabel", args: true, params: []string{"s", "s"}},
+	"parted.mkpart":  {pkg: "parted", goName: "MkPart", args: true, params: []string{"s", "s", "s", "s", "s"}},
+	"parted.rm":      {pkg: "parted", goName: "Rm", args: true, params: []string{"s", "i"}},
+
+	// ── acl ────────────────────────────────────────────────────────────
+	"acl.get":       {pkg: "acl", goName: "Get", args: true, params: []string{"s"}},
+	"acl.set":       {pkg: "acl", goName: "Set", args: true, params: []string{"s", "s", "b"}},
+	"acl.remove":    {pkg: "acl", goName: "Remove", args: true, params: []string{"s", "s", "b"}},
+	"acl.remove_all": {pkg: "acl", goName: "RemoveAll", args: true, params: []string{"s", "b"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -438,6 +475,11 @@ var pkgImportAlias = map[string]string{
 	"alternatives": "opsalternatives",
 	"blockdev":     "opsblockdev",
 	"at":           "opsat",
+	"postgresql":   "opspostgresql",
+	"apache2":      "opsapache2",
+	"filesystem":   "opsfilesystem",
+	"parted":       "opsparted",
+	"acl":          "opsacl",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -468,6 +510,11 @@ var pkgImportPath = map[string]string{
 	"alternatives": "github.com/opslang/opslang/pkg/ops-core-sdk/alternatives",
 	"blockdev":     "github.com/opslang/opslang/pkg/ops-core-sdk/blockdev",
 	"at":           "github.com/opslang/opslang/pkg/ops-core-sdk/at",
+	"postgresql":   "github.com/opslang/opslang/pkg/ops-core-sdk/postgresql",
+	"apache2":      "github.com/opslang/opslang/pkg/ops-core-sdk/apache2",
+	"filesystem":   "github.com/opslang/opslang/pkg/ops-core-sdk/filesystem",
+	"parted":       "github.com/opslang/opslang/pkg/ops-core-sdk/parted",
+	"acl":          "github.com/opslang/opslang/pkg/ops-core-sdk/acl",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

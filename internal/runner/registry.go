@@ -50,6 +50,11 @@ import (
 	sdkalternatives "github.com/opslang/opslang/pkg/ops-core-sdk/alternatives"
 	sdkblockdev "github.com/opslang/opslang/pkg/ops-core-sdk/blockdev"
 	sdkat "github.com/opslang/opslang/pkg/ops-core-sdk/at"
+	sdkpostgresql "github.com/opslang/opslang/pkg/ops-core-sdk/postgresql"
+	sdkapache2 "github.com/opslang/opslang/pkg/ops-core-sdk/apache2"
+	sdkfilesystem "github.com/opslang/opslang/pkg/ops-core-sdk/filesystem"
+	sdkparted "github.com/opslang/opslang/pkg/ops-core-sdk/parted"
+	sdkacl "github.com/opslang/opslang/pkg/ops-core-sdk/acl"
 	sdktimezone "github.com/opslang/opslang/pkg/ops-core-sdk/timezone"
 )
 
@@ -1997,6 +2002,227 @@ func (r *Registry) registerExtensions() {
 			return nil, fmt.Errorf("at.remove: %w", err)
 		}
 		return sdkat.Remove(jobID)
+	})
+
+	// ── postgresql ─────────────────────────────────────────────────────
+	r.Register("postgresql.databases", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpostgresql.Databases()
+	})
+	r.Register("postgresql.create_database", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("postgresql.create_database: %w", err)
+		}
+		return sdkpostgresql.CreateDatabase(name)
+	})
+	r.Register("postgresql.drop_database", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("postgresql.drop_database: %w", err)
+		}
+		return sdkpostgresql.DropDatabase(name)
+	})
+	r.Register("postgresql.users", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpostgresql.Users()
+	})
+	r.Register("postgresql.create_user", func(args map[string]interface{}) (interface{}, error) {
+		user, err := argString(args, "user")
+		if err != nil {
+			return nil, fmt.Errorf("postgresql.create_user: %w", err)
+		}
+		password, err := argString(args, "password")
+		if err != nil {
+			return nil, fmt.Errorf("postgresql.create_user: %w", err)
+		}
+		return sdkpostgresql.CreateUser(user, password)
+	})
+	r.Register("postgresql.drop_user", func(args map[string]interface{}) (interface{}, error) {
+		user, err := argString(args, "user")
+		if err != nil {
+			return nil, fmt.Errorf("postgresql.drop_user: %w", err)
+		}
+		return sdkpostgresql.DropUser(user)
+	})
+	r.Register("postgresql.grant", func(args map[string]interface{}) (interface{}, error) {
+		privileges, err := argString(args, "privileges")
+		if err != nil {
+			return nil, fmt.Errorf("postgresql.grant: %w", err)
+		}
+		database, err := argString(args, "database")
+		if err != nil {
+			return nil, fmt.Errorf("postgresql.grant: %w", err)
+		}
+		user, err := argString(args, "user")
+		if err != nil {
+			return nil, fmt.Errorf("postgresql.grant: %w", err)
+		}
+		return sdkpostgresql.Grant(privileges, database, user)
+	})
+
+	// ── apache2 ────────────────────────────────────────────────────────
+	r.Register("apache2.config_test", func(args map[string]interface{}) (interface{}, error) {
+		return sdkapache2.ConfigTest()
+	})
+	r.Register("apache2.reload", func(args map[string]interface{}) (interface{}, error) {
+		return sdkapache2.Reload()
+	})
+	r.Register("apache2.sites_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkapache2.SitesList()
+	})
+	r.Register("apache2.site_enable", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apache2.site_enable: %w", err)
+		}
+		return sdkapache2.SiteEnable(name)
+	})
+	r.Register("apache2.site_disable", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apache2.site_disable: %w", err)
+		}
+		return sdkapache2.SiteDisable(name)
+	})
+	r.Register("apache2.modules_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkapache2.ModulesList()
+	})
+	r.Register("apache2.module_enable", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apache2.module_enable: %w", err)
+		}
+		return sdkapache2.ModuleEnable(name)
+	})
+	r.Register("apache2.module_disable", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apache2.module_disable: %w", err)
+		}
+		return sdkapache2.ModuleDisable(name)
+	})
+
+	// ── filesystem ─────────────────────────────────────────────────────
+	r.Register("filesystem.mkfs", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("filesystem.mkfs: %w", err)
+		}
+		fsType, err := argString(args, "fstype")
+		if err != nil {
+			return nil, fmt.Errorf("filesystem.mkfs: %w", err)
+		}
+		label, _ := args["label"].(string)
+		return sdkfilesystem.Mkfs(device, fsType, label)
+	})
+	r.Register("filesystem.resize_ext4", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("filesystem.resize_ext4: %w", err)
+		}
+		return sdkfilesystem.ResizeExt4(device)
+	})
+	r.Register("filesystem.resize_xfs", func(args map[string]interface{}) (interface{}, error) {
+		mountpoint, err := argString(args, "mountpoint")
+		if err != nil {
+			return nil, fmt.Errorf("filesystem.resize_xfs: %w", err)
+		}
+		return sdkfilesystem.ResizeXFS(mountpoint)
+	})
+	r.Register("filesystem.check", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("filesystem.check: %w", err)
+		}
+		return sdkfilesystem.Check(device)
+	})
+
+	// ── parted ─────────────────────────────────────────────────────────
+	r.Register("parted.list", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("parted.list: %w", err)
+		}
+		return sdkparted.List(device)
+	})
+	r.Register("parted.mklabel", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("parted.mklabel: %w", err)
+		}
+		labelType, _ := args["label_type"].(string)
+		if labelType == "" {
+			labelType = "gpt"
+		}
+		return sdkparted.MkLabel(device, labelType)
+	})
+	r.Register("parted.mkpart", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("parted.mkpart: %w", err)
+		}
+		partType, _ := args["part_type"].(string)
+		fsType, _ := args["fstype"].(string)
+		start, err := argString(args, "start")
+		if err != nil {
+			return nil, fmt.Errorf("parted.mkpart: %w", err)
+		}
+		end, err := argString(args, "end")
+		if err != nil {
+			return nil, fmt.Errorf("parted.mkpart: %w", err)
+		}
+		return sdkparted.MkPart(device, partType, fsType, start, end)
+	})
+	r.Register("parted.rm", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("parted.rm: %w", err)
+		}
+		number, err := argInt(args, "number")
+		if err != nil {
+			return nil, fmt.Errorf("parted.rm: %w", err)
+		}
+		return sdkparted.Rm(device, number)
+	})
+
+	// ── acl ────────────────────────────────────────────────────────────
+	r.Register("acl.get", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("acl.get: %w", err)
+		}
+		return sdkacl.Get(path)
+	})
+	r.Register("acl.set", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("acl.set: %w", err)
+		}
+		entry, err := argString(args, "entry")
+		if err != nil {
+			return nil, fmt.Errorf("acl.set: %w", err)
+		}
+		recursive, _ := argBool(args, "recursive")
+		return sdkacl.Set(path, entry, recursive)
+	})
+	r.Register("acl.remove", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("acl.remove: %w", err)
+		}
+		entry, err := argString(args, "entry")
+		if err != nil {
+			return nil, fmt.Errorf("acl.remove: %w", err)
+		}
+		recursive, _ := argBool(args, "recursive")
+		return sdkacl.Remove(path, entry, recursive)
+	})
+	r.Register("acl.remove_all", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("acl.remove_all: %w", err)
+		}
+		recursive, _ := argBool(args, "recursive")
+		return sdkacl.RemoveAll(path, recursive)
 	})
 }
 

@@ -360,6 +360,43 @@ var Funcs = []Func{
 	{Name: "at.list"},
 	{Name: "at.schedule", Args: []string{"command", "time_spec"}, Mutating: true},
 	{Name: "at.remove", Args: []string{"job_id"}, Mutating: true},
+
+	// ── postgresql ─────────────────────────────────────────────────────
+	{Name: "postgresql.databases"},
+	{Name: "postgresql.create_database", Args: []string{"name"}, Mutating: true},
+	{Name: "postgresql.drop_database", Args: []string{"name"}, Mutating: true},
+	{Name: "postgresql.users"},
+	{Name: "postgresql.create_user", Args: []string{"user", "password"}, Mutating: true},
+	{Name: "postgresql.drop_user", Args: []string{"user"}, Mutating: true},
+	{Name: "postgresql.grant", Args: []string{"privileges", "database", "user"}, Mutating: true},
+
+	// ── apache2 ────────────────────────────────────────────────────────
+	{Name: "apache2.config_test"},
+	{Name: "apache2.reload", Mutating: true},
+	{Name: "apache2.sites_list"},
+	{Name: "apache2.site_enable", Args: []string{"name"}, Mutating: true},
+	{Name: "apache2.site_disable", Args: []string{"name"}, Mutating: true},
+	{Name: "apache2.modules_list"},
+	{Name: "apache2.module_enable", Args: []string{"name"}, Mutating: true},
+	{Name: "apache2.module_disable", Args: []string{"name"}, Mutating: true},
+
+	// ── filesystem ─────────────────────────────────────────────────────
+	{Name: "filesystem.mkfs", Args: []string{"device", "fstype", "label"}, Mutating: true},
+	{Name: "filesystem.resize_ext4", Args: []string{"device"}, Mutating: true},
+	{Name: "filesystem.resize_xfs", Args: []string{"mountpoint"}, Mutating: true},
+	{Name: "filesystem.check", Args: []string{"device"}},
+
+	// ── parted ─────────────────────────────────────────────────────────
+	{Name: "parted.list", Args: []string{"device"}},
+	{Name: "parted.mklabel", Args: []string{"device", "label_type"}, Mutating: true},
+	{Name: "parted.mkpart", Args: []string{"device", "part_type", "fstype", "start", "end"}, Mutating: true},
+	{Name: "parted.rm", Args: []string{"device", "number"}, Mutating: true},
+
+	// ── acl ────────────────────────────────────────────────────────────
+	{Name: "acl.get", Args: []string{"path"}},
+	{Name: "acl.set", Args: []string{"path", "entry", "recursive"}, Mutating: true},
+	{Name: "acl.remove", Args: []string{"path", "entry", "recursive"}, Mutating: true},
+	{Name: "acl.remove_all", Args: []string{"path", "recursive"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

@@ -1,0 +1,8 @@
+// disk_partition.ops - Disk partition management with parted
+block {
+    let parts = parted.list("/dev/sda")
+    report { partitions: parts }
+}
+rescue {
+    print("Parted not available: " + _error)
+}

@@ -49,6 +49,11 @@ import (
 	sdkalternatives "github.com/opslang/opslang/pkg/ops-core-sdk/alternatives"
 	sdkblockdev "github.com/opslang/opslang/pkg/ops-core-sdk/blockdev"
 	sdkat "github.com/opslang/opslang/pkg/ops-core-sdk/at"
+	sdkpostgresql "github.com/opslang/opslang/pkg/ops-core-sdk/postgresql"
+	sdkapache2 "github.com/opslang/opslang/pkg/ops-core-sdk/apache2"
+	sdkfilesystem "github.com/opslang/opslang/pkg/ops-core-sdk/filesystem"
+	sdkparted "github.com/opslang/opslang/pkg/ops-core-sdk/parted"
+	sdkacl "github.com/opslang/opslang/pkg/ops-core-sdk/acl"
 	sdkyumrepo "github.com/opslang/opslang/pkg/ops-core-sdk/yum_repo"
 )
 
@@ -3241,6 +3246,314 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		jobID, _ := args[0].(string)
 		r, err := sdkat.Remove(jobID)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── postgresql ─────────────────────────────────────────────────────
+	interp.builtins["postgresql.databases"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpostgresql.Databases()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["postgresql.create_database"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("postgresql.create_database() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkpostgresql.CreateDatabase(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["postgresql.drop_database"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("postgresql.drop_database() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkpostgresql.DropDatabase(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["postgresql.users"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpostgresql.Users()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["postgresql.create_user"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("postgresql.create_user() requires 2 arguments (user, password)")
+		}
+		user, _ := args[0].(string)
+		password, _ := args[1].(string)
+		r, err := sdkpostgresql.CreateUser(user, password)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["postgresql.drop_user"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("postgresql.drop_user() requires 1 argument (user)")
+		}
+		user, _ := args[0].(string)
+		r, err := sdkpostgresql.DropUser(user)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["postgresql.grant"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("postgresql.grant() requires 3 arguments (privileges, database, user)")
+		}
+		privileges, _ := args[0].(string)
+		database, _ := args[1].(string)
+		user, _ := args[2].(string)
+		r, err := sdkpostgresql.Grant(privileges, database, user)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── apache2 ────────────────────────────────────────────────────────
+	interp.builtins["apache2.config_test"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapache2.ConfigTest()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apache2.reload"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapache2.Reload()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apache2.sites_list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapache2.SitesList()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apache2.site_enable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apache2.site_enable() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkapache2.SiteEnable(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apache2.site_disable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apache2.site_disable() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkapache2.SiteDisable(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apache2.modules_list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapache2.ModulesList()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apache2.module_enable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apache2.module_enable() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkapache2.ModuleEnable(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apache2.module_disable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apache2.module_disable() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkapache2.ModuleDisable(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── filesystem ─────────────────────────────────────────────────────
+	interp.builtins["filesystem.mkfs"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("filesystem.mkfs() requires at least 2 arguments (device, fstype)")
+		}
+		device, _ := args[0].(string)
+		fsType, _ := args[1].(string)
+		label := getStringArgBridge(args, 2, "")
+		r, err := sdkfilesystem.Mkfs(device, fsType, label)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["filesystem.resize_ext4"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("filesystem.resize_ext4() requires 1 argument (device)")
+		}
+		device, _ := args[0].(string)
+		r, err := sdkfilesystem.ResizeExt4(device)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["filesystem.resize_xfs"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("filesystem.resize_xfs() requires 1 argument (mountpoint)")
+		}
+		mountpoint, _ := args[0].(string)
+		r, err := sdkfilesystem.ResizeXFS(mountpoint)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["filesystem.check"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("filesystem.check() requires 1 argument (device)")
+		}
+		device, _ := args[0].(string)
+		r, err := sdkfilesystem.Check(device)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── parted ─────────────────────────────────────────────────────────
+	interp.builtins["parted.list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("parted.list() requires 1 argument (device)")
+		}
+		device, _ := args[0].(string)
+		r, err := sdkparted.List(device)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["parted.mklabel"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("parted.mklabel() requires at least 1 argument (device)")
+		}
+		device, _ := args[0].(string)
+		labelType := getStringArgBridge(args, 1, "gpt")
+		r, err := sdkparted.MkLabel(device, labelType)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["parted.mkpart"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 {
+			return nil, fmt.Errorf("parted.mkpart() requires 5 arguments (device, part_type, fstype, start, end)")
+		}
+		device, _ := args[0].(string)
+		partType, _ := args[1].(string)
+		fsType, _ := args[2].(string)
+		start, _ := args[3].(string)
+		end, _ := args[4].(string)
+		r, err := sdkparted.MkPart(device, partType, fsType, start, end)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["parted.rm"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("parted.rm() requires 2 arguments (device, number)")
+		}
+		device, _ := args[0].(string)
+		number := int(opsFloat(args, 1))
+		r, err := sdkparted.Rm(device, number)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── acl ────────────────────────────────────────────────────────────
+	interp.builtins["acl.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("acl.get() requires 1 argument (path)")
+		}
+		path, _ := args[0].(string)
+		r, err := sdkacl.Get(path)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["acl.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("acl.set() requires at least 2 arguments (path, entry)")
+		}
+		path, _ := args[0].(string)
+		entry, _ := args[1].(string)
+		recursive := false
+		if len(args) > 2 {
+			recursive, _ = args[2].(bool)
+		}
+		r, err := sdkacl.Set(path, entry, recursive)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["acl.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("acl.remove() requires at least 2 arguments (path, entry)")
+		}
+		path, _ := args[0].(string)
+		entry, _ := args[1].(string)
+		recursive := false
+		if len(args) > 2 {
+			recursive, _ = args[2].(bool)
+		}
+		r, err := sdkacl.Remove(path, entry, recursive)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["acl.remove_all"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("acl.remove_all() requires at least 1 argument (path)")
+		}
+		path, _ := args[0].(string)
+		recursive := false
+		if len(args) > 1 {
+			recursive, _ = args[1].(bool)
+		}
+		r, err := sdkacl.RemoveAll(path, recursive)
 		if err != nil {
 			return nil, err
 		}
