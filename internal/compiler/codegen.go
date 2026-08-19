@@ -526,6 +526,18 @@ var sdkMapping = map[string]sdkFunc{
 	"zfs.get_pool_status":  {pkg: "zfs", goName: "GetPoolStatus", args: true, params: []string{"s"}},
 	"zfs.snapshot":         {pkg: "zfs", goName: "Snapshot", args: true, params: []string{"s", "s"}},
 	"zfs.destroy_snapshot": {pkg: "zfs", goName: "DestroySnapshot", args: true, params: []string{"s", "s"}},
+
+	// ── nmcli ─────────────────────────────────────────────────────────────
+	"nmcli.add":                {pkg: "nmcli", goName: "Add", args: true, params: []string{"s", "s", "ms"}},
+	"nmcli.modify":             {pkg: "nmcli", goName: "Modify", args: true, params: []string{"s", "ms"}},
+	"nmcli.delete":             {pkg: "nmcli", goName: "Delete", args: true, params: []string{"s"}},
+	"nmcli.up":                 {pkg: "nmcli", goName: "Up", args: true, params: []string{"s"}},
+	"nmcli.down":               {pkg: "nmcli", goName: "Down", args: true, params: []string{"s"}},
+	"nmcli.list":               {pkg: "nmcli", goName: "List"},
+	"nmcli.show":               {pkg: "nmcli", goName: "Show", args: true, params: []string{"s"}},
+	"nmcli.list_devices":       {pkg: "nmcli", goName: "ListDevices"},
+	"nmcli.reload":             {pkg: "nmcli", goName: "Reload"},
+	"nmcli.get_general_status": {pkg: "nmcli", goName: "GetGeneralStatus"},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -655,6 +667,7 @@ var pkgImportAlias = map[string]string{
 	"snap":           "opssnap",
 	"flatpak":        "opsflatpak",
 	"zfs":            "opszfs",
+	"nmcli":          "opsnmcli",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -710,6 +723,7 @@ var pkgImportPath = map[string]string{
 	"snap":           "github.com/opslang/opslang/pkg/ops-core-sdk/snap",
 	"flatpak":        "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak",
 	"zfs":            "github.com/opslang/opslang/pkg/ops-core-sdk/zfs",
+	"nmcli":          "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

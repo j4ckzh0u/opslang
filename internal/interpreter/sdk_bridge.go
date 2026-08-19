@@ -75,6 +75,7 @@ import (
 	sefcontext "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext"
 	sdkflatpak "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak"
 	sdkzfs "github.com/opslang/opslang/pkg/ops-core-sdk/zfs"
+	sdknmcli "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -1097,6 +1098,146 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return structToMap(r)
+	}
+
+	// ── nmcli.* ────────────────────────────────────────────────────────
+	interp.builtins["nmcli.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("nmcli.add() requires 2-3 arguments (name, type, settings)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("nmcli.add(): first argument must be string")
+		}
+		connType, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("nmcli.add(): second argument must be string")
+		}
+		var settings map[string]string
+		if len(args) > 2 && args[2] != nil {
+			if m, ok := args[2].(map[string]interface{}); ok {
+				settings = make(map[string]string)
+				for k, v := range m {
+					if s, ok := v.(string); ok {
+						settings[k] = s
+					}
+				}
+			}
+		}
+		r, err := sdknmcli.Add(name, connType, settings)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nmcli.modify"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("nmcli.modify() requires 2 arguments (name, settings)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("nmcli.modify(): first argument must be string")
+		}
+		var settings map[string]string
+		if args[1] != nil {
+			if m, ok := args[1].(map[string]interface{}); ok {
+				settings = make(map[string]string)
+				for k, v := range m {
+					if s, ok := v.(string); ok {
+						settings[k] = s
+					}
+				}
+			}
+		}
+		r, err := sdknmcli.Modify(name, settings)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nmcli.delete"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("nmcli.delete() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("nmcli.delete(): first argument must be string")
+		}
+		r, err := sdknmcli.Delete(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nmcli.up"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("nmcli.up() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("nmcli.up(): first argument must be string")
+		}
+		r, err := sdknmcli.Up(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nmcli.down"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("nmcli.down() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("nmcli.down(): first argument must be string")
+		}
+		r, err := sdknmcli.Down(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nmcli.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdknmcli.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nmcli.show"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("nmcli.show() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("nmcli.show(): first argument must be string")
+		}
+		r, err := sdknmcli.Show(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nmcli.list_devices"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdknmcli.ListDevices()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nmcli.reload"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdknmcli.Reload()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nmcli.get_general_status"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdknmcli.GetGeneralStatus()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
 	}
 
 	// ── selinux.* ────────────────────────────────────────────────────────

@@ -76,6 +76,7 @@ import (
 	sdksefcontext "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext"
 	sdkflatpak "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak"
 	sdkzfs "github.com/opslang/opslang/pkg/ops-core-sdk/zfs"
+	sdknmcli "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -3105,6 +3106,67 @@ func (r *Registry) registerExtensions() {
 		name, _ := argString(args, "name")
 		snapName, _ := argString(args, "snapshot_name")
 		return sdkzfs.DestroySnapshot(name, snapName)
+	})
+
+	// ── nmcli ─────────────────────────────────────────────────────────────
+	r.Register("nmcli.add", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		connType, _ := argString(args, "type")
+		var settings map[string]string
+		if settingsRaw, ok := args["settings"]; ok && settingsRaw != nil {
+			if m, ok := settingsRaw.(map[string]interface{}); ok {
+				settings = make(map[string]string)
+				for k, v := range m {
+					if s, ok := v.(string); ok {
+						settings[k] = s
+					}
+				}
+			}
+		}
+		return sdknmcli.Add(name, connType, settings)
+	})
+	r.Register("nmcli.modify", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		var settings map[string]string
+		if settingsRaw, ok := args["settings"]; ok && settingsRaw != nil {
+			if m, ok := settingsRaw.(map[string]interface{}); ok {
+				settings = make(map[string]string)
+				for k, v := range m {
+					if s, ok := v.(string); ok {
+						settings[k] = s
+					}
+				}
+			}
+		}
+		return sdknmcli.Modify(name, settings)
+	})
+	r.Register("nmcli.delete", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdknmcli.Delete(name)
+	})
+	r.Register("nmcli.up", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdknmcli.Up(name)
+	})
+	r.Register("nmcli.down", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdknmcli.Down(name)
+	})
+	r.Register("nmcli.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdknmcli.List()
+	})
+	r.Register("nmcli.show", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdknmcli.Show(name)
+	})
+	r.Register("nmcli.list_devices", func(args map[string]interface{}) (interface{}, error) {
+		return sdknmcli.ListDevices()
+	})
+	r.Register("nmcli.reload", func(args map[string]interface{}) (interface{}, error) {
+		return sdknmcli.Reload()
+	})
+	r.Register("nmcli.get_general_status", func(args map[string]interface{}) (interface{}, error) {
+		return sdknmcli.GetGeneralStatus()
 	})
 }
 

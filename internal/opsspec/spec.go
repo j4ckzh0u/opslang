@@ -252,6 +252,18 @@ var Funcs = []Func{
 	{Name: "zfs.snapshot", Args: []string{"name", "snapshot_name"}, Mutating: true},
 	{Name: "zfs.destroy_snapshot", Args: []string{"name", "snapshot_name"}, Mutating: true},
 
+	// ── nmcli ──────────────────────────────────────────────────────────
+	{Name: "nmcli.add", Args: []string{"name", "type", "settings"}, Mutating: true},
+	{Name: "nmcli.modify", Args: []string{"name", "settings"}, Mutating: true},
+	{Name: "nmcli.delete", Args: []string{"name"}, Mutating: true},
+	{Name: "nmcli.up", Args: []string{"name"}, Mutating: true},
+	{Name: "nmcli.down", Args: []string{"name"}, Mutating: true},
+	{Name: "nmcli.list"},
+	{Name: "nmcli.show", Args: []string{"name"}},
+	{Name: "nmcli.list_devices"},
+	{Name: "nmcli.reload", Mutating: true},
+	{Name: "nmcli.get_general_status"},
+
 	// ── selinux ───────────────────────────────────────────────────────
 	{Name: "selinux.get"},
 	{Name: "selinux.set", Args: []string{"mode"}, Mutating: true},

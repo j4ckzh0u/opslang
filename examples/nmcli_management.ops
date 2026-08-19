@@ -1,0 +1,142 @@
+// nmcli 网络管理示例
+// NetworkManager connection management example
+
+// 列出所有网络连接
+block {
+    let conns = nmcli.list()
+    report {
+        total_connections: len(conns.connections)
+    }
+    for conn in conns.connections {
+        report {
+            name: conn.name,
+            uuid: conn.uuid,
+            type: conn.type,
+            device: conn.device,
+            state: conn.state
+        }
+    }
+}
+rescue {
+    print("nmcli not available: " + _error)
+}
+
+// 列出所有网络设备
+block {
+    let devices = nmcli.list_devices()
+    report {
+        total_devices: len(devices.devices)
+    }
+    for dev in devices.devices {
+        report {
+            device: dev.device,
+            type: dev.type,
+            state: dev.state,
+            connection: dev.connection
+        }
+    }
+}
+rescue {
+    print("nmcli device list failed: " + _error)
+}
+
+// 获取 NetworkManager 总体状态
+block {
+    let status = nmcli.get_general_status()
+    report {
+        nm_status: status
+    }
+}
+rescue {
+    print("nmcli status failed: " + _error)
+}
+
+// 显示特定连接详情
+block {
+    let info = nmcli.show("eth0")
+    report {
+        connection_info: info
+    }
+}
+rescue {
+    print("nmcli show failed: " + _error)
+}
+
+// 添加以太网连接
+block {
+    let result = nmcli.add("my-eth0", "ethernet", {
+        "ipv4.method": "manual",
+        "ipv4.addresses": "192.168.1.100/24",
+        "ipv4.gateway": "192.168.1.1",
+        "ipv4.dns": "8.8.8.8"
+    })
+    report {
+        added: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("nmcli add failed (expected without root): " + _error)
+}
+
+// 修改连接设置
+block {
+    let result = nmcli.modify("eth0", {"ipv4.dns": "8.8.4.4"})
+    report {
+        modified: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("nmcli modify failed: " + _error)
+}
+
+// 激活连接
+block {
+    let result = nmcli.up("eth0")
+    report {
+        activated: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("nmcli up failed: " + _error)
+}
+
+// 停用连接
+block {
+    let result = nmcli.down("eth0")
+    report {
+        deactivated: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("nmcli down failed: " + _error)
+}
+
+// 删除连接
+block {
+    let result = nmcli.delete("my-eth0")
+    report {
+        deleted: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("nmcli delete failed: " + _error)
+}
+
+// 重新加载 NetworkManager 配置
+block {
+    let result = nmcli.reload()
+    report {
+        reloaded: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("nmcli reload failed: " + _error)
+}
