@@ -54,6 +54,11 @@ import (
 	sdkfilesystem "github.com/opslang/opslang/pkg/ops-core-sdk/filesystem"
 	sdkparted "github.com/opslang/opslang/pkg/ops-core-sdk/parted"
 	sdkacl "github.com/opslang/opslang/pkg/ops-core-sdk/acl"
+	sdkwaitfor "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for"
+	sdklvol "github.com/opslang/opslang/pkg/ops-core-sdk/lvol"
+	sdksync "github.com/opslang/opslang/pkg/ops-core-sdk/synchronize"
+	sdkfetch "github.com/opslang/opslang/pkg/ops-core-sdk/fetch"
+	sdksebool "github.com/opslang/opslang/pkg/ops-core-sdk/seboolean"
 	sdkyumrepo "github.com/opslang/opslang/pkg/ops-core-sdk/yum_repo"
 )
 
@@ -3554,6 +3559,192 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			recursive, _ = args[1].(bool)
 		}
 		r, err := sdkacl.RemoveAll(path, recursive)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── wait_for ───────────────────────────────────────────────────────
+	interp.builtins["wait_for.port"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("wait_for.port() requires at least 2 arguments (host, port)")
+		}
+		host, _ := args[0].(string)
+		port := int(opsFloat(args, 1))
+		timeoutMs := 30000
+		if len(args) > 2 {
+			timeoutMs = int(opsFloat(args, 2))
+		}
+		r, err := sdkwaitfor.Port(host, port, timeoutMs)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["wait_for.file"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("wait_for.file() requires at least 1 argument (path)")
+		}
+		path, _ := args[0].(string)
+		timeoutMs := 30000
+		if len(args) > 1 {
+			timeoutMs = int(opsFloat(args, 1))
+		}
+		r, err := sdkwaitfor.File(path, timeoutMs)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["wait_for.url"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("wait_for.url() requires at least 1 argument (url)")
+		}
+		url, _ := args[0].(string)
+		timeoutMs := 30000
+		if len(args) > 1 {
+			timeoutMs = int(opsFloat(args, 1))
+		}
+		r, err := sdkwaitfor.URL(url, timeoutMs)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── lvol ───────────────────────────────────────────────────────────
+	interp.builtins["lvol.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdklvol.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["lvol.vg_list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdklvol.VGList()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["lvol.create"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("lvol.create() requires 3 arguments (name, vg, size)")
+		}
+		name, _ := args[0].(string)
+		vg, _ := args[1].(string)
+		size, _ := args[2].(string)
+		r, err := sdklvol.Create(name, vg, size)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["lvol.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("lvol.remove() requires 2 arguments (name, vg)")
+		}
+		name, _ := args[0].(string)
+		vg, _ := args[1].(string)
+		r, err := sdklvol.Remove(name, vg)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["lvol.resize"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("lvol.resize() requires 3 arguments (name, vg, size)")
+		}
+		name, _ := args[0].(string)
+		vg, _ := args[1].(string)
+		size, _ := args[2].(string)
+		r, err := sdklvol.Resize(name, vg, size)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── synchronize ────────────────────────────────────────────────────
+	interp.builtins["synchronize.sync"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("synchronize.sync() requires at least 2 arguments (source, dest)")
+		}
+		source, _ := args[0].(string)
+		dest, _ := args[1].(string)
+		del := false
+		if len(args) > 2 {
+			del, _ = args[2].(bool)
+		}
+		compress := false
+		if len(args) > 3 {
+			compress, _ = args[3].(bool)
+		}
+		r, err := sdksync.Sync(source, dest, del, compress)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── fetch ──────────────────────────────────────────────────────────
+	interp.builtins["fetch.file"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("fetch.file() requires 2 arguments (source, dest)")
+		}
+		source, _ := args[0].(string)
+		dest, _ := args[1].(string)
+		r, err := sdkfetch.File(source, dest)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["fetch.url"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("fetch.url() requires 2 arguments (url, dest)")
+		}
+		url, _ := args[0].(string)
+		dest, _ := args[1].(string)
+		r, err := sdkfetch.URL(url, dest)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── seboolean ──────────────────────────────────────────────────────
+	interp.builtins["seboolean.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksebool.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["seboolean.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("seboolean.get() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksebool.Get(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["seboolean.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("seboolean.set() requires at least 2 arguments (name, state)")
+		}
+		name, _ := args[0].(string)
+		state, _ := args[1].(bool)
+		persistent := false
+		if len(args) > 2 {
+			persistent, _ = args[2].(bool)
+		}
+		r, err := sdksebool.Set(name, state, persistent)
 		if err != nil {
 			return nil, err
 		}

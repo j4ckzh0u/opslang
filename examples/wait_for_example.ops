@@ -1,0 +1,13 @@
+// wait_for_example.ops - Wait for ports, files, and URLs
+block {
+    // Wait for a port to open (2s timeout for demo)
+    let port = wait_for.port("localhost", 22, 2000)
+    report { port_wait: port }
+
+    // Wait for a file to exist (1s timeout)
+    let f = wait_for.file("/etc/hostname", 1000)
+    report { file_wait: f }
+}
+rescue {
+    print("Wait failed: " + _error)
+}

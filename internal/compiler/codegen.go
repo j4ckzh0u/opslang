@@ -371,6 +371,30 @@ var sdkMapping = map[string]sdkFunc{
 	"acl.set":       {pkg: "acl", goName: "Set", args: true, params: []string{"s", "s", "b"}},
 	"acl.remove":    {pkg: "acl", goName: "Remove", args: true, params: []string{"s", "s", "b"}},
 	"acl.remove_all": {pkg: "acl", goName: "RemoveAll", args: true, params: []string{"s", "b"}},
+
+	// ── wait_for ───────────────────────────────────────────────────────
+	"wait_for.port": {pkg: "wait_for", goName: "Port", args: true, params: []string{"s", "i", "i"}},
+	"wait_for.file": {pkg: "wait_for", goName: "File", args: true, params: []string{"s", "i"}},
+	"wait_for.url":  {pkg: "wait_for", goName: "URL", args: true, params: []string{"s", "i"}},
+
+	// ── lvol ───────────────────────────────────────────────────────────
+	"lvol.list":    {pkg: "lvol", goName: "List"},
+	"lvol.vg_list": {pkg: "lvol", goName: "VGList"},
+	"lvol.create":  {pkg: "lvol", goName: "Create", args: true, params: []string{"s", "s", "s"}},
+	"lvol.remove":  {pkg: "lvol", goName: "Remove", args: true, params: []string{"s", "s"}},
+	"lvol.resize":  {pkg: "lvol", goName: "Resize", args: true, params: []string{"s", "s", "s"}},
+
+	// ── synchronize ────────────────────────────────────────────────────
+	"synchronize.sync": {pkg: "synchronize", goName: "Sync", args: true, params: []string{"s", "s", "b", "b"}},
+
+	// ── fetch ──────────────────────────────────────────────────────────
+	"fetch.file": {pkg: "fetch", goName: "File", args: true, params: []string{"s", "s"}},
+	"fetch.url":  {pkg: "fetch", goName: "URL", args: true, params: []string{"s", "s"}},
+
+	// ── seboolean ──────────────────────────────────────────────────────
+	"seboolean.list": {pkg: "seboolean", goName: "List"},
+	"seboolean.get":  {pkg: "seboolean", goName: "Get", args: true, params: []string{"s"}},
+	"seboolean.set":  {pkg: "seboolean", goName: "Set", args: true, params: []string{"s", "b", "b"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -480,6 +504,11 @@ var pkgImportAlias = map[string]string{
 	"filesystem":   "opsfilesystem",
 	"parted":       "opsparted",
 	"acl":          "opsacl",
+	"wait_for":     "opswaitfor",
+	"lvol":         "opslvol",
+	"synchronize":  "opssync",
+	"fetch":        "opsfetch",
+	"seboolean":    "opssebool",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -515,6 +544,11 @@ var pkgImportPath = map[string]string{
 	"filesystem":   "github.com/opslang/opslang/pkg/ops-core-sdk/filesystem",
 	"parted":       "github.com/opslang/opslang/pkg/ops-core-sdk/parted",
 	"acl":          "github.com/opslang/opslang/pkg/ops-core-sdk/acl",
+	"wait_for":     "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for",
+	"lvol":         "github.com/opslang/opslang/pkg/ops-core-sdk/lvol",
+	"synchronize":  "github.com/opslang/opslang/pkg/ops-core-sdk/synchronize",
+	"fetch":        "github.com/opslang/opslang/pkg/ops-core-sdk/fetch",
+	"seboolean":    "github.com/opslang/opslang/pkg/ops-core-sdk/seboolean",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

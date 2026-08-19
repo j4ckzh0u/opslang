@@ -397,6 +397,30 @@ var Funcs = []Func{
 	{Name: "acl.set", Args: []string{"path", "entry", "recursive"}, Mutating: true},
 	{Name: "acl.remove", Args: []string{"path", "entry", "recursive"}, Mutating: true},
 	{Name: "acl.remove_all", Args: []string{"path", "recursive"}, Mutating: true},
+
+	// ── wait_for ───────────────────────────────────────────────────────
+	{Name: "wait_for.port", Args: []string{"host", "port", "timeout_ms"}},
+	{Name: "wait_for.file", Args: []string{"path", "timeout_ms"}},
+	{Name: "wait_for.url", Args: []string{"url", "timeout_ms"}},
+
+	// ── lvol ───────────────────────────────────────────────────────────
+	{Name: "lvol.list"},
+	{Name: "lvol.vg_list"},
+	{Name: "lvol.create", Args: []string{"name", "vg", "size"}, Mutating: true},
+	{Name: "lvol.remove", Args: []string{"name", "vg"}, Mutating: true},
+	{Name: "lvol.resize", Args: []string{"name", "vg", "size"}, Mutating: true},
+
+	// ── synchronize ────────────────────────────────────────────────────
+	{Name: "synchronize.sync", Args: []string{"source", "dest", "delete", "compress"}, Mutating: true},
+
+	// ── fetch ──────────────────────────────────────────────────────────
+	{Name: "fetch.file", Args: []string{"source", "dest"}, Mutating: true},
+	{Name: "fetch.url", Args: []string{"url", "dest"}, Mutating: true},
+
+	// ── seboolean ──────────────────────────────────────────────────────
+	{Name: "seboolean.list"},
+	{Name: "seboolean.get", Args: []string{"name"}},
+	{Name: "seboolean.set", Args: []string{"name", "state", "persistent"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

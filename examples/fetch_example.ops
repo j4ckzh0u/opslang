@@ -1,0 +1,8 @@
+// fetch_example.ops - Fetch files and URLs
+block {
+    let r = fetch.url("https://example.com", "/tmp/fetched_example.html")
+    report { fetch_result: r }
+}
+rescue {
+    print("Fetch failed: " + _error)
+}

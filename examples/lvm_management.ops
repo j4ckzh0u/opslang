@@ -1,0 +1,11 @@
+// lvm_management.ops - LVM logical volume management
+block {
+    let vgs = lvol.vg_list()
+    report { volume_groups: vgs }
+
+    let lvs = lvol.list()
+    report { logical_volumes: lvs }
+}
+rescue {
+    print("LVM not available: " + _error)
+}

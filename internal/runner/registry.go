@@ -55,6 +55,11 @@ import (
 	sdkfilesystem "github.com/opslang/opslang/pkg/ops-core-sdk/filesystem"
 	sdkparted "github.com/opslang/opslang/pkg/ops-core-sdk/parted"
 	sdkacl "github.com/opslang/opslang/pkg/ops-core-sdk/acl"
+	sdkwaitfor "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for"
+	sdklvol "github.com/opslang/opslang/pkg/ops-core-sdk/lvol"
+	sdksync "github.com/opslang/opslang/pkg/ops-core-sdk/synchronize"
+	sdkfetch "github.com/opslang/opslang/pkg/ops-core-sdk/fetch"
+	sdksebool "github.com/opslang/opslang/pkg/ops-core-sdk/seboolean"
 	sdktimezone "github.com/opslang/opslang/pkg/ops-core-sdk/timezone"
 )
 
@@ -2223,6 +2228,163 @@ func (r *Registry) registerExtensions() {
 		}
 		recursive, _ := argBool(args, "recursive")
 		return sdkacl.RemoveAll(path, recursive)
+	})
+
+	// ── wait_for ───────────────────────────────────────────────────────
+	r.Register("wait_for.port", func(args map[string]interface{}) (interface{}, error) {
+		host, err := argString(args, "host")
+		if err != nil {
+			return nil, fmt.Errorf("wait_for.port: %w", err)
+		}
+		port, err := argInt(args, "port")
+		if err != nil {
+			return nil, fmt.Errorf("wait_for.port: %w", err)
+		}
+		timeoutMs := 30000
+		if v, ok := args["timeout_ms"]; ok {
+			if t, e := argInt(map[string]interface{}{"timeout_ms": v}, "timeout_ms"); e == nil {
+				timeoutMs = t
+			}
+		}
+		return sdkwaitfor.Port(host, port, timeoutMs)
+	})
+	r.Register("wait_for.file", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("wait_for.file: %w", err)
+		}
+		timeoutMs := 30000
+		if v, ok := args["timeout_ms"]; ok {
+			if t, e := argInt(map[string]interface{}{"timeout_ms": v}, "timeout_ms"); e == nil {
+				timeoutMs = t
+			}
+		}
+		return sdkwaitfor.File(path, timeoutMs)
+	})
+	r.Register("wait_for.url", func(args map[string]interface{}) (interface{}, error) {
+		url, err := argString(args, "url")
+		if err != nil {
+			return nil, fmt.Errorf("wait_for.url: %w", err)
+		}
+		timeoutMs := 30000
+		if v, ok := args["timeout_ms"]; ok {
+			if t, e := argInt(map[string]interface{}{"timeout_ms": v}, "timeout_ms"); e == nil {
+				timeoutMs = t
+			}
+		}
+		return sdkwaitfor.URL(url, timeoutMs)
+	})
+
+	// ── lvol ───────────────────────────────────────────────────────────
+	r.Register("lvol.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdklvol.List()
+	})
+	r.Register("lvol.vg_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdklvol.VGList()
+	})
+	r.Register("lvol.create", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("lvol.create: %w", err)
+		}
+		vg, err := argString(args, "vg")
+		if err != nil {
+			return nil, fmt.Errorf("lvol.create: %w", err)
+		}
+		size, err := argString(args, "size")
+		if err != nil {
+			return nil, fmt.Errorf("lvol.create: %w", err)
+		}
+		return sdklvol.Create(name, vg, size)
+	})
+	r.Register("lvol.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("lvol.remove: %w", err)
+		}
+		vg, err := argString(args, "vg")
+		if err != nil {
+			return nil, fmt.Errorf("lvol.remove: %w", err)
+		}
+		return sdklvol.Remove(name, vg)
+	})
+	r.Register("lvol.resize", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("lvol.resize: %w", err)
+		}
+		vg, err := argString(args, "vg")
+		if err != nil {
+			return nil, fmt.Errorf("lvol.resize: %w", err)
+		}
+		size, err := argString(args, "size")
+		if err != nil {
+			return nil, fmt.Errorf("lvol.resize: %w", err)
+		}
+		return sdklvol.Resize(name, vg, size)
+	})
+
+	// ── synchronize ────────────────────────────────────────────────────
+	r.Register("synchronize.sync", func(args map[string]interface{}) (interface{}, error) {
+		source, err := argString(args, "source")
+		if err != nil {
+			return nil, fmt.Errorf("synchronize.sync: %w", err)
+		}
+		dest, err := argString(args, "dest")
+		if err != nil {
+			return nil, fmt.Errorf("synchronize.sync: %w", err)
+		}
+		del, _ := argBool(args, "delete")
+		compress, _ := argBool(args, "compress")
+		return sdksync.Sync(source, dest, del, compress)
+	})
+
+	// ── fetch ──────────────────────────────────────────────────────────
+	r.Register("fetch.file", func(args map[string]interface{}) (interface{}, error) {
+		source, err := argString(args, "source")
+		if err != nil {
+			return nil, fmt.Errorf("fetch.file: %w", err)
+		}
+		dest, err := argString(args, "dest")
+		if err != nil {
+			return nil, fmt.Errorf("fetch.file: %w", err)
+		}
+		return sdkfetch.File(source, dest)
+	})
+	r.Register("fetch.url", func(args map[string]interface{}) (interface{}, error) {
+		url, err := argString(args, "url")
+		if err != nil {
+			return nil, fmt.Errorf("fetch.url: %w", err)
+		}
+		dest, err := argString(args, "dest")
+		if err != nil {
+			return nil, fmt.Errorf("fetch.url: %w", err)
+		}
+		return sdkfetch.URL(url, dest)
+	})
+
+	// ── seboolean ──────────────────────────────────────────────────────
+	r.Register("seboolean.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdksebool.List()
+	})
+	r.Register("seboolean.get", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("seboolean.get: %w", err)
+		}
+		return sdksebool.Get(name)
+	})
+	r.Register("seboolean.set", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("seboolean.set: %w", err)
+		}
+		state, err := argBool(args, "state")
+		if err != nil {
+			return nil, fmt.Errorf("seboolean.set: %w", err)
+		}
+		persistent, _ := argBool(args, "persistent")
+		return sdksebool.Set(name, state, persistent)
 	})
 }
 

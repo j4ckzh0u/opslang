@@ -1,0 +1,8 @@
+// selinux_boolean.ops - SELinux boolean management
+block {
+    let booleans = seboolean.list()
+    report { booleans: booleans }
+}
+rescue {
+    print("SELinux not available: " + _error)
+}
