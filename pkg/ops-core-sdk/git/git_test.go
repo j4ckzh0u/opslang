@@ -208,10 +208,16 @@ func TestPullAlreadyUpToDate(t *testing.T) {
 		t.Fatalf("failed to fetch: %v", err)
 	}
 
-	// Set up tracking branch so git pull works without specifying branch
-	cmd = exec.Command("git", "-C", repoPath, "branch", "--set-upstream-to=origin/main", "main")
+	// Set up tracking branch so git pull works without specifying branch.
+	// Use git config instead of --set-upstream-to since origin/main may not
+	// exist as a ref when origin points to itself.
+	cmd = exec.Command("git", "-C", repoPath, "config", "branch.main.remote", "origin")
 	if err := cmd.Run(); err != nil {
-		t.Fatalf("failed to set upstream tracking: %v", err)
+		t.Fatalf("failed to set branch.main.remote: %v", err)
+	}
+	cmd = exec.Command("git", "-C", repoPath, "config", "branch.main.merge", "refs/heads/main")
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("failed to set branch.main.merge: %v", err)
 	}
 
 	// Call Pull
@@ -348,10 +354,16 @@ func TestPullDefaults(t *testing.T) {
 		t.Fatalf("failed to fetch: %v", err)
 	}
 
-	// Set up tracking branch so git pull works without specifying branch
-	cmd = exec.Command("git", "-C", repoPath, "branch", "--set-upstream-to=origin/main", "main")
+	// Set up tracking branch so git pull works without specifying branch.
+	// Use git config instead of --set-upstream-to since origin/main may not
+	// exist as a ref when origin points to itself.
+	cmd = exec.Command("git", "-C", repoPath, "config", "branch.main.remote", "origin")
 	if err := cmd.Run(); err != nil {
-		t.Fatalf("failed to set upstream tracking: %v", err)
+		t.Fatalf("failed to set branch.main.remote: %v", err)
+	}
+	cmd = exec.Command("git", "-C", repoPath, "config", "branch.main.merge", "refs/heads/main")
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("failed to set branch.main.merge: %v", err)
 	}
 
 	// Call Pull with empty remote (should default to "origin") and empty branch
