@@ -220,6 +220,17 @@ var Funcs = []Func{
 	{Name: "service.status", Args: []string{"name"}},
 	{Name: "service.stop", Args: []string{"name"}, Mutating: true},
 
+	// ── snap ──────────────────────────────────────────────────────────
+	{Name: "snap.install", Args: []string{"name", "channel", "classic"}, Mutating: true},
+	{Name: "snap.remove", Args: []string{"name"}, Mutating: true},
+	{Name: "snap.refresh", Args: []string{"name", "channel"}, Mutating: true},
+	{Name: "snap.list"},
+	{Name: "snap.get", Args: []string{"name"}},
+	{Name: "snap.enable", Args: []string{"name"}, Mutating: true},
+	{Name: "snap.disable", Args: []string{"name"}, Mutating: true},
+	{Name: "snap.switch", Args: []string{"name", "channel"}, Mutating: true},
+	{Name: "snap.changes"},
+
 	// ── selinux ───────────────────────────────────────────────────────
 	{Name: "selinux.get"},
 	{Name: "selinux.set", Args: []string{"mode"}, Mutating: true},

@@ -30,6 +30,7 @@ import (
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/process"
 	sdkresolv "github.com/opslang/opslang/pkg/ops-core-sdk/resolv"
+	sdksnap "github.com/opslang/opslang/pkg/ops-core-sdk/snap"
 	sdkselinux "github.com/opslang/opslang/pkg/ops-core-sdk/selinux"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/service"
 	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
@@ -447,6 +448,49 @@ func (r *Registry) registerServiceOps() {
 	r.Register("service.restart", serviceOp("service.restart", service.Restart))
 	r.Register("service.enable", serviceOp("service.enable", service.Enable))
 	r.Register("service.disable", serviceOp("service.disable", service.Disable))
+
+	// snap operations
+	r.Register("snap.install", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		channel, _ := argString(args, "channel")
+		if channel == "" {
+			channel = "stable"
+		}
+		classic, _ := args["classic"].(bool)
+		return sdksnap.Install(name, channel, classic)
+	})
+	r.Register("snap.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdksnap.Remove(name)
+	})
+	r.Register("snap.refresh", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		channel, _ := argString(args, "channel")
+		return sdksnap.Refresh(name, channel)
+	})
+	r.Register("snap.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdksnap.List()
+	})
+	r.Register("snap.get", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdksnap.Get(name)
+	})
+	r.Register("snap.enable", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdksnap.Enable(name)
+	})
+	r.Register("snap.disable", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdksnap.Disable(name)
+	})
+	r.Register("snap.switch", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		channel, _ := argString(args, "channel")
+		return sdksnap.Switch(name, channel)
+	})
+	r.Register("snap.changes", func(_ map[string]interface{}) (interface{}, error) {
+		return sdksnap.Changes()
+	})
 }
 
 // serviceOp adapts a service SDK function taking just a name.

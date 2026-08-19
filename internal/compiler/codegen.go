@@ -227,6 +227,17 @@ var sdkMapping = map[string]sdkFunc{
 	"lvg.list":      {pkg: "lvg", goName: "List"},
 	"lvg.get":       {pkg: "lvg", goName: "Get", args: true, params: []string{"s"}},
 
+	// snap
+	"snap.install":  {pkg: "snap", goName: "Install", args: true, params: []string{"s", "s", "b"}},
+	"snap.remove":   {pkg: "snap", goName: "Remove", args: true, params: []string{"s"}},
+	"snap.refresh":  {pkg: "snap", goName: "Refresh", args: true, params: []string{"s", "s"}},
+	"snap.list":     {pkg: "snap", goName: "List"},
+	"snap.get":      {pkg: "snap", goName: "Get", args: true, params: []string{"s"}},
+	"snap.enable":   {pkg: "snap", goName: "Enable", args: true, params: []string{"s"}},
+	"snap.disable":  {pkg: "snap", goName: "Disable", args: true, params: []string{"s"}},
+	"snap.switch":   {pkg: "snap", goName: "Switch", args: true, params: []string{"s", "s"}},
+	"snap.changes":  {pkg: "snap", goName: "Changes"},
+
 	// resolv
 	"resolv.get":              {pkg: "resolv", goName: "Get"},
 	"resolv.set":              {pkg: "resolv", goName: "Set", args: true, params: []string{"l", "l", "l", "s"}},
@@ -620,6 +631,7 @@ var pkgImportAlias = map[string]string{
 	"seport":         "opsseport",
 	"sefcontext":     "opssefcontext",
 	"lvg":            "opslvg",
+	"snap":           "opssnap",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -672,6 +684,7 @@ var pkgImportPath = map[string]string{
 	"seport":         "github.com/opslang/opslang/pkg/ops-core-sdk/seport",
 	"sefcontext":     "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext",
 	"lvg":            "github.com/opslang/opslang/pkg/ops-core-sdk/lvg",
+	"snap":           "github.com/opslang/opslang/pkg/ops-core-sdk/snap",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

@@ -29,6 +29,7 @@ import (
 	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	sdkprocess "github.com/opslang/opslang/pkg/ops-core-sdk/process"
 	sdkresolv "github.com/opslang/opslang/pkg/ops-core-sdk/resolv"
+	sdksnap "github.com/opslang/opslang/pkg/ops-core-sdk/snap"
 	sdkselinux "github.com/opslang/opslang/pkg/ops-core-sdk/selinux"
 	sdkservice "github.com/opslang/opslang/pkg/ops-core-sdk/service"
 	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
@@ -696,6 +697,112 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, fmt.Errorf("service.enable(): argument must be string")
 		}
 		r, err := sdkservice.Enable(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── snap.* ──────────────────────────────────────────────────────────────
+	interp.builtins["snap.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("snap.install() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		channel := "stable"
+		if len(args) > 1 {
+			channel, _ = args[1].(string)
+		}
+		classic := false
+		if len(args) > 2 {
+			classic, _ = args[2].(bool)
+		}
+		r, err := sdksnap.Install(name, channel, classic)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["snap.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("snap.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksnap.Remove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["snap.refresh"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("snap.refresh() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		channel := ""
+		if len(args) > 1 {
+			channel, _ = args[1].(string)
+		}
+		r, err := sdksnap.Refresh(name, channel)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["snap.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksnap.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["snap.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("snap.get() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksnap.Get(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["snap.enable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("snap.enable() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksnap.Enable(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["snap.disable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("snap.disable() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksnap.Disable(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["snap.switch"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("snap.switch() requires 2 arguments (name, channel)")
+		}
+		name, _ := args[0].(string)
+		channel, _ := args[1].(string)
+		r, err := sdksnap.Switch(name, channel)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["snap.changes"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksnap.Changes()
 		if err != nil {
 			return nil, err
 		}

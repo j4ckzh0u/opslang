@@ -1,0 +1,117 @@
+// snap 包管理示例
+// Snap package management example
+
+// 列出已安装的 snap 包
+block {
+    let snaps = snap.list()
+    report {
+        total_snaps: len(snaps.snaps)
+    }
+    for s in snaps.snaps {
+        report {
+            name: s.name,
+            version: s.version,
+            rev: s.rev,
+            publisher: s.publisher
+        }
+    }
+}
+rescue {
+    print("snap not available: " + _error)
+}
+
+// 获取特定 snap 信息
+block {
+    let info = snap.get("core")
+    report {
+        snap_name: info.name,
+        version: info.version,
+        publisher: info.publisher,
+        summary: info.summary
+    }
+}
+rescue {
+    print("snap.get failed: " + _error)
+}
+
+// 安装 snap（需要 root 权限）
+block {
+    let result = snap.install("hello-world", "stable", false)
+    report {
+        installed: result.name,
+        success: result.success,
+        changed: result.changed
+    }
+}
+rescue {
+    print("snap.install failed (expected without root): " + _error)
+}
+
+// 刷新 snap
+block {
+    let result = snap.refresh("hello-world", "stable")
+    report {
+        refreshed: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("snap.refresh failed: " + _error)
+}
+
+// 切换 snap 通道
+block {
+    let result = snap.switch("hello-world", "edge")
+    report {
+        switched: result.name,
+        channel: result.channel
+    }
+}
+rescue {
+    print("snap.switch failed: " + _error)
+}
+
+// 启用/禁用 snap
+block {
+    let enable_result = snap.enable("hello-world")
+    report {
+        enabled: enable_result.success
+    }
+    let disable_result = snap.disable("hello-world")
+    report {
+        disabled: disable_result.success
+    }
+}
+rescue {
+    print("snap enable/disable failed: " + _error)
+}
+
+// 删除 snap
+block {
+    let result = snap.remove("hello-world")
+    report {
+        removed: result.name,
+        success: result.success
+    }
+}
+rescue {
+    print("snap.remove failed: " + _error)
+}
+
+// 查看 snap 变更历史
+block {
+    let changes = snap.changes()
+    report {
+        total_changes: len(changes.changes)
+    }
+    for c in changes.changes {
+        report {
+            id: c.id,
+            status: c.status,
+            summary: c.summary
+        }
+    }
+}
+rescue {
+    print("snap.changes failed: " + _error)
+}
