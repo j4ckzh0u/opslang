@@ -1,0 +1,210 @@
+// cron_management.ops - 演示定时任务管理
+// 新增 SDK: cron.*
+
+// ═══════════════════════════════════════════════════════════
+// 1. 查询定时任务
+// ═══════════════════════════════════════════════════════════
+
+print("=== 查询定时任务 ===")
+
+// 查询当前用户的定时任务
+let my_crons = cron.list("")
+if my_crons.error == "" {
+    print("当前用户的定时任务数量: " + str(len(my_crons.entries)))
+    for entry in my_crons.entries {
+        print("  " + entry.minute + " " + entry.hour + " " + entry.day_of_month + " " + entry.month + " " + entry.day_of_week + " " + entry.command)
+    }
+} else {
+    print("查询失败: " + my_crons.error)
+    print("提示: 可能没有定时任务或需要权限")
+}
+
+// 查询特定用户的定时任务（需要 root 权限）
+print("\n查询 root 用户的定时任务...")
+let root_crons = cron.list("root")
+if root_crons.error == "" {
+    print("root 用户的定时任务数量: " + str(len(root_crons.entries)))
+} else {
+    print("查询失败: " + root_crons.error)
+    print("提示: 需要 root 权限")
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2. 添加定时任务
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 添加定时任务 ===")
+
+// 示例 1: 每天凌晨 2 点执行备份
+print("添加每日备份任务...")
+let backup_job = cron.add("", {
+    "minute": "0",
+    "hour": "2",
+    "day_of_month": "*",
+    "month": "*",
+    "day_of_week": "*",
+    "command": "/usr/local/bin/backup.sh >> /var/log/backup.log 2>&1"
+})
+
+if backup_job.error == "" {
+    if backup_job.changed {
+        print("  ✓ 备份任务已添加")
+    } else {
+        print("  - 任务已存在")
+    }
+} else {
+    print("  ✗ 添加失败: " + backup_job.error)
+}
+
+// 示例 2: 每小时执行日志清理
+print("\n添加每小时日志清理任务...")
+let cleanup_job = cron.add("", {
+    "minute": "0",
+    "hour": "*",
+    "day_of_month": "*",
+    "month": "*",
+    "day_of_week": "*",
+    "command": "find /var/log -name '*.log' -mtime +7 -delete"
+})
+
+if cleanup_job.error == "" {
+    print("  ✓ 日志清理任务已添加")
+} else {
+    print("  ✗ 添加失败: " + cleanup_job.error)
+}
+
+// 示例 3: 每 5 分钟执行健康检查
+print("\n添加健康检查任务...")
+let health_job = cron.add("", {
+    "minute": "*/5",
+    "hour": "*",
+    "day_of_month": "*",
+    "month": "*",
+    "day_of_week": "*",
+    "command": "curl -s http://localhost/health > /dev/null || echo 'Health check failed' | mail -s 'Alert' admin@example.com"
+})
+
+if health_job.error == "" {
+    print("  ✓ 健康检查任务已添加")
+} else {
+    print("  ✗ 添加失败: " + health_job.error)
+}
+
+// 示例 4: 每周一凌晨 3 点执行周报
+print("\n添加周报任务...")
+let report_job = cron.add("", {
+    "minute": "0",
+    "hour": "3",
+    "day_of_month": "*",
+    "month": "*",
+    "day_of_week": "1",
+    "command": "/usr/local/bin/weekly-report.sh"
+})
+
+if report_job.error == "" {
+    print("  ✓ 周报任务已添加")
+} else {
+    print("  ✗ 添加失败: " + report_job.error)
+}
+
+// ═══════════════════════════════════════════════════════════
+// 3. 删除定时任务
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 删除定时任务 ===")
+
+// 删除包含特定关键词的任务
+print("删除备份相关的定时任务...")
+let remove_backup = cron.remove("", "backup.sh")
+if remove_backup.error == "" {
+    if remove_backup.changed {
+        print("  ✓ 已删除备份任务")
+    } else {
+        print("  - 未找到匹配的任务")
+    }
+} else {
+    print("  ✗ 删除失败: " + remove_backup.error)
+}
+
+// 删除日志清理任务
+print("\n删除日志清理任务...")
+let remove_cleanup = cron.remove("", "find /var/log")
+if remove_cleanup.error == "" {
+    print("  ✓ 已删除日志清理任务")
+} else {
+    print("  ✗ 删除失败: " + remove_cleanup.error)
+}
+
+// ═══════════════════════════════════════════════════════════
+// 4. 批量管理定时任务
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 批量管理定时任务 ===")
+
+// 定义需要添加的任务列表
+let jobs = [
+    {
+        "name": "数据库备份",
+        "schedule": {"minute": "0", "hour": "1", "day_of_month": "*", "month": "*", "day_of_week": "*", "command": "/usr/local/bin/db-backup.sh"},
+        "keyword": "db-backup.sh"
+    },
+    {
+        "name": "系统监控",
+        "schedule": {"minute": "*/10", "hour": "*", "day_of_month": "*", "month": "*", "day_of_week": "*", "command": "/usr/local/bin/monitor.sh"},
+        "keyword": "monitor.sh"
+    },
+    {
+        "name": "日志轮转",
+        "schedule": {"minute": "0", "hour": "0", "day_of_month": "*", "month": "*", "day_of_week": "*", "command": "/usr/sbin/logrotate /etc/logrotate.conf"},
+        "keyword": "logrotate"
+    }
+]
+
+print("批量添加定时任务...")
+for job in jobs {
+    let result = cron.add("", job["schedule"])
+    if result.error == "" {
+        print("  ✓ " + job["name"] + " 已添加")
+    } else {
+        print("  ✗ " + job["name"] + " 添加失败: " + result.error)
+    }
+}
+
+// 验证添加结果
+print("\n验证当前定时任务...")
+let verify = cron.list("")
+if verify.error == "" {
+    print("当前定时任务总数: " + str(len(verify.entries)))
+    for entry in verify.entries {
+        print("  - " + entry.command)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 5. 清理所有测试任务
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 清理测试任务 ===")
+
+for job in jobs {
+    let result = cron.remove("", job["keyword"])
+    if result.error == "" {
+        if result.changed {
+            print("  ✓ 已删除: " + job["name"])
+        } else {
+            print("  - 未找到: " + job["name"])
+        }
+    }
+}
+
+// 删除健康检查和周报任务
+cron.remove("", "health")
+cron.remove("", "weekly-report")
+
+print("\n验证清理结果...")
+let final_check = cron.list("")
+if final_check.error == "" {
+    print("剩余定时任务数量: " + str(len(final_check.entries)))
+}
+
+print("\n=== cron 管理演示完成 ===")

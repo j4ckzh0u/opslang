@@ -1,0 +1,214 @@
+// file_lineinfile.ops - 演示 file.lineinfile 操作
+// 确保文件中存在或不存在特定行
+
+// ═══════════════════════════════════════════════════════════
+// 1. 确保行存在 (present: true)
+// ═══════════════════════════════════════════════════════════
+
+print("=== 确保行存在 ===")
+
+// 创建测试文件
+let test_file = "/tmp/ops_test_lineinfile.txt"
+let init = file.write(test_file, "# 配置文件\n# 由 OpsLang 生成\n")
+if init.error != "" {
+    print("创建测试文件失败: " + init.error)
+} else {
+    print("测试文件已创建: " + test_file)
+}
+
+// 添加配置行
+print("\n添加配置行...")
+let add_line1 = file.lineinfile(test_file, "DEBUG=false", true, "")
+if add_line1.error == "" {
+    if add_line1.changed {
+        print("  ✓ 添加: DEBUG=false")
+    } else {
+        print("  - 已存在: DEBUG=false")
+    }
+} else {
+    print("  ✗ 添加失败: " + add_line1.error)
+}
+
+// 添加多行配置
+let config_lines = [
+    "LOG_LEVEL=info",
+    "MAX_CONNECTIONS=100",
+    "TIMEOUT=30"
+]
+
+print("\n批量添加配置行...")
+for line in config_lines {
+    let result = file.lineinfile(test_file, line, true, "")
+    if result.error == "" {
+        if result.changed {
+            print("  ✓ 添加: " + line)
+        } else {
+            print("  - 已存在: " + line)
+        }
+    }
+}
+
+// 使用正则表达式匹配替换
+print("\n使用正则表达式更新配置...")
+let update_log_level = file.lineinfile(
+    test_file,
+    "LOG_LEVEL=debug",
+    true,
+    "^LOG_LEVEL="
+)
+if update_log_level.error == "" {
+    if update_log_level.changed {
+        print("  ✓ 更新: LOG_LEVEL=debug (替换原有值)")
+    } else {
+        print("  - 无变化")
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2. 确保行不存在 (present: false)
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 确保行不存在 ===")
+
+// 删除特定行
+print("删除 DEBUG 配置...")
+let remove_line = file.lineinfile(test_file, "DEBUG=false", false, "")
+if remove_line.error == "" {
+    if remove_line.changed {
+        print("  ✓ 已删除: DEBUG=false")
+    } else {
+        print("  - 不存在: DEBUG=false")
+    }
+}
+
+// 使用正则表达式删除多行
+print("\n删除所有 TIMEOUT 相关配置...")
+let remove_timeout = file.lineinfile(
+    test_file,
+    "",
+    false,
+    "^TIMEOUT="
+)
+if remove_timeout.error == "" {
+    if remove_timeout.changed {
+        print("  ✓ 已删除匹配的行")
+    } else {
+        print("  - 无匹配行")
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 3. 实际应用场景
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 实际应用场景 ===")
+
+// 场景 1: 配置 SSH
+print("\n场景 1: 配置 SSH 服务")
+let ssh_config = "/tmp/sshd_config_test"
+
+// 初始化 SSH 配置
+file.write(ssh_config, "# SSH Configuration\nPort 22\nPermitRootLogin yes\n")
+
+// 确保安全的 SSH 配置
+let ssh_settings = {
+    "PermitRootLogin no": "^PermitRootLogin",
+    "PasswordAuthentication no": "^PasswordAuthentication",
+    "X11Forwarding no": "^X11Forwarding",
+    "MaxAuthTries 3": "^MaxAuthTries"
+}
+
+for setting in ssh_settings {
+    let pattern = ssh_settings[setting]
+    let result = file.lineinfile(ssh_config, setting, true, pattern)
+    if result.error == "" {
+        if result.changed {
+            print("  ✓ " + setting)
+        } else {
+            print("  - 已存在: " + setting)
+        }
+    }
+}
+
+// 场景 2: 管理 hosts 文件
+print("\n场景 2: 管理 /etc/hosts 条目")
+let hosts_file = "/tmp/hosts_test"
+file.write(hosts_file, "127.0.0.1 localhost\n::1 localhost\n")
+
+// 添加自定义 hosts 条目
+let hosts_entries = [
+    "192.168.1.100 web-server",
+    "192.168.1.101 db-server",
+    "192.168.1.102 cache-server"
+]
+
+for entry in hosts_entries {
+    let result = file.lineinfile(hosts_file, entry, true, "")
+    if result.error == "" {
+        if result.changed {
+            print("  ✓ " + entry)
+        }
+    }
+}
+
+// 场景 3: 配置文件去重
+print("\n场景 3: 确保配置不重复")
+let app_config = "/tmp/app_config_test"
+file.write(app_config, "DATABASE_URL=mysql://localhost\n")
+
+// 确保只有一个 DATABASE_URL
+let ensure_db = file.lineinfile(
+    app_config,
+    "DATABASE_URL=postgres://localhost",
+    true,
+    "^DATABASE_URL="
+)
+if ensure_db.error == "" {
+    if ensure_db.changed {
+        print("  ✓ 更新 DATABASE_URL")
+    } else {
+        print("  - DATABASE_URL 未变化")
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 4. 验证结果
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 验证文件内容 ===")
+
+print("\n" + test_file + ":")
+let content1 = file.read(test_file)
+if content1.error == "" {
+    print(content1.content)
+}
+
+print("\n" + ssh_config + ":")
+let content2 = file.read(ssh_config)
+if content2.error == "" {
+    print(content2.content)
+}
+
+print("\n" + hosts_file + ":")
+let content3 = file.read(hosts_file)
+if content3.error == "" {
+    print(content3.content)
+}
+
+// ═══════════════════════════════════════════════════════════
+// 5. 清理测试文件
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 清理测试文件 ===")
+let files_to_clean = [test_file, ssh_config, hosts_file, app_config]
+
+for f in files_to_clean {
+    let result = file.delete(f)
+    if result.error == "" {
+        print("  ✓ 删除: " + f)
+    } else {
+        print("  ✗ 删除失败: " + f)
+    }
+}
+
+print("\n=== file.lineinfile 演示完成 ===")

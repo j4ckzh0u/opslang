@@ -1,0 +1,164 @@
+// user_management.ops - 演示用户和用户组管理
+// 新增 SDK: user.*, group.*
+
+// ═══════════════════════════════════════════════════════════
+// 1. 查询系统用户
+// ═══════════════════════════════════════════════════════════
+
+print("=== 查询系统用户 ===")
+
+// 列出所有用户
+let users = user.list()
+print("系统用户总数: " + str(len(users.users)))
+
+// 查询特定用户信息
+let root_info = user.info("root")
+if root_info.error == "" {
+    print("\nroot 用户信息:")
+    print("  UID: " + str(root_info.uid))
+    print("  GID: " + str(root_info.gid))
+    print("  Home: " + root_info.home)
+    print("  Shell: " + root_info.shell)
+} else {
+    print("查询 root 失败: " + root_info.error)
+}
+
+// 检查用户是否存在
+let exists = user.exists("root")
+print("\nroot 用户存在: " + str(exists.exists))
+
+// ═══════════════════════════════════════════════════════════
+// 2. 创建新用户
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 创建新用户 ===")
+
+let new_username = "appuser"
+
+// 检查用户是否已存在
+let check = user.exists(new_username)
+if check.exists {
+    print("用户 " + new_username + " 已存在，跳过创建")
+} else {
+    // 创建用户，带选项
+    let create_result = user.add(new_username, {
+        "home": "/home/" + new_username,
+        "shell": "/bin/bash",
+        "comment": "Application User"
+    })
+
+    if create_result.error == "" {
+        print("用户创建成功: " + new_username)
+        print("  UID: " + str(create_result.uid))
+    } else {
+        print("用户创建失败: " + create_result.error)
+        print("提示: 可能需要 root 权限")
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 3. 用户组管理
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 用户组管理 ===")
+
+// 列出所有用户组
+let groups = group.list()
+print("系统用户组总数: " + str(len(groups.groups)))
+
+// 查询特定组信息
+let dev_group = group.info("staff")
+if dev_group.error == "" {
+    print("\nstaff 组信息:")
+    print("  GID: " + str(dev_group.gid))
+    print("  成员: " + dev_group.members)
+} else {
+    print("查询 staff 组失败: " + dev_group.error)
+}
+
+// 检查组是否存在
+let group_exists = group.exists("staff")
+print("\nstaff 组存在: " + str(group_exists.exists))
+
+// ═══════════════════════════════════════════════════════════
+// 4. 创建用户组
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 创建用户组 ===")
+
+let new_group = "appgroup"
+
+let group_check = group.exists(new_group)
+if group_check.exists {
+    print("组 " + new_group + " 已存在")
+} else {
+    let create_group = group.add(new_group, {})
+    if create_group.error == "" {
+        print("组创建成功: " + new_group)
+        print("  GID: " + str(create_group.gid))
+    } else {
+        print("组创建失败: " + create_group.error)
+        print("提示: 可能需要 root 权限")
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 5. 修改用户属性
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 修改用户属性 ===")
+
+// 修改用户 shell（示例）
+let modify_result = user.modify("appuser", {
+    "shell": "/bin/zsh",
+    "comment": "Updated Application User"
+})
+
+if modify_result.error == "" {
+    print("用户修改成功")
+} else {
+    print("用户修改失败: " + modify_result.error)
+    print("提示: 可能需要 root 权限，或用户不存在")
+}
+
+// ═══════════════════════════════════════════════════════════
+// 6. 批量用户管理
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 批量用户管理 ===")
+
+let user_list = ["deploy", "monitor", "backup"]
+
+for username in user_list {
+    let check = user.exists(username)
+    if check.exists {
+        let info = user.info(username)
+        print(username + ": UID=" + str(info.uid) + ", Shell=" + info.shell)
+    } else {
+        print(username + ": 不存在")
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 7. 清理（可选）
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 清理测试数据 ===")
+
+// 删除测试用户（如果需要）
+let remove_user = user.remove("appuser", false)  // false = 不删除 home 目录
+if remove_user.error == "" {
+    print("用户 appuser 已删除")
+} else {
+    print("删除用户失败: " + remove_user.error)
+}
+
+// 删除测试组
+let remove_group = group.remove("appgroup")
+if remove_group.error == "" {
+    print("组 appgroup 已删除")
+} else {
+    print("删除组失败: " + remove_group.error)
+}
+
+print("\n=== 用户管理演示完成 ===")

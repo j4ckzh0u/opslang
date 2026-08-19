@@ -1,0 +1,145 @@
+// block_rescue_example.ops - 演示 block/rescue/always 错误处理
+// 类似 Ansible 的错误处理机制
+
+// ═══════════════════════════════════════════════════════════
+// 1. 基本 block/rescue 用法
+// ═══════════════════════════════════════════════════════════
+
+print("=== 示例 1: 基本错误处理 ===")
+
+block {
+    print("尝试执行操作...")
+    // 模拟可能失败的操作
+    let result = file.read("/nonexistent/file.txt")
+    print("读取成功: " + result.content)
+}
+rescue {
+    print("操作失败，进入 rescue 块")
+    print("错误信息: " + _error.message)
+    // 这里可以执行恢复操作
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2. block/rescue/always 完整用法
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 示例 2: 完整的 block/rescue/always ===")
+
+let task_success = false
+
+block {
+    print("执行任务...")
+    // 尝试启动一个可能不存在的的服务
+    let result = service.start("nonexistent-service")
+    if result.error != "" {
+        print("服务启动失败: " + result.error)
+    }
+    task_success = true
+}
+rescue {
+    print("任务失败，执行恢复逻辑")
+    print("错误: " + _error.message)
+    task_success = false
+}
+always {
+    print("无论成功失败，都会执行 always 块")
+    print("任务状态: " + str(task_success))
+    // 清理操作、日志记录等
+}
+
+// ═══════════════════════════════════════════════════════════
+// 3. 嵌套 block/rescue
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 示例 3: 嵌套错误处理 ===")
+
+block {
+    print("外层 block")
+
+    block {
+        print("内层 block")
+        // 这里会失败
+        let data = file.read("/this/does/not/exist")
+        print("不会执行到这里")
+    }
+    rescue {
+        print("内层 rescue 捕获错误: " + _error.message)
+        // 内层 rescue 处理后，外层继续
+    }
+
+    print("外层 block 继续执行")
+}
+rescue {
+    print("外层 rescue（不会执行，因为内层已处理）")
+}
+
+// ═══════════════════════════════════════════════════════════
+// 4. 实际应用场景：服务部署
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 示例 4: 服务部署流程 ===")
+
+let deploy_success = false
+let deploy_backup_path = "/tmp/app-backup-" + str(time.now().unix)
+
+block {
+    print("步骤 1: 备份当前版本")
+    let backup = file.copy("/opt/app/current", deploy_backup_path)
+    if backup.error != "" {
+        print("备份失败: " + backup.error)
+    }
+
+    print("步骤 2: 停止服务")
+    let stop = service.stop("myapp")
+
+    print("步骤 3: 部署新版本")
+    // 假设这里会失败
+    let deploy = file.copy("/nonexistent/new-version.tar.gz", "/opt/app/current")
+
+    print("步骤 4: 启动服务")
+    let start = service.start("myapp")
+
+    deploy_success = true
+    print("部署成功!")
+}
+rescue {
+    print("部署失败，执行回滚")
+    print("错误: " + _error.message)
+
+    // 回滚：恢复备份
+    let rollback = file.copy(deploy_backup_path, "/opt/app/current")
+    if rollback.error == "" {
+        print("回滚成功")
+        // 重启服务
+        service.start("myapp")
+    } else {
+        print("回滚失败: " + rollback.error)
+        print("需要人工介入!")
+    }
+}
+always {
+    // 清理备份文件
+    if deploy_success {
+        print("清理备份文件")
+        file.delete(deploy_backup_path)
+    }
+    print("部署流程结束")
+}
+
+// ═══════════════════════════════════════════════════════════
+// 5. 仅有 block 和 always（无 rescue）
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 示例 5: block + always（无 rescue）===")
+
+block {
+    print("执行某些操作")
+    let info = sys.hostname()
+    print("主机名: " + info.hostname)
+}
+always {
+    print("记录执行日志")
+    // 无论成功失败都记录
+}
+
+print("\n=== block/rescue/always 演示完成 ===")

@@ -1,0 +1,83 @@
+// for_in_example.ops - 演示 for-in 遍历语法
+// 支持遍历列表、字典、字符串
+
+// ═══════════════════════════════════════════════════════════
+// 1. 遍历列表
+// ═══════════════════════════════════════════════════════════
+
+let servers = ["web01", "web02", "db01", "cache01"]
+
+print("=== 遍历服务器列表 ===")
+for server in servers {
+    print("检查服务器: " + server)
+    // 这里可以调用 sys.cpu.usage() 等函数
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2. 遍历字典
+// ═══════════════════════════════════════════════════════════
+
+let config = {
+    "database": "mysql://localhost:3306",
+    "cache": "redis://localhost:6379",
+    "queue": "rabbitmq://localhost:5672"
+}
+
+print("\n=== 遍历配置字典 ===")
+for key in config {
+    let value = config[key]
+    print("配置项 " + key + " = " + value)
+}
+
+// ═══════════════════════════════════════════════════════════
+// 3. 遍历字符串
+// ═══════════════════════════════════════════════════════════
+
+let hostname = "server01"
+
+print("\n=== 遍历主机名字符串 ===")
+for char in hostname {
+    print("字符: " + char)
+}
+
+// ═══════════════════════════════════════════════════════════
+// 4. 结合系统信息
+// ═══════════════════════════════════════════════════════════
+
+let paths = ["/", "/home", "/var", "/tmp"]
+
+print("\n=== 遍历路径获取磁盘信息 ===")
+for path in paths {
+    let disk = sys.disk.usage(path)
+    if disk.error == "" {
+        print(path + ": 使用率 " + str(disk.used_percent) + "%")
+    } else {
+        print(path + ": 无法获取 - " + disk.error)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 5. 嵌套遍历
+// ═══════════════════════════════════════════════════════════
+
+let services = {
+    "web": ["nginx", "php-fpm"],
+    "db": ["mysql", "redis"],
+    "monitor": ["prometheus", "grafana"]
+}
+
+print("\n=== 嵌套遍历：分组服务 ===")
+for group in services {
+    print("\n服务组: " + group)
+    let svc_list = services[group]
+    for svc in svc_list {
+        let status = service.status(svc)
+        if status.error == "" {
+            print("  " + svc + ": " + status.active)
+        } else {
+            print("  " + svc + ": 未找到")
+        }
+    }
+}
+
+print("\n=== 遍历完成 ===")

@@ -1,0 +1,234 @@
+// system_config.ops - 演示系统配置管理
+// 新增 SDK: sysctl.*, firewall.rule, sys.hostname_set, sys.mount/unmount
+
+// ═══════════════════════════════════════════════════════════
+// 1. 内核参数管理 (sysctl)
+// ═══════════════════════════════════════════════════════════
+
+print("=== 内核参数管理 ===")
+
+// 查询内核参数
+let ip_forward = sysctl.get("net.ipv4.ip_forward")
+if ip_forward.error == "" {
+    print("IP 转发: " + ip_forward.value)
+} else {
+    print("查询失败: " + ip_forward.error)
+}
+
+// 列出所有内核参数
+let all_params = sysctl.list()
+print("\n内核参数总数: " + str(len(all_params.params)))
+
+// 显示部分常用参数
+let common_params = [
+    "net.ipv4.ip_forward",
+    "net.ipv4.tcp_syncookies",
+    "vm.swappiness",
+    "fs.file-max"
+]
+
+print("\n常用内核参数:")
+for param in common_params {
+    let result = sysctl.get(param)
+    if result.error == "" {
+        print("  " + param + " = " + result.value)
+    } else {
+        print("  " + param + " = [不可用]")
+    }
+}
+
+// 设置内核参数（需要 root 权限）
+print("\n设置内核参数（示例，需要 root 权限）:")
+let set_result = sysctl.set("net.ipv4.ip_forward", "1")
+if set_result.error == "" {
+    if set_result.changed {
+        print("  IP 转发已启用")
+    } else {
+        print("  IP 转发已是启用状态")
+    }
+} else {
+    print("  设置失败: " + set_result.error)
+    print("  提示: 需要 root 权限")
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2. 防火墙规则管理 (firewall)
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 防火墙规则管理 ===")
+
+// 开放 SSH 端口
+print("开放 SSH 端口 (22/tcp)...")
+let ssh_rule = firewall.rule("allow", "tcp", 22, "0.0.0.0/0")
+if ssh_rule.error == "" {
+    print("  SSH 规则已添加")
+} else {
+    print("  规则添加失败: " + ssh_rule.error)
+    print("  提示: 需要 root 权限")
+}
+
+// 开放 HTTP/HTTPS 端口
+print("\n开放 HTTP/HTTPS 端口...")
+let http_rule = firewall.rule("allow", "tcp", 80, "0.0.0.0/0")
+let https_rule = firewall.rule("allow", "tcp", 443, "0.0.0.0/0")
+
+if http_rule.error == "" {
+    print("  HTTP (80) 已开放")
+}
+if https_rule.error == "" {
+    print("  HTTPS (443) 已开放")
+}
+
+// 开放自定义端口（仅允许特定 IP）
+print("\n开放 MySQL 端口（仅允许 192.168.1.0/24）...")
+let mysql_rule = firewall.rule("allow", "tcp", 3306, "192.168.1.0/24")
+if mysql_rule.error == "" {
+    print("  MySQL 规则已添加")
+} else {
+    print("  规则添加失败: " + mysql_rule.error)
+}
+
+// 删除规则（示例）
+print("\n删除规则（示例）...")
+let delete_rule = firewall.rule("deny", "tcp", 23, "0.0.0.0/0")
+if delete_rule.error == "" {
+    print("  Telnet (23) 已禁止")
+}
+
+// ═══════════════════════════════════════════════════════════
+// 3. 主机名管理 (sys.hostname_set)
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 主机名管理 ===")
+
+// 查询当前主机名
+let current_hostname = sys.hostname()
+print("当前主机名: " + current_hostname.hostname)
+
+// 设置新主机名（需要 root 权限）
+let new_hostname = "web-server-01"
+print("\n设置新主机名: " + new_hostname)
+
+let set_hostname = sys.hostname_set(new_hostname)
+if set_hostname.error == "" {
+    if set_hostname.changed {
+        print("  主机名已更改为: " + set_hostname.hostname)
+        print("  提示: 可能需要重启或重新登录才能看到变化")
+    } else {
+        print("  主机名未改变（已是目标值）")
+    }
+} else {
+    print("  设置失败: " + set_hostname.error)
+    print("  提示: 需要 root 权限")
+}
+
+// 恢复原主机名（示例）
+print("\n恢复原主机名（示例）...")
+let restore = sys.hostname_set(current_hostname.hostname)
+if restore.error == "" {
+    print("  主机名已恢复")
+}
+
+// ═══════════════════════════════════════════════════════════
+// 4. 挂载点管理 (sys.mount/unmount/list_mounts)
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 挂载点管理 ===")
+
+// 列出所有挂载点
+let mounts = sys.list_mounts()
+print("当前挂载点数量: " + str(len(mounts.mounts)))
+
+// 显示前 5 个挂载点
+print("\n前 5 个挂载点:")
+let count = 0
+for mount in mounts.mounts {
+    if count >= 5 {
+        break
+    }
+    print("  " + mount.device + " -> " + mount.mountpoint)
+    print("    类型: " + mount.fstype + ", 选项: " + mount.options)
+    count = count + 1
+}
+
+// 挂载文件系统（示例，需要 root 权限）
+print("\n挂载文件系统（示例，需要 root 权限）...")
+
+// 创建挂载点
+let mkdir_result = file.mkdir("/mnt/data")
+if mkdir_result.error == "" {
+    print("  挂载点 /mnt/data 已创建")
+}
+
+// 挂载（示例：挂载 tmpfs）
+let mount_result = sys.mount("tmpfs", "/mnt/data", "tmpfs", {
+    "size": "100M"
+})
+
+if mount_result.error == "" {
+    if mount_result.changed {
+        print("  tmpfs 已挂载到 /mnt/data")
+    } else {
+        print("  已挂载（无变化）")
+    }
+} else {
+    print("  挂载失败: " + mount_result.error)
+    print("  提示: 需要 root 权限")
+}
+
+// 卸载（示例）
+print("\n卸载文件系统（示例）...")
+let unmount_result = sys.unmount("/mnt/data")
+if unmount_result.error == "" {
+    if unmount_result.changed {
+        print("  /mnt/data 已卸载")
+    } else {
+        print("  未挂载（无变化）")
+    }
+} else {
+    print("  卸载失败: " + unmount_result.error)
+}
+
+// ═══════════════════════════════════════════════════════════
+// 5. 综合示例：服务器初始化
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 综合示例：服务器初始化 ===")
+
+print("步骤 1: 设置主机名")
+let init_hostname = sys.hostname_set("app-server-01")
+if init_hostname.error == "" {
+    print("  ✓ 主机名设置成功")
+} else {
+    print("  ✗ 主机名设置失败: " + init_hostname.error)
+}
+
+print("\n步骤 2: 优化内核参数")
+let optimizations = {
+    "net.ipv4.tcp_fin_timeout": "30",
+    "net.ipv4.tcp_keepalive_time": "1200",
+    "net.ipv4.tcp_max_syn_backlog": "2048"
+}
+
+for param in optimizations {
+    let value = optimizations[param]
+    let result = sysctl.set(param, value)
+    if result.error == "" {
+        print("  ✓ " + param + " = " + value)
+    } else {
+        print("  ✗ " + param + " 设置失败")
+    }
+}
+
+print("\n步骤 3: 配置防火墙")
+let allow_ports = [22, 80, 443, 8080]
+for port in allow_ports {
+    let rule = firewall.rule("allow", "tcp", port, "0.0.0.0/0")
+    if rule.error == "" {
+        print("  ✓ 端口 " + str(port) + "/tcp 已开放")
+    } else {
+        print("  ✗ 端口 " + str(port) + " 配置失败")
+    }
+}
+
+print("\n=== 系统配置管理演示完成 ===")

@@ -1,0 +1,192 @@
+// git_operations.ops - 演示 Git 操作
+// 新增 SDK: git.*
+
+// ═══════════════════════════════════════════════════════════
+// 1. 克隆仓库
+// ═══════════════════════════════════════════════════════════
+
+print("=== 克隆 Git 仓库 ===")
+
+let repo_url = "https://github.com/j4ckzh0u/opslang.git"
+let clone_dir = "/tmp/opslang-clone-test"
+
+// 清理可能存在的目录
+file.delete(clone_dir)
+
+// 克隆仓库
+print("克隆仓库: " + repo_url)
+let clone_result = git.clone(repo_url, clone_dir, {})
+
+if clone_result.error == "" {
+    print("  ✓ 克隆成功")
+    print("  路径: " + clone_result.path)
+    print("  分支: " + clone_result.branch)
+} else {
+    print("  ✗ 克隆失败: " + clone_result.error)
+}
+
+// 克隆特定分支
+print("\n克隆特定分支 (main)...")
+let clone_branch_dir = "/tmp/opslang-main-test"
+file.delete(clone_branch_dir)
+
+let clone_branch = git.clone(repo_url, clone_branch_dir, {
+    "branch": "main",
+    "depth": "1"  // 浅克隆，节省空间
+})
+
+if clone_branch.error == "" {
+    print("  ✓ 克隆成功")
+    print("  分支: " + clone_branch.branch)
+} else {
+    print("  ✗ 克隆失败: " + clone_branch.error)
+}
+
+// ═══════════════════════════════════════════════════════════
+// 2. 拉取更新
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 拉取更新 ===")
+
+// 拉取默认分支
+print("拉取最新更新...")
+let pull_result = git.pull(clone_dir, "", "")
+
+if pull_result.error == "" {
+    if pull_result.changed {
+        print("  ✓ 已更新到新提交")
+        print("  提交: " + pull_result.commit)
+    } else {
+        print("  - 已是最新")
+    }
+} else {
+    print("  ✗ 拉取失败: " + pull_result.error)
+}
+
+// 拉取特定分支
+print("\n拉取 main 分支...")
+let pull_main = git.pull(clone_dir, "origin", "main")
+
+if pull_main.error == "" {
+    print("  ✓ 拉取成功")
+} else {
+    print("  ✗ 拉取失败: " + pull_main.error)
+}
+
+// ═══════════════════════════════════════════════════════════
+// 3. 实际场景：部署应用
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 实际场景：从 Git 部署应用 ===")
+
+let app_repo = "https://github.com/j4ckzh0u/opslang.git"
+let app_dir = "/tmp/app-deploy-test"
+
+// 步骤 1: 清理旧版本
+print("步骤 1: 清理旧版本...")
+let cleanup = file.delete(app_dir)
+if cleanup.error == "" {
+    print("  ✓ 旧版本已清理")
+}
+
+// 步骤 2: 克隆新版本
+print("\n步骤 2: 克隆新版本...")
+let deploy_clone = git.clone(app_repo, app_dir, {
+    "branch": "main"
+})
+
+if deploy_clone.error == "" {
+    print("  ✓ 代码已克隆")
+} else {
+    print("  ✗ 克隆失败: " + deploy_clone.error)
+}
+
+// 步骤 3: 验证代码
+print("\n步骤 3: 验证代码...")
+let readme = file.read(app_dir + "/README.md")
+if readme.error == "" {
+    print("  ✓ README.md 存在")
+    print("  大小: " + str(len(readme.content)) + " 字节")
+} else {
+    print("  ✗ README.md 不存在")
+}
+
+// 步骤 4: 列出文件
+print("\n步骤 4: 列出仓库文件...")
+let files = file.list(app_dir)
+if files.error == "" {
+    print("  文件数量: " + str(len(files.files)))
+    let count = 0
+    for f in files.files {
+        if count >= 5 {
+            break
+        }
+        print("    - " + f.name)
+        count = count + 1
+    }
+    if len(files.files) > 5 {
+        print("    ... 等 " + str(len(files.files) - 5) + " 个文件")
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 4. 批量管理多个仓库
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 批量管理多个仓库 ===")
+
+let repos = [
+    {"name": "opslang", "url": "https://github.com/j4ckzh0u/opslang.git"},
+    {"name": "test-repo", "url": "https://github.com/j4ckzh0u/opslang.git"}
+]
+
+let base_dir = "/tmp/multi-repo-test"
+file.mkdir(base_dir)
+
+// 克隆所有仓库
+print("克隆多个仓库...")
+for repo in repos {
+    let repo_dir = base_dir + "/" + repo["name"]
+    file.delete(repo_dir)
+
+    let result = git.clone(repo["url"], repo_dir, {})
+    if result.error == "" {
+        print("  ✓ " + repo["name"] + " 已克隆")
+    } else {
+        print("  ✗ " + repo["name"] + " 克隆失败: " + result.error)
+    }
+}
+
+// 更新所有仓库
+print("\n更新所有仓库...")
+for repo in repos {
+    let repo_dir = base_dir + "/" + repo["name"]
+    let result = git.pull(repo_dir, "", "")
+    if result.error == "" {
+        if result.changed {
+            print("  ✓ " + repo["name"] + " 已更新")
+        } else {
+            print("  - " + repo["name"] + " 已是最新")
+        }
+    } else {
+        print("  ✗ " + repo["name"] + " 更新失败: " + result.error)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════
+// 5. 清理测试数据
+// ═══════════════════════════════════════════════════════════
+
+print("\n=== 清理测试数据 ===")
+
+let dirs_to_clean = [clone_dir, clone_branch_dir, app_dir, base_dir]
+for dir in dirs_to_clean {
+    let result = file.delete(dir)
+    if result.error == "" {
+        print("  ✓ 删除: " + dir)
+    } else {
+        print("  ✗ 删除失败: " + dir)
+    }
+}
+
+print("\n=== git 操作演示完成 ===")
