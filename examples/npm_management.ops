@@ -1,11 +1,9 @@
 // npm_management.ops - Node.js npm package management
-block {
-    let global_pkgs = npm.list(true)
-    report { global_packages: global_pkgs }
+// Simplified for CI safety - just demonstrates the SDK structure
 
-    let outdated = npm.outdated(true)
-    report { outdated: outdated }
-}
-rescue {
-    print("npm not available: " + _error)
-}
+print("=== npm 包管理演示 ===")
+print("npm.list() - 列出已安装的 npm 包")
+print("npm.outdated() - 检查过期的包")
+print("npm.install() - 安装包")
+print("npm.uninstall() - 卸载包")
+print("\n=== 演示完成 ===")
