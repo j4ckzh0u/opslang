@@ -835,6 +835,51 @@ var sdkMapping = map[string]sdkFunc{
 	// expect
 	"expect.run":        {pkg: "expect", goName: "Run", args: true, params: []string{"s", "ms", "i"}},
 	"expect.run_simple": {pkg: "expect", goName: "RunSimple", args: true, params: []string{"s", "s", "s", "i"}},
+
+	// slurp
+	"slurp.encode": {pkg: "slurp", goName: "Encode", args: true, params: []string{"s"}},
+	"slurp.decode": {pkg: "slurp", goName: "Decode", args: true, params: []string{"s", "s"}},
+
+	// wait_for_connection
+	"wait_for_connection.wait":       {pkg: "wait_for_connection", goName: "Wait", args: true, params: []string{"s", "i", "i", "i"}},
+	"wait_for_connection.check_once": {pkg: "wait_for_connection", goName: "CheckOnce", args: true, params: []string{"s", "i"}},
+
+	// firewalld_rich_rule
+	"firewalld_rich_rule.add":     {pkg: "firewalld_rich_rule", goName: "Add", args: true, params: []string{"s", "s"}},
+	"firewalld_rich_rule.remove":  {pkg: "firewalld_rich_rule", goName: "Remove", args: true, params: []string{"s", "s"}},
+	"firewalld_rich_rule.list":    {pkg: "firewalld_rich_rule", goName: "List", args: true, params: []string{"s"}},
+	"firewalld_rich_rule.exists":  {pkg: "firewalld_rich_rule", goName: "Exists", args: true, params: []string{"s", "s"}},
+
+	// firewalld_ipset
+	"firewalld_ipset.create":       {pkg: "firewalld_ipset", goName: "Create", args: true, params: []string{"s", "s"}},
+	"firewalld_ipset.delete":       {pkg: "firewalld_ipset", goName: "Delete", args: true, params: []string{"s"}},
+	"firewalld_ipset.add_entry":    {pkg: "firewalld_ipset", goName: "AddEntry", args: true, params: []string{"s", "s"}},
+	"firewalld_ipset.remove_entry": {pkg: "firewalld_ipset", goName: "RemoveEntry", args: true, params: []string{"s", "s"}},
+	"firewalld_ipset.list":         {pkg: "firewalld_ipset", goName: "List"},
+	"firewalld_ipset.info":         {pkg: "firewalld_ipset", goName: "Info", args: true, params: []string{"s"}},
+
+	// pause
+	"pause.seconds":            {pkg: "pause", goName: "Seconds", args: true, params: []string{"i"}},
+	"pause.prompt":             {pkg: "pause", goName: "Prompt", args: true, params: []string{"s"}},
+	"pause.prompt_with_default": {pkg: "pause", goName: "PromptWithDefault", args: true, params: []string{"s", "s"}},
+
+	// meta
+	"meta.end_host":         {pkg: "meta", goName: "EndHost"},
+	"meta.end_play":         {pkg: "meta", goName: "EndPlay"},
+	"meta.clear_host_errors": {pkg: "meta", goName: "ClearHostErrors"},
+	"meta.refresh_inventory": {pkg: "meta", goName: "RefreshInventory"},
+	"meta.flush_handlers":   {pkg: "meta", goName: "FlushHandlers"},
+	"meta.reset_connection": {pkg: "meta", goName: "ResetConnection"},
+	"meta.noop":             {pkg: "meta", goName: "Noop"},
+	"meta.fail":             {pkg: "meta", goName: "Fail", args: true, params: []string{"s"}},
+	"meta.assert":           {pkg: "meta", goName: "Assert", args: true, params: []string{"b", "s"}},
+	"meta.debug":            {pkg: "meta", goName: "Debug", args: true, params: []string{"s", "ms"}},
+
+	// uri_ext
+	"uri_ext.patch":   {pkg: "uri_ext", goName: "Patch", args: true, params: []string{"s", "s", "ms", "i"}},
+	"uri_ext.delete":  {pkg: "uri_ext", goName: "Delete", args: true, params: []string{"s", "ms", "i"}},
+	"uri_ext.head":    {pkg: "uri_ext", goName: "Head", args: true, params: []string{"s", "ms", "i"}},
+	"uri_ext.options": {pkg: "uri_ext", goName: "Options", args: true, params: []string{"s", "ms", "i"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1004,6 +1049,13 @@ var pkgImportAlias = map[string]string{
 	"swap":           "opsswap",
 	"raw":            "opsraw",
 	"expect":         "opsexpect",
+	"slurp":          "opsslurp",
+	"wait_for_connection": "opswait_for_connection",
+	"firewalld_rich_rule": "opsfirewalld_rich_rule",
+	"firewalld_ipset": "opsfirewalld_ipset",
+	"pause":          "opspause",
+	"meta":           "opsmeta",
+	"uri_ext":        "opsuri_ext",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1099,6 +1151,13 @@ var pkgImportPath = map[string]string{
 	"swap":           "github.com/opslang/opslang/pkg/ops-core-sdk/swap",
 	"raw":            "github.com/opslang/opslang/pkg/ops-core-sdk/raw",
 	"expect":         "github.com/opslang/opslang/pkg/ops-core-sdk/expect",
+	"slurp":          "github.com/opslang/opslang/pkg/ops-core-sdk/slurp",
+	"wait_for_connection": "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for_connection",
+	"firewalld_rich_rule": "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_rich_rule",
+	"firewalld_ipset": "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_ipset",
+	"pause":          "github.com/opslang/opslang/pkg/ops-core-sdk/pause",
+	"meta":           "github.com/opslang/opslang/pkg/ops-core-sdk/meta",
+	"uri_ext":        "github.com/opslang/opslang/pkg/ops-core-sdk/uri_ext",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

@@ -860,6 +860,51 @@ var Funcs = []Func{
 	// ── expect ──────────────────────────────────────────────────────────────
 	{Name: "expect.run", Args: []string{"command", "responses", "timeout"}, Mutating: true},
 	{Name: "expect.run_simple", Args: []string{"command", "prompt", "response", "timeout"}, Mutating: true},
+
+	// ── slurp ───────────────────────────────────────────────────────────────
+	{Name: "slurp.encode", Args: []string{"path"}},
+	{Name: "slurp.decode", Args: []string{"encoded", "dest_path"}, Mutating: true},
+
+	// ── wait_for_connection ─────────────────────────────────────────────────
+	{Name: "wait_for_connection.wait", Args: []string{"host", "port", "timeout", "delay"}},
+	{Name: "wait_for_connection.check_once", Args: []string{"host", "port"}},
+
+	// ── firewalld_rich_rule ─────────────────────────────────────────────────
+	{Name: "firewalld_rich_rule.add", Args: []string{"zone", "rule"}, Mutating: true},
+	{Name: "firewalld_rich_rule.remove", Args: []string{"zone", "rule"}, Mutating: true},
+	{Name: "firewalld_rich_rule.list", Args: []string{"zone"}},
+	{Name: "firewalld_rich_rule.exists", Args: []string{"zone", "rule"}},
+
+	// ── firewalld_ipset ─────────────────────────────────────────────────────
+	{Name: "firewalld_ipset.create", Args: []string{"name", "type"}, Mutating: true},
+	{Name: "firewalld_ipset.delete", Args: []string{"name"}, Mutating: true},
+	{Name: "firewalld_ipset.add_entry", Args: []string{"name", "entry"}, Mutating: true},
+	{Name: "firewalld_ipset.remove_entry", Args: []string{"name", "entry"}, Mutating: true},
+	{Name: "firewalld_ipset.list"},
+	{Name: "firewalld_ipset.info", Args: []string{"name"}},
+
+	// ── pause ───────────────────────────────────────────────────────────────
+	{Name: "pause.seconds", Args: []string{"duration"}},
+	{Name: "pause.prompt", Args: []string{"message"}},
+	{Name: "pause.prompt_with_default", Args: []string{"message", "default"}},
+
+	// ── meta ────────────────────────────────────────────────────────────────
+	{Name: "meta.end_host"},
+	{Name: "meta.end_play"},
+	{Name: "meta.clear_host_errors"},
+	{Name: "meta.refresh_inventory"},
+	{Name: "meta.flush_handlers"},
+	{Name: "meta.reset_connection"},
+	{Name: "meta.noop"},
+	{Name: "meta.fail", Args: []string{"message"}},
+	{Name: "meta.assert", Args: []string{"condition", "message"}},
+	{Name: "meta.debug", Args: []string{"message", "vars"}},
+
+	// ── uri_ext ─────────────────────────────────────────────────────────────
+	{Name: "uri_ext.patch", Args: []string{"url", "body", "headers", "timeout"}, Mutating: true},
+	{Name: "uri_ext.delete", Args: []string{"url", "headers", "timeout"}, Mutating: true},
+	{Name: "uri_ext.head", Args: []string{"url", "headers", "timeout"}},
+	{Name: "uri_ext.options", Args: []string{"url", "headers", "timeout"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

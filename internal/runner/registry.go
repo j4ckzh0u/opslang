@@ -116,6 +116,13 @@ import (
 	sdkswap "github.com/opslang/opslang/pkg/ops-core-sdk/swap"
 	sdkraw "github.com/opslang/opslang/pkg/ops-core-sdk/raw"
 	sdkexpect "github.com/opslang/opslang/pkg/ops-core-sdk/expect"
+	sdkslurp "github.com/opslang/opslang/pkg/ops-core-sdk/slurp"
+	sdkwait_for_connection "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for_connection"
+	sdkfirewalld_rich_rule "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_rich_rule"
+	sdkfirewalld_ipset "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_ipset"
+	sdkpause "github.com/opslang/opslang/pkg/ops-core-sdk/pause"
+	sdkmeta "github.com/opslang/opslang/pkg/ops-core-sdk/meta"
+	sdkuri_ext "github.com/opslang/opslang/pkg/ops-core-sdk/uri_ext"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -4315,6 +4322,158 @@ func (r *Registry) registerExtensions() {
 		response, _ := argString(args, "response")
 		timeout, _ := argInt(args, "timeout")
 		return sdkexpect.RunSimple(command, prompt, response, timeout), nil
+	})
+
+	// ── slurp ───────────────────────────────────────────────────────────────
+	r.Register("slurp.encode", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		return sdkslurp.Encode(path), nil
+	})
+	r.Register("slurp.decode", func(args map[string]interface{}) (interface{}, error) {
+		encoded, _ := argString(args, "encoded")
+		destPath, _ := argString(args, "dest_path")
+		return sdkslurp.Decode(encoded, destPath), nil
+	})
+
+	// ── wait_for_connection ─────────────────────────────────────────────────
+	r.Register("wait_for_connection.wait", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := argString(args, "host")
+		port, _ := argInt(args, "port")
+		timeout, _ := argInt(args, "timeout")
+		delay, _ := argInt(args, "delay")
+		return sdkwait_for_connection.Wait(host, port, timeout, delay), nil
+	})
+	r.Register("wait_for_connection.check_once", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := argString(args, "host")
+		port, _ := argInt(args, "port")
+		return sdkwait_for_connection.CheckOnce(host, port), nil
+	})
+
+	// ── firewalld_rich_rule ─────────────────────────────────────────────────
+	r.Register("firewalld_rich_rule.add", func(args map[string]interface{}) (interface{}, error) {
+		zone, _ := argString(args, "zone")
+		rule, _ := argString(args, "rule")
+		return sdkfirewalld_rich_rule.Add(zone, rule), nil
+	})
+	r.Register("firewalld_rich_rule.remove", func(args map[string]interface{}) (interface{}, error) {
+		zone, _ := argString(args, "zone")
+		rule, _ := argString(args, "rule")
+		return sdkfirewalld_rich_rule.Remove(zone, rule), nil
+	})
+	r.Register("firewalld_rich_rule.list", func(args map[string]interface{}) (interface{}, error) {
+		zone, _ := argString(args, "zone")
+		return sdkfirewalld_rich_rule.List(zone), nil
+	})
+	r.Register("firewalld_rich_rule.exists", func(args map[string]interface{}) (interface{}, error) {
+		zone, _ := argString(args, "zone")
+		rule, _ := argString(args, "rule")
+		return sdkfirewalld_rich_rule.Exists(zone, rule), nil
+	})
+
+	// ── firewalld_ipset ─────────────────────────────────────────────────────
+	r.Register("firewalld_ipset.create", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		setType, _ := argString(args, "type")
+		return sdkfirewalld_ipset.Create(name, setType), nil
+	})
+	r.Register("firewalld_ipset.delete", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkfirewalld_ipset.Delete(name), nil
+	})
+	r.Register("firewalld_ipset.add_entry", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		entry, _ := argString(args, "entry")
+		return sdkfirewalld_ipset.AddEntry(name, entry), nil
+	})
+	r.Register("firewalld_ipset.remove_entry", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		entry, _ := argString(args, "entry")
+		return sdkfirewalld_ipset.RemoveEntry(name, entry), nil
+	})
+	r.Register("firewalld_ipset.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkfirewalld_ipset.List(), nil
+	})
+	r.Register("firewalld_ipset.info", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkfirewalld_ipset.Info(name), nil
+	})
+
+	// ── pause ───────────────────────────────────────────────────────────────
+	r.Register("pause.seconds", func(args map[string]interface{}) (interface{}, error) {
+		duration, _ := argInt(args, "duration")
+		return sdkpause.Seconds(duration), nil
+	})
+	r.Register("pause.prompt", func(args map[string]interface{}) (interface{}, error) {
+		message, _ := argString(args, "message")
+		return sdkpause.Prompt(message), nil
+	})
+	r.Register("pause.prompt_with_default", func(args map[string]interface{}) (interface{}, error) {
+		message, _ := argString(args, "message")
+		defaultVal, _ := argString(args, "default")
+		return sdkpause.PromptWithDefault(message, defaultVal), nil
+	})
+
+	// ── meta ────────────────────────────────────────────────────────────────
+	r.Register("meta.end_host", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmeta.EndHost(), nil
+	})
+	r.Register("meta.end_play", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmeta.EndPlay(), nil
+	})
+	r.Register("meta.clear_host_errors", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmeta.ClearHostErrors(), nil
+	})
+	r.Register("meta.refresh_inventory", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmeta.RefreshInventory(), nil
+	})
+	r.Register("meta.flush_handlers", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmeta.FlushHandlers(), nil
+	})
+	r.Register("meta.reset_connection", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmeta.ResetConnection(), nil
+	})
+	r.Register("meta.noop", func(args map[string]interface{}) (interface{}, error) {
+		return sdkmeta.Noop(), nil
+	})
+	r.Register("meta.fail", func(args map[string]interface{}) (interface{}, error) {
+		message, _ := argString(args, "message")
+		return sdkmeta.Fail(message), nil
+	})
+	r.Register("meta.assert", func(args map[string]interface{}) (interface{}, error) {
+		condition, _ := args["condition"].(bool)
+		message, _ := argString(args, "message")
+		return sdkmeta.Assert(condition, message), nil
+	})
+	r.Register("meta.debug", func(args map[string]interface{}) (interface{}, error) {
+		message, _ := argString(args, "message")
+		return sdkmeta.Debug(message, nil), nil
+	})
+
+	// ── uri_ext ─────────────────────────────────────────────────────────────
+	r.Register("uri_ext.patch", func(args map[string]interface{}) (interface{}, error) {
+		url, _ := argString(args, "url")
+		body, _ := args["body"].([]byte)
+		headers := toStringMapArg(args, "headers")
+		timeout, _ := argInt(args, "timeout")
+		return sdkuri_ext.Patch(url, body, headers, timeout), nil
+	})
+	r.Register("uri_ext.delete", func(args map[string]interface{}) (interface{}, error) {
+		url, _ := argString(args, "url")
+		headers := toStringMapArg(args, "headers")
+		timeout, _ := argInt(args, "timeout")
+		return sdkuri_ext.Delete(url, headers, timeout), nil
+	})
+	r.Register("uri_ext.head", func(args map[string]interface{}) (interface{}, error) {
+		url, _ := argString(args, "url")
+		headers := toStringMapArg(args, "headers")
+		timeout, _ := argInt(args, "timeout")
+		return sdkuri_ext.Head(url, headers, timeout), nil
+	})
+	r.Register("uri_ext.options", func(args map[string]interface{}) (interface{}, error) {
+		url, _ := argString(args, "url")
+		headers := toStringMapArg(args, "headers")
+		timeout, _ := argInt(args, "timeout")
+		return sdkuri_ext.Options(url, headers, timeout), nil
 	})
 }
 

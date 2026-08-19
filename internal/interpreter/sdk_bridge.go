@@ -115,6 +115,13 @@ import (
 	sdkswap "github.com/opslang/opslang/pkg/ops-core-sdk/swap"
 	sdkraw "github.com/opslang/opslang/pkg/ops-core-sdk/raw"
 	sdkexpect "github.com/opslang/opslang/pkg/ops-core-sdk/expect"
+	sdkslurp "github.com/opslang/opslang/pkg/ops-core-sdk/slurp"
+	sdkwait_for_connection "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for_connection"
+	sdkfirewalld_rich_rule "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_rich_rule"
+	sdkfirewalld_ipset "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_ipset"
+	sdkpause "github.com/opslang/opslang/pkg/ops-core-sdk/pause"
+	sdkmeta "github.com/opslang/opslang/pkg/ops-core-sdk/meta"
+	sdkuri_ext "github.com/opslang/opslang/pkg/ops-core-sdk/uri_ext"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -7040,6 +7047,227 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		response, _ := args[2].(string)
 		timeout, _ := args[3].(int)
 		return sdkexpect.RunSimple(command, prompt, response, timeout), nil
+	}
+
+	// ── slurp ───────────────────────────────────────────────────────────────
+	interp.builtins["slurp.encode"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("slurp.encode() requires 1 argument")
+		}
+		path, _ := args[0].(string)
+		return sdkslurp.Encode(path), nil
+	}
+	interp.builtins["slurp.decode"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("slurp.decode() requires 2 arguments")
+		}
+		encoded, _ := args[0].(string)
+		destPath, _ := args[1].(string)
+		return sdkslurp.Decode(encoded, destPath), nil
+	}
+
+	// ── wait_for_connection ─────────────────────────────────────────────────
+	interp.builtins["wait_for_connection.wait"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("wait_for_connection.wait() requires 4 arguments")
+		}
+		host, _ := args[0].(string)
+		port, _ := args[1].(int)
+		timeout, _ := args[2].(int)
+		delay, _ := args[3].(int)
+		return sdkwait_for_connection.Wait(host, port, timeout, delay), nil
+	}
+	interp.builtins["wait_for_connection.check_once"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("wait_for_connection.check_once() requires 2 arguments")
+		}
+		host, _ := args[0].(string)
+		port, _ := args[1].(int)
+		return sdkwait_for_connection.CheckOnce(host, port), nil
+	}
+
+	// ── firewalld_rich_rule ─────────────────────────────────────────────────
+	interp.builtins["firewalld_rich_rule.add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewalld_rich_rule.add() requires 2 arguments")
+		}
+		zone, _ := args[0].(string)
+		rule, _ := args[1].(string)
+		return sdkfirewalld_rich_rule.Add(zone, rule), nil
+	}
+	interp.builtins["firewalld_rich_rule.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewalld_rich_rule.remove() requires 2 arguments")
+		}
+		zone, _ := args[0].(string)
+		rule, _ := args[1].(string)
+		return sdkfirewalld_rich_rule.Remove(zone, rule), nil
+	}
+	interp.builtins["firewalld_rich_rule.list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("firewalld_rich_rule.list() requires 1 argument")
+		}
+		zone, _ := args[0].(string)
+		return sdkfirewalld_rich_rule.List(zone), nil
+	}
+	interp.builtins["firewalld_rich_rule.exists"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewalld_rich_rule.exists() requires 2 arguments")
+		}
+		zone, _ := args[0].(string)
+		rule, _ := args[1].(string)
+		return sdkfirewalld_rich_rule.Exists(zone, rule), nil
+	}
+
+	// ── firewalld_ipset ─────────────────────────────────────────────────────
+	interp.builtins["firewalld_ipset.create"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewalld_ipset.create() requires 2 arguments")
+		}
+		name, _ := args[0].(string)
+		setType, _ := args[1].(string)
+		return sdkfirewalld_ipset.Create(name, setType), nil
+	}
+	interp.builtins["firewalld_ipset.delete"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("firewalld_ipset.delete() requires 1 argument")
+		}
+		name, _ := args[0].(string)
+		return sdkfirewalld_ipset.Delete(name), nil
+	}
+	interp.builtins["firewalld_ipset.add_entry"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewalld_ipset.add_entry() requires 2 arguments")
+		}
+		name, _ := args[0].(string)
+		entry, _ := args[1].(string)
+		return sdkfirewalld_ipset.AddEntry(name, entry), nil
+	}
+	interp.builtins["firewalld_ipset.remove_entry"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("firewalld_ipset.remove_entry() requires 2 arguments")
+		}
+		name, _ := args[0].(string)
+		entry, _ := args[1].(string)
+		return sdkfirewalld_ipset.RemoveEntry(name, entry), nil
+	}
+	interp.builtins["firewalld_ipset.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkfirewalld_ipset.List(), nil
+	}
+	interp.builtins["firewalld_ipset.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("firewalld_ipset.info() requires 1 argument")
+		}
+		name, _ := args[0].(string)
+		return sdkfirewalld_ipset.Info(name), nil
+	}
+
+	// ── pause ───────────────────────────────────────────────────────────────
+	interp.builtins["pause.seconds"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pause.seconds() requires 1 argument")
+		}
+		duration, _ := args[0].(int)
+		return sdkpause.Seconds(duration), nil
+	}
+	interp.builtins["pause.prompt"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pause.prompt() requires 1 argument")
+		}
+		message, _ := args[0].(string)
+		return sdkpause.Prompt(message), nil
+	}
+	interp.builtins["pause.prompt_with_default"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("pause.prompt_with_default() requires 2 arguments")
+		}
+		message, _ := args[0].(string)
+		defaultVal, _ := args[1].(string)
+		return sdkpause.PromptWithDefault(message, defaultVal), nil
+	}
+
+	// ── meta ────────────────────────────────────────────────────────────────
+	interp.builtins["meta.end_host"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmeta.EndHost(), nil
+	}
+	interp.builtins["meta.end_play"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmeta.EndPlay(), nil
+	}
+	interp.builtins["meta.clear_host_errors"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmeta.ClearHostErrors(), nil
+	}
+	interp.builtins["meta.refresh_inventory"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmeta.RefreshInventory(), nil
+	}
+	interp.builtins["meta.flush_handlers"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmeta.FlushHandlers(), nil
+	}
+	interp.builtins["meta.reset_connection"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmeta.ResetConnection(), nil
+	}
+	interp.builtins["meta.noop"] = func(args ...interface{}) (interface{}, error) {
+		return sdkmeta.Noop(), nil
+	}
+	interp.builtins["meta.fail"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("meta.fail() requires 1 argument")
+		}
+		message, _ := args[0].(string)
+		return sdkmeta.Fail(message), nil
+	}
+	interp.builtins["meta.assert"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("meta.assert() requires 2 arguments")
+		}
+		condition, _ := args[0].(bool)
+		message, _ := args[1].(string)
+		return sdkmeta.Assert(condition, message), nil
+	}
+	interp.builtins["meta.debug"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("meta.debug() requires 1 argument")
+		}
+		message, _ := args[0].(string)
+		return sdkmeta.Debug(message, nil), nil
+	}
+
+	// ── uri_ext ─────────────────────────────────────────────────────────────
+	interp.builtins["uri_ext.patch"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("uri_ext.patch() requires 4 arguments")
+		}
+		url, _ := args[0].(string)
+		body, _ := args[1].([]byte)
+		headers := toStringMap(args, 2)
+		timeout, _ := args[3].(int)
+		return sdkuri_ext.Patch(url, body, headers, timeout), nil
+	}
+	interp.builtins["uri_ext.delete"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("uri_ext.delete() requires 3 arguments")
+		}
+		url, _ := args[0].(string)
+		headers := toStringMap(args, 1)
+		timeout, _ := args[2].(int)
+		return sdkuri_ext.Delete(url, headers, timeout), nil
+	}
+	interp.builtins["uri_ext.head"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("uri_ext.head() requires 3 arguments")
+		}
+		url, _ := args[0].(string)
+		headers := toStringMap(args, 1)
+		timeout, _ := args[2].(int)
+		return sdkuri_ext.Head(url, headers, timeout), nil
+	}
+	interp.builtins["uri_ext.options"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("uri_ext.options() requires 3 arguments")
+		}
+		url, _ := args[0].(string)
+		headers := toStringMap(args, 1)
+		timeout, _ := args[2].(int)
+		return sdkuri_ext.Options(url, headers, timeout), nil
 	}
 }
 // If the arg at idx is a map[string]interface{}, values are converted to strings.
