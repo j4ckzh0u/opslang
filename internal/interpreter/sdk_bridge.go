@@ -10578,6 +10578,94 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		return sdktypedebug.Debug(value), nil
 	}
+
+	// ── group_by ────────────────────────────────────────────────────────
+	interp.builtins["group_by.group_by"] = func(args ...interface{}) (interface{}, error) {
+		hostsRaw, _ := args[0].([]interface{})
+		hosts := make([]string, len(hostsRaw))
+		for i, h := range hostsRaw {
+			hosts[i] = fmt.Sprintf("%v", h)
+		}
+		key := getStringArgBridge(args, 1, "")
+		return sdkgroupby.GroupBy(hosts, key), nil
+	}
+	interp.builtins["group_by.get_hosts"] = func(args ...interface{}) (interface{}, error) {
+		group := getStringArgBridge(args, 0, "")
+		return sdkgroupby.GetHosts(group), nil
+	}
+	interp.builtins["group_by.list_groups"] = func(args ...interface{}) (interface{}, error) {
+		return sdkgroupby.ListGroups(), nil
+	}
+	interp.builtins["group_by.clear"] = func(args ...interface{}) (interface{}, error) {
+		sdkgroupby.Clear()
+		return nil, nil
+	}
+
+	// ── normalize ───────────────────────────────────────────────────────
+	interp.builtins["normalize.lower"] = func(args ...interface{}) (interface{}, error) {
+		return sdknormalize.Lower(getStringArgBridge(args, 0, "")), nil
+	}
+	interp.builtins["normalize.upper"] = func(args ...interface{}) (interface{}, error) {
+		return sdknormalize.Upper(getStringArgBridge(args, 0, "")), nil
+	}
+	interp.builtins["normalize.trim"] = func(args ...interface{}) (interface{}, error) {
+		return sdknormalize.Trim(getStringArgBridge(args, 0, "")), nil
+	}
+	interp.builtins["normalize.slugify"] = func(args ...interface{}) (interface{}, error) {
+		return sdknormalize.Slugify(getStringArgBridge(args, 0, "")), nil
+	}
+	interp.builtins["normalize.title"] = func(args ...interface{}) (interface{}, error) {
+		return sdknormalize.Title(getStringArgBridge(args, 0, "")), nil
+	}
+	interp.builtins["normalize.camel_case"] = func(args ...interface{}) (interface{}, error) {
+		return sdknormalize.CamelCase(getStringArgBridge(args, 0, "")), nil
+	}
+	interp.builtins["normalize.snake_case"] = func(args ...interface{}) (interface{}, error) {
+		return sdknormalize.SnakeCase(getStringArgBridge(args, 0, "")), nil
+	}
+	interp.builtins["normalize.kebab_case"] = func(args ...interface{}) (interface{}, error) {
+		return sdknormalize.KebabCase(getStringArgBridge(args, 0, "")), nil
+	}
+
+	// ── validate_certs ──────────────────────────────────────────────────
+	interp.builtins["validate_certs.validate"] = func(args ...interface{}) (interface{}, error) {
+		host := getStringArgBridge(args, 0, "")
+		port := 443
+		if len(args) > 1 {
+			if p, ok := args[1].(float64); ok {
+				port = int(p)
+			}
+		}
+		timeoutMs := 5000
+		if len(args) > 2 {
+			if t, ok := args[2].(float64); ok {
+				timeoutMs = int(t)
+			}
+		}
+		return sdkvalidatecerts.Validate(host, port, time.Duration(timeoutMs)*time.Millisecond), nil
+	}
+	interp.builtins["validate_certs.check_expiry"] = func(args ...interface{}) (interface{}, error) {
+		host := getStringArgBridge(args, 0, "")
+		port := 443
+		if len(args) > 1 {
+			if p, ok := args[1].(float64); ok {
+				port = int(p)
+			}
+		}
+		days := 30
+		if len(args) > 2 {
+			if d, ok := args[2].(float64); ok {
+				days = int(d)
+			}
+		}
+		timeoutMs := 5000
+		if len(args) > 3 {
+			if t, ok := args[3].(float64); ok {
+				timeoutMs = int(t)
+			}
+		}
+		return sdkvalidatecerts.CheckExpiry(host, port, days, time.Duration(timeoutMs)*time.Millisecond), nil
+	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {
 	result := make(map[string]string)
