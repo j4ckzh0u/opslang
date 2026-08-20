@@ -1446,6 +1446,11 @@ var Funcs = []Func{
 	{Name: "dnsmasq.set", Args: []string{"key", "value"}, Mutating: true},
 	{Name: "dnsmasq.absent", Args: []string{"key"}, Mutating: true},
 	{Name: "dnsmasq.restart", Mutating: true},
+
+	// apache2_module: Apache HTTP Server module management
+	{Name: "apache2_module.check", Args: []string{"module"}},
+	{Name: "apache2_module.enable", Args: []string{"module"}, Mutating: true},
+	{Name: "apache2_module.disable", Args: []string{"module"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

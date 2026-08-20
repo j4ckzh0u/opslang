@@ -1433,6 +1433,11 @@ var sdkMapping = map[string]sdkFunc{
 	"dnsmasq.set":     {pkg: "dnsmasq", goName: "Set", args: true, params: []string{"s", "s"}},
 	"dnsmasq.absent":  {pkg: "dnsmasq", goName: "Absent", args: true, params: []string{"s"}},
 	"dnsmasq.restart": {pkg: "dnsmasq", goName: "Restart", args: true},
+
+	// apache2_module
+	"apache2_module.check":  {pkg: "apache2_module", goName: "Check", args: true, params: []string{"s"}},
+	"apache2_module.enable": {pkg: "apache2_module", goName: "Enable", args: true, params: []string{"s"}},
+	"apache2_module.disable": {pkg: "apache2_module", goName: "Disable", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1686,6 +1691,7 @@ var pkgImportAlias = map[string]string{
 	"nfs_exports":      "opsnfsexports",
 	"postfix":          "opspostfix",
 	"dnsmasq":          "opsdnsmasq",
+	"apache2_module":   "opsapache2mod",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1865,6 +1871,7 @@ var pkgImportPath = map[string]string{
 	"nfs_exports":      "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports",
 	"postfix":          "github.com/opslang/opslang/pkg/ops-core-sdk/postfix",
 	"dnsmasq":          "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq",
+	"apache2_module":   "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

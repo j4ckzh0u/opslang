@@ -199,6 +199,7 @@ import (
 	sdknfsexports "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports"
 	sdkpostfix "github.com/opslang/opslang/pkg/ops-core-sdk/postfix"
 	sdkdnsmasq "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq"
+	sdkapache2mod "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11278,6 +11279,19 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["dnsmasq.restart"] = func(args ...interface{}) (interface{}, error) {
 		return sdkdnsmasq.Restart()
+	}
+
+	interp.builtins["apache2_module.check"] = func(args ...interface{}) (interface{}, error) {
+		module := getStringArgBridge(args, 0, "")
+		return sdkapache2mod.Check(module)
+	}
+	interp.builtins["apache2_module.enable"] = func(args ...interface{}) (interface{}, error) {
+		module := getStringArgBridge(args, 0, "")
+		return sdkapache2mod.Enable(module)
+	}
+	interp.builtins["apache2_module.disable"] = func(args ...interface{}) (interface{}, error) {
+		module := getStringArgBridge(args, 0, "")
+		return sdkapache2mod.Disable(module)
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

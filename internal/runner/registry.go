@@ -199,6 +199,7 @@ import (
 	sdknfsexports "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports"
 	sdkpostfix "github.com/opslang/opslang/pkg/ops-core-sdk/postfix"
 	sdkdnsmasq "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq"
+	sdkapache2mod "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module"
 	"time"
 )
 
@@ -7209,6 +7210,19 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("dnsmasq.restart", func(args map[string]interface{}) (interface{}, error) {
 		return sdkdnsmasq.Restart()
+	})
+
+	r.Register("apache2_module.check", func(args map[string]interface{}) (interface{}, error) {
+		module := mapStrArg(args, "module", "")
+		return sdkapache2mod.Check(module)
+	})
+	r.Register("apache2_module.enable", func(args map[string]interface{}) (interface{}, error) {
+		module := mapStrArg(args, "module", "")
+		return sdkapache2mod.Enable(module)
+	})
+	r.Register("apache2_module.disable", func(args map[string]interface{}) (interface{}, error) {
+		module := mapStrArg(args, "module", "")
+		return sdkapache2mod.Disable(module)
 	})
 }
 
