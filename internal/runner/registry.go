@@ -190,6 +190,7 @@ import (
 	sdkopensslpublickey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey"
 	sdketcd "github.com/opslang/opslang/pkg/ops-core-sdk/etcd"
 	sdkzookeeper "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper"
+	sdkvault "github.com/opslang/opslang/pkg/ops-core-sdk/vault"
 	"time"
 )
 
@@ -7047,6 +7048,35 @@ func (r *Registry) registerExtensions() {
 			}
 		}
 		return sdkzookeeper.Exists(path, servers), nil
+	})
+	// vault
+	r.Register("vault.read", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		token := mapStrArg(args, "token", "")
+		address := mapStrArg(args, "address", "")
+		return sdkvault.Read(path, token, address), nil
+	})
+	r.Register("vault.write", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		token := mapStrArg(args, "token", "")
+		address := mapStrArg(args, "address", "")
+		data := make(map[string]interface{})
+		if d, ok := args["data"].(map[string]interface{}); ok {
+			data = d
+		}
+		return sdkvault.Write(path, token, address, data), nil
+	})
+	r.Register("vault.delete", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		token := mapStrArg(args, "token", "")
+		address := mapStrArg(args, "address", "")
+		return sdkvault.Delete(path, token, address), nil
+	})
+	r.Register("vault.list", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		token := mapStrArg(args, "token", "")
+		address := mapStrArg(args, "address", "")
+		return sdkvault.List(path, token, address), nil
 	})
 }
 

@@ -1399,6 +1399,11 @@ var Funcs = []Func{
 	{Name: "zookeeper.delete", Args: []string{"path", "servers"}, Mutating: true},
 	{Name: "zookeeper.list", Args: []string{"path", "servers"}},
 	{Name: "zookeeper.exists", Args: []string{"path", "servers"}},
+	// vault
+	{Name: "vault.read", Args: []string{"path", "token", "address"}},
+	{Name: "vault.write", Args: []string{"path", "token", "address", "data"}, Mutating: true},
+	{Name: "vault.delete", Args: []string{"path", "token", "address"}, Mutating: true},
+	{Name: "vault.list", Args: []string{"path", "token", "address"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

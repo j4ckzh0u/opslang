@@ -190,6 +190,7 @@ import (
 	sdkopensslpublickey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey"
 	sdketcd "github.com/opslang/opslang/pkg/ops-core-sdk/etcd"
 	sdkzookeeper "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper"
+	sdkvault "github.com/opslang/opslang/pkg/ops-core-sdk/vault"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11114,6 +11115,37 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			}
 		}
 		return sdkzookeeper.Exists(path, servers), nil
+	}
+	// vault
+	interp.builtins["vault.read"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		token := getStringArgBridge(args, 1, "")
+		address := getStringArgBridge(args, 2, "")
+		return sdkvault.Read(path, token, address), nil
+	}
+	interp.builtins["vault.write"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		token := getStringArgBridge(args, 1, "")
+		address := getStringArgBridge(args, 2, "")
+		data := make(map[string]interface{})
+		if len(args) > 3 {
+			if m, ok := args[3].(map[string]interface{}); ok {
+				data = m
+			}
+		}
+		return sdkvault.Write(path, token, address, data), nil
+	}
+	interp.builtins["vault.delete"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		token := getStringArgBridge(args, 1, "")
+		address := getStringArgBridge(args, 2, "")
+		return sdkvault.Delete(path, token, address), nil
+	}
+	interp.builtins["vault.list"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		token := getStringArgBridge(args, 1, "")
+		address := getStringArgBridge(args, 2, "")
+		return sdkvault.List(path, token, address), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

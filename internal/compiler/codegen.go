@@ -1386,6 +1386,11 @@ var sdkMapping = map[string]sdkFunc{
 	"zookeeper.delete": {pkg: "zookeeper", goName: "Delete", args: true, params: []string{"s", "l"}},
 	"zookeeper.list":   {pkg: "zookeeper", goName: "List", args: true, params: []string{"s", "l"}},
 	"zookeeper.exists": {pkg: "zookeeper", goName: "Exists", args: true, params: []string{"s", "l"}},
+	// vault
+	"vault.read":   {pkg: "vault", goName: "Read", args: true, params: []string{"s", "s", "s"}},
+	"vault.write":  {pkg: "vault", goName: "Write", args: true, params: []string{"s", "s", "s", "m"}},
+	"vault.delete": {pkg: "vault", goName: "Delete", args: true, params: []string{"s", "s", "s"}},
+	"vault.list":   {pkg: "vault", goName: "List", args: true, params: []string{"s", "s", "s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1630,6 +1635,7 @@ var pkgImportAlias = map[string]string{
 	"openssl_publickey": "opsopensslpublickey",
 	"etcd":             "opsetcd",
 	"zookeeper":        "opszookeeper",
+	"vault":            "opsvault",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1800,6 +1806,7 @@ var pkgImportPath = map[string]string{
 	"openssl_publickey": "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey",
 	"etcd":             "github.com/opslang/opslang/pkg/ops-core-sdk/etcd",
 	"zookeeper":        "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper",
+	"vault":            "github.com/opslang/opslang/pkg/ops-core-sdk/vault",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
