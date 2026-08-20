@@ -1373,6 +1373,12 @@ var Funcs = []Func{
 	{Name: "ip_netns.delete", Args: []string{"name"}, Mutating: true},
 	{Name: "ip_netns.exec", Args: []string{"namespace", "command", "args"}},
 	{Name: "ip_netns.pids", Args: []string{"name"}},
+	// ip_neighbor - ARP/neighbor table management
+	{Name: "ip_neighbor.list"},
+	{Name: "ip_neighbor.list_dev", Args: []string{"dev"}},
+	{Name: "ip_neighbor.add", Args: []string{"ip", "dev", "mac"}, Mutating: true},
+	{Name: "ip_neighbor.delete", Args: []string{"ip", "dev"}, Mutating: true},
+	{Name: "ip_neighbor.flush", Args: []string{"dev"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

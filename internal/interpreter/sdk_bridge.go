@@ -185,6 +185,7 @@ import (
 	sdkiproute "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route"
 	sdkiplink "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link"
 	sdkipnetns "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns"
+	sdkipneighbor "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10887,6 +10888,29 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	interp.builtins["ip_netns.pids"] = func(args ...interface{}) (interface{}, error) {
 		name := getStringArgBridge(args, 0, "")
 		return sdkipnetns.Pids(name), nil
+	}
+	// ip_neighbor
+	interp.builtins["ip_neighbor.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkipneighbor.List(), nil
+	}
+	interp.builtins["ip_neighbor.list_dev"] = func(args ...interface{}) (interface{}, error) {
+		dev := getStringArgBridge(args, 0, "")
+		return sdkipneighbor.ListDev(dev), nil
+	}
+	interp.builtins["ip_neighbor.add"] = func(args ...interface{}) (interface{}, error) {
+		ip := getStringArgBridge(args, 0, "")
+		dev := getStringArgBridge(args, 1, "")
+		mac := getStringArgBridge(args, 2, "")
+		return sdkipneighbor.Add(ip, dev, mac), nil
+	}
+	interp.builtins["ip_neighbor.delete"] = func(args ...interface{}) (interface{}, error) {
+		ip := getStringArgBridge(args, 0, "")
+		dev := getStringArgBridge(args, 1, "")
+		return sdkipneighbor.Delete(ip, dev), nil
+	}
+	interp.builtins["ip_neighbor.flush"] = func(args ...interface{}) (interface{}, error) {
+		dev := getStringArgBridge(args, 0, "")
+		return sdkipneighbor.Flush(dev), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

@@ -1360,6 +1360,12 @@ var sdkMapping = map[string]sdkFunc{
 	"ip_netns.delete": {pkg: "ip_netns", goName: "Delete", args: true, params: []string{"s"}},
 	"ip_netns.exec":   {pkg: "ip_netns", goName: "Exec", args: true, params: []string{"s", "s", "l"}},
 	"ip_netns.pids":   {pkg: "ip_netns", goName: "Pids", args: true, params: []string{"s"}},
+	// ip_neighbor
+	"ip_neighbor.list":      {pkg: "ip_neighbor", goName: "List"},
+	"ip_neighbor.list_dev":  {pkg: "ip_neighbor", goName: "ListDev", args: true, params: []string{"s"}},
+	"ip_neighbor.add":       {pkg: "ip_neighbor", goName: "Add", args: true, params: []string{"s", "s", "s"}},
+	"ip_neighbor.delete":    {pkg: "ip_neighbor", goName: "Delete", args: true, params: []string{"s", "s"}},
+	"ip_neighbor.flush":     {pkg: "ip_neighbor", goName: "Flush", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1599,6 +1605,7 @@ var pkgImportAlias = map[string]string{
 	"ip_route":         "opsiproute",
 	"ip_link":          "opsiplink",
 	"ip_netns":         "opsipnetns",
+	"ip_neighbor":      "opsipneighbor",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1764,6 +1771,7 @@ var pkgImportPath = map[string]string{
 	"ip_route":         "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route",
 	"ip_link":          "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link",
 	"ip_netns":         "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns",
+	"ip_neighbor":      "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

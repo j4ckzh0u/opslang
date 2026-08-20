@@ -185,6 +185,7 @@ import (
 	sdkiproute "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route"
 	sdkiplink "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link"
 	sdkipnetns "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns"
+	sdkipneighbor "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor"
 	"time"
 )
 
@@ -6854,6 +6855,29 @@ func (r *Registry) registerExtensions() {
 	r.Register("ip_netns.pids", func(args map[string]interface{}) (interface{}, error) {
 		name, _ := args["name"].(string)
 		return sdkipnetns.Pids(name), nil
+	})
+	// ip_neighbor
+	r.Register("ip_neighbor.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkipneighbor.List(), nil
+	})
+	r.Register("ip_neighbor.list_dev", func(args map[string]interface{}) (interface{}, error) {
+		dev, _ := args["dev"].(string)
+		return sdkipneighbor.ListDev(dev), nil
+	})
+	r.Register("ip_neighbor.add", func(args map[string]interface{}) (interface{}, error) {
+		ip, _ := args["ip"].(string)
+		dev, _ := args["dev"].(string)
+		mac, _ := args["mac"].(string)
+		return sdkipneighbor.Add(ip, dev, mac), nil
+	})
+	r.Register("ip_neighbor.delete", func(args map[string]interface{}) (interface{}, error) {
+		ip, _ := args["ip"].(string)
+		dev, _ := args["dev"].(string)
+		return sdkipneighbor.Delete(ip, dev), nil
+	})
+	r.Register("ip_neighbor.flush", func(args map[string]interface{}) (interface{}, error) {
+		dev, _ := args["dev"].(string)
+		return sdkipneighbor.Flush(dev), nil
 	})
 }
 
