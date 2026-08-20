@@ -60,25 +60,42 @@ func (td *TempDir) Cleanup() {
 	}
 
 	if err := os.RemoveAll(td.path); err != nil {
-		// Log error but don't fail - this is cleanup
 		fmt.Fprintf(os.Stderr, "warning: failed to cleanup temp directory %s: %v\n", td.path, err)
 	}
 
 	td.cleaned = true
+	globalTempDirs.Delete(td.path)
 }
 
-// registerSignalHandler registers SIGINT and SIGTERM handlers for cleanup
-func (td *TempDir) registerSignalHandler() {
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+// package-level signal handler (registered once, shared by all TempDir instances)
+var (
+	globalSigOnce  sync.Once
+	globalSigChan  = make(chan os.Signal, 1)
+	globalTempDirs sync.Map // path -> *TempDir
+)
 
-	go func() {
-		<-sigChan
-		td.Cleanup()
-		// Re-raise signal to exit
-		signal.Reset(syscall.SIGINT, syscall.SIGTERM)
-		syscall.Kill(os.Getpid(), syscall.SIGINT)
-	}()
+func ensureGlobalSignalHandler() {
+	globalSigOnce.Do(func() {
+		signal.Notify(globalSigChan, syscall.SIGINT, syscall.SIGTERM)
+		go func() {
+			<-globalSigChan
+			// Cleanup all registered temp dirs
+			globalTempDirs.Range(func(key, value any) bool {
+				if td, ok := value.(*TempDir); ok {
+					td.Cleanup()
+				}
+				return true
+			})
+			signal.Reset(syscall.SIGINT, syscall.SIGTERM)
+			syscall.Kill(os.Getpid(), syscall.SIGINT)
+		}()
+	})
+}
+
+// registerSignalHandler registers this TempDir with the package-level signal handler
+func (td *TempDir) registerSignalHandler() {
+	ensureGlobalSignalHandler()
+	globalTempDirs.Store(td.path, td)
 }
 
 // IsCleaned returns whether the temp directory has been cleaned up
