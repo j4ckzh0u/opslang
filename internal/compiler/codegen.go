@@ -268,6 +268,27 @@ var sdkMapping = map[string]sdkFunc{
 	"runit.disable": {pkg: "runit", goName: "Disable", args: true, params: []string{"s"}},
 	"runit.list":    {pkg: "runit", goName: "List"},
 
+	// fail2ban
+	"fail2ban.get":          {pkg: "fail2ban", goName: "Get"},
+	"fail2ban.jail_status":  {pkg: "fail2ban", goName: "JailStatus", args: true, params: []string{"s"}},
+	"fail2ban.start":        {pkg: "fail2ban", goName: "Start"},
+	"fail2ban.stop":         {pkg: "fail2ban", goName: "Stop"},
+	"fail2ban.reload":       {pkg: "fail2ban", goName: "Reload"},
+	"fail2ban.ban_ip":       {pkg: "fail2ban", goName: "BanIP", args: true, params: []string{"s", "s"}},
+	"fail2ban.unban_ip":     {pkg: "fail2ban", goName: "UnbanIP", args: true, params: []string{"s", "s"}},
+
+	// lsb_release
+	"lsb_release.get": {pkg: "lsb_release", goName: "Get"},
+
+	// docker_compose
+	"docker_compose.up":      {pkg: "docker_compose", goName: "Up", args: true, params: []string{"s"}},
+	"docker_compose.down":    {pkg: "docker_compose", goName: "Down", args: true, params: []string{"s"}},
+	"docker_compose.restart": {pkg: "docker_compose", goName: "Restart", args: true, params: []string{"s"}},
+	"docker_compose.pull":    {pkg: "docker_compose", goName: "Pull", args: true, params: []string{"s"}},
+	"docker_compose.status":  {pkg: "docker_compose", goName: "Status", args: true, params: []string{"s"}},
+	"docker_compose.build":   {pkg: "docker_compose", goName: "Build", args: true, params: []string{"s"}},
+	"docker_compose.logs":    {pkg: "docker_compose", goName: "Logs", args: true, params: []string{"s", "i"}},
+
 	// dpkg_selections
 	"dpkg_selections.set":   {pkg: "dpkg_selections", goName: "SetSelection", args: true, params: []string{"s", "s"}},
 	"dpkg_selections.get":   {pkg: "dpkg_selections", goName: "GetSelection", args: true, params: []string{"s"}},

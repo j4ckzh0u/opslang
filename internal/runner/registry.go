@@ -12,6 +12,9 @@ import (
 	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
 	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
 	sdkrunit "github.com/opslang/opslang/pkg/ops-core-sdk/runit"
+	sdkfail2ban "github.com/opslang/opslang/pkg/ops-core-sdk/fail2ban"
+	sdklsb "github.com/opslang/opslang/pkg/ops-core-sdk/lsb_release"
+	sdkcompose "github.com/opslang/opslang/pkg/ops-core-sdk/docker_compose"
 	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
 	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
@@ -1805,6 +1808,94 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("runit.list", func(_ map[string]interface{}) (interface{}, error) {
 		return sdkrunit.List()
+	})
+
+	// ── fail2ban.* ────────────────────────────────────────────────────
+	r.Register("fail2ban.get", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkfail2ban.Get()
+	})
+	r.Register("fail2ban.jail_status", func(args map[string]interface{}) (interface{}, error) {
+		jail, err := argString(args, "jail")
+		if err != nil {
+			return nil, fmt.Errorf("fail2ban.jail_status: %w", err)
+		}
+		return sdkfail2ban.JailStatus(jail)
+	})
+	r.Register("fail2ban.start", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkfail2ban.Start()
+	})
+	r.Register("fail2ban.stop", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkfail2ban.Stop()
+	})
+	r.Register("fail2ban.reload", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkfail2ban.Reload()
+	})
+	r.Register("fail2ban.ban_ip", func(args map[string]interface{}) (interface{}, error) {
+		jail, err := argString(args, "jail")
+		if err != nil {
+			return nil, fmt.Errorf("fail2ban.ban_ip: %w", err)
+		}
+		ip, err := argString(args, "ip")
+		if err != nil {
+			return nil, fmt.Errorf("fail2ban.ban_ip: %w", err)
+		}
+		return sdkfail2ban.BanIP(jail, ip)
+	})
+	r.Register("fail2ban.unban_ip", func(args map[string]interface{}) (interface{}, error) {
+		jail, err := argString(args, "jail")
+		if err != nil {
+			return nil, fmt.Errorf("fail2ban.unban_ip: %w", err)
+		}
+		ip, err := argString(args, "ip")
+		if err != nil {
+			return nil, fmt.Errorf("fail2ban.unban_ip: %w", err)
+		}
+		return sdkfail2ban.UnbanIP(jail, ip)
+	})
+
+	// ── lsb_release.* ─────────────────────────────────────────────────
+	r.Register("lsb_release.get", func(_ map[string]interface{}) (interface{}, error) {
+		return sdklsb.Get()
+	})
+
+	// ── docker_compose.* ──────────────────────────────────────────────
+	r.Register("docker_compose.up", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "project_dir")
+		return sdkcompose.Up(dir)
+	})
+	r.Register("docker_compose.down", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "project_dir")
+		return sdkcompose.Down(dir)
+	})
+	r.Register("docker_compose.restart", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "project_dir")
+		return sdkcompose.Restart(dir)
+	})
+	r.Register("docker_compose.pull", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "project_dir")
+		return sdkcompose.Pull(dir)
+	})
+	r.Register("docker_compose.status", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "project_dir")
+		return sdkcompose.Status(dir)
+	})
+	r.Register("docker_compose.build", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "project_dir")
+		return sdkcompose.Build(dir)
+	})
+	r.Register("docker_compose.logs", func(args map[string]interface{}) (interface{}, error) {
+		dir, _ := argString(args, "project_dir")
+		tail := 100
+		if v, ok := args["tail"]; ok {
+			if n, ok := v.(int); ok {
+				tail = n
+			}
+		}
+		output, err := sdkcompose.Logs(dir, tail)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"logs": output}, nil
 	})
 
 	// ── dpkg_selections.* ─────────────────────────────────────────────

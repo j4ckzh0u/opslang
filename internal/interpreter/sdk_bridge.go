@@ -12,6 +12,9 @@ import (
 	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
 	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
 	sdkrunit "github.com/opslang/opslang/pkg/ops-core-sdk/runit"
+	sdkfail2ban "github.com/opslang/opslang/pkg/ops-core-sdk/fail2ban"
+	sdklsb "github.com/opslang/opslang/pkg/ops-core-sdk/lsb_release"
+	sdkcompose "github.com/opslang/opslang/pkg/ops-core-sdk/docker_compose"
 	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
 	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
@@ -4307,6 +4310,165 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return r, nil
+	}
+
+	// ── fail2ban.* ────────────────────────────────────────────────────
+	interp.builtins["fail2ban.get"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfail2ban.Get()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["fail2ban.jail_status"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("fail2ban.jail_status() requires 1 argument (jail)")
+		}
+		jail, _ := args[0].(string)
+		r, err := sdkfail2ban.JailStatus(jail)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["fail2ban.start"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfail2ban.Start()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["fail2ban.stop"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfail2ban.Stop()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["fail2ban.reload"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkfail2ban.Reload()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["fail2ban.ban_ip"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("fail2ban.ban_ip() requires 2 arguments (jail, ip)")
+		}
+		jail, _ := args[0].(string)
+		ip, _ := args[1].(string)
+		r, err := sdkfail2ban.BanIP(jail, ip)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["fail2ban.unban_ip"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("fail2ban.unban_ip() requires 2 arguments (jail, ip)")
+		}
+		jail, _ := args[0].(string)
+		ip, _ := args[1].(string)
+		r, err := sdkfail2ban.UnbanIP(jail, ip)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── lsb_release.* ─────────────────────────────────────────────────
+	interp.builtins["lsb_release.get"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdklsb.Get()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── docker_compose.* ──────────────────────────────────────────────
+	interp.builtins["docker_compose.up"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		if len(args) >= 1 {
+			dir, _ = args[0].(string)
+		}
+		r, err := sdkcompose.Up(dir)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker_compose.down"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		if len(args) >= 1 {
+			dir, _ = args[0].(string)
+		}
+		r, err := sdkcompose.Down(dir)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker_compose.restart"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		if len(args) >= 1 {
+			dir, _ = args[0].(string)
+		}
+		r, err := sdkcompose.Restart(dir)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker_compose.pull"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		if len(args) >= 1 {
+			dir, _ = args[0].(string)
+		}
+		r, err := sdkcompose.Pull(dir)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker_compose.status"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		if len(args) >= 1 {
+			dir, _ = args[0].(string)
+		}
+		r, err := sdkcompose.Status(dir)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker_compose.build"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		if len(args) >= 1 {
+			dir, _ = args[0].(string)
+		}
+		r, err := sdkcompose.Build(dir)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["docker_compose.logs"] = func(args ...interface{}) (interface{}, error) {
+		dir := ""
+		tail := 100
+		if len(args) >= 1 {
+			dir, _ = args[0].(string)
+		}
+		if len(args) >= 2 {
+			if v, ok := args[1].(int); ok {
+				tail = v
+			}
+		}
+		output, err := sdkcompose.Logs(dir, tail)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"logs": output}, nil
 	}
 
 	// ── dpkg_selections.* ─────────────────────────────────────────────

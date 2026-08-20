@@ -114,6 +114,27 @@ var Funcs = []Func{
 	{Name: "runit.disable", Args: []string{"service"}, Mutating: true},
 	{Name: "runit.list"},
 
+	// ── fail2ban ─────────────────────────────────────────────────────
+	{Name: "fail2ban.get"},
+	{Name: "fail2ban.jail_status", Args: []string{"jail"}},
+	{Name: "fail2ban.start", Mutating: true},
+	{Name: "fail2ban.stop", Mutating: true},
+	{Name: "fail2ban.reload", Mutating: true},
+	{Name: "fail2ban.ban_ip", Args: []string{"jail", "ip"}, Mutating: true},
+	{Name: "fail2ban.unban_ip", Args: []string{"jail", "ip"}, Mutating: true},
+
+	// ── lsb_release ──────────────────────────────────────────────────
+	{Name: "lsb_release.get"},
+
+	// ── docker_compose ───────────────────────────────────────────────
+	{Name: "docker_compose.up", Args: []string{"project_dir"}, Mutating: true},
+	{Name: "docker_compose.down", Args: []string{"project_dir"}, Mutating: true},
+	{Name: "docker_compose.restart", Args: []string{"project_dir"}, Mutating: true},
+	{Name: "docker_compose.pull", Args: []string{"project_dir"}, Mutating: true},
+	{Name: "docker_compose.status", Args: []string{"project_dir"}},
+	{Name: "docker_compose.build", Args: []string{"project_dir"}, Mutating: true},
+	{Name: "docker_compose.logs", Args: []string{"project_dir", "tail"}},
+
 	// ── dpkg_selections ───────────────────────────────────────────────
 	{Name: "dpkg_selections.set", Args: []string{"name", "state"}, Mutating: true},
 	{Name: "dpkg_selections.get", Args: []string{"name"}},
