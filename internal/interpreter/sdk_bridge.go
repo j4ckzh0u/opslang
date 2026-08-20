@@ -11,6 +11,7 @@ import (
 	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
 	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
 	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
+	sdkrunit "github.com/opslang/opslang/pkg/ops-core-sdk/runit"
 	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
 	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
@@ -4212,6 +4213,96 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["sysvinit.list"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdksysvinit.List()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+
+	// ── runit.* ─────────────────────────────────────────────────────
+	interp.builtins["runit.status"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("runit.status() requires 1 argument (service)")
+		}
+		svc, _ := args[0].(string)
+		r, err := sdkrunit.Status(svc)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["runit.start"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("runit.start() requires 1 argument (service)")
+		}
+		svc, _ := args[0].(string)
+		r, err := sdkrunit.Start(svc)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["runit.stop"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("runit.stop() requires 1 argument (service)")
+		}
+		svc, _ := args[0].(string)
+		r, err := sdkrunit.Stop(svc)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["runit.restart"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("runit.restart() requires 1 argument (service)")
+		}
+		svc, _ := args[0].(string)
+		r, err := sdkrunit.Restart(svc)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["runit.reload"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("runit.reload() requires 1 argument (service)")
+		}
+		svc, _ := args[0].(string)
+		r, err := sdkrunit.Reload(svc)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["runit.enable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("runit.enable() requires at least 1 argument (service)")
+		}
+		svc, _ := args[0].(string)
+		svcDir := ""
+		if len(args) >= 2 {
+			svcDir, _ = args[1].(string)
+		}
+		r, err := sdkrunit.Enable(svc, svcDir)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["runit.disable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("runit.disable() requires 1 argument (service)")
+		}
+		svc, _ := args[0].(string)
+		r, err := sdkrunit.Disable(svc)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["runit.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkrunit.List()
 		if err != nil {
 			return nil, err
 		}

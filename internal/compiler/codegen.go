@@ -258,6 +258,16 @@ var sdkMapping = map[string]sdkFunc{
 	"sysvinit.disable": {pkg: "sysvinit", goName: "Disable", args: true, params: []string{"s"}},
 	"sysvinit.list":    {pkg: "sysvinit", goName: "List"},
 
+	// runit
+	"runit.status":  {pkg: "runit", goName: "Status", args: true, params: []string{"s"}},
+	"runit.start":   {pkg: "runit", goName: "Start", args: true, params: []string{"s"}},
+	"runit.stop":    {pkg: "runit", goName: "Stop", args: true, params: []string{"s"}},
+	"runit.restart": {pkg: "runit", goName: "Restart", args: true, params: []string{"s"}},
+	"runit.reload":  {pkg: "runit", goName: "Reload", args: true, params: []string{"s"}},
+	"runit.enable":  {pkg: "runit", goName: "Enable", args: true, params: []string{"s", "s"}},
+	"runit.disable": {pkg: "runit", goName: "Disable", args: true, params: []string{"s"}},
+	"runit.list":    {pkg: "runit", goName: "List"},
+
 	// dpkg_selections
 	"dpkg_selections.set":   {pkg: "dpkg_selections", goName: "SetSelection", args: true, params: []string{"s", "s"}},
 	"dpkg_selections.get":   {pkg: "dpkg_selections", goName: "GetSelection", args: true, params: []string{"s"}},

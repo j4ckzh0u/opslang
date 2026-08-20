@@ -104,6 +104,16 @@ var Funcs = []Func{
 	{Name: "sysvinit.disable", Args: []string{"name"}, Mutating: true},
 	{Name: "sysvinit.list"},
 
+	// ── runit ─────────────────────────────────────────────────────
+	{Name: "runit.status", Args: []string{"service"}},
+	{Name: "runit.start", Args: []string{"service"}, Mutating: true},
+	{Name: "runit.stop", Args: []string{"service"}, Mutating: true},
+	{Name: "runit.restart", Args: []string{"service"}, Mutating: true},
+	{Name: "runit.reload", Args: []string{"service"}, Mutating: true},
+	{Name: "runit.enable", Args: []string{"service", "service_dir"}, Mutating: true},
+	{Name: "runit.disable", Args: []string{"service"}, Mutating: true},
+	{Name: "runit.list"},
+
 	// ── dpkg_selections ───────────────────────────────────────────────
 	{Name: "dpkg_selections.set", Args: []string{"name", "state"}, Mutating: true},
 	{Name: "dpkg_selections.get", Args: []string{"name"}},

@@ -11,6 +11,7 @@ import (
 	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
 	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
 	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
+	sdkrunit "github.com/opslang/opslang/pkg/ops-core-sdk/runit"
 	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
 	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
@@ -1749,6 +1750,61 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("sysvinit.list", func(_ map[string]interface{}) (interface{}, error) {
 		return sdksysvinit.List()
+	})
+
+	// ── runit.* ─────────────────────────────────────────────────────
+	r.Register("runit.status", func(args map[string]interface{}) (interface{}, error) {
+		svc, err := argString(args, "service")
+		if err != nil {
+			return nil, fmt.Errorf("runit.status: %w", err)
+		}
+		return sdkrunit.Status(svc)
+	})
+	r.Register("runit.start", func(args map[string]interface{}) (interface{}, error) {
+		svc, err := argString(args, "service")
+		if err != nil {
+			return nil, fmt.Errorf("runit.start: %w", err)
+		}
+		return sdkrunit.Start(svc)
+	})
+	r.Register("runit.stop", func(args map[string]interface{}) (interface{}, error) {
+		svc, err := argString(args, "service")
+		if err != nil {
+			return nil, fmt.Errorf("runit.stop: %w", err)
+		}
+		return sdkrunit.Stop(svc)
+	})
+	r.Register("runit.restart", func(args map[string]interface{}) (interface{}, error) {
+		svc, err := argString(args, "service")
+		if err != nil {
+			return nil, fmt.Errorf("runit.restart: %w", err)
+		}
+		return sdkrunit.Restart(svc)
+	})
+	r.Register("runit.reload", func(args map[string]interface{}) (interface{}, error) {
+		svc, err := argString(args, "service")
+		if err != nil {
+			return nil, fmt.Errorf("runit.reload: %w", err)
+		}
+		return sdkrunit.Reload(svc)
+	})
+	r.Register("runit.enable", func(args map[string]interface{}) (interface{}, error) {
+		svc, err := argString(args, "service")
+		if err != nil {
+			return nil, fmt.Errorf("runit.enable: %w", err)
+		}
+		svcDir, _ := argString(args, "service_dir")
+		return sdkrunit.Enable(svc, svcDir)
+	})
+	r.Register("runit.disable", func(args map[string]interface{}) (interface{}, error) {
+		svc, err := argString(args, "service")
+		if err != nil {
+			return nil, fmt.Errorf("runit.disable: %w", err)
+		}
+		return sdkrunit.Disable(svc)
+	})
+	r.Register("runit.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkrunit.List()
 	})
 
 	// ── dpkg_selections.* ─────────────────────────────────────────────
