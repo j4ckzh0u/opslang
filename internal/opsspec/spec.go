@@ -1339,6 +1339,9 @@ var Funcs = []Func{
 	// ── validate_certs ────────────────────────────────────────────────────
 	{Name: "validate_certs.validate", Args: []string{"host", "port", "timeout_ms"}},
 	{Name: "validate_certs.check_expiry", Args: []string{"host", "port", "days", "timeout_ms"}},
+	// ── mail ──────────────────────────────────────────────────────────────
+	{Name: "mail.send", Args: []string{"host", "port", "from", "to", "subject", "body"}, Mutating: true},
+	{Name: "mail.send_html", Args: []string{"host", "port", "from", "to", "subject", "body"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

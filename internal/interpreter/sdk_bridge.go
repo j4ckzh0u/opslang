@@ -179,6 +179,7 @@ import (
 	sdkgroupby "github.com/opslang/opslang/pkg/ops-core-sdk/group_by"
 	sdknormalize "github.com/opslang/opslang/pkg/ops-core-sdk/normalize"
 	sdkvalidatecerts "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs"
+	sdkmail "github.com/opslang/opslang/pkg/ops-core-sdk/mail"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10665,6 +10666,59 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			}
 		}
 		return sdkvalidatecerts.CheckExpiry(host, port, days, time.Duration(timeoutMs)*time.Millisecond), nil
+	}
+
+	// ── mail ──────────────────────────────────────────────────────────────
+	interp.builtins["mail.send"] = func(args ...interface{}) (interface{}, error) {
+		host := getStringArgBridge(args, 0, "")
+		port := 587
+		if len(args) > 1 {
+			if p, ok := args[1].(float64); ok {
+				port = int(p)
+			}
+		}
+		from := getStringArgBridge(args, 2, "")
+		var to []string
+		if len(args) > 3 {
+			if toRaw, ok := args[3].([]interface{}); ok {
+				for _, t := range toRaw {
+					to = append(to, fmt.Sprintf("%v", t))
+				}
+			}
+		}
+		subject := getStringArgBridge(args, 4, "")
+		body := getStringArgBridge(args, 5, "")
+		return sdkmail.SendSimple(host, port, from, to, subject, body), nil
+	}
+	interp.builtins["mail.send_html"] = func(args ...interface{}) (interface{}, error) {
+		host := getStringArgBridge(args, 0, "")
+		port := 587
+		if len(args) > 1 {
+			if p, ok := args[1].(float64); ok {
+				port = int(p)
+			}
+		}
+		from := getStringArgBridge(args, 2, "")
+		var to []string
+		if len(args) > 3 {
+			if toRaw, ok := args[3].([]interface{}); ok {
+				for _, t := range toRaw {
+					to = append(to, fmt.Sprintf("%v", t))
+				}
+			}
+		}
+		subject := getStringArgBridge(args, 4, "")
+		body := getStringArgBridge(args, 5, "")
+		return sdkmail.Send(sdkmail.MailConfig{
+			Host:     host,
+			Port:     port,
+			From:     from,
+			To:       to,
+			Subject:  subject,
+			Body:     body,
+			HTML:     true,
+			StartTLS: true,
+		}), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

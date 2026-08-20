@@ -1322,6 +1322,10 @@ var sdkMapping = map[string]sdkFunc{
 	// ── validate_certs ──────────────────────────────────────────────────
 	"validate_certs.validate":     {pkg: "validate_certs", goName: "Validate", args: true, params: []string{"s", "i", "d"}},
 	"validate_certs.check_expiry": {pkg: "validate_certs", goName: "CheckExpiry", args: true, params: []string{"s", "i", "i", "d"}},
+
+	// ── mail ────────────────────────────────────────────────────────────
+	"mail.send":      {pkg: "mail", goName: "SendSimple", args: true, params: []string{"s", "i", "s", "as", "s", "s"}},
+	"mail.send_html": {pkg: "mail", goName: "Send", args: true, params: []string{"s", "i", "s", "as", "s", "s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1555,6 +1559,7 @@ var pkgImportAlias = map[string]string{
 	"group_by":       "opsgroupby",
 	"normalize":      "opsnormalize",
 	"validate_certs": "opsvalidatecerts",
+	"mail":           "ops",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1714,6 +1719,7 @@ var pkgImportPath = map[string]string{
 	"group_by":       "github.com/opslang/opslang/pkg/ops-core-sdk/group_by",
 	"normalize":      "github.com/opslang/opslang/pkg/ops-core-sdk/normalize",
 	"validate_certs": "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs",
+	"mail":           "github.com/opslang/opslang/pkg/ops-core-sdk/mail",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

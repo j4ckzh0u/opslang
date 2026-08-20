@@ -179,6 +179,7 @@ import (
 	sdkgroupby "github.com/opslang/opslang/pkg/ops-core-sdk/group_by"
 	sdknormalize "github.com/opslang/opslang/pkg/ops-core-sdk/normalize"
 	sdkvalidatecerts "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs"
+	sdkmail "github.com/opslang/opslang/pkg/ops-core-sdk/mail"
 	"time"
 )
 
@@ -6645,6 +6646,51 @@ func (r *Registry) registerExtensions() {
 		}
 		timeoutMs, _ := args["timeout_ms"].(float64)
 		return sdkvalidatecerts.CheckExpiry(host, port, days, time.Duration(timeoutMs)*time.Millisecond), nil
+	})
+
+	// ── mail ──────────────────────────────────────────────────────────────
+	r.Register("mail.send", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 587
+		if p, ok := args["port"].(float64); ok {
+			port = int(p)
+		}
+		from, _ := args["from"].(string)
+		var to []string
+		if toRaw, ok := args["to"].([]interface{}); ok {
+			for _, t := range toRaw {
+				to = append(to, fmt.Sprintf("%v", t))
+			}
+		}
+		subject, _ := args["subject"].(string)
+		body, _ := args["body"].(string)
+		return sdkmail.SendSimple(host, port, from, to, subject, body), nil
+	})
+	r.Register("mail.send_html", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 587
+		if p, ok := args["port"].(float64); ok {
+			port = int(p)
+		}
+		from, _ := args["from"].(string)
+		var to []string
+		if toRaw, ok := args["to"].([]interface{}); ok {
+			for _, t := range toRaw {
+				to = append(to, fmt.Sprintf("%v", t))
+			}
+		}
+		subject, _ := args["subject"].(string)
+		body, _ := args["body"].(string)
+		return sdkmail.Send(sdkmail.MailConfig{
+			Host:     host,
+			Port:     port,
+			From:     from,
+			To:       to,
+			Subject:  subject,
+			Body:     body,
+			HTML:     true,
+			StartTLS: true,
+		}), nil
 	})
 }
 
