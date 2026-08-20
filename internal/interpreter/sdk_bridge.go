@@ -152,6 +152,8 @@ import (
 	sdktomcat "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat"
 	sdkjavacert "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert"
 	sdkmaven "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact"
+	sdkdockerimage "github.com/opslang/opslang/pkg/ops-core-sdk/docker_image"
+	sdkdockercontainer "github.com/opslang/opslang/pkg/ops-core-sdk/docker_container"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10013,6 +10015,172 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		filePath, _ := args[0].(string)
 		r, err := sdkmaven.Checksum(filePath)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+
+	// ── docker_image.* ──────────────────────────────────────────────────
+	interp.builtins["docker_image.pull"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker_image.pull() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		tag := ""
+		force := false
+		if len(args) >= 2 { tag, _ = args[1].(string) }
+		if len(args) >= 3 { force, _ = args[2].(bool) }
+		r, err := sdkdockerimage.Pull(name, tag, force)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_image.build"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("docker_image.build() requires 2 arguments (path, name)")
+		}
+		path, _ := args[0].(string)
+		name, _ := args[1].(string)
+		tag := ""
+		dockerfile := ""
+		if len(args) >= 3 { tag, _ = args[2].(string) }
+		if len(args) >= 4 { dockerfile, _ = args[3].(string) }
+		r, err := sdkdockerimage.Build(path, name, tag, dockerfile)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_image.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker_image.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		tag := ""
+		force := false
+		if len(args) >= 2 { tag, _ = args[1].(string) }
+		if len(args) >= 3 { force, _ = args[2].(bool) }
+		r, err := sdkdockerimage.Remove(name, tag, force)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_image.tag"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("docker_image.tag() requires 2 arguments (source, target)")
+		}
+		source, _ := args[0].(string)
+		target, _ := args[1].(string)
+		r, err := sdkdockerimage.Tag(source, target)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_image.inspect"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker_image.inspect() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdockerimage.Inspect(name)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_image.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkdockerimage.List()
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_image.push"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker_image.push() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		tag := ""
+		if len(args) >= 2 { tag, _ = args[1].(string) }
+		r, err := sdkdockerimage.Push(name, tag)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+
+	// ── docker_container.* ──────────────────────────────────────────────
+	interp.builtins["docker_container.start"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker_container.start() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdockercontainer.Start(name)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_container.stop"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker_container.stop() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		timeout := 0
+		if len(args) >= 2 { timeout, _ = args[1].(int) }
+		r, err := sdkdockercontainer.Stop(name, timeout)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_container.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker_container.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		force := false
+		if len(args) >= 2 { force, _ = args[1].(bool) }
+		r, err := sdkdockercontainer.Remove(name, force)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_container.restart"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker_container.restart() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		timeout := 0
+		if len(args) >= 2 { timeout, _ = args[1].(int) }
+		r, err := sdkdockercontainer.Restart(name, timeout)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_container.pause"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker_container.pause() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdockercontainer.Pause(name)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_container.unpause"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker_container.unpause() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdockercontainer.Unpause(name)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_container.inspect"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker_container.inspect() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdockercontainer.Inspect(name)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_container.list"] = func(args ...interface{}) (interface{}, error) {
+		all := false
+		if len(args) >= 1 { all, _ = args[0].(bool) }
+		r, err := sdkdockercontainer.List(all)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["docker_container.logs"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("docker_container.logs() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		tail := "100"
+		if len(args) >= 2 { tail, _ = args[1].(string) }
+		r, err := sdkdockercontainer.Logs(name, tail)
 		if err != nil { return nil, err }
 		return r, nil
 	}

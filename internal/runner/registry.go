@@ -153,6 +153,8 @@ import (
 	sdktomcat "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat"
 	sdkjavacert "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert"
 	sdkmaven "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact"
+	sdkdockerimage "github.com/opslang/opslang/pkg/ops-core-sdk/docker_image"
+	sdkdockercontainer "github.com/opslang/opslang/pkg/ops-core-sdk/docker_container"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -6109,6 +6111,86 @@ func (r *Registry) registerExtensions() {
 	r.Register("maven_artifact.checksum", func(args map[string]interface{}) (interface{}, error) {
 		filePath, _ := args["file_path"].(string)
 		return sdkmaven.Checksum(filePath)
+	})
+
+	// ── docker_image ────────────────────────────────────────────────────
+	r.Register("docker_image.pull", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		tag, _ := args["tag"].(string)
+		force, _ := args["force"].(bool)
+		return sdkdockerimage.Pull(name, tag, force)
+	})
+	r.Register("docker_image.build", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := args["path"].(string)
+		name, _ := args["name"].(string)
+		tag, _ := args["tag"].(string)
+		dockerfile, _ := args["dockerfile"].(string)
+		return sdkdockerimage.Build(path, name, tag, dockerfile)
+	})
+	r.Register("docker_image.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		tag, _ := args["tag"].(string)
+		force, _ := args["force"].(bool)
+		return sdkdockerimage.Remove(name, tag, force)
+	})
+	r.Register("docker_image.tag", func(args map[string]interface{}) (interface{}, error) {
+		source, _ := args["source"].(string)
+		target, _ := args["target"].(string)
+		return sdkdockerimage.Tag(source, target)
+	})
+	r.Register("docker_image.inspect", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkdockerimage.Inspect(name)
+	})
+	r.Register("docker_image.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkdockerimage.List()
+	})
+	r.Register("docker_image.push", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		tag, _ := args["tag"].(string)
+		return sdkdockerimage.Push(name, tag)
+	})
+
+	// ── docker_container ────────────────────────────────────────────────
+	r.Register("docker_container.start", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkdockercontainer.Start(name)
+	})
+	r.Register("docker_container.stop", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		timeout, _ := args["timeout"].(int)
+		return sdkdockercontainer.Stop(name, timeout)
+	})
+	r.Register("docker_container.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		force, _ := args["force"].(bool)
+		return sdkdockercontainer.Remove(name, force)
+	})
+	r.Register("docker_container.restart", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		timeout, _ := args["timeout"].(int)
+		return sdkdockercontainer.Restart(name, timeout)
+	})
+	r.Register("docker_container.pause", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkdockercontainer.Pause(name)
+	})
+	r.Register("docker_container.unpause", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkdockercontainer.Unpause(name)
+	})
+	r.Register("docker_container.inspect", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkdockercontainer.Inspect(name)
+	})
+	r.Register("docker_container.list", func(args map[string]interface{}) (interface{}, error) {
+		all, _ := args["all"].(bool)
+		return sdkdockercontainer.List(all)
+	})
+	r.Register("docker_container.logs", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		tail, _ := args["tail"].(string)
+		return sdkdockercontainer.Logs(name, tail)
 	})
 }
 

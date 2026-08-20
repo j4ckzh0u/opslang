@@ -1196,6 +1196,24 @@ var sdkMapping = map[string]sdkFunc{
 	"maven_artifact.deploy":            {pkg: "maven_artifact", goName: "Deploy", args: true, params: []string{"s", "s", "s", "s", "s", "s"}},
 	"maven_artifact.get_latest_version": {pkg: "maven_artifact", goName: "GetLatestVersion", args: true, params: []string{"s", "s", "s"}},
 	"maven_artifact.checksum":          {pkg: "maven_artifact", goName: "Checksum", args: true, params: []string{"s"}},
+	// docker_image
+	"docker_image.pull":   {pkg: "docker_image", goName: "Pull", args: true, params: []string{"s", "s", "b"}},
+	"docker_image.build":  {pkg: "docker_image", goName: "Build", args: true, params: []string{"s", "s", "s", "s"}},
+	"docker_image.remove": {pkg: "docker_image", goName: "Remove", args: true, params: []string{"s", "s", "b"}},
+	"docker_image.tag":    {pkg: "docker_image", goName: "Tag", args: true, params: []string{"s", "s"}},
+	"docker_image.inspect": {pkg: "docker_image", goName: "Inspect", args: true, params: []string{"s"}},
+	"docker_image.list":   {pkg: "docker_image", goName: "List", args: false, params: nil},
+	"docker_image.push":   {pkg: "docker_image", goName: "Push", args: true, params: []string{"s", "s"}},
+	// docker_container
+	"docker_container.start":   {pkg: "docker_container", goName: "Start", args: true, params: []string{"s"}},
+	"docker_container.stop":    {pkg: "docker_container", goName: "Stop", args: true, params: []string{"s", "i"}},
+	"docker_container.remove":  {pkg: "docker_container", goName: "Remove", args: true, params: []string{"s", "b"}},
+	"docker_container.restart": {pkg: "docker_container", goName: "Restart", args: true, params: []string{"s", "i"}},
+	"docker_container.pause":   {pkg: "docker_container", goName: "Pause", args: true, params: []string{"s"}},
+	"docker_container.unpause": {pkg: "docker_container", goName: "Unpause", args: true, params: []string{"s"}},
+	"docker_container.inspect": {pkg: "docker_container", goName: "Inspect", args: true, params: []string{"s"}},
+	"docker_container.list":    {pkg: "docker_container", goName: "List", args: true, params: []string{"b"}},
+	"docker_container.logs":    {pkg: "docker_container", goName: "Logs", args: true, params: []string{"s", "s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1403,6 +1421,8 @@ var pkgImportAlias = map[string]string{
 	"tomcat":         "opstomcat",
 	"java_cert":      "opsjavacert",
 	"maven_artifact": "opsmaven",
+	"docker_image":   "opsdockerimage",
+	"docker_container": "opsdockercontainer",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1536,6 +1556,8 @@ var pkgImportPath = map[string]string{
 	"tomcat":         "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat",
 	"java_cert":      "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert",
 	"maven_artifact": "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact",
+	"docker_image":   "github.com/opslang/opslang/pkg/ops-core-sdk/docker_image",
+	"docker_container": "github.com/opslang/opslang/pkg/ops-core-sdk/docker_container",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

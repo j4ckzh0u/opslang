@@ -1226,6 +1226,24 @@ var Funcs = []Func{
 	{Name: "maven_artifact.deploy", Args: []string{"repo_url", "group_id", "artifact_id", "version", "src_path", "extension"}, Mutating: true},
 	{Name: "maven_artifact.get_latest_version", Args: []string{"repo_url", "group_id", "artifact_id"}},
 	{Name: "maven_artifact.checksum", Args: []string{"file_path"}},
+	// docker_image
+	{Name: "docker_image.pull", Args: []string{"name", "tag", "force"}, Mutating: true},
+	{Name: "docker_image.build", Args: []string{"path", "name", "tag", "dockerfile"}, Mutating: true},
+	{Name: "docker_image.remove", Args: []string{"name", "tag", "force"}, Mutating: true},
+	{Name: "docker_image.tag", Args: []string{"source", "target"}, Mutating: true},
+	{Name: "docker_image.inspect", Args: []string{"name"}},
+	{Name: "docker_image.list", Args: nil},
+	{Name: "docker_image.push", Args: []string{"name", "tag"}},
+	// docker_container
+	{Name: "docker_container.start", Args: []string{"name"}, Mutating: true},
+	{Name: "docker_container.stop", Args: []string{"name", "timeout"}, Mutating: true},
+	{Name: "docker_container.remove", Args: []string{"name", "force"}, Mutating: true},
+	{Name: "docker_container.restart", Args: []string{"name", "timeout"}, Mutating: true},
+	{Name: "docker_container.pause", Args: []string{"name"}, Mutating: true},
+	{Name: "docker_container.unpause", Args: []string{"name"}, Mutating: true},
+	{Name: "docker_container.inspect", Args: []string{"name"}},
+	{Name: "docker_container.list", Args: []string{"all"}},
+	{Name: "docker_container.logs", Args: []string{"name", "tail"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
