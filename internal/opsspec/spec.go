@@ -1164,6 +1164,24 @@ var Funcs = []Func{
 	{Name: "podman.stop_pod", Args: []string{"name"}, Mutating: true},
 	{Name: "podman.remove_pod", Args: []string{"name", "force"}, Mutating: true},
 	{Name: "podman.list_pods"},
+
+	// ── nftables ────────────────────────────────────────────────────
+	{Name: "nftables.add_table", Args: []string{"family", "name"}, Mutating: true},
+	{Name: "nftables.delete_table", Args: []string{"family", "name"}, Mutating: true},
+	{Name: "nftables.list_tables"},
+	{Name: "nftables.add_chain", Args: []string{"family", "table", "name", "type", "hook", "priority"}, Mutating: true},
+	{Name: "nftables.delete_chain", Args: []string{"family", "table", "name"}, Mutating: true},
+	{Name: "nftables.add_rule", Args: []string{"family", "table", "chain", "expression"}, Mutating: true},
+	{Name: "nftables.delete_rule", Args: []string{"family", "table", "chain", "handle"}, Mutating: true},
+	{Name: "nftables.flush_chain", Args: []string{"family", "table", "chain"}, Mutating: true},
+	{Name: "nftables.flush_table", Args: []string{"family", "table"}, Mutating: true},
+	{Name: "nftables.flush_ruleset", Mutating: true},
+	{Name: "nftables.list_ruleset"},
+	{Name: "nftables.add_set", Args: []string{"family", "table", "name", "type", "flags"}, Mutating: true},
+	{Name: "nftables.delete_set", Args: []string{"family", "table", "name"}, Mutating: true},
+	{Name: "nftables.add_element", Args: []string{"family", "table", "set", "element"}, Mutating: true},
+	{Name: "nftables.delete_element", Args: []string{"family", "table", "set", "element"}, Mutating: true},
+	{Name: "nftables.export", Args: []string{"format"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

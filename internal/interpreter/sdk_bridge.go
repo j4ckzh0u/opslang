@@ -147,6 +147,7 @@ import (
 	sdkportage "github.com/opslang/opslang/pkg/ops-core-sdk/portage"
 	sdkpkgng "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng"
 	sdkpodman "github.com/opslang/opslang/pkg/ops-core-sdk/podman"
+	sdknftables "github.com/opslang/opslang/pkg/ops-core-sdk/nftables"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -9377,6 +9378,214 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["podman.list_pods"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdkpodman.ListPods()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+
+	// ── nftables.* ──────────────────────────────────────────────────
+	interp.builtins["nftables.add_table"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("nftables.add_table() requires 2 arguments (family, name)")
+		}
+		family, _ := args[0].(string)
+		name, _ := args[1].(string)
+		r, err := sdknftables.AddTable(family, name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.delete_table"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("nftables.delete_table() requires 2 arguments (family, name)")
+		}
+		family, _ := args[0].(string)
+		name, _ := args[1].(string)
+		r, err := sdknftables.DeleteTable(family, name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.list_tables"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdknftables.ListTables()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["nftables.add_chain"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("nftables.add_chain() requires at least 3 arguments (family, table, name)")
+		}
+		family, _ := args[0].(string)
+		table, _ := args[1].(string)
+		name, _ := args[2].(string)
+		chainType := ""
+		if len(args) >= 4 {
+			chainType, _ = args[3].(string)
+		}
+		hook := ""
+		if len(args) >= 5 {
+			hook, _ = args[4].(string)
+		}
+		priority := ""
+		if len(args) >= 6 {
+			priority, _ = args[5].(string)
+		}
+		r, err := sdknftables.AddChain(family, table, name, chainType, hook, priority)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.delete_chain"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("nftables.delete_chain() requires 3 arguments (family, table, name)")
+		}
+		family, _ := args[0].(string)
+		table, _ := args[1].(string)
+		name, _ := args[2].(string)
+		r, err := sdknftables.DeleteChain(family, table, name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.add_rule"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("nftables.add_rule() requires 4 arguments (family, table, chain, expression)")
+		}
+		family, _ := args[0].(string)
+		table, _ := args[1].(string)
+		chain, _ := args[2].(string)
+		expr, _ := args[3].(string)
+		r, err := sdknftables.AddRule(family, table, chain, expr)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.delete_rule"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("nftables.delete_rule() requires 4 arguments (family, table, chain, handle)")
+		}
+		family, _ := args[0].(string)
+		table, _ := args[1].(string)
+		chain, _ := args[2].(string)
+		handle, _ := args[3].(string)
+		r, err := sdknftables.DeleteRule(family, table, chain, handle)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.flush_chain"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("nftables.flush_chain() requires 3 arguments (family, table, chain)")
+		}
+		family, _ := args[0].(string)
+		table, _ := args[1].(string)
+		chain, _ := args[2].(string)
+		r, err := sdknftables.FlushChain(family, table, chain)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.flush_table"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("nftables.flush_table() requires 2 arguments (family, table)")
+		}
+		family, _ := args[0].(string)
+		table, _ := args[1].(string)
+		r, err := sdknftables.FlushTable(family, table)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.flush_ruleset"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdknftables.FlushRuleset()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.list_ruleset"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdknftables.ListRuleset()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["nftables.add_set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("nftables.add_set() requires at least 4 arguments (family, table, name, type)")
+		}
+		family, _ := args[0].(string)
+		table, _ := args[1].(string)
+		name, _ := args[2].(string)
+		setType, _ := args[3].(string)
+		flags := ""
+		if len(args) >= 5 {
+			flags, _ = args[4].(string)
+		}
+		r, err := sdknftables.AddSet(family, table, name, setType, flags)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.delete_set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("nftables.delete_set() requires 3 arguments (family, table, name)")
+		}
+		family, _ := args[0].(string)
+		table, _ := args[1].(string)
+		name, _ := args[2].(string)
+		r, err := sdknftables.DeleteSet(family, table, name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.add_element"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("nftables.add_element() requires 4 arguments (family, table, set, element)")
+		}
+		family, _ := args[0].(string)
+		table, _ := args[1].(string)
+		set, _ := args[2].(string)
+		element, _ := args[3].(string)
+		r, err := sdknftables.AddElement(family, table, set, element)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.delete_element"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("nftables.delete_element() requires 4 arguments (family, table, set, element)")
+		}
+		family, _ := args[0].(string)
+		table, _ := args[1].(string)
+		set, _ := args[2].(string)
+		element, _ := args[3].(string)
+		r, err := sdknftables.DeleteElement(family, table, set, element)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["nftables.export"] = func(args ...interface{}) (interface{}, error) {
+		format := "json"
+		if len(args) >= 1 {
+			format, _ = args[0].(string)
+		}
+		r, err := sdknftables.Export(format)
 		if err != nil {
 			return nil, err
 		}

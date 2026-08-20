@@ -148,6 +148,7 @@ import (
 	sdkportage "github.com/opslang/opslang/pkg/ops-core-sdk/portage"
 	sdkpkgng "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng"
 	sdkpodman "github.com/opslang/opslang/pkg/ops-core-sdk/podman"
+	sdknftables "github.com/opslang/opslang/pkg/ops-core-sdk/nftables"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -5651,6 +5652,216 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("podman.list_pods", func(args map[string]interface{}) (interface{}, error) {
 		return sdkpodman.ListPods()
+	})
+
+	// ── nftables ────────────────────────────────────────────────────
+	r.Register("nftables.add_table", func(args map[string]interface{}) (interface{}, error) {
+		family, err := argString(args, "family")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_table: %w", err)
+		}
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_table: %w", err)
+		}
+		return sdknftables.AddTable(family, name)
+	})
+	r.Register("nftables.delete_table", func(args map[string]interface{}) (interface{}, error) {
+		family, err := argString(args, "family")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_table: %w", err)
+		}
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_table: %w", err)
+		}
+		return sdknftables.DeleteTable(family, name)
+	})
+	r.Register("nftables.list_tables", func(args map[string]interface{}) (interface{}, error) {
+		return sdknftables.ListTables()
+	})
+	r.Register("nftables.add_chain", func(args map[string]interface{}) (interface{}, error) {
+		family, err := argString(args, "family")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_chain: %w", err)
+		}
+		table, err := argString(args, "table")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_chain: %w", err)
+		}
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_chain: %w", err)
+		}
+		chainType, _ := args["type"].(string)
+		hook, _ := args["hook"].(string)
+		priority, _ := args["priority"].(string)
+		return sdknftables.AddChain(family, table, name, chainType, hook, priority)
+	})
+	r.Register("nftables.delete_chain", func(args map[string]interface{}) (interface{}, error) {
+		family, err := argString(args, "family")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_chain: %w", err)
+		}
+		table, err := argString(args, "table")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_chain: %w", err)
+		}
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_chain: %w", err)
+		}
+		return sdknftables.DeleteChain(family, table, name)
+	})
+	r.Register("nftables.add_rule", func(args map[string]interface{}) (interface{}, error) {
+		family, err := argString(args, "family")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_rule: %w", err)
+		}
+		table, err := argString(args, "table")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_rule: %w", err)
+		}
+		chain, err := argString(args, "chain")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_rule: %w", err)
+		}
+		expr, err := argString(args, "expression")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_rule: %w", err)
+		}
+		return sdknftables.AddRule(family, table, chain, expr)
+	})
+	r.Register("nftables.delete_rule", func(args map[string]interface{}) (interface{}, error) {
+		family, err := argString(args, "family")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_rule: %w", err)
+		}
+		table, err := argString(args, "table")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_rule: %w", err)
+		}
+		chain, err := argString(args, "chain")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_rule: %w", err)
+		}
+		handle, err := argString(args, "handle")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_rule: %w", err)
+		}
+		return sdknftables.DeleteRule(family, table, chain, handle)
+	})
+	r.Register("nftables.flush_chain", func(args map[string]interface{}) (interface{}, error) {
+		family, err := argString(args, "family")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.flush_chain: %w", err)
+		}
+		table, err := argString(args, "table")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.flush_chain: %w", err)
+		}
+		chain, err := argString(args, "chain")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.flush_chain: %w", err)
+		}
+		return sdknftables.FlushChain(family, table, chain)
+	})
+	r.Register("nftables.flush_table", func(args map[string]interface{}) (interface{}, error) {
+		family, err := argString(args, "family")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.flush_table: %w", err)
+		}
+		table, err := argString(args, "table")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.flush_table: %w", err)
+		}
+		return sdknftables.FlushTable(family, table)
+	})
+	r.Register("nftables.flush_ruleset", func(args map[string]interface{}) (interface{}, error) {
+		return sdknftables.FlushRuleset()
+	})
+	r.Register("nftables.list_ruleset", func(args map[string]interface{}) (interface{}, error) {
+		return sdknftables.ListRuleset()
+	})
+	r.Register("nftables.add_set", func(args map[string]interface{}) (interface{}, error) {
+		family, err := argString(args, "family")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_set: %w", err)
+		}
+		table, err := argString(args, "table")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_set: %w", err)
+		}
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_set: %w", err)
+		}
+		setType, err := argString(args, "type")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_set: %w", err)
+		}
+		flags, _ := args["flags"].(string)
+		return sdknftables.AddSet(family, table, name, setType, flags)
+	})
+	r.Register("nftables.delete_set", func(args map[string]interface{}) (interface{}, error) {
+		family, err := argString(args, "family")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_set: %w", err)
+		}
+		table, err := argString(args, "table")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_set: %w", err)
+		}
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_set: %w", err)
+		}
+		return sdknftables.DeleteSet(family, table, name)
+	})
+	r.Register("nftables.add_element", func(args map[string]interface{}) (interface{}, error) {
+		family, err := argString(args, "family")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_element: %w", err)
+		}
+		table, err := argString(args, "table")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_element: %w", err)
+		}
+		set, err := argString(args, "set")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_element: %w", err)
+		}
+		element, err := argString(args, "element")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.add_element: %w", err)
+		}
+		return sdknftables.AddElement(family, table, set, element)
+	})
+	r.Register("nftables.delete_element", func(args map[string]interface{}) (interface{}, error) {
+		family, err := argString(args, "family")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_element: %w", err)
+		}
+		table, err := argString(args, "table")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_element: %w", err)
+		}
+		set, err := argString(args, "set")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_element: %w", err)
+		}
+		element, err := argString(args, "element")
+		if err != nil {
+			return nil, fmt.Errorf("nftables.delete_element: %w", err)
+		}
+		return sdknftables.DeleteElement(family, table, set, element)
+	})
+	r.Register("nftables.export", func(args map[string]interface{}) (interface{}, error) {
+		format, _ := args["format"].(string)
+		if format == "" {
+			format = "json"
+		}
+		return sdknftables.Export(format)
 	})
 }
 

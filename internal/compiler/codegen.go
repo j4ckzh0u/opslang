@@ -1136,6 +1136,23 @@ var sdkMapping = map[string]sdkFunc{
 	"podman.stop_pod":         {pkg: "podman", goName: "StopPod", args: true, params: []string{"s"}},
 	"podman.remove_pod":       {pkg: "podman", goName: "RemovePod", args: true, params: []string{"s", "b"}},
 	"podman.list_pods":        {pkg: "podman", goName: "ListPods", args: false},
+
+	"nftables.add_table":      {pkg: "nftables", goName: "AddTable", args: true, params: []string{"s", "s"}},
+	"nftables.delete_table":   {pkg: "nftables", goName: "DeleteTable", args: true, params: []string{"s", "s"}},
+	"nftables.list_tables":    {pkg: "nftables", goName: "ListTables", args: false},
+	"nftables.add_chain":      {pkg: "nftables", goName: "AddChain", args: true, params: []string{"s", "s", "s", "s", "s", "s"}},
+	"nftables.delete_chain":   {pkg: "nftables", goName: "DeleteChain", args: true, params: []string{"s", "s", "s"}},
+	"nftables.add_rule":       {pkg: "nftables", goName: "AddRule", args: true, params: []string{"s", "s", "s", "s"}},
+	"nftables.delete_rule":    {pkg: "nftables", goName: "DeleteRule", args: true, params: []string{"s", "s", "s", "s"}},
+	"nftables.flush_chain":    {pkg: "nftables", goName: "FlushChain", args: true, params: []string{"s", "s", "s"}},
+	"nftables.flush_table":    {pkg: "nftables", goName: "FlushTable", args: true, params: []string{"s", "s"}},
+	"nftables.flush_ruleset":  {pkg: "nftables", goName: "FlushRuleset", args: false},
+	"nftables.list_ruleset":   {pkg: "nftables", goName: "ListRuleset", args: false},
+	"nftables.add_set":        {pkg: "nftables", goName: "AddSet", args: true, params: []string{"s", "s", "s", "s", "s"}},
+	"nftables.delete_set":     {pkg: "nftables", goName: "DeleteSet", args: true, params: []string{"s", "s", "s"}},
+	"nftables.add_element":    {pkg: "nftables", goName: "AddElement", args: true, params: []string{"s", "s", "s", "s"}},
+	"nftables.delete_element": {pkg: "nftables", goName: "DeleteElement", args: true, params: []string{"s", "s", "s", "s"}},
+	"nftables.export":         {pkg: "nftables", goName: "Export", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1338,6 +1355,7 @@ var pkgImportAlias = map[string]string{
 	"portage":        "opsportage",
 	"pkgng":          "opspkgng",
 	"podman":         "opspodman",
+	"nftables":       "opsnftables",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1466,6 +1484,7 @@ var pkgImportPath = map[string]string{
 	"portage":        "github.com/opslang/opslang/pkg/ops-core-sdk/portage",
 	"pkgng":          "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng",
 	"podman":         "github.com/opslang/opslang/pkg/ops-core-sdk/podman",
+	"nftables":       "github.com/opslang/opslang/pkg/ops-core-sdk/nftables",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
