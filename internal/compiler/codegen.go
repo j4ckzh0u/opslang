@@ -1337,6 +1337,14 @@ var sdkMapping = map[string]sdkFunc{
 	"openssl_privatekey.generate": {pkg: "openssl_privatekey", goName: "Generate", args: true, params: []string{"s", "s", "i"}},
 	"openssl_privatekey.info":     {pkg: "openssl_privatekey", goName: "Info", args: true, params: []string{"s"}},
 	"openssl_privatekey.delete":   {pkg: "openssl_privatekey", goName: "Delete", args: true, params: []string{"s"}},
+
+	// ── ip_route ────────────────────────────────────────────────────────
+	"ip_route.list":       {pkg: "ip_route", goName: "List"},
+	"ip_route.list_table": {pkg: "ip_route", goName: "ListTable", args: true, params: []string{"s"}},
+	"ip_route.add":        {pkg: "ip_route", goName: "Add", args: true, params: []string{"s", "s", "s", "i", "s"}},
+	"ip_route.delete":     {pkg: "ip_route", goName: "Delete", args: true, params: []string{"s", "s"}},
+	"ip_route.flush":      {pkg: "ip_route", goName: "Flush", args: true, params: []string{"s", "s"}},
+	"ip_route.get":        {pkg: "ip_route", goName: "Get", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1573,6 +1581,7 @@ var pkgImportAlias = map[string]string{
 	"mail":           "ops",
 	"webhook":        "opswebhook",
 	"openssl_privatekey": "opsopensslprivatekey",
+	"ip_route":         "opsiproute",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1735,6 +1744,7 @@ var pkgImportPath = map[string]string{
 	"mail":           "github.com/opslang/opslang/pkg/ops-core-sdk/mail",
 	"webhook":        "github.com/opslang/opslang/pkg/ops-core-sdk/webhook",
 	"openssl_privatekey": "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey",
+	"ip_route":         "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

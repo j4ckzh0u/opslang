@@ -182,6 +182,7 @@ import (
 	sdkmail "github.com/opslang/opslang/pkg/ops-core-sdk/mail"
 	sdkwebhook "github.com/opslang/opslang/pkg/ops-core-sdk/webhook"
 	sdkopensslprivatekey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey"
+	sdkiproute "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10773,6 +10774,48 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	interp.builtins["openssl_privatekey.delete"] = func(args ...interface{}) (interface{}, error) {
 		path := getStringArgBridge(args, 0, "")
 		return sdkopensslprivatekey.Delete(path), nil
+	}
+
+	// ── ip_route ──────────────────────────────────────────────────────────
+	interp.builtins["ip_route.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkiproute.List(), nil
+	}
+	interp.builtins["ip_route.list_table"] = func(args ...interface{}) (interface{}, error) {
+		table := getStringArgBridge(args, 0, "main")
+		return sdkiproute.ListTable(table), nil
+	}
+	interp.builtins["ip_route.add"] = func(args ...interface{}) (interface{}, error) {
+		destination := getStringArgBridge(args, 0, "")
+		gateway := getStringArgBridge(args, 1, "")
+		dev := getStringArgBridge(args, 2, "")
+		metric := 0
+		if len(args) > 3 {
+			if m, ok := args[3].(float64); ok {
+				metric = int(m)
+			}
+		}
+		table := getStringArgBridge(args, 4, "")
+		return sdkiproute.Add(sdkiproute.AddConfig{
+			Destination: destination,
+			Gateway:     gateway,
+			Dev:         dev,
+			Metric:      metric,
+			Table:       table,
+		}), nil
+	}
+	interp.builtins["ip_route.delete"] = func(args ...interface{}) (interface{}, error) {
+		destination := getStringArgBridge(args, 0, "")
+		table := getStringArgBridge(args, 1, "")
+		return sdkiproute.Delete(destination, table), nil
+	}
+	interp.builtins["ip_route.flush"] = func(args ...interface{}) (interface{}, error) {
+		dev := getStringArgBridge(args, 0, "")
+		table := getStringArgBridge(args, 1, "")
+		return sdkiproute.Flush(dev, table), nil
+	}
+	interp.builtins["ip_route.get"] = func(args ...interface{}) (interface{}, error) {
+		destination := getStringArgBridge(args, 0, "")
+		return sdkiproute.Get(destination), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

@@ -1351,6 +1351,13 @@ var Funcs = []Func{
 	{Name: "openssl_privatekey.generate", Args: []string{"path", "type", "size"}, Mutating: true},
 	{Name: "openssl_privatekey.info", Args: []string{"path"}},
 	{Name: "openssl_privatekey.delete", Args: []string{"path"}, Mutating: true},
+	// ── ip_route ──────────────────────────────────────────────────────────
+	{Name: "ip_route.list"},
+	{Name: "ip_route.list_table", Args: []string{"table"}},
+	{Name: "ip_route.add", Args: []string{"destination", "gateway", "dev", "metric", "table"}, Mutating: true},
+	{Name: "ip_route.delete", Args: []string{"destination", "table"}, Mutating: true},
+	{Name: "ip_route.flush", Args: []string{"dev", "table"}, Mutating: true},
+	{Name: "ip_route.get", Args: []string{"destination"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

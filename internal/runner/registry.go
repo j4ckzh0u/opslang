@@ -182,6 +182,7 @@ import (
 	sdkmail "github.com/opslang/opslang/pkg/ops-core-sdk/mail"
 	sdkwebhook "github.com/opslang/opslang/pkg/ops-core-sdk/webhook"
 	sdkopensslprivatekey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey"
+	sdkiproute "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route"
 	"time"
 )
 
@@ -6746,6 +6747,49 @@ func (r *Registry) registerExtensions() {
 	r.Register("openssl_privatekey.delete", func(args map[string]interface{}) (interface{}, error) {
 		path, _ := args["path"].(string)
 		return sdkopensslprivatekey.Delete(path), nil
+	})
+
+	// ── ip_route ──────────────────────────────────────────────────────────
+	r.Register("ip_route.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkiproute.List(), nil
+	})
+	r.Register("ip_route.list_table", func(args map[string]interface{}) (interface{}, error) {
+		table, _ := args["table"].(string)
+		if table == "" {
+			table = "main"
+		}
+		return sdkiproute.ListTable(table), nil
+	})
+	r.Register("ip_route.add", func(args map[string]interface{}) (interface{}, error) {
+		destination, _ := args["destination"].(string)
+		gateway, _ := args["gateway"].(string)
+		dev, _ := args["dev"].(string)
+		metric := 0
+		if m, ok := args["metric"].(float64); ok {
+			metric = int(m)
+		}
+		table, _ := args["table"].(string)
+		return sdkiproute.Add(sdkiproute.AddConfig{
+			Destination: destination,
+			Gateway:     gateway,
+			Dev:         dev,
+			Metric:      metric,
+			Table:       table,
+		}), nil
+	})
+	r.Register("ip_route.delete", func(args map[string]interface{}) (interface{}, error) {
+		destination, _ := args["destination"].(string)
+		table, _ := args["table"].(string)
+		return sdkiproute.Delete(destination, table), nil
+	})
+	r.Register("ip_route.flush", func(args map[string]interface{}) (interface{}, error) {
+		dev, _ := args["dev"].(string)
+		table, _ := args["table"].(string)
+		return sdkiproute.Flush(dev, table), nil
+	})
+	r.Register("ip_route.get", func(args map[string]interface{}) (interface{}, error) {
+		destination, _ := args["destination"].(string)
+		return sdkiproute.Get(destination), nil
 	})
 }
 
