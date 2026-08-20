@@ -200,6 +200,7 @@ import (
 	sdkpostfix "github.com/opslang/opslang/pkg/ops-core-sdk/postfix"
 	sdkdnsmasq "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq"
 	sdkapache2mod "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module"
+	sdkpipx "github.com/opslang/opslang/pkg/ops-core-sdk/pipx"
 	"time"
 )
 
@@ -7223,6 +7224,22 @@ func (r *Registry) registerExtensions() {
 	r.Register("apache2_module.disable", func(args map[string]interface{}) (interface{}, error) {
 		module := mapStrArg(args, "module", "")
 		return sdkapache2mod.Disable(module)
+	})
+
+	r.Register("pipx.install", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		return sdkpipx.Install(name)
+	})
+	r.Register("pipx.uninstall", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		return sdkpipx.Uninstall(name)
+	})
+	r.Register("pipx.upgrade", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		return sdkpipx.Upgrade(name)
+	})
+	r.Register("pipx.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpipx.List()
 	})
 }
 

@@ -1438,6 +1438,12 @@ var sdkMapping = map[string]sdkFunc{
 	"apache2_module.check":  {pkg: "apache2_module", goName: "Check", args: true, params: []string{"s"}},
 	"apache2_module.enable": {pkg: "apache2_module", goName: "Enable", args: true, params: []string{"s"}},
 	"apache2_module.disable": {pkg: "apache2_module", goName: "Disable", args: true, params: []string{"s"}},
+
+	// pipx
+	"pipx.install":   {pkg: "pipx", goName: "Install", args: true, params: []string{"s"}},
+	"pipx.uninstall": {pkg: "pipx", goName: "Uninstall", args: true, params: []string{"s"}},
+	"pipx.upgrade":   {pkg: "pipx", goName: "Upgrade", args: true, params: []string{"s"}},
+	"pipx.list":      {pkg: "pipx", goName: "List", args: true},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1692,6 +1698,7 @@ var pkgImportAlias = map[string]string{
 	"postfix":          "opspostfix",
 	"dnsmasq":          "opsdnsmasq",
 	"apache2_module":   "opsapache2mod",
+	"pipx":             "opspipx",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1872,6 +1879,7 @@ var pkgImportPath = map[string]string{
 	"postfix":          "github.com/opslang/opslang/pkg/ops-core-sdk/postfix",
 	"dnsmasq":          "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq",
 	"apache2_module":   "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module",
+	"pipx":             "github.com/opslang/opslang/pkg/ops-core-sdk/pipx",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

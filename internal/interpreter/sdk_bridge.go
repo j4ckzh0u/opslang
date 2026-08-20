@@ -200,6 +200,7 @@ import (
 	sdkpostfix "github.com/opslang/opslang/pkg/ops-core-sdk/postfix"
 	sdkdnsmasq "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq"
 	sdkapache2mod "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module"
+	sdkpipx "github.com/opslang/opslang/pkg/ops-core-sdk/pipx"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11292,6 +11293,22 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	interp.builtins["apache2_module.disable"] = func(args ...interface{}) (interface{}, error) {
 		module := getStringArgBridge(args, 0, "")
 		return sdkapache2mod.Disable(module)
+	}
+
+	interp.builtins["pipx.install"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkpipx.Install(name)
+	}
+	interp.builtins["pipx.uninstall"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkpipx.Uninstall(name)
+	}
+	interp.builtins["pipx.upgrade"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkpipx.Upgrade(name)
+	}
+	interp.builtins["pipx.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkpipx.List()
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

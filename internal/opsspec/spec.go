@@ -1451,6 +1451,12 @@ var Funcs = []Func{
 	{Name: "apache2_module.check", Args: []string{"module"}},
 	{Name: "apache2_module.enable", Args: []string{"module"}, Mutating: true},
 	{Name: "apache2_module.disable", Args: []string{"module"}, Mutating: true},
+
+	// pipx: Python package management via pipx
+	{Name: "pipx.install", Args: []string{"name"}, Mutating: true},
+	{Name: "pipx.uninstall", Args: []string{"name"}, Mutating: true},
+	{Name: "pipx.upgrade", Args: []string{"name"}, Mutating: true},
+	{Name: "pipx.list"},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
