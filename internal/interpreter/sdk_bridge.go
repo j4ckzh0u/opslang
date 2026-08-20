@@ -196,6 +196,7 @@ import (
 	sdkdockernet "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network"
 	sdkdockervol "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume"
 	sdkjournald "github.com/opslang/opslang/pkg/ops-core-sdk/journald"
+	sdknfsexports "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11231,6 +11232,20 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		key := getStringArgBridge(args, 0, "")
 		value := getStringArgBridge(args, 1, "")
 		return sdkjournald.Set(key, value)
+	}
+
+	interp.builtins["nfs_exports.present"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		hosts := getStringArgBridge(args, 1, "")
+		options := getStringArgBridge(args, 2, "")
+		return sdknfsexports.Present(path, hosts, options)
+	}
+	interp.builtins["nfs_exports.absent"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		return sdknfsexports.Absent(path)
+	}
+	interp.builtins["nfs_exports.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdknfsexports.List()
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

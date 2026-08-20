@@ -196,6 +196,7 @@ import (
 	sdkdockernet "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network"
 	sdkdockervol "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume"
 	sdkjournald "github.com/opslang/opslang/pkg/ops-core-sdk/journald"
+	sdknfsexports "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports"
 	"time"
 )
 
@@ -7162,6 +7163,20 @@ func (r *Registry) registerExtensions() {
 		key := mapStrArg(args, "key", "")
 		value := mapStrArg(args, "value", "")
 		return sdkjournald.Set(key, value)
+	})
+
+	r.Register("nfs_exports.present", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		hosts := mapStrArg(args, "hosts", "")
+		options := mapStrArg(args, "options", "")
+		return sdknfsexports.Present(path, hosts, options)
+	})
+	r.Register("nfs_exports.absent", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		return sdknfsexports.Absent(path)
+	})
+	r.Register("nfs_exports.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdknfsexports.List()
 	})
 }
 

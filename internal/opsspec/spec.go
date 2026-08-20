@@ -1430,6 +1430,11 @@ var Funcs = []Func{
 	// journald: systemd journal configuration management
 	{Name: "journald.get", Args: []string{"key"}},
 	{Name: "journald.set", Args: []string{"key", "value"}, Mutating: true},
+
+	// nfs_exports: NFS exports management
+	{Name: "nfs_exports.present", Args: []string{"path", "hosts", "options"}, Mutating: true},
+	{Name: "nfs_exports.absent", Args: []string{"path"}, Mutating: true},
+	{Name: "nfs_exports.list"},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
