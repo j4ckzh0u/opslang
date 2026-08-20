@@ -176,6 +176,9 @@ import (
 	sdkasyncstatus "github.com/opslang/opslang/pkg/ops-core-sdk/async_status"
 	sdkpackagemgr "github.com/opslang/opslang/pkg/ops-core-sdk/package"
 	sdktypedebug "github.com/opslang/opslang/pkg/ops-core-sdk/type_debug"
+	sdkgroupby "github.com/opslang/opslang/pkg/ops-core-sdk/group_by"
+	sdknormalize "github.com/opslang/opslang/pkg/ops-core-sdk/normalize"
+	sdkvalidatecerts "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by

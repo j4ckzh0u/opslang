@@ -1322,6 +1322,23 @@ var Funcs = []Func{
 	{Name: "package.info", Args: []string{"name"}},
 	// ── type_debug ─────────────────────────────────────────────────────────
 	{Name: "type_debug.debug", Args: []string{"value"}},
+	// ── group_by ──────────────────────────────────────────────────────────
+	{Name: "group_by.group_by", Args: []string{"hosts", "key"}, Mutating: true},
+	{Name: "group_by.get_hosts", Args: []string{"group"}},
+	{Name: "group_by.list_groups"},
+	{Name: "group_by.clear", Mutating: true},
+	// ── normalize ─────────────────────────────────────────────────────────
+	{Name: "normalize.lower", Args: []string{"value"}},
+	{Name: "normalize.upper", Args: []string{"value"}},
+	{Name: "normalize.trim", Args: []string{"value"}},
+	{Name: "normalize.slugify", Args: []string{"value"}},
+	{Name: "normalize.title", Args: []string{"value"}},
+	{Name: "normalize.camel_case", Args: []string{"value"}},
+	{Name: "normalize.snake_case", Args: []string{"value"}},
+	{Name: "normalize.kebab_case", Args: []string{"value"}},
+	// ── validate_certs ────────────────────────────────────────────────────
+	{Name: "validate_certs.validate", Args: []string{"host", "port", "timeout_ms"}},
+	{Name: "validate_certs.check_expiry", Args: []string{"host", "port", "days", "timeout_ms"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

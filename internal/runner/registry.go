@@ -176,6 +176,9 @@ import (
 	sdkasyncstatus "github.com/opslang/opslang/pkg/ops-core-sdk/async_status"
 	sdkpackagemgr "github.com/opslang/opslang/pkg/ops-core-sdk/package"
 	sdktypedebug "github.com/opslang/opslang/pkg/ops-core-sdk/type_debug"
+	sdkgroupby "github.com/opslang/opslang/pkg/ops-core-sdk/group_by"
+	sdknormalize "github.com/opslang/opslang/pkg/ops-core-sdk/normalize"
+	sdkvalidatecerts "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs"
 	"time"
 )
 
@@ -6559,6 +6562,89 @@ func (r *Registry) registerExtensions() {
 	// ── type_debug ──────────────────────────────────────────────────────
 	r.Register("type_debug.debug", func(args map[string]interface{}) (interface{}, error) {
 		return sdktypedebug.Debug(args["value"]), nil
+	})
+
+	// ── group_by ──────────────────────────────────────────────────────────
+	r.Register("group_by.group_by", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := args["key"].(string)
+		var hosts []string
+		if v, ok := args["hosts"].([]interface{}); ok {
+			for _, h := range v {
+				if s, ok := h.(string); ok {
+					hosts = append(hosts, s)
+				}
+			}
+		}
+		return sdkgroupby.GroupBy(hosts, key), nil
+	})
+	r.Register("group_by.get_hosts", func(args map[string]interface{}) (interface{}, error) {
+		group, _ := args["group"].(string)
+		return sdkgroupby.GetHosts(group), nil
+	})
+	r.Register("group_by.list_groups", func(args map[string]interface{}) (interface{}, error) {
+		return sdkgroupby.ListGroups(), nil
+	})
+	r.Register("group_by.clear", func(args map[string]interface{}) (interface{}, error) {
+		sdkgroupby.Clear()
+		return map[string]interface{}{"cleared": true}, nil
+	})
+
+	// ── normalize ─────────────────────────────────────────────────────────
+	r.Register("normalize.lower", func(args map[string]interface{}) (interface{}, error) {
+		v, _ := args["value"].(string)
+		return sdknormalize.Lower(v), nil
+	})
+	r.Register("normalize.upper", func(args map[string]interface{}) (interface{}, error) {
+		v, _ := args["value"].(string)
+		return sdknormalize.Upper(v), nil
+	})
+	r.Register("normalize.trim", func(args map[string]interface{}) (interface{}, error) {
+		v, _ := args["value"].(string)
+		return sdknormalize.Trim(v), nil
+	})
+	r.Register("normalize.slugify", func(args map[string]interface{}) (interface{}, error) {
+		v, _ := args["value"].(string)
+		return sdknormalize.Slugify(v), nil
+	})
+	r.Register("normalize.title", func(args map[string]interface{}) (interface{}, error) {
+		v, _ := args["value"].(string)
+		return sdknormalize.Title(v), nil
+	})
+	r.Register("normalize.camel_case", func(args map[string]interface{}) (interface{}, error) {
+		v, _ := args["value"].(string)
+		return sdknormalize.CamelCase(v), nil
+	})
+	r.Register("normalize.snake_case", func(args map[string]interface{}) (interface{}, error) {
+		v, _ := args["value"].(string)
+		return sdknormalize.SnakeCase(v), nil
+	})
+	r.Register("normalize.kebab_case", func(args map[string]interface{}) (interface{}, error) {
+		v, _ := args["value"].(string)
+		return sdknormalize.KebabCase(v), nil
+	})
+
+	// ── validate_certs ────────────────────────────────────────────────────
+	r.Register("validate_certs.validate", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 443
+		if p, ok := args["port"].(float64); ok {
+			port = int(p)
+		}
+		timeoutMs, _ := args["timeout_ms"].(float64)
+		return sdkvalidatecerts.Validate(host, port, time.Duration(timeoutMs)*time.Millisecond), nil
+	})
+	r.Register("validate_certs.check_expiry", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 443
+		if p, ok := args["port"].(float64); ok {
+			port = int(p)
+		}
+		days := 30
+		if d, ok := args["days"].(float64); ok {
+			days = int(d)
+		}
+		timeoutMs, _ := args["timeout_ms"].(float64)
+		return sdkvalidatecerts.CheckExpiry(host, port, days, time.Duration(timeoutMs)*time.Millisecond), nil
 	})
 }
 
