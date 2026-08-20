@@ -9,6 +9,7 @@ import (
 	sdkapt "github.com/opslang/opslang/pkg/ops-core-sdk/apt"
 	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
 	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
+	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	sdkcron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
@@ -4061,6 +4062,96 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["apk.repository"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdkapk.Repository()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+
+	// ── sysvinit.* ────────────────────────────────────────────────────
+	interp.builtins["sysvinit.status"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysvinit.status() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksysvinit.Status(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysvinit.start"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysvinit.start() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksysvinit.Start(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysvinit.stop"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysvinit.stop() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksysvinit.Stop(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysvinit.restart"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysvinit.restart() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksysvinit.Restart(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysvinit.reload"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysvinit.reload() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksysvinit.Reload(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysvinit.enable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysvinit.enable() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		runlevels := ""
+		if len(args) >= 2 {
+			runlevels, _ = args[1].(string)
+		}
+		r, err := sdksysvinit.Enable(name, runlevels)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysvinit.disable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sysvinit.disable() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksysvinit.Disable(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sysvinit.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksysvinit.List()
 		if err != nil {
 			return nil, err
 		}

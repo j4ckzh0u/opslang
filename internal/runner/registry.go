@@ -10,6 +10,7 @@ import (
 	sdkapt "github.com/opslang/opslang/pkg/ops-core-sdk/apt"
 	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
 	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
+	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	opscron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
@@ -1633,6 +1634,61 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("apk.repository", func(_ map[string]interface{}) (interface{}, error) {
 		return sdkapk.Repository()
+	})
+
+	// ── sysvinit.* ────────────────────────────────────────────────────
+	r.Register("sysvinit.status", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sysvinit.status: %w", err)
+		}
+		return sdksysvinit.Status(name)
+	})
+	r.Register("sysvinit.start", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sysvinit.start: %w", err)
+		}
+		return sdksysvinit.Start(name)
+	})
+	r.Register("sysvinit.stop", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sysvinit.stop: %w", err)
+		}
+		return sdksysvinit.Stop(name)
+	})
+	r.Register("sysvinit.restart", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sysvinit.restart: %w", err)
+		}
+		return sdksysvinit.Restart(name)
+	})
+	r.Register("sysvinit.reload", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sysvinit.reload: %w", err)
+		}
+		return sdksysvinit.Reload(name)
+	})
+	r.Register("sysvinit.enable", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sysvinit.enable: %w", err)
+		}
+		runlevels, _ := args["runlevels"].(string)
+		return sdksysvinit.Enable(name, runlevels)
+	})
+	r.Register("sysvinit.disable", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sysvinit.disable: %w", err)
+		}
+		return sdksysvinit.Disable(name)
+	})
+	r.Register("sysvinit.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdksysvinit.List()
 	})
 
 	// ── apt_repo.* ──────────────────────────────────────────────────────

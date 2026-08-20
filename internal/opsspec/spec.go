@@ -94,6 +94,16 @@ var Funcs = []Func{
 	{Name: "apk.upgrade_available"},
 	{Name: "apk.repository"},
 
+	// ── sysvinit ──────────────────────────────────────────────────────
+	{Name: "sysvinit.status", Args: []string{"name"}},
+	{Name: "sysvinit.start", Args: []string{"name"}, Mutating: true},
+	{Name: "sysvinit.stop", Args: []string{"name"}, Mutating: true},
+	{Name: "sysvinit.restart", Args: []string{"name"}, Mutating: true},
+	{Name: "sysvinit.reload", Args: []string{"name"}, Mutating: true},
+	{Name: "sysvinit.enable", Args: []string{"name", "runlevels"}, Mutating: true},
+	{Name: "sysvinit.disable", Args: []string{"name"}, Mutating: true},
+	{Name: "sysvinit.list"},
+
 	// ── apt_repo ──────────────────────────────────────────────────────
 	{Name: "apt_repo.list"},
 	{Name: "apt_repo.exists", Args: []string{"uri"}},

@@ -248,6 +248,16 @@ var sdkMapping = map[string]sdkFunc{
 	"apk.upgrade_available": {pkg: "apk", goName: "UpgradeAvailable"},
 	"apk.repository":        {pkg: "apk", goName: "Repository"},
 
+	// sysvinit
+	"sysvinit.status":  {pkg: "sysvinit", goName: "Status", args: true, params: []string{"s"}},
+	"sysvinit.start":   {pkg: "sysvinit", goName: "Start", args: true, params: []string{"s"}},
+	"sysvinit.stop":    {pkg: "sysvinit", goName: "Stop", args: true, params: []string{"s"}},
+	"sysvinit.restart": {pkg: "sysvinit", goName: "Restart", args: true, params: []string{"s"}},
+	"sysvinit.reload":  {pkg: "sysvinit", goName: "Reload", args: true, params: []string{"s"}},
+	"sysvinit.enable":  {pkg: "sysvinit", goName: "Enable", args: true, params: []string{"s", "s"}},
+	"sysvinit.disable": {pkg: "sysvinit", goName: "Disable", args: true, params: []string{"s"}},
+	"sysvinit.list":    {pkg: "sysvinit", goName: "List"},
+
 	// apt_repo
 	"apt_repo.list":   {pkg: "apt_repo", goName: "List"},
 	"apt_repo.exists": {pkg: "apt_repo", goName: "Exists", args: true, params: []string{"s"}},
@@ -1261,6 +1271,7 @@ var pkgImportAlias = map[string]string{
 	"apt":            "opsapt",
 	"apt_repo":       "opsaptrepo",
 	"apk":            "opsapk",
+	"sysvinit":       "opssysvinit",
 	"dnf":            "opsdnf",
 	"kubernetes":     "opsk8s",
 	"svn":            "opssvn",
@@ -1383,6 +1394,7 @@ var pkgImportPath = map[string]string{
 	"apt":            "github.com/opslang/opslang/pkg/ops-core-sdk/apt",
 	"apt_repo":       "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo",
 	"apk":            "github.com/opslang/opslang/pkg/ops-core-sdk/apk",
+	"sysvinit":       "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit",
 	"dnf":            "github.com/opslang/opslang/pkg/ops-core-sdk/dnf",
 	"kubernetes":     "github.com/opslang/opslang/pkg/ops-core-sdk/kubernetes",
 	"svn":            "github.com/opslang/opslang/pkg/ops-core-sdk/svn",
