@@ -1422,6 +1422,11 @@ var sdkMapping = map[string]sdkFunc{
 	"nfs_exports.present": {pkg: "nfs_exports", goName: "Present", args: true, params: []string{"s", "s", "s"}},
 	"nfs_exports.absent":  {pkg: "nfs_exports", goName: "Absent", args: true, params: []string{"s"}},
 	"nfs_exports.list":    {pkg: "nfs_exports", goName: "List", args: true},
+
+	// postfix
+	"postfix.get":    {pkg: "postfix", goName: "Get", args: true, params: []string{"s"}},
+	"postfix.set":    {pkg: "postfix", goName: "Set", args: true, params: []string{"s", "s"}},
+	"postfix.reload": {pkg: "postfix", goName: "Reload", args: true},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1673,6 +1678,7 @@ var pkgImportAlias = map[string]string{
 	"docker_volume":    "opsdockervol",
 	"journald":         "opsjournald",
 	"nfs_exports":      "opsnfsexports",
+	"postfix":          "opspostfix",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1850,6 +1856,7 @@ var pkgImportPath = map[string]string{
 	"docker_volume":    "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume",
 	"journald":         "github.com/opslang/opslang/pkg/ops-core-sdk/journald",
 	"nfs_exports":      "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports",
+	"postfix":          "github.com/opslang/opslang/pkg/ops-core-sdk/postfix",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

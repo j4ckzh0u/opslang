@@ -197,6 +197,7 @@ import (
 	sdkdockervol "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume"
 	sdkjournald "github.com/opslang/opslang/pkg/ops-core-sdk/journald"
 	sdknfsexports "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports"
+	sdkpostfix "github.com/opslang/opslang/pkg/ops-core-sdk/postfix"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11246,6 +11247,19 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["nfs_exports.list"] = func(args ...interface{}) (interface{}, error) {
 		return sdknfsexports.List()
+	}
+
+	interp.builtins["postfix.get"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		return sdkpostfix.Get(key)
+	}
+	interp.builtins["postfix.set"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		value := getStringArgBridge(args, 1, "")
+		return sdkpostfix.Set(key, value)
+	}
+	interp.builtins["postfix.reload"] = func(args ...interface{}) (interface{}, error) {
+		return sdkpostfix.Reload()
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

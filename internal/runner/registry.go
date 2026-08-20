@@ -197,6 +197,7 @@ import (
 	sdkdockervol "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume"
 	sdkjournald "github.com/opslang/opslang/pkg/ops-core-sdk/journald"
 	sdknfsexports "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports"
+	sdkpostfix "github.com/opslang/opslang/pkg/ops-core-sdk/postfix"
 	"time"
 )
 
@@ -7177,6 +7178,19 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("nfs_exports.list", func(args map[string]interface{}) (interface{}, error) {
 		return sdknfsexports.List()
+	})
+
+	r.Register("postfix.get", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		return sdkpostfix.Get(key)
+	})
+	r.Register("postfix.set", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		value := mapStrArg(args, "value", "")
+		return sdkpostfix.Set(key, value)
+	})
+	r.Register("postfix.reload", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpostfix.Reload()
 	})
 }
 

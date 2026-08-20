@@ -1435,6 +1435,11 @@ var Funcs = []Func{
 	{Name: "nfs_exports.present", Args: []string{"path", "hosts", "options"}, Mutating: true},
 	{Name: "nfs_exports.absent", Args: []string{"path"}, Mutating: true},
 	{Name: "nfs_exports.list"},
+
+	// postfix: Postfix mail server configuration
+	{Name: "postfix.get", Args: []string{"key"}},
+	{Name: "postfix.set", Args: []string{"key", "value"}, Mutating: true},
+	{Name: "postfix.reload", Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
