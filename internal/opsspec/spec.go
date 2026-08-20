@@ -1342,6 +1342,11 @@ var Funcs = []Func{
 	// ── mail ──────────────────────────────────────────────────────────────
 	{Name: "mail.send", Args: []string{"host", "port", "from", "to", "subject", "body"}, Mutating: true},
 	{Name: "mail.send_html", Args: []string{"host", "port", "from", "to", "subject", "body"}, Mutating: true},
+	// ── webhook ───────────────────────────────────────────────────────────
+	{Name: "webhook.send", Args: []string{"url", "method", "body"}, Mutating: true},
+	{Name: "webhook.slack", Args: []string{"url", "text"}, Mutating: true},
+	{Name: "webhook.discord", Args: []string{"url", "content"}, Mutating: true},
+	{Name: "webhook.teams", Args: []string{"url", "title", "text"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

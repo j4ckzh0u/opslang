@@ -180,6 +180,7 @@ import (
 	sdknormalize "github.com/opslang/opslang/pkg/ops-core-sdk/normalize"
 	sdkvalidatecerts "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs"
 	sdkmail "github.com/opslang/opslang/pkg/ops-core-sdk/mail"
+	sdkwebhook "github.com/opslang/opslang/pkg/ops-core-sdk/webhook"
 	"time"
 )
 
@@ -6691,6 +6692,33 @@ func (r *Registry) registerExtensions() {
 			HTML:     true,
 			StartTLS: true,
 		}), nil
+	})
+
+	// ── webhook ───────────────────────────────────────────────────────────
+	r.Register("webhook.send", func(args map[string]interface{}) (interface{}, error) {
+		url, _ := args["url"].(string)
+		method, _ := args["method"].(string)
+		if method == "" {
+			method = "POST"
+		}
+		body := args["body"]
+		return sdkwebhook.SendGeneric(url, method, nil, body), nil
+	})
+	r.Register("webhook.slack", func(args map[string]interface{}) (interface{}, error) {
+		url, _ := args["url"].(string)
+		text, _ := args["text"].(string)
+		return sdkwebhook.SendSlack(url, text), nil
+	})
+	r.Register("webhook.discord", func(args map[string]interface{}) (interface{}, error) {
+		url, _ := args["url"].(string)
+		content, _ := args["content"].(string)
+		return sdkwebhook.SendDiscord(url, content), nil
+	})
+	r.Register("webhook.teams", func(args map[string]interface{}) (interface{}, error) {
+		url, _ := args["url"].(string)
+		title, _ := args["title"].(string)
+		text, _ := args["text"].(string)
+		return sdkwebhook.SendTeams(url, title, text), nil
 	})
 }
 

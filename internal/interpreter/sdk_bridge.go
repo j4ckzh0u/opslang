@@ -180,6 +180,7 @@ import (
 	sdknormalize "github.com/opslang/opslang/pkg/ops-core-sdk/normalize"
 	sdkvalidatecerts "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs"
 	sdkmail "github.com/opslang/opslang/pkg/ops-core-sdk/mail"
+	sdkwebhook "github.com/opslang/opslang/pkg/ops-core-sdk/webhook"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10719,6 +10720,33 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			HTML:     true,
 			StartTLS: true,
 		}), nil
+	}
+
+	// ── webhook ───────────────────────────────────────────────────────────
+	interp.builtins["webhook.send"] = func(args ...interface{}) (interface{}, error) {
+		url := getStringArgBridge(args, 0, "")
+		method := getStringArgBridge(args, 1, "POST")
+		var body interface{}
+		if len(args) > 2 {
+			body = args[2]
+		}
+		return sdkwebhook.SendGeneric(url, method, nil, body), nil
+	}
+	interp.builtins["webhook.slack"] = func(args ...interface{}) (interface{}, error) {
+		url := getStringArgBridge(args, 0, "")
+		text := getStringArgBridge(args, 1, "")
+		return sdkwebhook.SendSlack(url, text), nil
+	}
+	interp.builtins["webhook.discord"] = func(args ...interface{}) (interface{}, error) {
+		url := getStringArgBridge(args, 0, "")
+		content := getStringArgBridge(args, 1, "")
+		return sdkwebhook.SendDiscord(url, content), nil
+	}
+	interp.builtins["webhook.teams"] = func(args ...interface{}) (interface{}, error) {
+		url := getStringArgBridge(args, 0, "")
+		title := getStringArgBridge(args, 1, "")
+		text := getStringArgBridge(args, 2, "")
+		return sdkwebhook.SendTeams(url, title, text), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

@@ -1326,6 +1326,12 @@ var sdkMapping = map[string]sdkFunc{
 	// ── mail ────────────────────────────────────────────────────────────
 	"mail.send":      {pkg: "mail", goName: "SendSimple", args: true, params: []string{"s", "i", "s", "as", "s", "s"}},
 	"mail.send_html": {pkg: "mail", goName: "Send", args: true, params: []string{"s", "i", "s", "as", "s", "s"}},
+
+	// ── webhook ─────────────────────────────────────────────────────────
+	"webhook.send":    {pkg: "webhook", goName: "SendGeneric", args: true, params: []string{"s", "s", "mss", "a"}},
+	"webhook.slack":   {pkg: "webhook", goName: "SendSlack", args: true, params: []string{"s", "s"}},
+	"webhook.discord": {pkg: "webhook", goName: "SendDiscord", args: true, params: []string{"s", "s"}},
+	"webhook.teams":   {pkg: "webhook", goName: "SendTeams", args: true, params: []string{"s", "s", "s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1560,6 +1566,7 @@ var pkgImportAlias = map[string]string{
 	"normalize":      "opsnormalize",
 	"validate_certs": "opsvalidatecerts",
 	"mail":           "ops",
+	"webhook":        "opswebhook",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1720,6 +1727,7 @@ var pkgImportPath = map[string]string{
 	"normalize":      "github.com/opslang/opslang/pkg/ops-core-sdk/normalize",
 	"validate_certs": "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs",
 	"mail":           "github.com/opslang/opslang/pkg/ops-core-sdk/mail",
+	"webhook":        "github.com/opslang/opslang/pkg/ops-core-sdk/webhook",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
