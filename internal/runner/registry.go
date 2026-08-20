@@ -15,6 +15,8 @@ import (
 	sdkfail2ban "github.com/opslang/opslang/pkg/ops-core-sdk/fail2ban"
 	sdklsb "github.com/opslang/opslang/pkg/ops-core-sdk/lsb_release"
 	sdkcompose "github.com/opslang/opslang/pkg/ops-core-sdk/docker_compose"
+	sdkcloudinit "github.com/opslang/opslang/pkg/ops-core-sdk/cloud_init"
+	sdksyspersist "github.com/opslang/opslang/pkg/ops-core-sdk/sys_persist"
 	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
 	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
@@ -1896,6 +1898,51 @@ func (r *Registry) registerExtensions() {
 			return nil, err
 		}
 		return map[string]interface{}{"logs": output}, nil
+	})
+
+	// ── cloud_init.* ──────────────────────────────────────────────────
+	r.Register("cloud_init.status", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkcloudinit.Status()
+	})
+	r.Register("cloud_init.modules", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkcloudinit.Modules()
+	})
+	r.Register("cloud_init.clean", func(args map[string]interface{}) (interface{}, error) {
+		removeLogs, _ := args["remove_logs"].(bool)
+		return sdkcloudinit.Clean(removeLogs)
+	})
+	r.Register("cloud_init.init", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkcloudinit.Init()
+	})
+
+	// ── sys_persist.* ─────────────────────────────────────────────────
+	r.Register("sys_persist.set", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sys_persist.set: %w", err)
+		}
+		value, err := argString(args, "value")
+		if err != nil {
+			return nil, fmt.Errorf("sys_persist.set: %w", err)
+		}
+		return sdksyspersist.Set(name, value)
+	})
+	r.Register("sys_persist.get", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sys_persist.get: %w", err)
+		}
+		return sdksyspersist.Get(name)
+	})
+	r.Register("sys_persist.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("sys_persist.remove: %w", err)
+		}
+		return sdksyspersist.Remove(name)
+	})
+	r.Register("sys_persist.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdksyspersist.List()
 	})
 
 	// ── dpkg_selections.* ─────────────────────────────────────────────

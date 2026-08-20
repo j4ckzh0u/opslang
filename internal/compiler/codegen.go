@@ -289,6 +289,18 @@ var sdkMapping = map[string]sdkFunc{
 	"docker_compose.build":   {pkg: "docker_compose", goName: "Build", args: true, params: []string{"s"}},
 	"docker_compose.logs":    {pkg: "docker_compose", goName: "Logs", args: true, params: []string{"s", "i"}},
 
+	// cloud_init
+	"cloud_init.status":  {pkg: "cloud_init", goName: "Status"},
+	"cloud_init.modules": {pkg: "cloud_init", goName: "Modules"},
+	"cloud_init.clean":   {pkg: "cloud_init", goName: "Clean", args: true, params: []string{"b"}},
+	"cloud_init.init":    {pkg: "cloud_init", goName: "Init"},
+
+	// sys_persist
+	"sys_persist.set":    {pkg: "sys_persist", goName: "Set", args: true, params: []string{"s", "s"}},
+	"sys_persist.get":    {pkg: "sys_persist", goName: "Get", args: true, params: []string{"s"}},
+	"sys_persist.remove": {pkg: "sys_persist", goName: "Remove", args: true, params: []string{"s"}},
+	"sys_persist.list":   {pkg: "sys_persist", goName: "List"},
+
 	// dpkg_selections
 	"dpkg_selections.set":   {pkg: "dpkg_selections", goName: "SetSelection", args: true, params: []string{"s", "s"}},
 	"dpkg_selections.get":   {pkg: "dpkg_selections", goName: "GetSelection", args: true, params: []string{"s"}},

@@ -15,6 +15,8 @@ import (
 	sdkfail2ban "github.com/opslang/opslang/pkg/ops-core-sdk/fail2ban"
 	sdklsb "github.com/opslang/opslang/pkg/ops-core-sdk/lsb_release"
 	sdkcompose "github.com/opslang/opslang/pkg/ops-core-sdk/docker_compose"
+	sdkcloudinit "github.com/opslang/opslang/pkg/ops-core-sdk/cloud_init"
+	sdksyspersist "github.com/opslang/opslang/pkg/ops-core-sdk/sys_persist"
 	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
 	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
@@ -4469,6 +4471,83 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return map[string]interface{}{"logs": output}, nil
+	}
+
+	// ── cloud_init.* ──────────────────────────────────────────────────
+	interp.builtins["cloud_init.status"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkcloudinit.Status()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["cloud_init.modules"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkcloudinit.Modules()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["cloud_init.clean"] = func(args ...interface{}) (interface{}, error) {
+		removeLogs := false
+		if len(args) >= 1 {
+			removeLogs, _ = args[0].(bool)
+		}
+		r, err := sdkcloudinit.Clean(removeLogs)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["cloud_init.init"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkcloudinit.Init()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── sys_persist.* ─────────────────────────────────────────────────
+	interp.builtins["sys_persist.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("sys_persist.set() requires 2 arguments (name, value)")
+		}
+		name, _ := args[0].(string)
+		value, _ := args[1].(string)
+		r, err := sdksyspersist.Set(name, value)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sys_persist.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sys_persist.get() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksyspersist.Get(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sys_persist.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("sys_persist.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdksyspersist.Remove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sys_persist.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksyspersist.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
 	}
 
 	// ── dpkg_selections.* ─────────────────────────────────────────────

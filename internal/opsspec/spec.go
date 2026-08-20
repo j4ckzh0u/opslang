@@ -135,6 +135,18 @@ var Funcs = []Func{
 	{Name: "docker_compose.build", Args: []string{"project_dir"}, Mutating: true},
 	{Name: "docker_compose.logs", Args: []string{"project_dir", "tail"}},
 
+	// ── cloud_init ──────────────────────────────────────────────────
+	{Name: "cloud_init.status"},
+	{Name: "cloud_init.modules"},
+	{Name: "cloud_init.clean", Args: []string{"remove_logs"}, Mutating: true},
+	{Name: "cloud_init.init", Mutating: true},
+
+	// ── sys_persist ─────────────────────────────────────────────────
+	{Name: "sys_persist.set", Args: []string{"name", "value"}, Mutating: true},
+	{Name: "sys_persist.get", Args: []string{"name"}},
+	{Name: "sys_persist.remove", Args: []string{"name"}, Mutating: true},
+	{Name: "sys_persist.list"},
+
 	// ── dpkg_selections ───────────────────────────────────────────────
 	{Name: "dpkg_selections.set", Args: []string{"name", "state"}, Mutating: true},
 	{Name: "dpkg_selections.get", Args: []string{"name"}},
