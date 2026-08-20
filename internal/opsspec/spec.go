@@ -1546,6 +1546,15 @@ var Funcs = []Func{
 	{Name: "btrfs.balance_status", Args: []string{"mount_point"}},
 	{Name: "btrfs.quota_enable", Args: []string{"mount_point"}, Mutating: true},
 	{Name: "btrfs.quota_disable", Args: []string{"mount_point"}, Mutating: true},
+
+	// ── lvol ─────────────────────────────────────────────────────────
+	{Name: "lvol.list"},
+	{Name: "lvol.create", Args: []string{"vg_name", "lv_name", "size"}, Mutating: true},
+	{Name: "lvol.remove", Args: []string{"vg_name", "lv_name", "force"}, Mutating: true},
+	{Name: "lvol.resize", Args: []string{"vg_name", "lv_name", "size", "resizefs"}, Mutating: true},
+	{Name: "lvol.rename", Args: []string{"vg_name", "old_name", "new_name"}, Mutating: true},
+	{Name: "lvol.activate", Args: []string{"vg_name", "lv_name"}, Mutating: true},
+	{Name: "lvol.deactivate", Args: []string{"vg_name", "lv_name"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

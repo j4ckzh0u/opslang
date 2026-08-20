@@ -11919,6 +11919,24 @@ func getStringArgBridge(args []interface{}, idx int, def string) string {
 	return def
 }
 
+// getStringSliceArgBridge extracts a []string argument at the given index.
+func getStringSliceArgBridge(args []interface{}, idx int) []string {
+	if idx >= len(args) {
+		return nil
+	}
+	switch v := args[idx].(type) {
+	case []string:
+		return v
+	case []interface{}:
+		result := make([]string, 0, len(v))
+		for _, item := range v {
+			result = append(result, fmt.Sprintf("%v", item))
+		}
+		return result
+	}
+	return nil
+}
+
 // verifyBridgeCoverage is a self-check that every function the canonical
 // opsspec table promises for the controller (interpreter) is registered.
 // It panics at init if the bridge and the spec drift apart — the two used

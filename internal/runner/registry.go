@@ -7670,6 +7670,25 @@ func mapStrArg(m map[string]interface{}, key string, def string) string {
 	return def
 }
 
+// mapStrSliceArg extracts a []string from a map.
+func mapStrSliceArg(m map[string]interface{}, key string) []string {
+	raw, ok := m[key]
+	if !ok || raw == nil {
+		return nil
+	}
+	switch v := raw.(type) {
+	case []string:
+		return v
+	case []interface{}:
+		result := make([]string, 0, len(v))
+		for _, item := range v {
+			result = append(result, fmt.Sprintf("%v", item))
+		}
+		return result
+	}
+	return nil
+}
+
 // ============================================================
 // built-in operations (log, alert, set, report, binary.exec)
 // ============================================================
