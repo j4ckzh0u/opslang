@@ -1521,6 +1521,31 @@ var Funcs = []Func{
 	{Name: "ssh_config.get", Args: []string{"host", "option", "scope"}},
 	{Name: "ssh_config.set", Args: []string{"host", "option", "value", "scope"}, Mutating: true},
 	{Name: "ssh_config.absent", Args: []string{"host", "option", "scope"}, Mutating: true},
+
+	// ── openvpn ──────────────────────────────────────────────────────
+	{Name: "openvpn.status"},
+	{Name: "openvpn.start", Mutating: true},
+	{Name: "openvpn.stop", Mutating: true},
+	{Name: "openvpn.restart", Mutating: true},
+	{Name: "openvpn.enable", Mutating: true},
+	{Name: "openvpn.disable", Mutating: true},
+	{Name: "openvpn.genkey", Args: []string{"output_path"}, Mutating: true},
+	{Name: "openvpn.gen_tls_auth", Args: []string{"output_path"}, Mutating: true},
+
+	// ── btrfs ────────────────────────────────────────────────────────
+	{Name: "btrfs.filesystem_list"},
+	{Name: "btrfs.subvolume_list", Args: []string{"mount_point"}},
+	{Name: "btrfs.subvolume_create", Args: []string{"path"}, Mutating: true},
+	{Name: "btrfs.subvolume_delete", Args: []string{"path"}, Mutating: true},
+	{Name: "btrfs.snapshot_create", Args: []string{"source", "dest", "read_only"}, Mutating: true},
+	{Name: "btrfs.scrub_start", Args: []string{"mount_point"}, Mutating: true},
+	{Name: "btrfs.scrub_status", Args: []string{"mount_point"}},
+	{Name: "btrfs.device_add", Args: []string{"device_path", "mount_point"}, Mutating: true},
+	{Name: "btrfs.device_remove", Args: []string{"device_path", "mount_point"}, Mutating: true},
+	{Name: "btrfs.balance_start", Args: []string{"mount_point"}, Mutating: true},
+	{Name: "btrfs.balance_status", Args: []string{"mount_point"}},
+	{Name: "btrfs.quota_enable", Args: []string{"mount_point"}, Mutating: true},
+	{Name: "btrfs.quota_disable", Args: []string{"mount_point"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

@@ -210,6 +210,8 @@ import (
 	sdkapache2mod "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module"
 	sdkpipx "github.com/opslang/opslang/pkg/ops-core-sdk/pipx"
 	sdksshconfig "github.com/opslang/opslang/pkg/ops-core-sdk/ssh_config"
+	sdkopenvpn "github.com/opslang/opslang/pkg/ops-core-sdk/openvpn"
+	sdkbtrfs "github.com/opslang/opslang/pkg/ops-core-sdk/btrfs"
 	"time"
 )
 
@@ -7556,6 +7558,87 @@ func (r *Registry) registerExtensions() {
 		option := mapStrArg(args, "option", "")
 		scope := mapStrArg(args, "scope", "")
 		return sdksshconfig.Absent(host, option, scope)
+	})
+	r.Register("openvpn.status", func(args map[string]interface{}) (interface{}, error) {
+		return sdkopenvpn.Status()
+	})
+	r.Register("openvpn.start", func(args map[string]interface{}) (interface{}, error) {
+		return sdkopenvpn.Start()
+	})
+	r.Register("openvpn.stop", func(args map[string]interface{}) (interface{}, error) {
+		return sdkopenvpn.Stop()
+	})
+	r.Register("openvpn.restart", func(args map[string]interface{}) (interface{}, error) {
+		return sdkopenvpn.Restart()
+	})
+	r.Register("openvpn.enable", func(args map[string]interface{}) (interface{}, error) {
+		return sdkopenvpn.Enable()
+	})
+	r.Register("openvpn.disable", func(args map[string]interface{}) (interface{}, error) {
+		return sdkopenvpn.Disable()
+	})
+	r.Register("openvpn.genkey", func(args map[string]interface{}) (interface{}, error) {
+		outputPath := mapStrArg(args, "output_path", "")
+		return sdkopenvpn.GenKey(outputPath)
+	})
+	r.Register("openvpn.gen_tls_auth", func(args map[string]interface{}) (interface{}, error) {
+		outputPath := mapStrArg(args, "output_path", "")
+		return sdkopenvpn.GenTLSAuth(outputPath)
+	})
+	r.Register("btrfs.filesystem_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkbtrfs.FilesystemList()
+	})
+	r.Register("btrfs.subvolume_list", func(args map[string]interface{}) (interface{}, error) {
+		mountPoint := mapStrArg(args, "mount_point", "/")
+		return sdkbtrfs.SubvolumeList(mountPoint)
+	})
+	r.Register("btrfs.subvolume_create", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		return sdkbtrfs.SubvolumeCreate(path)
+	})
+	r.Register("btrfs.subvolume_delete", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		return sdkbtrfs.SubvolumeDelete(path)
+	})
+	r.Register("btrfs.snapshot_create", func(args map[string]interface{}) (interface{}, error) {
+		source := mapStrArg(args, "source", "")
+		dest := mapStrArg(args, "dest", "")
+		readOnly, _ := argBool(args, "read_only")
+		return sdkbtrfs.SnapshotCreate(source, dest, readOnly)
+	})
+	r.Register("btrfs.scrub_start", func(args map[string]interface{}) (interface{}, error) {
+		mountPoint := mapStrArg(args, "mount_point", "/")
+		return sdkbtrfs.ScrubStart(mountPoint)
+	})
+	r.Register("btrfs.scrub_status", func(args map[string]interface{}) (interface{}, error) {
+		mountPoint := mapStrArg(args, "mount_point", "/")
+		return sdkbtrfs.ScrubStatus(mountPoint)
+	})
+	r.Register("btrfs.device_add", func(args map[string]interface{}) (interface{}, error) {
+		devicePath := mapStrArg(args, "device_path", "")
+		mountPoint := mapStrArg(args, "mount_point", "")
+		return sdkbtrfs.DeviceAdd(devicePath, mountPoint)
+	})
+	r.Register("btrfs.device_remove", func(args map[string]interface{}) (interface{}, error) {
+		devicePath := mapStrArg(args, "device_path", "")
+		mountPoint := mapStrArg(args, "mount_point", "")
+		return sdkbtrfs.DeviceRemove(devicePath, mountPoint)
+	})
+	r.Register("btrfs.balance_start", func(args map[string]interface{}) (interface{}, error) {
+		mountPoint := mapStrArg(args, "mount_point", "/")
+		return sdkbtrfs.BalanceStart(mountPoint)
+	})
+	r.Register("btrfs.balance_status", func(args map[string]interface{}) (interface{}, error) {
+		mountPoint := mapStrArg(args, "mount_point", "/")
+		return sdkbtrfs.BalanceStatus(mountPoint)
+	})
+	r.Register("btrfs.quota_enable", func(args map[string]interface{}) (interface{}, error) {
+		mountPoint := mapStrArg(args, "mount_point", "/")
+		return sdkbtrfs.QuotaEnable(mountPoint)
+	})
+	r.Register("btrfs.quota_disable", func(args map[string]interface{}) (interface{}, error) {
+		mountPoint := mapStrArg(args, "mount_point", "/")
+		return sdkbtrfs.QuotaDisable(mountPoint)
 	})
 }
 

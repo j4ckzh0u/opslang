@@ -210,6 +210,8 @@ import (
 	sdkapache2mod "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module"
 	sdkpipx "github.com/opslang/opslang/pkg/ops-core-sdk/pipx"
 	sdksshconfig "github.com/opslang/opslang/pkg/ops-core-sdk/ssh_config"
+	sdkopenvpn "github.com/opslang/opslang/pkg/ops-core-sdk/openvpn"
+	sdkbtrfs "github.com/opslang/opslang/pkg/ops-core-sdk/btrfs"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11797,6 +11799,87 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		option := getStringArgBridge(args, 1, "")
 		scope := getStringArgBridge(args, 2, "")
 		return sdksshconfig.Absent(host, option, scope)
+	}
+	interp.builtins["openvpn.status"] = func(args ...interface{}) (interface{}, error) {
+		return sdkopenvpn.Status()
+	}
+	interp.builtins["openvpn.start"] = func(args ...interface{}) (interface{}, error) {
+		return sdkopenvpn.Start()
+	}
+	interp.builtins["openvpn.stop"] = func(args ...interface{}) (interface{}, error) {
+		return sdkopenvpn.Stop()
+	}
+	interp.builtins["openvpn.restart"] = func(args ...interface{}) (interface{}, error) {
+		return sdkopenvpn.Restart()
+	}
+	interp.builtins["openvpn.enable"] = func(args ...interface{}) (interface{}, error) {
+		return sdkopenvpn.Enable()
+	}
+	interp.builtins["openvpn.disable"] = func(args ...interface{}) (interface{}, error) {
+		return sdkopenvpn.Disable()
+	}
+	interp.builtins["openvpn.genkey"] = func(args ...interface{}) (interface{}, error) {
+		outputPath := getStringArgBridge(args, 0, "")
+		return sdkopenvpn.GenKey(outputPath)
+	}
+	interp.builtins["openvpn.gen_tls_auth"] = func(args ...interface{}) (interface{}, error) {
+		outputPath := getStringArgBridge(args, 0, "")
+		return sdkopenvpn.GenTLSAuth(outputPath)
+	}
+	interp.builtins["btrfs.filesystem_list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkbtrfs.FilesystemList()
+	}
+	interp.builtins["btrfs.subvolume_list"] = func(args ...interface{}) (interface{}, error) {
+		mountPoint := getStringArgBridge(args, 0, "/")
+		return sdkbtrfs.SubvolumeList(mountPoint)
+	}
+	interp.builtins["btrfs.subvolume_create"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		return sdkbtrfs.SubvolumeCreate(path)
+	}
+	interp.builtins["btrfs.subvolume_delete"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		return sdkbtrfs.SubvolumeDelete(path)
+	}
+	interp.builtins["btrfs.snapshot_create"] = func(args ...interface{}) (interface{}, error) {
+		source := getStringArgBridge(args, 0, "")
+		dest := getStringArgBridge(args, 1, "")
+		readOnly := opsBool(args[2])
+		return sdkbtrfs.SnapshotCreate(source, dest, readOnly)
+	}
+	interp.builtins["btrfs.scrub_start"] = func(args ...interface{}) (interface{}, error) {
+		mountPoint := getStringArgBridge(args, 0, "/")
+		return sdkbtrfs.ScrubStart(mountPoint)
+	}
+	interp.builtins["btrfs.scrub_status"] = func(args ...interface{}) (interface{}, error) {
+		mountPoint := getStringArgBridge(args, 0, "/")
+		return sdkbtrfs.ScrubStatus(mountPoint)
+	}
+	interp.builtins["btrfs.device_add"] = func(args ...interface{}) (interface{}, error) {
+		devicePath := getStringArgBridge(args, 0, "")
+		mountPoint := getStringArgBridge(args, 1, "")
+		return sdkbtrfs.DeviceAdd(devicePath, mountPoint)
+	}
+	interp.builtins["btrfs.device_remove"] = func(args ...interface{}) (interface{}, error) {
+		devicePath := getStringArgBridge(args, 0, "")
+		mountPoint := getStringArgBridge(args, 1, "")
+		return sdkbtrfs.DeviceRemove(devicePath, mountPoint)
+	}
+	interp.builtins["btrfs.balance_start"] = func(args ...interface{}) (interface{}, error) {
+		mountPoint := getStringArgBridge(args, 0, "/")
+		return sdkbtrfs.BalanceStart(mountPoint)
+	}
+	interp.builtins["btrfs.balance_status"] = func(args ...interface{}) (interface{}, error) {
+		mountPoint := getStringArgBridge(args, 0, "/")
+		return sdkbtrfs.BalanceStatus(mountPoint)
+	}
+	interp.builtins["btrfs.quota_enable"] = func(args ...interface{}) (interface{}, error) {
+		mountPoint := getStringArgBridge(args, 0, "/")
+		return sdkbtrfs.QuotaEnable(mountPoint)
+	}
+	interp.builtins["btrfs.quota_disable"] = func(args ...interface{}) (interface{}, error) {
+		mountPoint := getStringArgBridge(args, 0, "/")
+		return sdkbtrfs.QuotaDisable(mountPoint)
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

@@ -1508,6 +1508,31 @@ var sdkMapping = map[string]sdkFunc{
 	"ssh_config.get":   {pkg: "ssh_config", goName: "Get", args: true, params: []string{"s", "s", "s"}},
 	"ssh_config.set":   {pkg: "ssh_config", goName: "Set", args: true, params: []string{"s", "s", "s", "s"}},
 	"ssh_config.absent": {pkg: "ssh_config", goName: "Absent", args: true, params: []string{"s", "s", "s"}},
+
+	// openvpn
+	"openvpn.status":       {pkg: "openvpn", goName: "Status", args: true},
+	"openvpn.start":        {pkg: "openvpn", goName: "Start", args: true},
+	"openvpn.stop":         {pkg: "openvpn", goName: "Stop", args: true},
+	"openvpn.restart":      {pkg: "openvpn", goName: "Restart", args: true},
+	"openvpn.enable":       {pkg: "openvpn", goName: "Enable", args: true},
+	"openvpn.disable":      {pkg: "openvpn", goName: "Disable", args: true},
+	"openvpn.genkey":       {pkg: "openvpn", goName: "GenKey", args: true, params: []string{"s"}},
+	"openvpn.gen_tls_auth": {pkg: "openvpn", goName: "GenTLSAuth", args: true, params: []string{"s"}},
+
+	// btrfs
+	"btrfs.filesystem_list":   {pkg: "btrfs", goName: "FilesystemList", args: true},
+	"btrfs.subvolume_list":    {pkg: "btrfs", goName: "SubvolumeList", args: true, params: []string{"s"}},
+	"btrfs.subvolume_create":  {pkg: "btrfs", goName: "SubvolumeCreate", args: true, params: []string{"s"}},
+	"btrfs.subvolume_delete":  {pkg: "btrfs", goName: "SubvolumeDelete", args: true, params: []string{"s"}},
+	"btrfs.snapshot_create":   {pkg: "btrfs", goName: "SnapshotCreate", args: true, params: []string{"s", "s", "b"}},
+	"btrfs.scrub_start":       {pkg: "btrfs", goName: "ScrubStart", args: true, params: []string{"s"}},
+	"btrfs.scrub_status":      {pkg: "btrfs", goName: "ScrubStatus", args: true, params: []string{"s"}},
+	"btrfs.device_add":        {pkg: "btrfs", goName: "DeviceAdd", args: true, params: []string{"s", "s"}},
+	"btrfs.device_remove":     {pkg: "btrfs", goName: "DeviceRemove", args: true, params: []string{"s", "s"}},
+	"btrfs.balance_start":     {pkg: "btrfs", goName: "BalanceStart", args: true, params: []string{"s"}},
+	"btrfs.balance_status":    {pkg: "btrfs", goName: "BalanceStatus", args: true, params: []string{"s"}},
+	"btrfs.quota_enable":      {pkg: "btrfs", goName: "QuotaEnable", args: true, params: []string{"s"}},
+	"btrfs.quota_disable":     {pkg: "btrfs", goName: "QuotaDisable", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1764,6 +1789,8 @@ var pkgImportAlias = map[string]string{
 	"apache2_module":   "opsapache2mod",
 	"pipx":             "opspipx",
 	"ssh_config":       "opssshconfig",
+	"openvpn":          "opsopenvpn",
+	"btrfs":            "opsbtrfs",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1946,6 +1973,8 @@ var pkgImportPath = map[string]string{
 	"apache2_module":   "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module",
 	"pipx":             "github.com/opslang/opslang/pkg/ops-core-sdk/pipx",
 	"ssh_config":       "github.com/opslang/opslang/pkg/ops-core-sdk/ssh_config",
+	"openvpn":          "github.com/opslang/opslang/pkg/ops-core-sdk/openvpn",
+	"btrfs":            "github.com/opslang/opslang/pkg/ops-core-sdk/btrfs",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
