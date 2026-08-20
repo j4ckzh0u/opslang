@@ -1112,6 +1112,16 @@ var sdkMapping = map[string]sdkFunc{
 	"portage.search":    {pkg: "portage", goName: "Search", args: true, params: []string{"s"}},
 	"portage.depclean":  {pkg: "portage", goName: "Depclean", args: false},
 	"portage.metadata":  {pkg: "portage", goName: "Metadata", args: true, params: []string{"s"}},
+
+	"pkgng.install":   {pkg: "pkgng", goName: "Install", args: true, params: []string{"s", "s"}},
+	"pkgng.remove":    {pkg: "pkgng", goName: "Remove", args: true, params: []string{"s"}},
+	"pkgng.update":    {pkg: "pkgng", goName: "Update", args: false},
+	"pkgng.upgrade":   {pkg: "pkgng", goName: "Upgrade", args: true, params: []string{"s"}},
+	"pkgng.autoclean": {pkg: "pkgng", goName: "Autoclean", args: false},
+	"pkgng.info":      {pkg: "pkgng", goName: "Info", args: true, params: []string{"s"}},
+	"pkgng.list":      {pkg: "pkgng", goName: "List", args: false},
+	"pkgng.search":    {pkg: "pkgng", goName: "Search", args: true, params: []string{"s"}},
+	"pkgng.stats":     {pkg: "pkgng", goName: "Stats", args: false},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1312,6 +1322,7 @@ var pkgImportAlias = map[string]string{
 	"zypper":         "opszypper",
 	"pacman":         "opspacman",
 	"portage":        "opsportage",
+	"pkgng":          "opspkgng",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1438,6 +1449,7 @@ var pkgImportPath = map[string]string{
 	"zypper":         "github.com/opslang/opslang/pkg/ops-core-sdk/zypper",
 	"pacman":         "github.com/opslang/opslang/pkg/ops-core-sdk/pacman",
 	"portage":        "github.com/opslang/opslang/pkg/ops-core-sdk/portage",
+	"pkgng":          "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

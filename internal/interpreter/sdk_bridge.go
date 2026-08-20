@@ -145,6 +145,7 @@ import (
 	sdkzypper "github.com/opslang/opslang/pkg/ops-core-sdk/zypper"
 	sdkpacman "github.com/opslang/opslang/pkg/ops-core-sdk/pacman"
 	sdkportage "github.com/opslang/opslang/pkg/ops-core-sdk/portage"
+	sdkpkgng "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -9121,6 +9122,95 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		r, err := sdkportage.Metadata(name)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+
+	// ── pkgng.* ─────────────────────────────────────────────────────
+	interp.builtins["pkgng.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pkgng.install() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		version := ""
+		if len(args) >= 2 {
+			version, _ = args[1].(string)
+		}
+		r, err := sdkpkgng.Install(name, version)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pkgng.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pkgng.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkpkgng.Remove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pkgng.update"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpkgng.Update()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pkgng.upgrade"] = func(args ...interface{}) (interface{}, error) {
+		name := ""
+		if len(args) >= 1 {
+			name, _ = args[0].(string)
+		}
+		r, err := sdkpkgng.Upgrade(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pkgng.autoclean"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpkgng.Autoclean()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pkgng.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pkgng.info() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkpkgng.Info(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pkgng.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpkgng.List()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["pkgng.search"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pkgng.search() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkpkgng.Search(name)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["pkgng.stats"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpkgng.Stats()
 		if err != nil {
 			return nil, err
 		}

@@ -146,6 +146,7 @@ import (
 	sdkzypper "github.com/opslang/opslang/pkg/ops-core-sdk/zypper"
 	sdkpacman "github.com/opslang/opslang/pkg/ops-core-sdk/pacman"
 	sdkportage "github.com/opslang/opslang/pkg/ops-core-sdk/portage"
+	sdkpkgng "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -5509,6 +5510,53 @@ func (r *Registry) registerExtensions() {
 			return nil, fmt.Errorf("portage.metadata: %w", err)
 		}
 		return sdkportage.Metadata(name)
+	})
+
+	// ── pkgng ───────────────────────────────────────────────────────
+	r.Register("pkgng.install", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("pkgng.install: %w", err)
+		}
+		version, _ := args["version"].(string)
+		return sdkpkgng.Install(name, version)
+	})
+	r.Register("pkgng.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("pkgng.remove: %w", err)
+		}
+		return sdkpkgng.Remove(name)
+	})
+	r.Register("pkgng.update", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpkgng.Update()
+	})
+	r.Register("pkgng.upgrade", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkpkgng.Upgrade(name)
+	})
+	r.Register("pkgng.autoclean", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpkgng.Autoclean()
+	})
+	r.Register("pkgng.info", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("pkgng.info: %w", err)
+		}
+		return sdkpkgng.Info(name)
+	})
+	r.Register("pkgng.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpkgng.List()
+	})
+	r.Register("pkgng.search", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("pkgng.search: %w", err)
+		}
+		return sdkpkgng.Search(name)
+	})
+	r.Register("pkgng.stats", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpkgng.Stats()
 	})
 }
 

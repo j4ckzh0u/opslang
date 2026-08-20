@@ -1138,6 +1138,17 @@ var Funcs = []Func{
 	{Name: "portage.search", Args: []string{"name"}},
 	{Name: "portage.depclean", Mutating: true},
 	{Name: "portage.metadata", Args: []string{"name"}},
+
+	// ── pkgng ───────────────────────────────────────────────────────
+	{Name: "pkgng.install", Args: []string{"name", "version"}, Mutating: true},
+	{Name: "pkgng.remove", Args: []string{"name"}, Mutating: true},
+	{Name: "pkgng.update", Mutating: true},
+	{Name: "pkgng.upgrade", Args: []string{"name"}, Mutating: true},
+	{Name: "pkgng.autoclean", Mutating: true},
+	{Name: "pkgng.info", Args: []string{"name"}},
+	{Name: "pkgng.list"},
+	{Name: "pkgng.search", Args: []string{"name"}},
+	{Name: "pkgng.stats"},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
