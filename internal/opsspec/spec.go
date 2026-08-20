@@ -1244,6 +1244,47 @@ var Funcs = []Func{
 	{Name: "docker_container.inspect", Args: []string{"name"}},
 	{Name: "docker_container.list", Args: []string{"all"}},
 	{Name: "docker_container.logs", Args: []string{"name", "tail"}},
+
+	// ── ping ──────────────────────────────────────────────────────────────────
+	{Name: "ping.ping"},
+	{Name: "ping.win_ping"},
+
+	// ── find ──────────────────────────────────────────────────────────────────
+	{Name: "find.find", Args: []string{"paths", "patterns", "file_type", "recurse", "depth"}, Mutating: false},
+
+	// ── tempfile ──────────────────────────────────────────────────────────────
+	{Name: "tempfile.create_file", Args: []string{"prefix", "suffix", "path"}, Mutating: true},
+	{Name: "tempfile.create_dir", Args: []string{"prefix", "suffix", "path"}, Mutating: true},
+	{Name: "tempfile.delete", Args: []string{"path"}, Mutating: true},
+
+	// ── fail ──────────────────────────────────────────────────────────────────
+	{Name: "fail.fail", Args: []string{"message"}},
+
+	// ── assert ────────────────────────────────────────────────────────────────
+	{Name: "assert.assert", Args: []string{"condition", "success_msg", "fail_msg"}},
+
+	// ── debug ─────────────────────────────────────────────────────────────────
+	{Name: "debug.debug", Args: []string{"message"}},
+	{Name: "debug.debug_var", Args: []string{"name", "value"}},
+
+	// ── set_fact ──────────────────────────────────────────────────────────────
+	{Name: "set_fact.set", Args: []string{"key_values"}, Mutating: true},
+	{Name: "set_fact.get", Args: []string{"key"}},
+	{Name: "set_fact.get_all"},
+	{Name: "set_fact.clear", Mutating: true},
+
+	// ── unarchive ─────────────────────────────────────────────────────────────
+	{Name: "unarchive.unarchive", Args: []string{"src", "dest", "owner", "group", "mode", "creates"}, Mutating: true},
+
+	// ── package_facts ─────────────────────────────────────────────────────────
+	{Name: "package_facts.collect", Args: []string{"managers"}},
+
+	// ── service_facts ─────────────────────────────────────────────────────────
+	{Name: "service_facts.collect"},
+
+	// ── command ───────────────────────────────────────────────────────────────
+	{Name: "command.run", Args: []string{"command_args", "chdir", "creates", "removes", "timeout_ms"}, Mutating: true},
+	{Name: "command.shell", Args: []string{"command_args", "chdir", "creates", "removes", "timeout_ms", "executable"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

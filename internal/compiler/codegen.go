@@ -1194,6 +1194,47 @@ var sdkMapping = map[string]sdkFunc{
 	"maven_artifact.download":          {pkg: "maven_artifact", goName: "Download", args: true, params: []string{"s", "s", "s", "s", "s", "s"}},
 	"maven_artifact.resolve":           {pkg: "maven_artifact", goName: "Resolve", args: true, params: []string{"s", "s", "s", "s", "s"}},
 	"maven_artifact.deploy":            {pkg: "maven_artifact", goName: "Deploy", args: true, params: []string{"s", "s", "s", "s", "s", "s"}},
+
+	// ── ping ─────────────────────────────────────────────────────────────
+	"ping.ping":     {pkg: "ping", goName: "Ping"},
+	"ping.win_ping": {pkg: "ping", goName: "WinPing"},
+
+	// ── find ─────────────────────────────────────────────────────────────
+	"find.find": {pkg: "find", goName: "Find", args: true, params: []string{"l", "l", "s", "b", "i"}},
+
+	// ── tempfile ─────────────────────────────────────────────────────────
+	"tempfile.create_file": {pkg: "tempfile", goName: "CreateFile", args: true, params: []string{"s", "s", "s"}},
+	"tempfile.create_dir":  {pkg: "tempfile", goName: "CreateDir", args: true, params: []string{"s", "s", "s"}},
+	"tempfile.delete":      {pkg: "tempfile", goName: "Delete", args: true, params: []string{"s"}},
+
+	// ── fail ─────────────────────────────────────────────────────────────
+	"fail.fail": {pkg: "fail", goName: "Fail", args: true, params: []string{"s"}},
+
+	// ── assert ───────────────────────────────────────────────────────────
+	"assert.assert": {pkg: "assert", goName: "Assert", args: true, params: []string{"b", "s", "s"}},
+
+	// ── debug ────────────────────────────────────────────────────────────
+	"debug.debug":     {pkg: "debug", goName: "Debug", args: true, params: []string{"s"}},
+	"debug.debug_var": {pkg: "debug", goName: "DebugVar", args: true, params: []string{"s", "s"}},
+
+	// ── set_fact ─────────────────────────────────────────────────────────
+	"set_fact.set":      {pkg: "set_fact", goName: "Set", args: true, params: []string{"s"}},
+	"set_fact.get":      {pkg: "set_fact", goName: "Get", args: true, params: []string{"s"}},
+	"set_fact.get_all":  {pkg: "set_fact", goName: "GetAll"},
+	"set_fact.clear":    {pkg: "set_fact", goName: "Clear"},
+
+	// ── unarchive ────────────────────────────────────────────────────────
+	"unarchive.unarchive": {pkg: "unarchive", goName: "Unarchive", args: true, params: []string{"s", "s", "s", "s", "s", "s"}},
+
+	// ── package_facts ────────────────────────────────────────────────────
+	"package_facts.collect": {pkg: "package_facts", goName: "Collect", args: true, params: []string{"l"}},
+
+	// ── service_facts ────────────────────────────────────────────────────
+	"service_facts.collect": {pkg: "service_facts", goName: "Collect"},
+
+	// ── command ──────────────────────────────────────────────────────────
+	"command.run":   {pkg: "command", goName: "Run", args: true, params: []string{"l", "s", "s", "s", "i"}},
+	"command.shell": {pkg: "command", goName: "Shell", args: true, params: []string{"l", "s", "s", "s", "i", "s"}},
 	"maven_artifact.get_latest_version": {pkg: "maven_artifact", goName: "GetLatestVersion", args: true, params: []string{"s", "s", "s"}},
 	"maven_artifact.checksum":          {pkg: "maven_artifact", goName: "Checksum", args: true, params: []string{"s"}},
 	// docker_image
@@ -1423,6 +1464,17 @@ var pkgImportAlias = map[string]string{
 	"maven_artifact": "opsmaven",
 	"docker_image":   "opsdockerimage",
 	"docker_container": "opsdockercontainer",
+	"ping":           "opsping",
+	"find":           "opsfind",
+	"tempfile":       "opstempfile",
+	"fail":           "opsfail",
+	"assert":         "opsassert",
+	"debug":          "opsdebug",
+	"set_fact":       "opssetfact",
+	"unarchive":      "opsunarchive",
+	"package_facts":  "opspackagefacts",
+	"service_facts":  "opsservicefacts",
+	"command":        "opscommand",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1558,6 +1610,17 @@ var pkgImportPath = map[string]string{
 	"maven_artifact": "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact",
 	"docker_image":   "github.com/opslang/opslang/pkg/ops-core-sdk/docker_image",
 	"docker_container": "github.com/opslang/opslang/pkg/ops-core-sdk/docker_container",
+	"ping":           "github.com/opslang/opslang/pkg/ops-core-sdk/ping",
+	"find":           "github.com/opslang/opslang/pkg/ops-core-sdk/find",
+	"tempfile":       "github.com/opslang/opslang/pkg/ops-core-sdk/tempfile",
+	"fail":           "github.com/opslang/opslang/pkg/ops-core-sdk/fail",
+	"assert":         "github.com/opslang/opslang/pkg/ops-core-sdk/assert",
+	"debug":          "github.com/opslang/opslang/pkg/ops-core-sdk/debug",
+	"set_fact":       "github.com/opslang/opslang/pkg/ops-core-sdk/set_fact",
+	"unarchive":      "github.com/opslang/opslang/pkg/ops-core-sdk/unarchive",
+	"package_facts":  "github.com/opslang/opslang/pkg/ops-core-sdk/package_facts",
+	"service_facts":  "github.com/opslang/opslang/pkg/ops-core-sdk/service_facts",
+	"command":        "github.com/opslang/opslang/pkg/ops-core-sdk/command",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

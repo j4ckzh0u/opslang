@@ -155,6 +155,18 @@ import (
 	sdkmaven "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact"
 	sdkdockerimage "github.com/opslang/opslang/pkg/ops-core-sdk/docker_image"
 	sdkdockercontainer "github.com/opslang/opslang/pkg/ops-core-sdk/docker_container"
+	sdkping "github.com/opslang/opslang/pkg/ops-core-sdk/ping"
+	sdkfind "github.com/opslang/opslang/pkg/ops-core-sdk/find"
+	sdktempfile "github.com/opslang/opslang/pkg/ops-core-sdk/tempfile"
+	sdkfail "github.com/opslang/opslang/pkg/ops-core-sdk/fail"
+	sdkassert "github.com/opslang/opslang/pkg/ops-core-sdk/assert"
+	sdkdebug "github.com/opslang/opslang/pkg/ops-core-sdk/debug"
+	sdksetfact "github.com/opslang/opslang/pkg/ops-core-sdk/set_fact"
+	sdkunarchive "github.com/opslang/opslang/pkg/ops-core-sdk/unarchive"
+	sdkpackagefacts "github.com/opslang/opslang/pkg/ops-core-sdk/package_facts"
+	sdkservicefacts "github.com/opslang/opslang/pkg/ops-core-sdk/service_facts"
+	sdkcommand "github.com/opslang/opslang/pkg/ops-core-sdk/command"
+	"time"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -6191,6 +6203,175 @@ func (r *Registry) registerExtensions() {
 		name, _ := args["name"].(string)
 		tail, _ := args["tail"].(string)
 		return sdkdockercontainer.Logs(name, tail)
+	})
+
+	// ── ping ──────────────────────────────────────────────────────────
+	r.Register("ping.ping", func(args map[string]interface{}) (interface{}, error) {
+		data, _ := args["data"].(string)
+		return sdkping.Ping(data), nil
+	})
+	r.Register("ping.win_ping", func(args map[string]interface{}) (interface{}, error) {
+		data, _ := args["data"].(string)
+		return sdkping.WinPing(data), nil
+	})
+
+	// ── find ──────────────────────────────────────────────────────────
+	r.Register("find.find", func(args map[string]interface{}) (interface{}, error) {
+		opts := sdkfind.FindOptions{}
+		if v, ok := args["paths"].([]interface{}); ok {
+			for _, p := range v {
+				if s, ok := p.(string); ok {
+					opts.Paths = append(opts.Paths, s)
+				}
+			}
+		}
+		if v, ok := args["patterns"].([]interface{}); ok {
+			for _, p := range v {
+				if s, ok := p.(string); ok {
+					opts.Patterns = append(opts.Patterns, s)
+				}
+			}
+		}
+		opts.FileType, _ = args["file_type"].(string)
+		opts.Recurse, _ = args["recurse"].(bool)
+		if d, ok := args["depth"].(float64); ok {
+			opts.Depth = int(d)
+		}
+		return sdkfind.Find(opts), nil
+	})
+
+	// ── tempfile ──────────────────────────────────────────────────────
+	r.Register("tempfile.create_file", func(args map[string]interface{}) (interface{}, error) {
+		prefix, _ := args["prefix"].(string)
+		suffix, _ := args["suffix"].(string)
+		path, _ := args["path"].(string)
+		return sdktempfile.CreateFile(prefix, suffix, path), nil
+	})
+	r.Register("tempfile.create_dir", func(args map[string]interface{}) (interface{}, error) {
+		prefix, _ := args["prefix"].(string)
+		suffix, _ := args["suffix"].(string)
+		path, _ := args["path"].(string)
+		return sdktempfile.CreateDir(prefix, suffix, path), nil
+	})
+	r.Register("tempfile.delete", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := args["path"].(string)
+		return sdktempfile.Delete(path), nil
+	})
+
+	// ── fail ──────────────────────────────────────────────────────────
+	r.Register("fail.fail", func(args map[string]interface{}) (interface{}, error) {
+		msg, _ := args["message"].(string)
+		return sdkfail.Fail(msg), nil
+	})
+
+	// ── assert ────────────────────────────────────────────────────────
+	r.Register("assert.assert", func(args map[string]interface{}) (interface{}, error) {
+		cond, _ := args["condition"].(bool)
+		successMsg, _ := args["success_msg"].(string)
+		failMsg, _ := args["fail_msg"].(string)
+		return sdkassert.Assert(cond, successMsg, failMsg), nil
+	})
+
+	// ── debug ─────────────────────────────────────────────────────────
+	r.Register("debug.debug", func(args map[string]interface{}) (interface{}, error) {
+		msg, _ := args["message"].(string)
+		return sdkdebug.Debug(msg), nil
+	})
+	r.Register("debug.debug_var", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		value, _ := args["value"].(string)
+		return sdkdebug.DebugVar(name, value), nil
+	})
+
+	// ── set_fact ──────────────────────────────────────────────────────
+	r.Register("set_fact.set", func(args map[string]interface{}) (interface{}, error) {
+		kvJSON, _ := args["key_values"].(string)
+		var kv map[string]interface{}
+		if err := json.Unmarshal([]byte(kvJSON), &kv); err != nil {
+			return sdksetfact.Set(map[string]interface{}{"raw": kvJSON}), nil
+		}
+		return sdksetfact.Set(kv), nil
+	})
+	r.Register("set_fact.get", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := args["key"].(string)
+		v, ok := sdksetfact.Get(key)
+		return map[string]interface{}{"value": v, "found": ok}, nil
+	})
+	r.Register("set_fact.get_all", func(args map[string]interface{}) (interface{}, error) {
+		return sdksetfact.GetAll(), nil
+	})
+	r.Register("set_fact.clear", func(args map[string]interface{}) (interface{}, error) {
+		return sdksetfact.Clear(), nil
+	})
+
+	// ── unarchive ─────────────────────────────────────────────────────
+	r.Register("unarchive.unarchive", func(args map[string]interface{}) (interface{}, error) {
+		src, _ := args["src"].(string)
+		dest, _ := args["dest"].(string)
+		owner, _ := args["owner"].(string)
+		group, _ := args["group"].(string)
+		mode, _ := args["mode"].(string)
+		creates, _ := args["creates"].(string)
+		return sdkunarchive.Unarchive(src, dest, owner, group, mode, creates), nil
+	})
+
+	// ── package_facts ─────────────────────────────────────────────────
+	r.Register("package_facts.collect", func(args map[string]interface{}) (interface{}, error) {
+		var managers []string
+		if v, ok := args["managers"].([]interface{}); ok {
+			for _, m := range v {
+				if s, ok := m.(string); ok {
+					managers = append(managers, s)
+				}
+			}
+		}
+		return sdkpackagefacts.Collect(managers), nil
+	})
+
+	// ── service_facts ─────────────────────────────────────────────────
+	r.Register("service_facts.collect", func(args map[string]interface{}) (interface{}, error) {
+		return sdkservicefacts.Collect(), nil
+	})
+
+	// ── command ───────────────────────────────────────────────────────
+	r.Register("command.run", func(args map[string]interface{}) (interface{}, error) {
+		var cmdArgs []string
+		if v, ok := args["command_args"].([]interface{}); ok {
+			for _, a := range v {
+				if s, ok := a.(string); ok {
+					cmdArgs = append(cmdArgs, s)
+				}
+			}
+		}
+		chdir, _ := args["chdir"].(string)
+		creates, _ := args["creates"].(string)
+		removes, _ := args["removes"].(string)
+		timeoutMs := 0.0
+		if t, ok := args["timeout_ms"].(float64); ok {
+			timeoutMs = t
+		}
+		timeout := time.Duration(timeoutMs) * time.Millisecond
+		return sdkcommand.Run(cmdArgs, chdir, creates, removes, timeout), nil
+	})
+	r.Register("command.shell", func(args map[string]interface{}) (interface{}, error) {
+		var cmdArgs []string
+		if v, ok := args["command_args"].([]interface{}); ok {
+			for _, a := range v {
+				if s, ok := a.(string); ok {
+					cmdArgs = append(cmdArgs, s)
+				}
+			}
+		}
+		chdir, _ := args["chdir"].(string)
+		creates, _ := args["creates"].(string)
+		removes, _ := args["removes"].(string)
+		timeoutMs := 0.0
+		if t, ok := args["timeout_ms"].(float64); ok {
+			timeoutMs = t
+		}
+		executable, _ := args["executable"].(string)
+		timeout := time.Duration(timeoutMs) * time.Millisecond
+		return sdkcommand.Shell(cmdArgs, chdir, creates, removes, timeout, executable), nil
 	})
 }
 

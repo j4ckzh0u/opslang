@@ -4,6 +4,7 @@ package interpreter
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/opslang/opslang/internal/opsspec"
 	sdkapt "github.com/opslang/opslang/pkg/ops-core-sdk/apt"
@@ -154,6 +155,17 @@ import (
 	sdkmaven "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact"
 	sdkdockerimage "github.com/opslang/opslang/pkg/ops-core-sdk/docker_image"
 	sdkdockercontainer "github.com/opslang/opslang/pkg/ops-core-sdk/docker_container"
+	sdkping "github.com/opslang/opslang/pkg/ops-core-sdk/ping"
+	sdkfind "github.com/opslang/opslang/pkg/ops-core-sdk/find"
+	sdktempfile "github.com/opslang/opslang/pkg/ops-core-sdk/tempfile"
+	sdkfail "github.com/opslang/opslang/pkg/ops-core-sdk/fail"
+	sdkassert "github.com/opslang/opslang/pkg/ops-core-sdk/assert"
+	sdkdebug "github.com/opslang/opslang/pkg/ops-core-sdk/debug"
+	sdksetfact "github.com/opslang/opslang/pkg/ops-core-sdk/set_fact"
+	sdkunarchive "github.com/opslang/opslang/pkg/ops-core-sdk/unarchive"
+	sdkpackagefacts "github.com/opslang/opslang/pkg/ops-core-sdk/package_facts"
+	sdkservicefacts "github.com/opslang/opslang/pkg/ops-core-sdk/service_facts"
+	sdkcommand "github.com/opslang/opslang/pkg/ops-core-sdk/command"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10184,8 +10196,176 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		if err != nil { return nil, err }
 		return r, nil
 	}
+
+	// ── ping.* ────────────────────────────────────────────────────────
+	interp.builtins["ping.ping"] = func(args ...interface{}) (interface{}, error) {
+		data := ""
+		if len(args) >= 1 { data, _ = args[0].(string) }
+		return sdkping.Ping(data), nil
+	}
+	interp.builtins["ping.win_ping"] = func(args ...interface{}) (interface{}, error) {
+		data := ""
+		if len(args) >= 1 { data, _ = args[0].(string) }
+		return sdkping.WinPing(data), nil
+	}
+
+	// ── find.* ────────────────────────────────────────────────────────
+	interp.builtins["find.find"] = func(args ...interface{}) (interface{}, error) {
+		opts := sdkfind.FindOptions{}
+		if len(args) >= 1 {
+			if v, ok := args[0].([]interface{}); ok {
+				for _, p := range v { if s, ok := p.(string); ok { opts.Paths = append(opts.Paths, s) } }
+			}
+		}
+		if len(args) >= 2 {
+			if v, ok := args[1].([]interface{}); ok {
+				for _, p := range v { if s, ok := p.(string); ok { opts.Patterns = append(opts.Patterns, s) } }
+			}
+		}
+		if len(args) >= 3 { opts.FileType, _ = args[2].(string) }
+		if len(args) >= 4 { opts.Recurse, _ = args[3].(bool) }
+		if len(args) >= 5 { if d, ok := args[4].(float64); ok { opts.Depth = int(d) } }
+		return sdkfind.Find(opts), nil
+	}
+
+	// ── tempfile.* ────────────────────────────────────────────────────
+	interp.builtins["tempfile.create_file"] = func(args ...interface{}) (interface{}, error) {
+		prefix, suffix, path := "", "", ""
+		if len(args) >= 1 { prefix, _ = args[0].(string) }
+		if len(args) >= 2 { suffix, _ = args[1].(string) }
+		if len(args) >= 3 { path, _ = args[2].(string) }
+		return sdktempfile.CreateFile(prefix, suffix, path), nil
+	}
+	interp.builtins["tempfile.create_dir"] = func(args ...interface{}) (interface{}, error) {
+		prefix, suffix, path := "", "", ""
+		if len(args) >= 1 { prefix, _ = args[0].(string) }
+		if len(args) >= 2 { suffix, _ = args[1].(string) }
+		if len(args) >= 3 { path, _ = args[2].(string) }
+		return sdktempfile.CreateDir(prefix, suffix, path), nil
+	}
+	interp.builtins["tempfile.delete"] = func(args ...interface{}) (interface{}, error) {
+		path := ""
+		if len(args) >= 1 { path, _ = args[0].(string) }
+		return sdktempfile.Delete(path), nil
+	}
+
+	// ── fail.* ────────────────────────────────────────────────────────
+	interp.builtins["fail.fail"] = func(args ...interface{}) (interface{}, error) {
+		msg := ""
+		if len(args) >= 1 { msg, _ = args[0].(string) }
+		return sdkfail.Fail(msg), nil
+	}
+
+	// ── assert.* ──────────────────────────────────────────────────────
+	interp.builtins["assert.assert"] = func(args ...interface{}) (interface{}, error) {
+		cond := false
+		successMsg, failMsg := "", ""
+		if len(args) >= 1 { cond, _ = args[0].(bool) }
+		if len(args) >= 2 { successMsg, _ = args[1].(string) }
+		if len(args) >= 3 { failMsg, _ = args[2].(string) }
+		return sdkassert.Assert(cond, successMsg, failMsg), nil
+	}
+
+	// ── debug.* ───────────────────────────────────────────────────────
+	interp.builtins["debug.debug"] = func(args ...interface{}) (interface{}, error) {
+		msg := ""
+		if len(args) >= 1 { msg, _ = args[0].(string) }
+		return sdkdebug.Debug(msg), nil
+	}
+	interp.builtins["debug.debug_var"] = func(args ...interface{}) (interface{}, error) {
+		name, value := "", ""
+		if len(args) >= 1 { name, _ = args[0].(string) }
+		if len(args) >= 2 { value, _ = args[1].(string) }
+		return sdkdebug.DebugVar(name, value), nil
+	}
+
+	// ── set_fact.* ────────────────────────────────────────────────────
+	interp.builtins["set_fact.set"] = func(args ...interface{}) (interface{}, error) {
+		kvJSON := "{}"
+		if len(args) >= 1 { kvJSON, _ = args[0].(string) }
+		var kv map[string]interface{}
+		if err := json.Unmarshal([]byte(kvJSON), &kv); err != nil {
+			return sdksetfact.Set(map[string]interface{}{"raw": kvJSON}), nil
+		}
+		return sdksetfact.Set(kv), nil
+	}
+	interp.builtins["set_fact.get"] = func(args ...interface{}) (interface{}, error) {
+		key := ""
+		if len(args) >= 1 { key, _ = args[0].(string) }
+		v, ok := sdksetfact.Get(key)
+		return map[string]interface{}{"value": v, "found": ok}, nil
+	}
+	interp.builtins["set_fact.get_all"] = func(args ...interface{}) (interface{}, error) {
+		return sdksetfact.GetAll(), nil
+	}
+	interp.builtins["set_fact.clear"] = func(args ...interface{}) (interface{}, error) {
+		return sdksetfact.Clear(), nil
+	}
+
+	// ── unarchive.* ───────────────────────────────────────────────────
+	interp.builtins["unarchive.unarchive"] = func(args ...interface{}) (interface{}, error) {
+		src, dest, owner, group, mode, creates := "", "", "", "", "", ""
+		if len(args) >= 1 { src, _ = args[0].(string) }
+		if len(args) >= 2 { dest, _ = args[1].(string) }
+		if len(args) >= 3 { owner, _ = args[2].(string) }
+		if len(args) >= 4 { group, _ = args[3].(string) }
+		if len(args) >= 5 { mode, _ = args[4].(string) }
+		if len(args) >= 6 { creates, _ = args[5].(string) }
+		return sdkunarchive.Unarchive(src, dest, owner, group, mode, creates), nil
+	}
+
+	// ── package_facts.* ───────────────────────────────────────────────
+	interp.builtins["package_facts.collect"] = func(args ...interface{}) (interface{}, error) {
+		var managers []string
+		if len(args) >= 1 {
+			if v, ok := args[0].([]interface{}); ok {
+				for _, m := range v { if s, ok := m.(string); ok { managers = append(managers, s) } }
+			}
+		}
+		return sdkpackagefacts.Collect(managers), nil
+	}
+
+	// ── service_facts.* ───────────────────────────────────────────────
+	interp.builtins["service_facts.collect"] = func(args ...interface{}) (interface{}, error) {
+		return sdkservicefacts.Collect(), nil
+	}
+
+	// ── command.* ─────────────────────────────────────────────────────
+	interp.builtins["command.run"] = func(args ...interface{}) (interface{}, error) {
+		var cmdArgs []string
+		if len(args) >= 1 {
+			if v, ok := args[0].([]interface{}); ok {
+				for _, a := range v { if s, ok := a.(string); ok { cmdArgs = append(cmdArgs, s) } }
+			}
+		}
+		chdir, creates, removes := "", "", ""
+		if len(args) >= 2 { chdir, _ = args[1].(string) }
+		if len(args) >= 3 { creates, _ = args[2].(string) }
+		if len(args) >= 4 { removes, _ = args[3].(string) }
+		timeoutMs := 0.0
+		if len(args) >= 5 { timeoutMs, _ = args[4].(float64) }
+		timeout := time.Duration(timeoutMs) * time.Millisecond
+		return sdkcommand.Run(cmdArgs, chdir, creates, removes, timeout), nil
+	}
+	interp.builtins["command.shell"] = func(args ...interface{}) (interface{}, error) {
+		var cmdArgs []string
+		if len(args) >= 1 {
+			if v, ok := args[0].([]interface{}); ok {
+				for _, a := range v { if s, ok := a.(string); ok { cmdArgs = append(cmdArgs, s) } }
+			}
+		}
+		chdir, creates, removes := "", "", ""
+		if len(args) >= 2 { chdir, _ = args[1].(string) }
+		if len(args) >= 3 { creates, _ = args[2].(string) }
+		if len(args) >= 4 { removes, _ = args[3].(string) }
+		timeoutMs := 0.0
+		if len(args) >= 5 { timeoutMs, _ = args[4].(float64) }
+		executable := ""
+		if len(args) >= 6 { executable, _ = args[5].(string) }
+		timeout := time.Duration(timeoutMs) * time.Millisecond
+		return sdkcommand.Shell(cmdArgs, chdir, creates, removes, timeout, executable), nil
+	}
 }
-// Returns an empty map if no arg is present at idx.
 func toStringMap(args []interface{}, idx int) map[string]string {
 	result := make(map[string]string)
 	if idx >= len(args) {
