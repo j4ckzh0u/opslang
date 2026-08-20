@@ -146,6 +146,7 @@ import (
 	sdkpacman "github.com/opslang/opslang/pkg/ops-core-sdk/pacman"
 	sdkportage "github.com/opslang/opslang/pkg/ops-core-sdk/portage"
 	sdkpkgng "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng"
+	sdkpodman "github.com/opslang/opslang/pkg/ops-core-sdk/podman"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -9211,6 +9212,171 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["pkgng.stats"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdkpkgng.Stats()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+
+	// ── podman.* ────────────────────────────────────────────────────
+	interp.builtins["podman.run"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("podman.run() requires at least 1 argument (image)")
+		}
+		image, _ := args[0].(string)
+		name := ""
+		if len(args) >= 2 {
+			name, _ = args[1].(string)
+		}
+		command := ""
+		if len(args) >= 3 {
+			command, _ = args[2].(string)
+		}
+		r, err := sdkpodman.Run(image, name, command)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["podman.stop"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("podman.stop() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		timeout := 0
+		if len(args) >= 2 {
+			if v, ok := args[1].(int); ok {
+				timeout = v
+			} else if v, ok := args[1].(float64); ok {
+				timeout = int(v)
+			}
+		}
+		r, err := sdkpodman.Stop(name, timeout)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["podman.start"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("podman.start() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkpodman.Start(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["podman.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("podman.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		force := false
+		if len(args) >= 2 {
+			force, _ = args[1].(bool)
+		}
+		r, err := sdkpodman.Remove(name, force)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["podman.list_containers"] = func(args ...interface{}) (interface{}, error) {
+		all := false
+		if len(args) >= 1 {
+			all, _ = args[0].(bool)
+		}
+		r, err := sdkpodman.ListContainers(all)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["podman.inspect"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("podman.inspect() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkpodman.Inspect(name)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["podman.pull"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("podman.pull() requires 1 argument (image)")
+		}
+		image, _ := args[0].(string)
+		r, err := sdkpodman.Pull(image)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["podman.list_images"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpodman.ListImages()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["podman.remove_image"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("podman.remove_image() requires 1 argument (image_id)")
+		}
+		imageID, _ := args[0].(string)
+		force := false
+		if len(args) >= 2 {
+			force, _ = args[1].(bool)
+		}
+		r, err := sdkpodman.RemoveImage(imageID, force)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["podman.create_pod"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("podman.create_pod() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkpodman.CreatePod(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["podman.stop_pod"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("podman.stop_pod() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkpodman.StopPod(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["podman.remove_pod"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("podman.remove_pod() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		force := false
+		if len(args) >= 2 {
+			force, _ = args[1].(bool)
+		}
+		r, err := sdkpodman.RemovePod(name, force)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["podman.list_pods"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpodman.ListPods()
 		if err != nil {
 			return nil, err
 		}

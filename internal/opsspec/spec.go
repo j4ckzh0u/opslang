@@ -1149,6 +1149,21 @@ var Funcs = []Func{
 	{Name: "pkgng.list"},
 	{Name: "pkgng.search", Args: []string{"name"}},
 	{Name: "pkgng.stats"},
+
+	// ── podman ──────────────────────────────────────────────────────
+	{Name: "podman.run", Args: []string{"image", "name", "command"}, Mutating: true},
+	{Name: "podman.stop", Args: []string{"name", "timeout"}, Mutating: true},
+	{Name: "podman.start", Args: []string{"name"}, Mutating: true},
+	{Name: "podman.remove", Args: []string{"name", "force"}, Mutating: true},
+	{Name: "podman.list_containers", Args: []string{"all"}},
+	{Name: "podman.inspect", Args: []string{"name"}},
+	{Name: "podman.pull", Args: []string{"image"}, Mutating: true},
+	{Name: "podman.list_images"},
+	{Name: "podman.remove_image", Args: []string{"image_id", "force"}, Mutating: true},
+	{Name: "podman.create_pod", Args: []string{"name"}, Mutating: true},
+	{Name: "podman.stop_pod", Args: []string{"name"}, Mutating: true},
+	{Name: "podman.remove_pod", Args: []string{"name", "force"}, Mutating: true},
+	{Name: "podman.list_pods"},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

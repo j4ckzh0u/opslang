@@ -147,6 +147,7 @@ import (
 	sdkpacman "github.com/opslang/opslang/pkg/ops-core-sdk/pacman"
 	sdkportage "github.com/opslang/opslang/pkg/ops-core-sdk/portage"
 	sdkpkgng "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng"
+	sdkpodman "github.com/opslang/opslang/pkg/ops-core-sdk/podman"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -5557,6 +5558,99 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("pkgng.stats", func(args map[string]interface{}) (interface{}, error) {
 		return sdkpkgng.Stats()
+	})
+
+	// ── podman ──────────────────────────────────────────────────────
+	r.Register("podman.run", func(args map[string]interface{}) (interface{}, error) {
+		image, err := argString(args, "image")
+		if err != nil {
+			return nil, fmt.Errorf("podman.run: %w", err)
+		}
+		name, _ := args["name"].(string)
+		command, _ := args["command"].(string)
+		return sdkpodman.Run(image, name, command)
+	})
+	r.Register("podman.stop", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("podman.stop: %w", err)
+		}
+		timeout := 0
+		if v, ok := args["timeout"].(int); ok {
+			timeout = v
+		} else if v, ok := args["timeout"].(float64); ok {
+			timeout = int(v)
+		}
+		return sdkpodman.Stop(name, timeout)
+	})
+	r.Register("podman.start", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("podman.start: %w", err)
+		}
+		return sdkpodman.Start(name)
+	})
+	r.Register("podman.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("podman.remove: %w", err)
+		}
+		force, _ := args["force"].(bool)
+		return sdkpodman.Remove(name, force)
+	})
+	r.Register("podman.list_containers", func(args map[string]interface{}) (interface{}, error) {
+		all, _ := args["all"].(bool)
+		return sdkpodman.ListContainers(all)
+	})
+	r.Register("podman.inspect", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("podman.inspect: %w", err)
+		}
+		return sdkpodman.Inspect(name)
+	})
+	r.Register("podman.pull", func(args map[string]interface{}) (interface{}, error) {
+		image, err := argString(args, "image")
+		if err != nil {
+			return nil, fmt.Errorf("podman.pull: %w", err)
+		}
+		return sdkpodman.Pull(image)
+	})
+	r.Register("podman.list_images", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpodman.ListImages()
+	})
+	r.Register("podman.remove_image", func(args map[string]interface{}) (interface{}, error) {
+		imageID, err := argString(args, "image_id")
+		if err != nil {
+			return nil, fmt.Errorf("podman.remove_image: %w", err)
+		}
+		force, _ := args["force"].(bool)
+		return sdkpodman.RemoveImage(imageID, force)
+	})
+	r.Register("podman.create_pod", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("podman.create_pod: %w", err)
+		}
+		return sdkpodman.CreatePod(name)
+	})
+	r.Register("podman.stop_pod", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("podman.stop_pod: %w", err)
+		}
+		return sdkpodman.StopPod(name)
+	})
+	r.Register("podman.remove_pod", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("podman.remove_pod: %w", err)
+		}
+		force, _ := args["force"].(bool)
+		return sdkpodman.RemovePod(name, force)
+	})
+	r.Register("podman.list_pods", func(args map[string]interface{}) (interface{}, error) {
+		return sdkpodman.ListPods()
 	})
 }
 

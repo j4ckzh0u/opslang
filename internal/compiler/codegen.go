@@ -1122,6 +1122,20 @@ var sdkMapping = map[string]sdkFunc{
 	"pkgng.list":      {pkg: "pkgng", goName: "List", args: false},
 	"pkgng.search":    {pkg: "pkgng", goName: "Search", args: true, params: []string{"s"}},
 	"pkgng.stats":     {pkg: "pkgng", goName: "Stats", args: false},
+
+	"podman.run":              {pkg: "podman", goName: "Run", args: true, params: []string{"s", "s", "s"}},
+	"podman.stop":             {pkg: "podman", goName: "Stop", args: true, params: []string{"s", "i"}},
+	"podman.start":            {pkg: "podman", goName: "Start", args: true, params: []string{"s"}},
+	"podman.remove":           {pkg: "podman", goName: "Remove", args: true, params: []string{"s", "b"}},
+	"podman.list_containers":  {pkg: "podman", goName: "ListContainers", args: true, params: []string{"b"}},
+	"podman.inspect":          {pkg: "podman", goName: "Inspect", args: true, params: []string{"s"}},
+	"podman.pull":             {pkg: "podman", goName: "Pull", args: true, params: []string{"s"}},
+	"podman.list_images":      {pkg: "podman", goName: "ListImages", args: false},
+	"podman.remove_image":     {pkg: "podman", goName: "RemoveImage", args: true, params: []string{"s", "b"}},
+	"podman.create_pod":       {pkg: "podman", goName: "CreatePod", args: true, params: []string{"s"}},
+	"podman.stop_pod":         {pkg: "podman", goName: "StopPod", args: true, params: []string{"s"}},
+	"podman.remove_pod":       {pkg: "podman", goName: "RemovePod", args: true, params: []string{"s", "b"}},
+	"podman.list_pods":        {pkg: "podman", goName: "ListPods", args: false},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1323,6 +1337,7 @@ var pkgImportAlias = map[string]string{
 	"pacman":         "opspacman",
 	"portage":        "opsportage",
 	"pkgng":          "opspkgng",
+	"podman":         "opspodman",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1450,6 +1465,7 @@ var pkgImportPath = map[string]string{
 	"pacman":         "github.com/opslang/opslang/pkg/ops-core-sdk/pacman",
 	"portage":        "github.com/opslang/opslang/pkg/ops-core-sdk/portage",
 	"pkgng":          "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng",
+	"podman":         "github.com/opslang/opslang/pkg/ops-core-sdk/podman",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
