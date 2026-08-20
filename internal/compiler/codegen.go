@@ -1190,6 +1190,12 @@ var sdkMapping = map[string]sdkFunc{
 	"java_cert.info":            {pkg: "java_cert", goName: "Info", args: true, params: []string{"s", "s"}},
 	"java_cert.import_chain":    {pkg: "java_cert", goName: "ImportChain", args: true, params: []string{"s", "s", "s", "s"}},
 	"java_cert.change_password": {pkg: "java_cert", goName: "ChangePassword", args: true, params: []string{"s", "s", "s"}},
+	// maven_artifact
+	"maven_artifact.download":          {pkg: "maven_artifact", goName: "Download", args: true, params: []string{"s", "s", "s", "s", "s", "s"}},
+	"maven_artifact.resolve":           {pkg: "maven_artifact", goName: "Resolve", args: true, params: []string{"s", "s", "s", "s", "s"}},
+	"maven_artifact.deploy":            {pkg: "maven_artifact", goName: "Deploy", args: true, params: []string{"s", "s", "s", "s", "s", "s"}},
+	"maven_artifact.get_latest_version": {pkg: "maven_artifact", goName: "GetLatestVersion", args: true, params: []string{"s", "s", "s"}},
+	"maven_artifact.checksum":          {pkg: "maven_artifact", goName: "Checksum", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1396,6 +1402,7 @@ var pkgImportAlias = map[string]string{
 	"mongodb":        "opsmongodb",
 	"tomcat":         "opstomcat",
 	"java_cert":      "opsjavacert",
+	"maven_artifact": "opsmaven",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1528,6 +1535,7 @@ var pkgImportPath = map[string]string{
 	"mongodb":        "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb",
 	"tomcat":         "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat",
 	"java_cert":      "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert",
+	"maven_artifact": "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

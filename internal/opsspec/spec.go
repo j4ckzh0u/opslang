@@ -1219,6 +1219,13 @@ var Funcs = []Func{
 	{Name: "java_cert.info", Args: []string{"keystore_path", "password"}},
 	{Name: "java_cert.import_chain", Args: []string{"keystore_path", "password", "p12_path", "p12_password"}, Mutating: true},
 	{Name: "java_cert.change_password", Args: []string{"keystore_path", "old_password", "new_password"}, Mutating: true},
+
+	// ── maven_artifact ───────────────────────────────────────────────────────
+	{Name: "maven_artifact.download", Args: []string{"repo_url", "group_id", "artifact_id", "version", "dest", "extension"}, Mutating: true},
+	{Name: "maven_artifact.resolve", Args: []string{"repo_url", "group_id", "artifact_id", "version", "extension"}},
+	{Name: "maven_artifact.deploy", Args: []string{"repo_url", "group_id", "artifact_id", "version", "src_path", "extension"}, Mutating: true},
+	{Name: "maven_artifact.get_latest_version", Args: []string{"repo_url", "group_id", "artifact_id"}},
+	{Name: "maven_artifact.checksum", Args: []string{"file_path"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

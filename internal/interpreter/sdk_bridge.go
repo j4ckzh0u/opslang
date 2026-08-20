@@ -151,6 +151,7 @@ import (
 	sdkmongodb "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb"
 	sdktomcat "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat"
 	sdkjavacert "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert"
+	sdkmaven "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -9946,6 +9947,72 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		oldPass, _ := args[1].(string)
 		newPass, _ := args[2].(string)
 		r, err := sdkjavacert.ChangePassword(ksPath, oldPass, newPass)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+
+	// ── maven_artifact.* ────────────────────────────────────────────────────
+	interp.builtins["maven_artifact.download"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 {
+			return nil, fmt.Errorf("maven_artifact.download() requires at least 5 arguments (repo_url, group_id, artifact_id, version, dest)")
+		}
+		repoURL, _ := args[0].(string)
+		groupID, _ := args[1].(string)
+		artifactID, _ := args[2].(string)
+		version, _ := args[3].(string)
+		dest, _ := args[4].(string)
+		extension := ""
+		if len(args) >= 6 { extension, _ = args[5].(string) }
+		r, err := sdkmaven.Download(repoURL, groupID, artifactID, version, dest, extension)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["maven_artifact.resolve"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("maven_artifact.resolve() requires at least 4 arguments (repo_url, group_id, artifact_id, version)")
+		}
+		repoURL, _ := args[0].(string)
+		groupID, _ := args[1].(string)
+		artifactID, _ := args[2].(string)
+		version, _ := args[3].(string)
+		extension := ""
+		if len(args) >= 5 { extension, _ = args[4].(string) }
+		r, err := sdkmaven.Resolve(repoURL, groupID, artifactID, version, extension)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["maven_artifact.deploy"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 {
+			return nil, fmt.Errorf("maven_artifact.deploy() requires at least 5 arguments (repo_url, group_id, artifact_id, version, src_path)")
+		}
+		repoURL, _ := args[0].(string)
+		groupID, _ := args[1].(string)
+		artifactID, _ := args[2].(string)
+		version, _ := args[3].(string)
+		srcPath, _ := args[4].(string)
+		extension := ""
+		if len(args) >= 6 { extension, _ = args[5].(string) }
+		r, err := sdkmaven.Deploy(repoURL, groupID, artifactID, version, srcPath, extension)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["maven_artifact.get_latest_version"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("maven_artifact.get_latest_version() requires 3 arguments (repo_url, group_id, artifact_id)")
+		}
+		repoURL, _ := args[0].(string)
+		groupID, _ := args[1].(string)
+		artifactID, _ := args[2].(string)
+		r, err := sdkmaven.GetLatestVersion(repoURL, groupID, artifactID)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["maven_artifact.checksum"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("maven_artifact.checksum() requires 1 argument (file_path)")
+		}
+		filePath, _ := args[0].(string)
+		r, err := sdkmaven.Checksum(filePath)
 		if err != nil { return nil, err }
 		return r, nil
 	}

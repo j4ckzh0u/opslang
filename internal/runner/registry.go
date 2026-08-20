@@ -152,6 +152,7 @@ import (
 	sdkmongodb "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb"
 	sdktomcat "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat"
 	sdkjavacert "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert"
+	sdkmaven "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -6070,6 +6071,44 @@ func (r *Registry) registerExtensions() {
 		oldPass, _ := args["old_password"].(string)
 		newPass, _ := args["new_password"].(string)
 		return sdkjavacert.ChangePassword(ksPath, oldPass, newPass)
+	})
+
+	// ── maven_artifact ──────────────────────────────────────────────────────
+	r.Register("maven_artifact.download", func(args map[string]interface{}) (interface{}, error) {
+		repoURL, _ := args["repo_url"].(string)
+		groupID, _ := args["group_id"].(string)
+		artifactID, _ := args["artifact_id"].(string)
+		version, _ := args["version"].(string)
+		dest, _ := args["dest"].(string)
+		extension, _ := args["extension"].(string)
+		return sdkmaven.Download(repoURL, groupID, artifactID, version, dest, extension)
+	})
+	r.Register("maven_artifact.resolve", func(args map[string]interface{}) (interface{}, error) {
+		repoURL, _ := args["repo_url"].(string)
+		groupID, _ := args["group_id"].(string)
+		artifactID, _ := args["artifact_id"].(string)
+		version, _ := args["version"].(string)
+		extension, _ := args["extension"].(string)
+		return sdkmaven.Resolve(repoURL, groupID, artifactID, version, extension)
+	})
+	r.Register("maven_artifact.deploy", func(args map[string]interface{}) (interface{}, error) {
+		repoURL, _ := args["repo_url"].(string)
+		groupID, _ := args["group_id"].(string)
+		artifactID, _ := args["artifact_id"].(string)
+		version, _ := args["version"].(string)
+		srcPath, _ := args["src_path"].(string)
+		extension, _ := args["extension"].(string)
+		return sdkmaven.Deploy(repoURL, groupID, artifactID, version, srcPath, extension)
+	})
+	r.Register("maven_artifact.get_latest_version", func(args map[string]interface{}) (interface{}, error) {
+		repoURL, _ := args["repo_url"].(string)
+		groupID, _ := args["group_id"].(string)
+		artifactID, _ := args["artifact_id"].(string)
+		return sdkmaven.GetLatestVersion(repoURL, groupID, artifactID)
+	})
+	r.Register("maven_artifact.checksum", func(args map[string]interface{}) (interface{}, error) {
+		filePath, _ := args["file_path"].(string)
+		return sdkmaven.Checksum(filePath)
 	})
 }
 
