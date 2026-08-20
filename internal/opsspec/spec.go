@@ -104,6 +104,13 @@ var Funcs = []Func{
 	{Name: "sysvinit.disable", Args: []string{"name"}, Mutating: true},
 	{Name: "sysvinit.list"},
 
+	// ── dpkg_selections ───────────────────────────────────────────────
+	{Name: "dpkg_selections.set", Args: []string{"name", "state"}, Mutating: true},
+	{Name: "dpkg_selections.get", Args: []string{"name"}},
+	{Name: "dpkg_selections.list"},
+	{Name: "dpkg_selections.hold", Args: []string{"name"}, Mutating: true},
+	{Name: "dpkg_selections.unhold", Args: []string{"name"}, Mutating: true},
+
 	// ── apt_repo ──────────────────────────────────────────────────────
 	{Name: "apt_repo.list"},
 	{Name: "apt_repo.exists", Args: []string{"uri"}},

@@ -258,6 +258,13 @@ var sdkMapping = map[string]sdkFunc{
 	"sysvinit.disable": {pkg: "sysvinit", goName: "Disable", args: true, params: []string{"s"}},
 	"sysvinit.list":    {pkg: "sysvinit", goName: "List"},
 
+	// dpkg_selections
+	"dpkg_selections.set":   {pkg: "dpkg_selections", goName: "SetSelection", args: true, params: []string{"s", "s"}},
+	"dpkg_selections.get":   {pkg: "dpkg_selections", goName: "GetSelection", args: true, params: []string{"s"}},
+	"dpkg_selections.list":  {pkg: "dpkg_selections", goName: "ListSelections"},
+	"dpkg_selections.hold":  {pkg: "dpkg_selections", goName: "Hold", args: true, params: []string{"s"}},
+	"dpkg_selections.unhold": {pkg: "dpkg_selections", goName: "Unhold", args: true, params: []string{"s"}},
+
 	// apt_repo
 	"apt_repo.list":   {pkg: "apt_repo", goName: "List"},
 	"apt_repo.exists": {pkg: "apt_repo", goName: "Exists", args: true, params: []string{"s"}},
@@ -1272,6 +1279,7 @@ var pkgImportAlias = map[string]string{
 	"apt_repo":       "opsaptrepo",
 	"apk":            "opsapk",
 	"sysvinit":       "opssysvinit",
+	"dpkg_selections": "opsdpkgsel",
 	"dnf":            "opsdnf",
 	"kubernetes":     "opsk8s",
 	"svn":            "opssvn",
@@ -1395,6 +1403,7 @@ var pkgImportPath = map[string]string{
 	"apt_repo":       "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo",
 	"apk":            "github.com/opslang/opslang/pkg/ops-core-sdk/apk",
 	"sysvinit":       "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit",
+	"dpkg_selections": "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections",
 	"dnf":            "github.com/opslang/opslang/pkg/ops-core-sdk/dnf",
 	"kubernetes":     "github.com/opslang/opslang/pkg/ops-core-sdk/kubernetes",
 	"svn":            "github.com/opslang/opslang/pkg/ops-core-sdk/svn",

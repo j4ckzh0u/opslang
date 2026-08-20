@@ -11,6 +11,7 @@ import (
 	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
 	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
 	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
+	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	opscron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
@@ -1689,6 +1690,43 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("sysvinit.list", func(_ map[string]interface{}) (interface{}, error) {
 		return sdksysvinit.List()
+	})
+
+	// ── dpkg_selections.* ─────────────────────────────────────────────
+	r.Register("dpkg_selections.set", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("dpkg_selections.set: %w", err)
+		}
+		state, err := argString(args, "state")
+		if err != nil {
+			return nil, fmt.Errorf("dpkg_selections.set: %w", err)
+		}
+		return sdkdpkgsel.SetSelection(name, state)
+	})
+	r.Register("dpkg_selections.get", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("dpkg_selections.get: %w", err)
+		}
+		return sdkdpkgsel.GetSelection(name)
+	})
+	r.Register("dpkg_selections.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkdpkgsel.ListSelections()
+	})
+	r.Register("dpkg_selections.hold", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("dpkg_selections.hold: %w", err)
+		}
+		return sdkdpkgsel.Hold(name)
+	})
+	r.Register("dpkg_selections.unhold", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("dpkg_selections.unhold: %w", err)
+		}
+		return sdkdpkgsel.Unhold(name)
 	})
 
 	// ── apt_repo.* ──────────────────────────────────────────────────────

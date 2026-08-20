@@ -10,6 +10,7 @@ import (
 	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
 	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
 	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
+	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	sdkcron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
@@ -4156,6 +4157,60 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return r, nil
+	}
+
+	// ── dpkg_selections.* ─────────────────────────────────────────────
+	interp.builtins["dpkg_selections.set"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("dpkg_selections.set() requires 2 arguments (name, state)")
+		}
+		name, _ := args[0].(string)
+		state, _ := args[1].(string)
+		r, err := sdkdpkgsel.SetSelection(name, state)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["dpkg_selections.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dpkg_selections.get() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdpkgsel.GetSelection(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["dpkg_selections.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkdpkgsel.ListSelections()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["dpkg_selections.hold"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dpkg_selections.hold() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdpkgsel.Hold(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["dpkg_selections.unhold"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dpkg_selections.unhold() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdpkgsel.Unhold(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
 	}
 
 	// ── apt_repo.* ──────────────────────────────────────────────────────
