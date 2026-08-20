@@ -1332,6 +1332,11 @@ var sdkMapping = map[string]sdkFunc{
 	"webhook.slack":   {pkg: "webhook", goName: "SendSlack", args: true, params: []string{"s", "s"}},
 	"webhook.discord": {pkg: "webhook", goName: "SendDiscord", args: true, params: []string{"s", "s"}},
 	"webhook.teams":   {pkg: "webhook", goName: "SendTeams", args: true, params: []string{"s", "s", "s"}},
+
+	// ── openssl_privatekey ──────────────────────────────────────────────
+	"openssl_privatekey.generate": {pkg: "openssl_privatekey", goName: "Generate", args: true, params: []string{"s", "s", "i"}},
+	"openssl_privatekey.info":     {pkg: "openssl_privatekey", goName: "Info", args: true, params: []string{"s"}},
+	"openssl_privatekey.delete":   {pkg: "openssl_privatekey", goName: "Delete", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1567,6 +1572,7 @@ var pkgImportAlias = map[string]string{
 	"validate_certs": "opsvalidatecerts",
 	"mail":           "ops",
 	"webhook":        "opswebhook",
+	"openssl_privatekey": "opsopensslprivatekey",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1728,6 +1734,7 @@ var pkgImportPath = map[string]string{
 	"validate_certs": "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs",
 	"mail":           "github.com/opslang/opslang/pkg/ops-core-sdk/mail",
 	"webhook":        "github.com/opslang/opslang/pkg/ops-core-sdk/webhook",
+	"openssl_privatekey": "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

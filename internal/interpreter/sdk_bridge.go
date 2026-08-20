@@ -181,6 +181,7 @@ import (
 	sdkvalidatecerts "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs"
 	sdkmail "github.com/opslang/opslang/pkg/ops-core-sdk/mail"
 	sdkwebhook "github.com/opslang/opslang/pkg/ops-core-sdk/webhook"
+	sdkopensslprivatekey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10747,6 +10748,31 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		title := getStringArgBridge(args, 1, "")
 		text := getStringArgBridge(args, 2, "")
 		return sdkwebhook.SendTeams(url, title, text), nil
+	}
+
+	// ── openssl_privatekey ────────────────────────────────────────────────
+	interp.builtins["openssl_privatekey.generate"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		keyType := getStringArgBridge(args, 1, "rsa")
+		size := 0
+		if len(args) > 2 {
+			if s, ok := args[2].(float64); ok {
+				size = int(s)
+			}
+		}
+		return sdkopensslprivatekey.Generate(sdkopensslprivatekey.GenerateConfig{
+			Path: path,
+			Type: keyType,
+			Size: size,
+		}), nil
+	}
+	interp.builtins["openssl_privatekey.info"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		return sdkopensslprivatekey.Info(path), nil
+	}
+	interp.builtins["openssl_privatekey.delete"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		return sdkopensslprivatekey.Delete(path), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

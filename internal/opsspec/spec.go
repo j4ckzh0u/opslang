@@ -1347,6 +1347,10 @@ var Funcs = []Func{
 	{Name: "webhook.slack", Args: []string{"url", "text"}, Mutating: true},
 	{Name: "webhook.discord", Args: []string{"url", "content"}, Mutating: true},
 	{Name: "webhook.teams", Args: []string{"url", "title", "text"}, Mutating: true},
+	// ── openssl_privatekey ────────────────────────────────────────────────
+	{Name: "openssl_privatekey.generate", Args: []string{"path", "type", "size"}, Mutating: true},
+	{Name: "openssl_privatekey.info", Args: []string{"path"}},
+	{Name: "openssl_privatekey.delete", Args: []string{"path"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

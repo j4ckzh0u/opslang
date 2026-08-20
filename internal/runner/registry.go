@@ -181,6 +181,7 @@ import (
 	sdkvalidatecerts "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs"
 	sdkmail "github.com/opslang/opslang/pkg/ops-core-sdk/mail"
 	sdkwebhook "github.com/opslang/opslang/pkg/ops-core-sdk/webhook"
+	sdkopensslprivatekey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey"
 	"time"
 )
 
@@ -6719,6 +6720,32 @@ func (r *Registry) registerExtensions() {
 		title, _ := args["title"].(string)
 		text, _ := args["text"].(string)
 		return sdkwebhook.SendTeams(url, title, text), nil
+	})
+
+	// ── openssl_privatekey ────────────────────────────────────────────────
+	r.Register("openssl_privatekey.generate", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := args["path"].(string)
+		keyType, _ := args["type"].(string)
+		if keyType == "" {
+			keyType = "rsa"
+		}
+		size := 0
+		if s, ok := args["size"].(float64); ok {
+			size = int(s)
+		}
+		return sdkopensslprivatekey.Generate(sdkopensslprivatekey.GenerateConfig{
+			Path: path,
+			Type: keyType,
+			Size: size,
+		}), nil
+	})
+	r.Register("openssl_privatekey.info", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := args["path"].(string)
+		return sdkopensslprivatekey.Info(path), nil
+	})
+	r.Register("openssl_privatekey.delete", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := args["path"].(string)
+		return sdkopensslprivatekey.Delete(path), nil
 	})
 }
 
