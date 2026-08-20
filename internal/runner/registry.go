@@ -184,6 +184,7 @@ import (
 	sdkopensslprivatekey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey"
 	sdkiproute "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route"
 	sdkiplink "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link"
+	sdkipnetns "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns"
 	"time"
 )
 
@@ -6822,6 +6823,37 @@ func (r *Registry) registerExtensions() {
 		oldName, _ := args["old_name"].(string)
 		newName, _ := args["new_name"].(string)
 		return sdkiplink.SetName(oldName, newName), nil
+	})
+	// ip_netns
+	r.Register("ip_netns.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkipnetns.List(), nil
+	})
+	r.Register("ip_netns.get", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkipnetns.Get(name), nil
+	})
+	r.Register("ip_netns.add", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkipnetns.Add(name), nil
+	})
+	r.Register("ip_netns.delete", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkipnetns.Delete(name), nil
+	})
+	r.Register("ip_netns.exec", func(args map[string]interface{}) (interface{}, error) {
+		ns, _ := args["namespace"].(string)
+		cmd, _ := args["command"].(string)
+		var cmdArgs []string
+		if a, ok := args["args"].([]interface{}); ok {
+			for _, v := range a {
+				cmdArgs = append(cmdArgs, fmt.Sprintf("%v", v))
+			}
+		}
+		return sdkipnetns.Exec(ns, cmd, cmdArgs...), nil
+	})
+	r.Register("ip_netns.pids", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkipnetns.Pids(name), nil
 	})
 }
 

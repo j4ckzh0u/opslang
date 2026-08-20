@@ -184,6 +184,7 @@ import (
 	sdkopensslprivatekey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey"
 	sdkiproute "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route"
 	sdkiplink "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link"
+	sdkipnetns "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10853,6 +10854,39 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		oldName := getStringArgBridge(args, 0, "")
 		newName := getStringArgBridge(args, 1, "")
 		return sdkiplink.SetName(oldName, newName), nil
+	}
+	// ip_netns
+	interp.builtins["ip_netns.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkipnetns.List(), nil
+	}
+	interp.builtins["ip_netns.get"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkipnetns.Get(name), nil
+	}
+	interp.builtins["ip_netns.add"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkipnetns.Add(name), nil
+	}
+	interp.builtins["ip_netns.delete"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkipnetns.Delete(name), nil
+	}
+	interp.builtins["ip_netns.exec"] = func(args ...interface{}) (interface{}, error) {
+		ns := getStringArgBridge(args, 0, "")
+		cmd := getStringArgBridge(args, 1, "")
+		var cmdArgs []string
+		if len(args) > 2 {
+			if strArgs, ok := args[2].([]interface{}); ok {
+				for _, a := range strArgs {
+					cmdArgs = append(cmdArgs, fmt.Sprintf("%v", a))
+				}
+			}
+		}
+		return sdkipnetns.Exec(ns, cmd, cmdArgs...), nil
+	}
+	interp.builtins["ip_netns.pids"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkipnetns.Pids(name), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

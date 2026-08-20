@@ -1366,6 +1366,13 @@ var Funcs = []Func{
 	{Name: "ip_link.set_mtu", Args: []string{"name", "mtu"}, Mutating: true},
 	{Name: "ip_link.set_mac", Args: []string{"name", "mac"}, Mutating: true},
 	{Name: "ip_link.set_name", Args: []string{"old_name", "new_name"}, Mutating: true},
+	// ip_netns - Network namespace management
+	{Name: "ip_netns.list"},
+	{Name: "ip_netns.get", Args: []string{"name"}},
+	{Name: "ip_netns.add", Args: []string{"name"}, Mutating: true},
+	{Name: "ip_netns.delete", Args: []string{"name"}, Mutating: true},
+	{Name: "ip_netns.exec", Args: []string{"namespace", "command", "args"}},
+	{Name: "ip_netns.pids", Args: []string{"name"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

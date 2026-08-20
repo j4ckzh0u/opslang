@@ -1353,6 +1353,13 @@ var sdkMapping = map[string]sdkFunc{
 	"ip_link.set_mtu":  {pkg: "ip_link", goName: "SetMTU", args: true, params: []string{"s", "i"}},
 	"ip_link.set_mac":  {pkg: "ip_link", goName: "SetMAC", args: true, params: []string{"s", "s"}},
 	"ip_link.set_name": {pkg: "ip_link", goName: "SetName", args: true, params: []string{"s", "s"}},
+	// ip_netns
+	"ip_netns.list":   {pkg: "ip_netns", goName: "List"},
+	"ip_netns.get":    {pkg: "ip_netns", goName: "Get", args: true, params: []string{"s"}},
+	"ip_netns.add":    {pkg: "ip_netns", goName: "Add", args: true, params: []string{"s"}},
+	"ip_netns.delete": {pkg: "ip_netns", goName: "Delete", args: true, params: []string{"s"}},
+	"ip_netns.exec":   {pkg: "ip_netns", goName: "Exec", args: true, params: []string{"s", "s", "l"}},
+	"ip_netns.pids":   {pkg: "ip_netns", goName: "Pids", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1591,6 +1598,7 @@ var pkgImportAlias = map[string]string{
 	"openssl_privatekey": "opsopensslprivatekey",
 	"ip_route":         "opsiproute",
 	"ip_link":          "opsiplink",
+	"ip_netns":         "opsipnetns",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1755,6 +1763,7 @@ var pkgImportPath = map[string]string{
 	"openssl_privatekey": "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey",
 	"ip_route":         "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route",
 	"ip_link":          "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link",
+	"ip_netns":         "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
