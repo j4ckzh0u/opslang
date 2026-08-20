@@ -191,6 +191,7 @@ import (
 	sdketcd "github.com/opslang/opslang/pkg/ops-core-sdk/etcd"
 	sdkzookeeper "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper"
 	sdkvault "github.com/opslang/opslang/pkg/ops-core-sdk/vault"
+	sdkgitconfig "github.com/opslang/opslang/pkg/ops-core-sdk/git_config"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11146,6 +11147,28 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		token := getStringArgBridge(args, 1, "")
 		address := getStringArgBridge(args, 2, "")
 		return sdkvault.List(path, token, address), nil
+	}
+
+	// git_config
+	interp.builtins["git_config.get"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		scope := getStringArgBridge(args, 1, "")
+		return sdkgitconfig.Get(key, scope)
+	}
+	interp.builtins["git_config.set"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		value := getStringArgBridge(args, 1, "")
+		scope := getStringArgBridge(args, 2, "")
+		return sdkgitconfig.Set(key, value, scope)
+	}
+	interp.builtins["git_config.unset"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		scope := getStringArgBridge(args, 1, "")
+		return sdkgitconfig.Unset(key, scope)
+	}
+	interp.builtins["git_config.list"] = func(args ...interface{}) (interface{}, error) {
+		scope := getStringArgBridge(args, 0, "")
+		return sdkgitconfig.List(scope)
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

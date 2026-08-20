@@ -191,6 +191,7 @@ import (
 	sdketcd "github.com/opslang/opslang/pkg/ops-core-sdk/etcd"
 	sdkzookeeper "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper"
 	sdkvault "github.com/opslang/opslang/pkg/ops-core-sdk/vault"
+	sdkgitconfig "github.com/opslang/opslang/pkg/ops-core-sdk/git_config"
 	"time"
 )
 
@@ -7077,6 +7078,28 @@ func (r *Registry) registerExtensions() {
 		token := mapStrArg(args, "token", "")
 		address := mapStrArg(args, "address", "")
 		return sdkvault.List(path, token, address), nil
+	})
+
+	// git_config
+	r.Register("git_config.get", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		scope := mapStrArg(args, "scope", "")
+		return sdkgitconfig.Get(key, scope)
+	})
+	r.Register("git_config.set", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		value := mapStrArg(args, "value", "")
+		scope := mapStrArg(args, "scope", "")
+		return sdkgitconfig.Set(key, value, scope)
+	})
+	r.Register("git_config.unset", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		scope := mapStrArg(args, "scope", "")
+		return sdkgitconfig.Unset(key, scope)
+	})
+	r.Register("git_config.list", func(args map[string]interface{}) (interface{}, error) {
+		scope := mapStrArg(args, "scope", "")
+		return sdkgitconfig.List(scope)
 	})
 }
 

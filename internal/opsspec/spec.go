@@ -1404,6 +1404,11 @@ var Funcs = []Func{
 	{Name: "vault.write", Args: []string{"path", "token", "address", "data"}, Mutating: true},
 	{Name: "vault.delete", Args: []string{"path", "token", "address"}, Mutating: true},
 	{Name: "vault.list", Args: []string{"path", "token", "address"}},
+	// git_config - Git configuration management
+	{Name: "git_config.get", Args: []string{"key", "scope"}},
+	{Name: "git_config.set", Args: []string{"key", "value", "scope"}, Mutating: true},
+	{Name: "git_config.unset", Args: []string{"key", "scope"}, Mutating: true},
+	{Name: "git_config.list", Args: []string{"scope"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
