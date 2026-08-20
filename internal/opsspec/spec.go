@@ -147,6 +147,22 @@ var Funcs = []Func{
 	{Name: "sys_persist.remove", Args: []string{"name"}, Mutating: true},
 	{Name: "sys_persist.list"},
 
+	// ── wireguard ───────────────────────────────────────────────────
+	{Name: "wireguard.show"},
+	{Name: "wireguard.up", Args: []string{"interface", "config_path"}, Mutating: true},
+	{Name: "wireguard.down", Args: []string{"interface"}, Mutating: true},
+	{Name: "wireguard.add_peer", Args: []string{"interface", "public_key", "allowed_ips", "endpoint"}, Mutating: true},
+	{Name: "wireguard.remove_peer", Args: []string{"interface", "public_key"}, Mutating: true},
+	{Name: "wireguard.genkey"},
+	{Name: "wireguard.genpsk"},
+	{Name: "wireguard.pubkey", Args: []string{"private_key"}},
+
+	// ── smartctl_notify ─────────────────────────────────────────────
+	{Name: "smartctl_notify.check", Args: []string{"device"}},
+	{Name: "smartctl_notify.list_devices"},
+	{Name: "smartctl_notify.short_test", Args: []string{"device"}, Mutating: true},
+	{Name: "smartctl_notify.long_test", Args: []string{"device"}, Mutating: true},
+
 	// ── dpkg_selections ───────────────────────────────────────────────
 	{Name: "dpkg_selections.set", Args: []string{"name", "state"}, Mutating: true},
 	{Name: "dpkg_selections.get", Args: []string{"name"}},

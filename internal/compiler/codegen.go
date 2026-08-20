@@ -301,6 +301,22 @@ var sdkMapping = map[string]sdkFunc{
 	"sys_persist.remove": {pkg: "sys_persist", goName: "Remove", args: true, params: []string{"s"}},
 	"sys_persist.list":   {pkg: "sys_persist", goName: "List"},
 
+	// wireguard
+	"wireguard.show":        {pkg: "wireguard", goName: "Show"},
+	"wireguard.up":          {pkg: "wireguard", goName: "Up", args: true, params: []string{"s", "s"}},
+	"wireguard.down":        {pkg: "wireguard", goName: "Down", args: true, params: []string{"s"}},
+	"wireguard.add_peer":    {pkg: "wireguard", goName: "AddPeer", args: true, params: []string{"s", "s", "s", "s"}},
+	"wireguard.remove_peer": {pkg: "wireguard", goName: "RemovePeer", args: true, params: []string{"s", "s"}},
+	"wireguard.genkey":      {pkg: "wireguard", goName: "GenKey"},
+	"wireguard.genpsk":      {pkg: "wireguard", goName: "GenPSK"},
+	"wireguard.pubkey":      {pkg: "wireguard", goName: "PubKey", args: true, params: []string{"s"}},
+
+	// smartctl_notify
+	"smartctl_notify.check":       {pkg: "smartctl_notify", goName: "Check", args: true, params: []string{"s"}},
+	"smartctl_notify.list_devices": {pkg: "smartctl_notify", goName: "ListDevices"},
+	"smartctl_notify.short_test":  {pkg: "smartctl_notify", goName: "ShortTest", args: true, params: []string{"s"}},
+	"smartctl_notify.long_test":   {pkg: "smartctl_notify", goName: "LongTest", args: true, params: []string{"s"}},
+
 	// dpkg_selections
 	"dpkg_selections.set":   {pkg: "dpkg_selections", goName: "SetSelection", args: true, params: []string{"s", "s"}},
 	"dpkg_selections.get":   {pkg: "dpkg_selections", goName: "GetSelection", args: true, params: []string{"s"}},

@@ -17,6 +17,8 @@ import (
 	sdkcompose "github.com/opslang/opslang/pkg/ops-core-sdk/docker_compose"
 	sdkcloudinit "github.com/opslang/opslang/pkg/ops-core-sdk/cloud_init"
 	sdksyspersist "github.com/opslang/opslang/pkg/ops-core-sdk/sys_persist"
+	sdkwireguard "github.com/opslang/opslang/pkg/ops-core-sdk/wireguard"
+	sdksmartnotify "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl_notify"
 	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
 	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
@@ -1943,6 +1945,105 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("sys_persist.list", func(_ map[string]interface{}) (interface{}, error) {
 		return sdksyspersist.List()
+	})
+
+	// ── wireguard.* ───────────────────────────────────────────────────
+	r.Register("wireguard.show", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkwireguard.Show()
+	})
+	r.Register("wireguard.up", func(args map[string]interface{}) (interface{}, error) {
+		iface, err := argString(args, "interface")
+		if err != nil {
+			return nil, fmt.Errorf("wireguard.up: %w", err)
+		}
+		cfg, _ := argString(args, "config_path")
+		return sdkwireguard.Up(iface, cfg)
+	})
+	r.Register("wireguard.down", func(args map[string]interface{}) (interface{}, error) {
+		iface, err := argString(args, "interface")
+		if err != nil {
+			return nil, fmt.Errorf("wireguard.down: %w", err)
+		}
+		return sdkwireguard.Down(iface)
+	})
+	r.Register("wireguard.add_peer", func(args map[string]interface{}) (interface{}, error) {
+		iface, err := argString(args, "interface")
+		if err != nil {
+			return nil, fmt.Errorf("wireguard.add_peer: %w", err)
+		}
+		pubkey, err := argString(args, "public_key")
+		if err != nil {
+			return nil, fmt.Errorf("wireguard.add_peer: %w", err)
+		}
+		allowedIPs, _ := argString(args, "allowed_ips")
+		endpoint, _ := argString(args, "endpoint")
+		return sdkwireguard.AddPeer(iface, pubkey, allowedIPs, endpoint)
+	})
+	r.Register("wireguard.remove_peer", func(args map[string]interface{}) (interface{}, error) {
+		iface, err := argString(args, "interface")
+		if err != nil {
+			return nil, fmt.Errorf("wireguard.remove_peer: %w", err)
+		}
+		pubkey, err := argString(args, "public_key")
+		if err != nil {
+			return nil, fmt.Errorf("wireguard.remove_peer: %w", err)
+		}
+		return sdkwireguard.RemovePeer(iface, pubkey)
+	})
+	r.Register("wireguard.genkey", func(_ map[string]interface{}) (interface{}, error) {
+		key, err := sdkwireguard.GenKey()
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"private_key": key}, nil
+	})
+	r.Register("wireguard.genpsk", func(_ map[string]interface{}) (interface{}, error) {
+		key, err := sdkwireguard.GenPSK()
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"preshared_key": key}, nil
+	})
+	r.Register("wireguard.pubkey", func(args map[string]interface{}) (interface{}, error) {
+		privkey, err := argString(args, "private_key")
+		if err != nil {
+			return nil, fmt.Errorf("wireguard.pubkey: %w", err)
+		}
+		key, err := sdkwireguard.PubKey(privkey)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"public_key": key}, nil
+	})
+
+	// ── smartctl_notify.* ─────────────────────────────────────────────
+	r.Register("smartctl_notify.check", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("smartctl_notify.check: %w", err)
+		}
+		return sdksmartnotify.Check(device)
+	})
+	r.Register("smartctl_notify.list_devices", func(_ map[string]interface{}) (interface{}, error) {
+		devices, err := sdksmartnotify.ListDevices()
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"devices": devices}, nil
+	})
+	r.Register("smartctl_notify.short_test", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("smartctl_notify.short_test: %w", err)
+		}
+		return sdksmartnotify.ShortTest(device)
+	})
+	r.Register("smartctl_notify.long_test", func(args map[string]interface{}) (interface{}, error) {
+		device, err := argString(args, "device")
+		if err != nil {
+			return nil, fmt.Errorf("smartctl_notify.long_test: %w", err)
+		}
+		return sdksmartnotify.LongTest(device)
 	})
 
 	// ── dpkg_selections.* ─────────────────────────────────────────────

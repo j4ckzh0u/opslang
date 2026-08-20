@@ -17,6 +17,8 @@ import (
 	sdkcompose "github.com/opslang/opslang/pkg/ops-core-sdk/docker_compose"
 	sdkcloudinit "github.com/opslang/opslang/pkg/ops-core-sdk/cloud_init"
 	sdksyspersist "github.com/opslang/opslang/pkg/ops-core-sdk/sys_persist"
+	sdkwireguard "github.com/opslang/opslang/pkg/ops-core-sdk/wireguard"
+	sdksmartnotify "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl_notify"
 	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
 	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
@@ -4544,6 +4546,139 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["sys_persist.list"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdksyspersist.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── wireguard.* ───────────────────────────────────────────────────
+	interp.builtins["wireguard.show"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkwireguard.Show()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["wireguard.up"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("wireguard.up() requires at least 1 argument (interface)")
+		}
+		iface, _ := args[0].(string)
+		cfg := ""
+		if len(args) >= 2 {
+			cfg, _ = args[1].(string)
+		}
+		r, err := sdkwireguard.Up(iface, cfg)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["wireguard.down"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("wireguard.down() requires 1 argument (interface)")
+		}
+		iface, _ := args[0].(string)
+		r, err := sdkwireguard.Down(iface)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["wireguard.add_peer"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("wireguard.add_peer() requires at least 2 arguments (interface, public_key)")
+		}
+		iface, _ := args[0].(string)
+		pubkey, _ := args[1].(string)
+		allowedIPs, endpoint := "", ""
+		if len(args) >= 3 {
+			allowedIPs, _ = args[2].(string)
+		}
+		if len(args) >= 4 {
+			endpoint, _ = args[3].(string)
+		}
+		r, err := sdkwireguard.AddPeer(iface, pubkey, allowedIPs, endpoint)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["wireguard.remove_peer"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("wireguard.remove_peer() requires 2 arguments (interface, public_key)")
+		}
+		iface, _ := args[0].(string)
+		pubkey, _ := args[1].(string)
+		r, err := sdkwireguard.RemovePeer(iface, pubkey)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["wireguard.genkey"] = func(args ...interface{}) (interface{}, error) {
+		key, err := sdkwireguard.GenKey()
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"private_key": key}, nil
+	}
+	interp.builtins["wireguard.genpsk"] = func(args ...interface{}) (interface{}, error) {
+		key, err := sdkwireguard.GenPSK()
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"preshared_key": key}, nil
+	}
+	interp.builtins["wireguard.pubkey"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("wireguard.pubkey() requires 1 argument (private_key)")
+		}
+		privkey, _ := args[0].(string)
+		key, err := sdkwireguard.PubKey(privkey)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"public_key": key}, nil
+	}
+
+	// ── smartctl_notify.* ─────────────────────────────────────────────
+	interp.builtins["smartctl_notify.check"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("smartctl_notify.check() requires 1 argument (device)")
+		}
+		device, _ := args[0].(string)
+		r, err := sdksmartnotify.Check(device)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["smartctl_notify.list_devices"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksmartnotify.ListDevices()
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{"devices": r}, nil
+	}
+	interp.builtins["smartctl_notify.short_test"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("smartctl_notify.short_test() requires 1 argument (device)")
+		}
+		device, _ := args[0].(string)
+		r, err := sdksmartnotify.ShortTest(device)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["smartctl_notify.long_test"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("smartctl_notify.long_test() requires 1 argument (device)")
+		}
+		device, _ := args[0].(string)
+		r, err := sdksmartnotify.LongTest(device)
 		if err != nil {
 			return nil, err
 		}
