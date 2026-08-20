@@ -148,6 +148,7 @@ import (
 	sdkpkgng "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng"
 	sdkpodman "github.com/opslang/opslang/pkg/ops-core-sdk/podman"
 	sdknftables "github.com/opslang/opslang/pkg/ops-core-sdk/nftables"
+	sdkmongodb "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -9589,6 +9590,180 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		if err != nil {
 			return nil, err
 		}
+		return r, nil
+	}
+
+	// ── mongodb.* ────────────────────────────────────────────────────────────
+	interp.builtins["mongodb.create_database"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("mongodb.create_database() requires 3 arguments (host, port, name)")
+		}
+		host, _ := args[0].(string)
+		port := 27017
+		if p, ok := args[1].(int); ok { port = p }
+		name, _ := args[2].(string)
+		r, err := sdkmongodb.CreateDatabase(host, port, name)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.drop_database"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("mongodb.drop_database() requires 3 arguments (host, port, name)")
+		}
+		host, _ := args[0].(string)
+		port := 27017
+		if p, ok := args[1].(int); ok { port = p }
+		name, _ := args[2].(string)
+		r, err := sdkmongodb.DropDatabase(host, port, name)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.list_databases"] = func(args ...interface{}) (interface{}, error) {
+		host := "localhost"
+		port := 27017
+		if len(args) >= 1 { host, _ = args[0].(string) }
+		if len(args) >= 2 { if p, ok := args[1].(int); ok { port = p } }
+		r, err := sdkmongodb.ListDatabases(host, port)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.create_user"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 6 {
+			return nil, fmt.Errorf("mongodb.create_user() requires 6 arguments (host, port, database, user, password, roles)")
+		}
+		host, _ := args[0].(string)
+		port := 27017
+		if p, ok := args[1].(int); ok { port = p }
+		database, _ := args[2].(string)
+		user, _ := args[3].(string)
+		password, _ := args[4].(string)
+		roles, _ := args[5].(string)
+		r, err := sdkmongodb.CreateUser(host, port, database, user, password, roles)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.drop_user"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("mongodb.drop_user() requires 4 arguments (host, port, database, user)")
+		}
+		host, _ := args[0].(string)
+		port := 27017
+		if p, ok := args[1].(int); ok { port = p }
+		database, _ := args[2].(string)
+		user, _ := args[3].(string)
+		r, err := sdkmongodb.DropUser(host, port, database, user)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.list_users"] = func(args ...interface{}) (interface{}, error) {
+		host := "localhost"
+		port := 27017
+		database := "admin"
+		if len(args) >= 1 { host, _ = args[0].(string) }
+		if len(args) >= 2 { if p, ok := args[1].(int); ok { port = p } }
+		if len(args) >= 3 { database, _ = args[2].(string) }
+		r, err := sdkmongodb.ListUsers(host, port, database)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.create_collection"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("mongodb.create_collection() requires 4 arguments (host, port, database, collection)")
+		}
+		host, _ := args[0].(string)
+		port := 27017
+		if p, ok := args[1].(int); ok { port = p }
+		database, _ := args[2].(string)
+		collection, _ := args[3].(string)
+		r, err := sdkmongodb.CreateCollection(host, port, database, collection)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.drop_collection"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("mongodb.drop_collection() requires 4 arguments (host, port, database, collection)")
+		}
+		host, _ := args[0].(string)
+		port := 27017
+		if p, ok := args[1].(int); ok { port = p }
+		database, _ := args[2].(string)
+		collection, _ := args[3].(string)
+		r, err := sdkmongodb.DropCollection(host, port, database, collection)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.list_collections"] = func(args ...interface{}) (interface{}, error) {
+		host := "localhost"
+		port := 27017
+		database := "admin"
+		if len(args) >= 1 { host, _ = args[0].(string) }
+		if len(args) >= 2 { if p, ok := args[1].(int); ok { port = p } }
+		if len(args) >= 3 { database, _ = args[2].(string) }
+		r, err := sdkmongodb.ListCollections(host, port, database)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.create_index"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 {
+			return nil, fmt.Errorf("mongodb.create_index() requires at least 5 arguments (host, port, database, collection, keys)")
+		}
+		host, _ := args[0].(string)
+		port := 27017
+		if p, ok := args[1].(int); ok { port = p }
+		database, _ := args[2].(string)
+		collection, _ := args[3].(string)
+		keys, _ := args[4].(string)
+		unique := false
+		name := ""
+		if len(args) >= 6 { unique, _ = args[5].(bool) }
+		if len(args) >= 7 { name, _ = args[6].(string) }
+		r, err := sdkmongodb.CreateIndex(host, port, database, collection, keys, unique, name)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.drop_index"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 5 {
+			return nil, fmt.Errorf("mongodb.drop_index() requires 5 arguments (host, port, database, collection, index_name)")
+		}
+		host, _ := args[0].(string)
+		port := 27017
+		if p, ok := args[1].(int); ok { port = p }
+		database, _ := args[2].(string)
+		collection, _ := args[3].(string)
+		indexName, _ := args[4].(string)
+		r, err := sdkmongodb.DropIndex(host, port, database, collection, indexName)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.list_indexes"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("mongodb.list_indexes() requires 4 arguments (host, port, database, collection)")
+		}
+		host, _ := args[0].(string)
+		port := 27017
+		if p, ok := args[1].(int); ok { port = p }
+		database, _ := args[2].(string)
+		collection, _ := args[3].(string)
+		r, err := sdkmongodb.ListIndexes(host, port, database, collection)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.server_status"] = func(args ...interface{}) (interface{}, error) {
+		host := "localhost"
+		port := 27017
+		if len(args) >= 1 { host, _ = args[0].(string) }
+		if len(args) >= 2 { if p, ok := args[1].(int); ok { port = p } }
+		r, err := sdkmongodb.ServerStatus(host, port)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["mongodb.replica_set_status"] = func(args ...interface{}) (interface{}, error) {
+		host := "localhost"
+		port := 27017
+		if len(args) >= 1 { host, _ = args[0].(string) }
+		if len(args) >= 2 { if p, ok := args[1].(int); ok { port = p } }
+		r, err := sdkmongodb.ReplicaSetStatus(host, port)
+		if err != nil { return nil, err }
 		return r, nil
 	}
 }

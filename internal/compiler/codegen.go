@@ -1153,6 +1153,22 @@ var sdkMapping = map[string]sdkFunc{
 	"nftables.add_element":    {pkg: "nftables", goName: "AddElement", args: true, params: []string{"s", "s", "s", "s"}},
 	"nftables.delete_element": {pkg: "nftables", goName: "DeleteElement", args: true, params: []string{"s", "s", "s", "s"}},
 	"nftables.export":         {pkg: "nftables", goName: "Export", args: true, params: []string{"s"}},
+
+	// mongodb
+	"mongodb.create_database":     {pkg: "mongodb", goName: "CreateDatabase", args: true, params: []string{"s", "i", "s"}},
+	"mongodb.drop_database":       {pkg: "mongodb", goName: "DropDatabase", args: true, params: []string{"s", "i", "s"}},
+	"mongodb.list_databases":      {pkg: "mongodb", goName: "ListDatabases", args: true, params: []string{"s", "i"}},
+	"mongodb.create_user":         {pkg: "mongodb", goName: "CreateUser", args: true, params: []string{"s", "i", "s", "s", "s", "s"}},
+	"mongodb.drop_user":           {pkg: "mongodb", goName: "DropUser", args: true, params: []string{"s", "i", "s", "s"}},
+	"mongodb.list_users":          {pkg: "mongodb", goName: "ListUsers", args: true, params: []string{"s", "i", "s"}},
+	"mongodb.create_collection":   {pkg: "mongodb", goName: "CreateCollection", args: true, params: []string{"s", "i", "s", "s"}},
+	"mongodb.drop_collection":     {pkg: "mongodb", goName: "DropCollection", args: true, params: []string{"s", "i", "s", "s"}},
+	"mongodb.list_collections":    {pkg: "mongodb", goName: "ListCollections", args: true, params: []string{"s", "i", "s"}},
+	"mongodb.create_index":        {pkg: "mongodb", goName: "CreateIndex", args: true, params: []string{"s", "i", "s", "s", "s", "b", "s"}},
+	"mongodb.drop_index":          {pkg: "mongodb", goName: "DropIndex", args: true, params: []string{"s", "i", "s", "s", "s"}},
+	"mongodb.list_indexes":        {pkg: "mongodb", goName: "ListIndexes", args: true, params: []string{"s", "i", "s", "s"}},
+	"mongodb.server_status":       {pkg: "mongodb", goName: "ServerStatus", args: true, params: []string{"s", "i"}},
+	"mongodb.replica_set_status":  {pkg: "mongodb", goName: "ReplicaSetStatus", args: true, params: []string{"s", "i"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1356,6 +1372,7 @@ var pkgImportAlias = map[string]string{
 	"pkgng":          "opspkgng",
 	"podman":         "opspodman",
 	"nftables":       "opsnftables",
+	"mongodb":        "opsmongodb",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1485,6 +1502,7 @@ var pkgImportPath = map[string]string{
 	"pkgng":          "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng",
 	"podman":         "github.com/opslang/opslang/pkg/ops-core-sdk/podman",
 	"nftables":       "github.com/opslang/opslang/pkg/ops-core-sdk/nftables",
+	"mongodb":        "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

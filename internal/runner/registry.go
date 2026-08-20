@@ -149,6 +149,7 @@ import (
 	sdkpkgng "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng"
 	sdkpodman "github.com/opslang/opslang/pkg/ops-core-sdk/podman"
 	sdknftables "github.com/opslang/opslang/pkg/ops-core-sdk/nftables"
+	sdkmongodb "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -5862,6 +5863,116 @@ func (r *Registry) registerExtensions() {
 			format = "json"
 		}
 		return sdknftables.Export(format)
+	})
+
+	// ── mongodb ─────────────────────────────────────────────────────────────
+	r.Register("mongodb.create_database", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		name, _ := args["name"].(string)
+		return sdkmongodb.CreateDatabase(host, port, name)
+	})
+	r.Register("mongodb.drop_database", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		name, _ := args["name"].(string)
+		return sdkmongodb.DropDatabase(host, port, name)
+	})
+	r.Register("mongodb.list_databases", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		return sdkmongodb.ListDatabases(host, port)
+	})
+	r.Register("mongodb.create_user", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		database, _ := args["database"].(string)
+		user, _ := args["user"].(string)
+		password, _ := args["password"].(string)
+		roles, _ := args["roles"].(string)
+		return sdkmongodb.CreateUser(host, port, database, user, password, roles)
+	})
+	r.Register("mongodb.drop_user", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		database, _ := args["database"].(string)
+		user, _ := args["user"].(string)
+		return sdkmongodb.DropUser(host, port, database, user)
+	})
+	r.Register("mongodb.list_users", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		database, _ := args["database"].(string)
+		return sdkmongodb.ListUsers(host, port, database)
+	})
+	r.Register("mongodb.create_collection", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		database, _ := args["database"].(string)
+		collection, _ := args["collection"].(string)
+		return sdkmongodb.CreateCollection(host, port, database, collection)
+	})
+	r.Register("mongodb.drop_collection", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		database, _ := args["database"].(string)
+		collection, _ := args["collection"].(string)
+		return sdkmongodb.DropCollection(host, port, database, collection)
+	})
+	r.Register("mongodb.list_collections", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		database, _ := args["database"].(string)
+		return sdkmongodb.ListCollections(host, port, database)
+	})
+	r.Register("mongodb.create_index", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		database, _ := args["database"].(string)
+		collection, _ := args["collection"].(string)
+		keys, _ := args["keys"].(string)
+		unique, _ := args["unique"].(bool)
+		name, _ := args["name"].(string)
+		return sdkmongodb.CreateIndex(host, port, database, collection, keys, unique, name)
+	})
+	r.Register("mongodb.drop_index", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		database, _ := args["database"].(string)
+		collection, _ := args["collection"].(string)
+		indexName, _ := args["index_name"].(string)
+		return sdkmongodb.DropIndex(host, port, database, collection, indexName)
+	})
+	r.Register("mongodb.list_indexes", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		database, _ := args["database"].(string)
+		collection, _ := args["collection"].(string)
+		return sdkmongodb.ListIndexes(host, port, database, collection)
+	})
+	r.Register("mongodb.server_status", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		return sdkmongodb.ServerStatus(host, port)
+	})
+	r.Register("mongodb.replica_set_status", func(args map[string]interface{}) (interface{}, error) {
+		host, _ := args["host"].(string)
+		port := 27017
+		if v, ok := args["port"].(float64); ok { port = int(v) }
+		return sdkmongodb.ReplicaSetStatus(host, port)
 	})
 }
 

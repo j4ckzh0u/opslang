@@ -1182,6 +1182,22 @@ var Funcs = []Func{
 	{Name: "nftables.add_element", Args: []string{"family", "table", "set", "element"}, Mutating: true},
 	{Name: "nftables.delete_element", Args: []string{"family", "table", "set", "element"}, Mutating: true},
 	{Name: "nftables.export", Args: []string{"format"}},
+
+	// ── mongodb ──────────────────────────────────────────────────────────────
+	{Name: "mongodb.create_database", Args: []string{"host", "port", "name"}, Mutating: true},
+	{Name: "mongodb.drop_database", Args: []string{"host", "port", "name"}, Mutating: true},
+	{Name: "mongodb.list_databases", Args: []string{"host", "port"}},
+	{Name: "mongodb.create_user", Args: []string{"host", "port", "database", "user", "password", "roles"}, Mutating: true},
+	{Name: "mongodb.drop_user", Args: []string{"host", "port", "database", "user"}, Mutating: true},
+	{Name: "mongodb.list_users", Args: []string{"host", "port", "database"}},
+	{Name: "mongodb.create_collection", Args: []string{"host", "port", "database", "collection"}, Mutating: true},
+	{Name: "mongodb.drop_collection", Args: []string{"host", "port", "database", "collection"}, Mutating: true},
+	{Name: "mongodb.list_collections", Args: []string{"host", "port", "database"}},
+	{Name: "mongodb.create_index", Args: []string{"host", "port", "database", "collection", "keys", "unique", "name"}, Mutating: true},
+	{Name: "mongodb.drop_index", Args: []string{"host", "port", "database", "collection", "index_name"}, Mutating: true},
+	{Name: "mongodb.list_indexes", Args: []string{"host", "port", "database", "collection"}},
+	{Name: "mongodb.server_status", Args: []string{"host", "port"}},
+	{Name: "mongodb.replica_set_status", Args: []string{"host", "port"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
