@@ -1387,6 +1387,11 @@ var Funcs = []Func{
 	{Name: "openssl_publickey.extract", Args: []string{"private_key_file", "output_file", "force"}, Mutating: true},
 	{Name: "openssl_publickey.info", Args: []string{"public_key_file"}},
 	{Name: "openssl_publickey.delete", Args: []string{"public_key_file"}, Mutating: true},
+	// etcd - Distributed key-value store
+	{Name: "etcd.get", Args: []string{"key", "endpoints"}},
+	{Name: "etcd.set", Args: []string{"key", "value", "endpoints"}, Mutating: true},
+	{Name: "etcd.delete", Args: []string{"key", "endpoints"}, Mutating: true},
+	{Name: "etcd.list", Args: []string{"prefix", "endpoints"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

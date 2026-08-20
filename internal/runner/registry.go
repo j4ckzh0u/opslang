@@ -188,6 +188,7 @@ import (
 	sdkipneighbor "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor"
 	sdkopensslcsr "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr"
 	sdkopensslpublickey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey"
+	sdketcd "github.com/opslang/opslang/pkg/ops-core-sdk/etcd"
 	"time"
 )
 
@@ -6936,6 +6937,48 @@ func (r *Registry) registerExtensions() {
 	r.Register("openssl_publickey.delete", func(args map[string]interface{}) (interface{}, error) {
 		pubKeyFile, _ := args["public_key_file"].(string)
 		return sdkopensslpublickey.Delete(pubKeyFile), nil
+	})
+	// etcd
+	r.Register("etcd.get", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := args["key"].(string)
+		var endpoints []string
+		if list, ok := args["endpoints"].([]interface{}); ok {
+			for _, v := range list {
+				endpoints = append(endpoints, fmt.Sprintf("%v", v))
+			}
+		}
+		return sdketcd.Get(key, endpoints), nil
+	})
+	r.Register("etcd.set", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := args["key"].(string)
+		value, _ := args["value"].(string)
+		var endpoints []string
+		if list, ok := args["endpoints"].([]interface{}); ok {
+			for _, v := range list {
+				endpoints = append(endpoints, fmt.Sprintf("%v", v))
+			}
+		}
+		return sdketcd.Set(key, value, endpoints), nil
+	})
+	r.Register("etcd.delete", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := args["key"].(string)
+		var endpoints []string
+		if list, ok := args["endpoints"].([]interface{}); ok {
+			for _, v := range list {
+				endpoints = append(endpoints, fmt.Sprintf("%v", v))
+			}
+		}
+		return sdketcd.Delete(key, endpoints), nil
+	})
+	r.Register("etcd.list", func(args map[string]interface{}) (interface{}, error) {
+		prefix, _ := args["prefix"].(string)
+		var endpoints []string
+		if list, ok := args["endpoints"].([]interface{}); ok {
+			for _, v := range list {
+				endpoints = append(endpoints, fmt.Sprintf("%v", v))
+			}
+		}
+		return sdketcd.List(prefix, endpoints), nil
 	})
 }
 

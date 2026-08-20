@@ -1374,6 +1374,11 @@ var sdkMapping = map[string]sdkFunc{
 	"openssl_publickey.extract": {pkg: "openssl_publickey", goName: "Extract", args: true, params: []string{"s", "s", "b"}},
 	"openssl_publickey.info":    {pkg: "openssl_publickey", goName: "Info", args: true, params: []string{"s"}},
 	"openssl_publickey.delete":  {pkg: "openssl_publickey", goName: "Delete", args: true, params: []string{"s"}},
+	// etcd
+	"etcd.get":    {pkg: "etcd", goName: "Get", args: true, params: []string{"s", "l"}},
+	"etcd.set":    {pkg: "etcd", goName: "Set", args: true, params: []string{"s", "s", "l"}},
+	"etcd.delete": {pkg: "etcd", goName: "Delete", args: true, params: []string{"s", "l"}},
+	"etcd.list":   {pkg: "etcd", goName: "List", args: true, params: []string{"s", "l"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1616,6 +1621,7 @@ var pkgImportAlias = map[string]string{
 	"ip_neighbor":      "opsipneighbor",
 	"openssl_csr":      "opsopensslcsr",
 	"openssl_publickey": "opsopensslpublickey",
+	"etcd":             "opsetcd",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1784,6 +1790,7 @@ var pkgImportPath = map[string]string{
 	"ip_neighbor":      "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor",
 	"openssl_csr":      "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr",
 	"openssl_publickey": "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey",
+	"etcd":             "github.com/opslang/opslang/pkg/ops-core-sdk/etcd",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

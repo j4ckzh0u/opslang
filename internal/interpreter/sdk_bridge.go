@@ -188,6 +188,7 @@ import (
 	sdkipneighbor "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor"
 	sdkopensslcsr "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr"
 	sdkopensslpublickey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey"
+	sdketcd "github.com/opslang/opslang/pkg/ops-core-sdk/etcd"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10981,6 +10982,56 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	interp.builtins["openssl_publickey.delete"] = func(args ...interface{}) (interface{}, error) {
 		pubKeyFile := getStringArgBridge(args, 0, "")
 		return sdkopensslpublickey.Delete(pubKeyFile), nil
+	}
+	// etcd
+	interp.builtins["etcd.get"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		var endpoints []string
+		if len(args) > 1 {
+			if list, ok := args[1].([]interface{}); ok {
+				for _, v := range list {
+					endpoints = append(endpoints, fmt.Sprintf("%v", v))
+				}
+			}
+		}
+		return sdketcd.Get(key, endpoints), nil
+	}
+	interp.builtins["etcd.set"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		value := getStringArgBridge(args, 1, "")
+		var endpoints []string
+		if len(args) > 2 {
+			if list, ok := args[2].([]interface{}); ok {
+				for _, v := range list {
+					endpoints = append(endpoints, fmt.Sprintf("%v", v))
+				}
+			}
+		}
+		return sdketcd.Set(key, value, endpoints), nil
+	}
+	interp.builtins["etcd.delete"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		var endpoints []string
+		if len(args) > 1 {
+			if list, ok := args[1].([]interface{}); ok {
+				for _, v := range list {
+					endpoints = append(endpoints, fmt.Sprintf("%v", v))
+				}
+			}
+		}
+		return sdketcd.Delete(key, endpoints), nil
+	}
+	interp.builtins["etcd.list"] = func(args ...interface{}) (interface{}, error) {
+		prefix := getStringArgBridge(args, 0, "")
+		var endpoints []string
+		if len(args) > 1 {
+			if list, ok := args[1].([]interface{}); ok {
+				for _, v := range list {
+					endpoints = append(endpoints, fmt.Sprintf("%v", v))
+				}
+			}
+		}
+		return sdketcd.List(prefix, endpoints), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {
