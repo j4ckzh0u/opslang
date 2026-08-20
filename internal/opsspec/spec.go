@@ -1457,6 +1457,11 @@ var Funcs = []Func{
 	{Name: "pipx.uninstall", Args: []string{"name"}, Mutating: true},
 	{Name: "pipx.upgrade", Args: []string{"name"}, Mutating: true},
 	{Name: "pipx.list"},
+
+	// ssh_config: SSH client configuration management
+	{Name: "ssh_config.get", Args: []string{"host", "option", "scope"}},
+	{Name: "ssh_config.set", Args: []string{"host", "option", "value", "scope"}, Mutating: true},
+	{Name: "ssh_config.absent", Args: []string{"host", "option", "scope"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

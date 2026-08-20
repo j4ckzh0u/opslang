@@ -201,6 +201,7 @@ import (
 	sdkdnsmasq "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq"
 	sdkapache2mod "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module"
 	sdkpipx "github.com/opslang/opslang/pkg/ops-core-sdk/pipx"
+	sdksshconfig "github.com/opslang/opslang/pkg/ops-core-sdk/ssh_config"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11309,6 +11310,26 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["pipx.list"] = func(args ...interface{}) (interface{}, error) {
 		return sdkpipx.List()
+	}
+
+	interp.builtins["ssh_config.get"] = func(args ...interface{}) (interface{}, error) {
+		host := getStringArgBridge(args, 0, "")
+		option := getStringArgBridge(args, 1, "")
+		scope := getStringArgBridge(args, 2, "")
+		return sdksshconfig.Get(host, option, scope)
+	}
+	interp.builtins["ssh_config.set"] = func(args ...interface{}) (interface{}, error) {
+		host := getStringArgBridge(args, 0, "")
+		option := getStringArgBridge(args, 1, "")
+		value := getStringArgBridge(args, 2, "")
+		scope := getStringArgBridge(args, 3, "")
+		return sdksshconfig.Set(host, option, value, scope)
+	}
+	interp.builtins["ssh_config.absent"] = func(args ...interface{}) (interface{}, error) {
+		host := getStringArgBridge(args, 0, "")
+		option := getStringArgBridge(args, 1, "")
+		scope := getStringArgBridge(args, 2, "")
+		return sdksshconfig.Absent(host, option, scope)
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

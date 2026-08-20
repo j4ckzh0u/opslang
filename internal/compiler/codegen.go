@@ -1444,6 +1444,11 @@ var sdkMapping = map[string]sdkFunc{
 	"pipx.uninstall": {pkg: "pipx", goName: "Uninstall", args: true, params: []string{"s"}},
 	"pipx.upgrade":   {pkg: "pipx", goName: "Upgrade", args: true, params: []string{"s"}},
 	"pipx.list":      {pkg: "pipx", goName: "List", args: true},
+
+	// ssh_config
+	"ssh_config.get":   {pkg: "ssh_config", goName: "Get", args: true, params: []string{"s", "s", "s"}},
+	"ssh_config.set":   {pkg: "ssh_config", goName: "Set", args: true, params: []string{"s", "s", "s", "s"}},
+	"ssh_config.absent": {pkg: "ssh_config", goName: "Absent", args: true, params: []string{"s", "s", "s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1699,6 +1704,7 @@ var pkgImportAlias = map[string]string{
 	"dnsmasq":          "opsdnsmasq",
 	"apache2_module":   "opsapache2mod",
 	"pipx":             "opspipx",
+	"ssh_config":       "opssshconfig",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1880,6 +1886,7 @@ var pkgImportPath = map[string]string{
 	"dnsmasq":          "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq",
 	"apache2_module":   "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module",
 	"pipx":             "github.com/opslang/opslang/pkg/ops-core-sdk/pipx",
+	"ssh_config":       "github.com/opslang/opslang/pkg/ops-core-sdk/ssh_config",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

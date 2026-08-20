@@ -201,6 +201,7 @@ import (
 	sdkdnsmasq "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq"
 	sdkapache2mod "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module"
 	sdkpipx "github.com/opslang/opslang/pkg/ops-core-sdk/pipx"
+	sdksshconfig "github.com/opslang/opslang/pkg/ops-core-sdk/ssh_config"
 	"time"
 )
 
@@ -7240,6 +7241,26 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("pipx.list", func(args map[string]interface{}) (interface{}, error) {
 		return sdkpipx.List()
+	})
+
+	r.Register("ssh_config.get", func(args map[string]interface{}) (interface{}, error) {
+		host := mapStrArg(args, "host", "")
+		option := mapStrArg(args, "option", "")
+		scope := mapStrArg(args, "scope", "")
+		return sdksshconfig.Get(host, option, scope)
+	})
+	r.Register("ssh_config.set", func(args map[string]interface{}) (interface{}, error) {
+		host := mapStrArg(args, "host", "")
+		option := mapStrArg(args, "option", "")
+		value := mapStrArg(args, "value", "")
+		scope := mapStrArg(args, "scope", "")
+		return sdksshconfig.Set(host, option, value, scope)
+	})
+	r.Register("ssh_config.absent", func(args map[string]interface{}) (interface{}, error) {
+		host := mapStrArg(args, "host", "")
+		option := mapStrArg(args, "option", "")
+		scope := mapStrArg(args, "scope", "")
+		return sdksshconfig.Absent(host, option, scope)
 	})
 }
 
