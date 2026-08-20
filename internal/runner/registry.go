@@ -12,6 +12,7 @@ import (
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	opscron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
+	sdkdnf "github.com/opslang/opslang/pkg/ops-core-sdk/dnf"
 	sdkdocker "github.com/opslang/opslang/pkg/ops-core-sdk/docker"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/file"
 	sdkfirewalld "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld"
@@ -1499,6 +1500,87 @@ func (r *Registry) registerExtensions() {
 			return nil, fmt.Errorf("apt.mark_manual: %w", err)
 		}
 		return sdkapt.MarkManual(name)
+	})
+
+	// ── dnf.* ─────────────────────────────────────────────────────────
+	r.Register("dnf.install", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("dnf.install: %w", err)
+		}
+		version, _ := args["version"].(string)
+		return sdkdnf.Install(name, version)
+	})
+	r.Register("dnf.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("dnf.remove: %w", err)
+		}
+		return sdkdnf.Remove(name)
+	})
+	r.Register("dnf.update", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkdnf.Update(name)
+	})
+	r.Register("dnf.info", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("dnf.info: %w", err)
+		}
+		return sdkdnf.Info(name)
+	})
+	r.Register("dnf.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkdnf.List()
+	})
+	r.Register("dnf.search", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("dnf.search: %w", err)
+		}
+		return sdkdnf.Search(name)
+	})
+	r.Register("dnf.clean", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkdnf.Clean()
+	})
+	r.Register("dnf.repolist", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkdnf.RepoList()
+	})
+	r.Register("dnf.grouplist", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkdnf.GroupList()
+	})
+	r.Register("dnf.groupinstall", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("dnf.groupinstall: %w", err)
+		}
+		return sdkdnf.GroupInstall(name)
+	})
+	r.Register("dnf.groupremove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("dnf.groupremove: %w", err)
+		}
+		return sdkdnf.GroupRemove(name)
+	})
+	r.Register("dnf.history", func(args map[string]interface{}) (interface{}, error) {
+		count := 10
+		if v, ok := args["count"].(float64); ok {
+			count = int(v)
+		}
+		return sdkdnf.History(count)
+	})
+	r.Register("dnf.check_update", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkdnf.CheckUpdate()
+	})
+	r.Register("dnf.modulelist", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkdnf.ModuleList()
+	})
+	r.Register("dnf.module_enable", func(args map[string]interface{}) (interface{}, error) {
+		spec, err := argString(args, "spec")
+		if err != nil {
+			return nil, fmt.Errorf("dnf.module_enable: %w", err)
+		}
+		return sdkdnf.ModuleEnable(spec)
 	})
 
 	// ── apt_repo.* ──────────────────────────────────────────────────────

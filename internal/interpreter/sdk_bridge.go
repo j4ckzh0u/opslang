@@ -11,6 +11,7 @@ import (
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	sdkcron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
+	sdkdnf "github.com/opslang/opslang/pkg/ops-core-sdk/dnf"
 	sdkdocker "github.com/opslang/opslang/pkg/ops-core-sdk/docker"
 	sdkfile "github.com/opslang/opslang/pkg/ops-core-sdk/file"
 	sdkfirewalld "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld"
@@ -3810,6 +3811,155 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		r, err := sdkapt.MarkManual(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── dnf.* ─────────────────────────────────────────────────────────
+	interp.builtins["dnf.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dnf.install() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		version := ""
+		if len(args) >= 2 {
+			version, _ = args[1].(string)
+		}
+		r, err := sdkdnf.Install(name, version)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["dnf.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dnf.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdnf.Remove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["dnf.update"] = func(args ...interface{}) (interface{}, error) {
+		name := ""
+		if len(args) >= 1 {
+			name, _ = args[0].(string)
+		}
+		r, err := sdkdnf.Update(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["dnf.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dnf.info() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdnf.Info(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["dnf.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkdnf.List()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["dnf.search"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dnf.search() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdnf.Search(name)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["dnf.clean"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkdnf.Clean()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["dnf.repolist"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkdnf.RepoList()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["dnf.grouplist"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkdnf.GroupList()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["dnf.groupinstall"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dnf.groupinstall() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdnf.GroupInstall(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["dnf.groupremove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dnf.groupremove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkdnf.GroupRemove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["dnf.history"] = func(args ...interface{}) (interface{}, error) {
+		count := 10
+		if len(args) >= 1 {
+			if v, ok := args[0].(int); ok {
+				count = v
+			}
+		}
+		r, err := sdkdnf.History(count)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["dnf.check_update"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkdnf.CheckUpdate()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["dnf.modulelist"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkdnf.ModuleList()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["dnf.module_enable"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("dnf.module_enable() requires 1 argument (spec)")
+		}
+		spec, _ := args[0].(string)
+		r, err := sdkdnf.ModuleEnable(spec)
 		if err != nil {
 			return nil, err
 		}

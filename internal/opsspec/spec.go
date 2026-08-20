@@ -65,6 +65,23 @@ var Funcs = []Func{
 	{Name: "apt.mark_auto", Args: []string{"name"}, Mutating: true},
 	{Name: "apt.mark_manual", Args: []string{"name"}, Mutating: true},
 
+	// ── dnf ─────────────────────────────────────────────────────────
+	{Name: "dnf.install", Args: []string{"name", "version"}, Mutating: true},
+	{Name: "dnf.remove", Args: []string{"name"}, Mutating: true},
+	{Name: "dnf.update", Args: []string{"name"}, Mutating: true},
+	{Name: "dnf.info", Args: []string{"name"}},
+	{Name: "dnf.list"},
+	{Name: "dnf.search", Args: []string{"name"}},
+	{Name: "dnf.clean", Mutating: true},
+	{Name: "dnf.repolist"},
+	{Name: "dnf.grouplist"},
+	{Name: "dnf.groupinstall", Args: []string{"name"}, Mutating: true},
+	{Name: "dnf.groupremove", Args: []string{"name"}, Mutating: true},
+	{Name: "dnf.history", Args: []string{"count"}},
+	{Name: "dnf.check_update"},
+	{Name: "dnf.modulelist"},
+	{Name: "dnf.module_enable", Args: []string{"spec"}, Mutating: true},
+
 	// ── apt_repo ──────────────────────────────────────────────────────
 	{Name: "apt_repo.list"},
 	{Name: "apt_repo.exists", Args: []string{"uri"}},
