@@ -1555,6 +1555,22 @@ var Funcs = []Func{
 	{Name: "lvol.rename", Args: []string{"vg_name", "old_name", "new_name"}, Mutating: true},
 	{Name: "lvol.activate", Args: []string{"vg_name", "lv_name"}, Mutating: true},
 	{Name: "lvol.deactivate", Args: []string{"vg_name", "lv_name"}, Mutating: true},
+
+	// ── certbot ───────────────────────────────────────────────────────
+	{Name: "certbot.certificates"},
+	{Name: "certbot.obtain", Args: []string{"domains", "email", "webroot", "standalone"}, Mutating: true},
+	{Name: "certbot.renew", Args: []string{"force"}, Mutating: true},
+	{Name: "certbot.delete", Args: []string{"domain"}, Mutating: true},
+
+	// ── gluster ───────────────────────────────────────────────────────
+	{Name: "gluster.volume_list"},
+	{Name: "gluster.volume_create", Args: []string{"name", "bricks", "replica", "stripe", "transport"}, Mutating: true},
+	{Name: "gluster.volume_delete", Args: []string{"name"}, Mutating: true},
+	{Name: "gluster.volume_start", Args: []string{"name"}, Mutating: true},
+	{Name: "gluster.volume_stop", Args: []string{"name"}, Mutating: true},
+	{Name: "gluster.peer_list"},
+	{Name: "gluster.peer_probe", Args: []string{"host"}, Mutating: true},
+	{Name: "gluster.peer_detach", Args: []string{"host"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

@@ -212,6 +212,8 @@ import (
 	sdksshconfig "github.com/opslang/opslang/pkg/ops-core-sdk/ssh_config"
 	sdkopenvpn "github.com/opslang/opslang/pkg/ops-core-sdk/openvpn"
 	sdkbtrfs "github.com/opslang/opslang/pkg/ops-core-sdk/btrfs"
+	sdkcertbot "github.com/opslang/opslang/pkg/ops-core-sdk/certbot"
+	sdkgluster "github.com/opslang/opslang/pkg/ops-core-sdk/gluster"
 	"time"
 )
 
@@ -7639,6 +7641,58 @@ func (r *Registry) registerExtensions() {
 	r.Register("btrfs.quota_disable", func(args map[string]interface{}) (interface{}, error) {
 		mountPoint := mapStrArg(args, "mount_point", "/")
 		return sdkbtrfs.QuotaDisable(mountPoint)
+	})
+	r.Register("certbot.certificates", func(args map[string]interface{}) (interface{}, error) {
+		return sdkcertbot.Certificates()
+	})
+	r.Register("certbot.obtain", func(args map[string]interface{}) (interface{}, error) {
+		domains := mapStrSliceArg(args, "domains")
+		email := mapStrArg(args, "email", "")
+		webroot := mapStrArg(args, "webroot", "")
+		standalone, _ := argBool(args, "standalone")
+		return sdkcertbot.Obtain(domains, email, webroot, standalone)
+	})
+	r.Register("certbot.renew", func(args map[string]interface{}) (interface{}, error) {
+		force, _ := argBool(args, "force")
+		return sdkcertbot.Renew(force)
+	})
+	r.Register("certbot.delete", func(args map[string]interface{}) (interface{}, error) {
+		domain := mapStrArg(args, "domain", "")
+		return sdkcertbot.Delete(domain)
+	})
+	r.Register("gluster.volume_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkgluster.VolumeList()
+	})
+	r.Register("gluster.volume_create", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		bricks := mapStrSliceArg(args, "bricks")
+		replica := mapIntArg(args, "replica", 0)
+		stripe := mapIntArg(args, "stripe", 0)
+		transport := mapStrArg(args, "transport", "")
+		return sdkgluster.VolumeCreate(name, bricks, replica, stripe, transport)
+	})
+	r.Register("gluster.volume_delete", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		return sdkgluster.VolumeDelete(name)
+	})
+	r.Register("gluster.volume_start", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		return sdkgluster.VolumeStart(name)
+	})
+	r.Register("gluster.volume_stop", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		return sdkgluster.VolumeStop(name)
+	})
+	r.Register("gluster.peer_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkgluster.PeerList()
+	})
+	r.Register("gluster.peer_probe", func(args map[string]interface{}) (interface{}, error) {
+		host := mapStrArg(args, "host", "")
+		return sdkgluster.PeerProbe(host)
+	})
+	r.Register("gluster.peer_detach", func(args map[string]interface{}) (interface{}, error) {
+		host := mapStrArg(args, "host", "")
+		return sdkgluster.PeerDetach(host)
 	})
 }
 

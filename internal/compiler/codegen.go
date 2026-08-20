@@ -1534,6 +1534,22 @@ var sdkMapping = map[string]sdkFunc{
 	"btrfs.quota_enable":      {pkg: "btrfs", goName: "QuotaEnable", args: true, params: []string{"s"}},
 	"btrfs.quota_disable":     {pkg: "btrfs", goName: "QuotaDisable", args: true, params: []string{"s"}},
 
+	// certbot
+	"certbot.certificates": {pkg: "certbot", goName: "Certificates", args: true},
+	"certbot.obtain":       {pkg: "certbot", goName: "Obtain", args: true, params: []string{"[]string", "s", "s", "b"}},
+	"certbot.renew":        {pkg: "certbot", goName: "Renew", args: true, params: []string{"b"}},
+	"certbot.delete":       {pkg: "certbot", goName: "Delete", args: true, params: []string{"s"}},
+
+	// gluster
+	"gluster.volume_list":  {pkg: "gluster", goName: "VolumeList", args: true},
+	"gluster.volume_create": {pkg: "gluster", goName: "VolumeCreate", args: true, params: []string{"s", "[]string", "i", "i", "s"}},
+	"gluster.volume_delete": {pkg: "gluster", goName: "VolumeDelete", args: true, params: []string{"s"}},
+	"gluster.volume_start":  {pkg: "gluster", goName: "VolumeStart", args: true, params: []string{"s"}},
+	"gluster.volume_stop":   {pkg: "gluster", goName: "VolumeStop", args: true, params: []string{"s"}},
+	"gluster.peer_list":     {pkg: "gluster", goName: "PeerList", args: true},
+	"gluster.peer_probe":    {pkg: "gluster", goName: "PeerProbe", args: true, params: []string{"s"}},
+	"gluster.peer_detach":   {pkg: "gluster", goName: "PeerDetach", args: true, params: []string{"s"}},
+
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1792,6 +1808,8 @@ var pkgImportAlias = map[string]string{
 	"ssh_config":       "opssshconfig",
 	"openvpn":          "opsopenvpn",
 	"btrfs":            "opsbtrfs",
+	"certbot":          "opscertbot",
+	"gluster":          "opsgluster",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1976,6 +1994,8 @@ var pkgImportPath = map[string]string{
 	"ssh_config":       "github.com/opslang/opslang/pkg/ops-core-sdk/ssh_config",
 	"openvpn":          "github.com/opslang/opslang/pkg/ops-core-sdk/openvpn",
 	"btrfs":            "github.com/opslang/opslang/pkg/ops-core-sdk/btrfs",
+	"certbot":          "github.com/opslang/opslang/pkg/ops-core-sdk/certbot",
+	"gluster":          "github.com/opslang/opslang/pkg/ops-core-sdk/gluster",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

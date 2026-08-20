@@ -212,6 +212,8 @@ import (
 	sdksshconfig "github.com/opslang/opslang/pkg/ops-core-sdk/ssh_config"
 	sdkopenvpn "github.com/opslang/opslang/pkg/ops-core-sdk/openvpn"
 	sdkbtrfs "github.com/opslang/opslang/pkg/ops-core-sdk/btrfs"
+	sdkcertbot "github.com/opslang/opslang/pkg/ops-core-sdk/certbot"
+	sdkgluster "github.com/opslang/opslang/pkg/ops-core-sdk/gluster"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11880,6 +11882,68 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	interp.builtins["btrfs.quota_disable"] = func(args ...interface{}) (interface{}, error) {
 		mountPoint := getStringArgBridge(args, 0, "/")
 		return sdkbtrfs.QuotaDisable(mountPoint)
+	}
+	interp.builtins["certbot.certificates"] = func(args ...interface{}) (interface{}, error) {
+		return sdkcertbot.Certificates()
+	}
+	interp.builtins["certbot.obtain"] = func(args ...interface{}) (interface{}, error) {
+		domains := getStringSliceArgBridge(args, 0)
+		email := getStringArgBridge(args, 1, "")
+		webroot := getStringArgBridge(args, 2, "")
+		standalone := opsBool(args[3])
+		return sdkcertbot.Obtain(domains, email, webroot, standalone)
+	}
+	interp.builtins["certbot.renew"] = func(args ...interface{}) (interface{}, error) {
+		force := opsBool(args[0])
+		return sdkcertbot.Renew(force)
+	}
+	interp.builtins["certbot.delete"] = func(args ...interface{}) (interface{}, error) {
+		domain := getStringArgBridge(args, 0, "")
+		return sdkcertbot.Delete(domain)
+	}
+	interp.builtins["gluster.volume_list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkgluster.VolumeList()
+	}
+	interp.builtins["gluster.volume_create"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		bricks := getStringSliceArgBridge(args, 1)
+		replica := 0
+		if len(args) > 2 {
+			if n, ok := args[2].(float64); ok {
+				replica = int(n)
+			}
+		}
+		stripe := 0
+		if len(args) > 3 {
+			if n, ok := args[3].(float64); ok {
+				stripe = int(n)
+			}
+		}
+		transport := getStringArgBridge(args, 4, "")
+		return sdkgluster.VolumeCreate(name, bricks, replica, stripe, transport)
+	}
+	interp.builtins["gluster.volume_delete"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkgluster.VolumeDelete(name)
+	}
+	interp.builtins["gluster.volume_start"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkgluster.VolumeStart(name)
+	}
+	interp.builtins["gluster.volume_stop"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkgluster.VolumeStop(name)
+	}
+	interp.builtins["gluster.peer_list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkgluster.PeerList()
+	}
+	interp.builtins["gluster.peer_probe"] = func(args ...interface{}) (interface{}, error) {
+		host := getStringArgBridge(args, 0, "")
+		return sdkgluster.PeerProbe(host)
+	}
+	interp.builtins["gluster.peer_detach"] = func(args ...interface{}) (interface{}, error) {
+		host := getStringArgBridge(args, 0, "")
+		return sdkgluster.PeerDetach(host)
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {
