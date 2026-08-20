@@ -193,6 +193,7 @@ import (
 	sdkvault "github.com/opslang/opslang/pkg/ops-core-sdk/vault"
 	sdkgitconfig "github.com/opslang/opslang/pkg/ops-core-sdk/git_config"
 	sdksshdconfig "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config"
+	sdkdockernet "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11184,6 +11185,23 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	interp.builtins["sshd_config.absent"] = func(args ...interface{}) (interface{}, error) {
 		key := getStringArgBridge(args, 0, "")
 		return sdksshdconfig.Absent(key)
+	}
+
+	interp.builtins["docker_network.inspect"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkdockernet.Inspect(name)
+	}
+	interp.builtins["docker_network.create"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		driver := getStringArgBridge(args, 1, "bridge")
+		return sdkdockernet.Create(name, driver)
+	}
+	interp.builtins["docker_network.remove"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkdockernet.Remove(name)
+	}
+	interp.builtins["docker_network.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkdockernet.List()
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

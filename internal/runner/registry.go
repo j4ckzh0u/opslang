@@ -193,6 +193,7 @@ import (
 	sdkvault "github.com/opslang/opslang/pkg/ops-core-sdk/vault"
 	sdkgitconfig "github.com/opslang/opslang/pkg/ops-core-sdk/git_config"
 	sdksshdconfig "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config"
+	sdkdockernet "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network"
 	"time"
 )
 
@@ -7115,6 +7116,23 @@ func (r *Registry) registerExtensions() {
 	r.Register("sshd_config.absent", func(args map[string]interface{}) (interface{}, error) {
 		key := mapStrArg(args, "key", "")
 		return sdksshdconfig.Absent(key)
+	})
+
+	r.Register("docker_network.inspect", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		return sdkdockernet.Inspect(name)
+	})
+	r.Register("docker_network.create", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		driver := mapStrArg(args, "driver", "bridge")
+		return sdkdockernet.Create(name, driver)
+	})
+	r.Register("docker_network.remove", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		return sdkdockernet.Remove(name)
+	})
+	r.Register("docker_network.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkdockernet.List()
 	})
 }
 

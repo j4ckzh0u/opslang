@@ -1401,6 +1401,12 @@ var sdkMapping = map[string]sdkFunc{
 	"sshd_config.get":   {pkg: "sshd_config", goName: "Get", args: true, params: []string{"s"}},
 	"sshd_config.set":   {pkg: "sshd_config", goName: "Set", args: true, params: []string{"s", "s"}},
 	"sshd_config.absent": {pkg: "sshd_config", goName: "Absent", args: true, params: []string{"s"}},
+
+	// docker_network
+	"docker_network.inspect": {pkg: "docker_network", goName: "Inspect", args: true, params: []string{"s"}},
+	"docker_network.create":  {pkg: "docker_network", goName: "Create", args: true, params: []string{"s", "s"}},
+	"docker_network.remove":  {pkg: "docker_network", goName: "Remove", args: true, params: []string{"s"}},
+	"docker_network.list":    {pkg: "docker_network", goName: "List", args: true},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1648,6 +1654,7 @@ var pkgImportAlias = map[string]string{
 	"vault":            "opsvault",
 	"git_config":       "opsgitconfig",
 	"sshd_config":      "opssshdconfig",
+	"docker_network":   "opsdockernet",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1821,6 +1828,7 @@ var pkgImportPath = map[string]string{
 	"vault":            "github.com/opslang/opslang/pkg/ops-core-sdk/vault",
 	"git_config":       "github.com/opslang/opslang/pkg/ops-core-sdk/git_config",
 	"sshd_config":      "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config",
+	"docker_network":   "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
