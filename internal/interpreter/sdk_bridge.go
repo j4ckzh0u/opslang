@@ -144,6 +144,7 @@ import (
 	sdksvn "github.com/opslang/opslang/pkg/ops-core-sdk/svn"
 	sdkzypper "github.com/opslang/opslang/pkg/ops-core-sdk/zypper"
 	sdkpacman "github.com/opslang/opslang/pkg/ops-core-sdk/pacman"
+	sdkportage "github.com/opslang/opslang/pkg/ops-core-sdk/portage"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -9027,6 +9028,103 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return structToMap(r)
+	}
+
+	// ── portage.* ───────────────────────────────────────────────────
+	interp.builtins["portage.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("portage.install() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		version := ""
+		if len(args) >= 2 {
+			version, _ = args[1].(string)
+		}
+		r, err := sdkportage.Install(name, version)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["portage.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("portage.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkportage.Remove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["portage.update"] = func(args ...interface{}) (interface{}, error) {
+		name := ""
+		if len(args) >= 1 {
+			name, _ = args[0].(string)
+		}
+		deep := false
+		if len(args) >= 2 {
+			deep, _ = args[1].(bool)
+		}
+		r, err := sdkportage.Update(name, deep)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["portage.sync"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkportage.Sync()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["portage.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("portage.info() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkportage.Info(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["portage.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkportage.List()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["portage.search"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("portage.search() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkportage.Search(name)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["portage.depclean"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkportage.Depclean()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["portage.metadata"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("portage.metadata() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkportage.Metadata(name)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
 	}
 }
 // Returns an empty map if no arg is present at idx.

@@ -1127,6 +1127,17 @@ var Funcs = []Func{
 	{Name: "kubernetes.exec", Args: []string{"pod", "command", "namespace", "container"}, Mutating: true},
 	{Name: "kubernetes.logs", Args: []string{"pod", "namespace", "container", "tail"}},
 	{Name: "kubernetes.wait_ready", Args: []string{"resource_type", "name", "namespace", "timeout"}},
+
+	// ── portage ─────────────────────────────────────────────────────
+	{Name: "portage.install", Args: []string{"name", "version"}, Mutating: true},
+	{Name: "portage.remove", Args: []string{"name"}, Mutating: true},
+	{Name: "portage.update", Args: []string{"name", "deep"}, Mutating: true},
+	{Name: "portage.sync", Mutating: true},
+	{Name: "portage.info", Args: []string{"name"}},
+	{Name: "portage.list"},
+	{Name: "portage.search", Args: []string{"name"}},
+	{Name: "portage.depclean", Mutating: true},
+	{Name: "portage.metadata", Args: []string{"name"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

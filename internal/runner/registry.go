@@ -145,6 +145,7 @@ import (
 	sdksvn "github.com/opslang/opslang/pkg/ops-core-sdk/svn"
 	sdkzypper "github.com/opslang/opslang/pkg/ops-core-sdk/zypper"
 	sdkpacman "github.com/opslang/opslang/pkg/ops-core-sdk/pacman"
+	sdkportage "github.com/opslang/opslang/pkg/ops-core-sdk/portage"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -5456,6 +5457,58 @@ func (r *Registry) registerExtensions() {
 			timeout = int(v)
 		}
 		return sdkk8s.WaitReady(rt, name, namespace, timeout)
+	})
+
+	// ── portage ─────────────────────────────────────────────────────
+	r.Register("portage.install", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("portage.install: %w", err)
+		}
+		version, _ := args["version"].(string)
+		return sdkportage.Install(name, version)
+	})
+	r.Register("portage.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("portage.remove: %w", err)
+		}
+		return sdkportage.Remove(name)
+	})
+	r.Register("portage.update", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		deep, _ := args["deep"].(bool)
+		return sdkportage.Update(name, deep)
+	})
+	r.Register("portage.sync", func(args map[string]interface{}) (interface{}, error) {
+		return sdkportage.Sync()
+	})
+	r.Register("portage.info", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("portage.info: %w", err)
+		}
+		return sdkportage.Info(name)
+	})
+	r.Register("portage.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkportage.List()
+	})
+	r.Register("portage.search", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("portage.search: %w", err)
+		}
+		return sdkportage.Search(name)
+	})
+	r.Register("portage.depclean", func(args map[string]interface{}) (interface{}, error) {
+		return sdkportage.Depclean()
+	})
+	r.Register("portage.metadata", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("portage.metadata: %w", err)
+		}
+		return sdkportage.Metadata(name)
 	})
 }
 

@@ -1102,6 +1102,16 @@ var sdkMapping = map[string]sdkFunc{
 	"kubernetes.exec":            {pkg: "kubernetes", goName: "Exec", args: true, params: []string{"s", "s", "s", "s"}},
 	"kubernetes.logs":            {pkg: "kubernetes", goName: "Logs", args: true, params: []string{"s", "s", "s", "s"}},
 	"kubernetes.wait_ready":      {pkg: "kubernetes", goName: "WaitReady", args: true, params: []string{"s", "s", "s", "s"}},
+
+	"portage.install":   {pkg: "portage", goName: "Install", args: true, params: []string{"s", "s"}},
+	"portage.remove":    {pkg: "portage", goName: "Remove", args: true, params: []string{"s"}},
+	"portage.update":    {pkg: "portage", goName: "Update", args: true, params: []string{"s", "b"}},
+	"portage.sync":      {pkg: "portage", goName: "Sync", args: false},
+	"portage.info":      {pkg: "portage", goName: "Info", args: true, params: []string{"s"}},
+	"portage.list":      {pkg: "portage", goName: "List", args: false},
+	"portage.search":    {pkg: "portage", goName: "Search", args: true, params: []string{"s"}},
+	"portage.depclean":  {pkg: "portage", goName: "Depclean", args: false},
+	"portage.metadata":  {pkg: "portage", goName: "Metadata", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1301,6 +1311,7 @@ var pkgImportAlias = map[string]string{
 	"svn":            "opssvn",
 	"zypper":         "opszypper",
 	"pacman":         "opspacman",
+	"portage":        "opsportage",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1426,6 +1437,7 @@ var pkgImportPath = map[string]string{
 	"svn":            "github.com/opslang/opslang/pkg/ops-core-sdk/svn",
 	"zypper":         "github.com/opslang/opslang/pkg/ops-core-sdk/zypper",
 	"pacman":         "github.com/opslang/opslang/pkg/ops-core-sdk/pacman",
+	"portage":        "github.com/opslang/opslang/pkg/ops-core-sdk/portage",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
