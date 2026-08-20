@@ -1420,6 +1420,12 @@ var Funcs = []Func{
 	{Name: "docker_network.create", Args: []string{"name", "driver"}, Mutating: true},
 	{Name: "docker_network.remove", Args: []string{"name"}, Mutating: true},
 	{Name: "docker_network.list"},
+
+	// docker_volume: Docker volume management
+	{Name: "docker_volume.inspect", Args: []string{"name"}},
+	{Name: "docker_volume.create", Args: []string{"name", "driver"}, Mutating: true},
+	{Name: "docker_volume.remove", Args: []string{"name"}, Mutating: true},
+	{Name: "docker_volume.list"},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

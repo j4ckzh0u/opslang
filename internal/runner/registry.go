@@ -194,6 +194,7 @@ import (
 	sdkgitconfig "github.com/opslang/opslang/pkg/ops-core-sdk/git_config"
 	sdksshdconfig "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config"
 	sdkdockernet "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network"
+	sdkdockervol "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume"
 	"time"
 )
 
@@ -7133,6 +7134,23 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("docker_network.list", func(args map[string]interface{}) (interface{}, error) {
 		return sdkdockernet.List()
+	})
+
+	r.Register("docker_volume.inspect", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		return sdkdockervol.Inspect(name)
+	})
+	r.Register("docker_volume.create", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		driver := mapStrArg(args, "driver", "local")
+		return sdkdockervol.Create(name, driver)
+	})
+	r.Register("docker_volume.remove", func(args map[string]interface{}) (interface{}, error) {
+		name := mapStrArg(args, "name", "")
+		return sdkdockervol.Remove(name)
+	})
+	r.Register("docker_volume.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkdockervol.List()
 	})
 }
 
