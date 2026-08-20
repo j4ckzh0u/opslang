@@ -189,6 +189,7 @@ import (
 	sdkopensslcsr "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr"
 	sdkopensslpublickey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey"
 	sdketcd "github.com/opslang/opslang/pkg/ops-core-sdk/etcd"
+	sdkzookeeper "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper"
 	"time"
 )
 
@@ -6979,6 +6980,73 @@ func (r *Registry) registerExtensions() {
 			}
 		}
 		return sdketcd.List(prefix, endpoints), nil
+	})
+	// zookeeper
+	r.Register("zookeeper.get", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		var servers []string
+		if list, ok := args["servers"].([]interface{}); ok {
+			for _, v := range list {
+				servers = append(servers, fmt.Sprintf("%v", v))
+			}
+		}
+		return sdkzookeeper.Get(path, servers), nil
+	})
+	r.Register("zookeeper.set", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		value := mapStrArg(args, "value", "")
+		var servers []string
+		if list, ok := args["servers"].([]interface{}); ok {
+			for _, v := range list {
+				servers = append(servers, fmt.Sprintf("%v", v))
+			}
+		}
+		return sdkzookeeper.Set(path, value, servers), nil
+	})
+	r.Register("zookeeper.create", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		value := mapStrArg(args, "value", "")
+		ephemeral := false
+		if e, ok := args["ephemeral"].(bool); ok {
+			ephemeral = e
+		}
+		var servers []string
+		if list, ok := args["servers"].([]interface{}); ok {
+			for _, v := range list {
+				servers = append(servers, fmt.Sprintf("%v", v))
+			}
+		}
+		return sdkzookeeper.Create(path, value, ephemeral, servers), nil
+	})
+	r.Register("zookeeper.delete", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		var servers []string
+		if list, ok := args["servers"].([]interface{}); ok {
+			for _, v := range list {
+				servers = append(servers, fmt.Sprintf("%v", v))
+			}
+		}
+		return sdkzookeeper.Delete(path, servers), nil
+	})
+	r.Register("zookeeper.list", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		var servers []string
+		if list, ok := args["servers"].([]interface{}); ok {
+			for _, v := range list {
+				servers = append(servers, fmt.Sprintf("%v", v))
+			}
+		}
+		return sdkzookeeper.List(path, servers), nil
+	})
+	r.Register("zookeeper.exists", func(args map[string]interface{}) (interface{}, error) {
+		path := mapStrArg(args, "path", "")
+		var servers []string
+		if list, ok := args["servers"].([]interface{}); ok {
+			for _, v := range list {
+				servers = append(servers, fmt.Sprintf("%v", v))
+			}
+		}
+		return sdkzookeeper.Exists(path, servers), nil
 	})
 }
 

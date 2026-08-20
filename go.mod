@@ -3,6 +3,7 @@ module github.com/opslang/opslang
 go 1.26
 
 require (
+	github.com/go-zookeeper/zk v1.0.4
 	github.com/pkg/sftp v1.13.6
 	github.com/shirou/gopsutil/v4 v4.26.7
 	github.com/spf13/cobra v1.10.2

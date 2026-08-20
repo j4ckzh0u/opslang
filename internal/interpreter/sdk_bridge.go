@@ -189,6 +189,7 @@ import (
 	sdkopensslcsr "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr"
 	sdkopensslpublickey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey"
 	sdketcd "github.com/opslang/opslang/pkg/ops-core-sdk/etcd"
+	sdkzookeeper "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11032,6 +11033,87 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			}
 		}
 		return sdketcd.List(prefix, endpoints), nil
+	}
+	// zookeeper
+	interp.builtins["zookeeper.get"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		var servers []string
+		if len(args) > 1 {
+			if list, ok := args[1].([]interface{}); ok {
+				for _, v := range list {
+					servers = append(servers, fmt.Sprintf("%v", v))
+				}
+			}
+		}
+		return sdkzookeeper.Get(path, servers), nil
+	}
+	interp.builtins["zookeeper.set"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		value := getStringArgBridge(args, 1, "")
+		var servers []string
+		if len(args) > 2 {
+			if list, ok := args[2].([]interface{}); ok {
+				for _, v := range list {
+					servers = append(servers, fmt.Sprintf("%v", v))
+				}
+			}
+		}
+		return sdkzookeeper.Set(path, value, servers), nil
+	}
+	interp.builtins["zookeeper.create"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		value := getStringArgBridge(args, 1, "")
+		ephemeral := false
+		if len(args) > 2 {
+			if e, ok := args[2].(bool); ok {
+				ephemeral = e
+			}
+		}
+		var servers []string
+		if len(args) > 3 {
+			if list, ok := args[3].([]interface{}); ok {
+				for _, v := range list {
+					servers = append(servers, fmt.Sprintf("%v", v))
+				}
+			}
+		}
+		return sdkzookeeper.Create(path, value, ephemeral, servers), nil
+	}
+	interp.builtins["zookeeper.delete"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		var servers []string
+		if len(args) > 1 {
+			if list, ok := args[1].([]interface{}); ok {
+				for _, v := range list {
+					servers = append(servers, fmt.Sprintf("%v", v))
+				}
+			}
+		}
+		return sdkzookeeper.Delete(path, servers), nil
+	}
+	interp.builtins["zookeeper.list"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		var servers []string
+		if len(args) > 1 {
+			if list, ok := args[1].([]interface{}); ok {
+				for _, v := range list {
+					servers = append(servers, fmt.Sprintf("%v", v))
+				}
+			}
+		}
+		return sdkzookeeper.List(path, servers), nil
+	}
+	interp.builtins["zookeeper.exists"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		var servers []string
+		if len(args) > 1 {
+			if list, ok := args[1].([]interface{}); ok {
+				for _, v := range list {
+					servers = append(servers, fmt.Sprintf("%v", v))
+				}
+			}
+		}
+		return sdkzookeeper.Exists(path, servers), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

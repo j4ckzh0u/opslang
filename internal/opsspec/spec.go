@@ -1392,6 +1392,13 @@ var Funcs = []Func{
 	{Name: "etcd.set", Args: []string{"key", "value", "endpoints"}, Mutating: true},
 	{Name: "etcd.delete", Args: []string{"key", "endpoints"}, Mutating: true},
 	{Name: "etcd.list", Args: []string{"prefix", "endpoints"}},
+	// zookeeper - Distributed coordination service
+	{Name: "zookeeper.get", Args: []string{"path", "servers"}},
+	{Name: "zookeeper.set", Args: []string{"path", "value", "servers"}, Mutating: true},
+	{Name: "zookeeper.create", Args: []string{"path", "value", "ephemeral", "servers"}, Mutating: true},
+	{Name: "zookeeper.delete", Args: []string{"path", "servers"}, Mutating: true},
+	{Name: "zookeeper.list", Args: []string{"path", "servers"}},
+	{Name: "zookeeper.exists", Args: []string{"path", "servers"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
