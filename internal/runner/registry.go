@@ -151,6 +151,7 @@ import (
 	sdknftables "github.com/opslang/opslang/pkg/ops-core-sdk/nftables"
 	sdkmongodb "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb"
 	sdktomcat "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat"
+	sdkjavacert "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -6016,6 +6017,59 @@ func (r *Registry) registerExtensions() {
 	r.Register("tomcat.version", func(args map[string]interface{}) (interface{}, error) {
 		home, _ := args["catalina_home"].(string)
 		return sdktomcat.Version(home)
+	})
+
+	// ── java_cert ────────────────────────────────────────────────────────────
+	r.Register("java_cert.import", func(args map[string]interface{}) (interface{}, error) {
+		ksPath, _ := args["keystore_path"].(string)
+		password, _ := args["password"].(string)
+		alias, _ := args["alias"].(string)
+		certPath, _ := args["cert_path"].(string)
+		certType, _ := args["cert_type"].(string)
+		return sdkjavacert.Import(ksPath, password, alias, certPath, certType)
+	})
+	r.Register("java_cert.remove", func(args map[string]interface{}) (interface{}, error) {
+		ksPath, _ := args["keystore_path"].(string)
+		password, _ := args["password"].(string)
+		alias, _ := args["alias"].(string)
+		return sdkjavacert.Remove(ksPath, password, alias)
+	})
+	r.Register("java_cert.list", func(args map[string]interface{}) (interface{}, error) {
+		ksPath, _ := args["keystore_path"].(string)
+		password, _ := args["password"].(string)
+		return sdkjavacert.List(ksPath, password)
+	})
+	r.Register("java_cert.exists", func(args map[string]interface{}) (interface{}, error) {
+		ksPath, _ := args["keystore_path"].(string)
+		password, _ := args["password"].(string)
+		alias, _ := args["alias"].(string)
+		return sdkjavacert.Exists(ksPath, password, alias)
+	})
+	r.Register("java_cert.export", func(args map[string]interface{}) (interface{}, error) {
+		ksPath, _ := args["keystore_path"].(string)
+		password, _ := args["password"].(string)
+		alias, _ := args["alias"].(string)
+		outputPath, _ := args["output_path"].(string)
+		certType, _ := args["cert_type"].(string)
+		return sdkjavacert.Export(ksPath, password, alias, outputPath, certType)
+	})
+	r.Register("java_cert.info", func(args map[string]interface{}) (interface{}, error) {
+		ksPath, _ := args["keystore_path"].(string)
+		password, _ := args["password"].(string)
+		return sdkjavacert.Info(ksPath, password)
+	})
+	r.Register("java_cert.import_chain", func(args map[string]interface{}) (interface{}, error) {
+		ksPath, _ := args["keystore_path"].(string)
+		password, _ := args["password"].(string)
+		p12Path, _ := args["p12_path"].(string)
+		p12Password, _ := args["p12_password"].(string)
+		return sdkjavacert.ImportChain(ksPath, password, p12Path, p12Password)
+	})
+	r.Register("java_cert.change_password", func(args map[string]interface{}) (interface{}, error) {
+		ksPath, _ := args["keystore_path"].(string)
+		oldPass, _ := args["old_password"].(string)
+		newPass, _ := args["new_password"].(string)
+		return sdkjavacert.ChangePassword(ksPath, oldPass, newPass)
 	})
 }
 

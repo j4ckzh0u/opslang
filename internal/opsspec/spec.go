@@ -1209,6 +1209,16 @@ var Funcs = []Func{
 	{Name: "tomcat.list_apps", Args: []string{"catalina_home"}},
 	{Name: "tomcat.reload", Args: []string{"catalina_home", "context_path"}, Mutating: true},
 	{Name: "tomcat.version", Args: []string{"catalina_home"}},
+
+	// ── java_cert ────────────────────────────────────────────────────────────
+	{Name: "java_cert.import", Args: []string{"keystore_path", "password", "alias", "cert_path", "cert_type"}, Mutating: true},
+	{Name: "java_cert.remove", Args: []string{"keystore_path", "password", "alias"}, Mutating: true},
+	{Name: "java_cert.list", Args: []string{"keystore_path", "password"}},
+	{Name: "java_cert.exists", Args: []string{"keystore_path", "password", "alias"}},
+	{Name: "java_cert.export", Args: []string{"keystore_path", "password", "alias", "output_path", "cert_type"}, Mutating: true},
+	{Name: "java_cert.info", Args: []string{"keystore_path", "password"}},
+	{Name: "java_cert.import_chain", Args: []string{"keystore_path", "password", "p12_path", "p12_password"}, Mutating: true},
+	{Name: "java_cert.change_password", Args: []string{"keystore_path", "old_password", "new_password"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

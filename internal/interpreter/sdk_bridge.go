@@ -150,6 +150,7 @@ import (
 	sdknftables "github.com/opslang/opslang/pkg/ops-core-sdk/nftables"
 	sdkmongodb "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb"
 	sdktomcat "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat"
+	sdkjavacert "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -9850,6 +9851,101 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		home, _ := args[0].(string)
 		r, err := sdktomcat.Version(home)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+
+	// ── java_cert.* ─────────────────────────────────────────────────────────
+	interp.builtins["java_cert.import"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("java_cert.import() requires at least 4 arguments (keystore_path, password, alias, cert_path)")
+		}
+		ksPath, _ := args[0].(string)
+		password, _ := args[1].(string)
+		alias, _ := args[2].(string)
+		certPath, _ := args[3].(string)
+		certType := ""
+		if len(args) >= 5 { certType, _ = args[4].(string) }
+		r, err := sdkjavacert.Import(ksPath, password, alias, certPath, certType)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["java_cert.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("java_cert.remove() requires 3 arguments (keystore_path, password, alias)")
+		}
+		ksPath, _ := args[0].(string)
+		password, _ := args[1].(string)
+		alias, _ := args[2].(string)
+		r, err := sdkjavacert.Remove(ksPath, password, alias)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["java_cert.list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("java_cert.list() requires 2 arguments (keystore_path, password)")
+		}
+		ksPath, _ := args[0].(string)
+		password, _ := args[1].(string)
+		r, err := sdkjavacert.List(ksPath, password)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["java_cert.exists"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("java_cert.exists() requires 3 arguments (keystore_path, password, alias)")
+		}
+		ksPath, _ := args[0].(string)
+		password, _ := args[1].(string)
+		alias, _ := args[2].(string)
+		r, err := sdkjavacert.Exists(ksPath, password, alias)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["java_cert.export"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("java_cert.export() requires at least 4 arguments (keystore_path, password, alias, output_path)")
+		}
+		ksPath, _ := args[0].(string)
+		password, _ := args[1].(string)
+		alias, _ := args[2].(string)
+		outputPath, _ := args[3].(string)
+		certType := ""
+		if len(args) >= 5 { certType, _ = args[4].(string) }
+		r, err := sdkjavacert.Export(ksPath, password, alias, outputPath, certType)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["java_cert.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("java_cert.info() requires 2 arguments (keystore_path, password)")
+		}
+		ksPath, _ := args[0].(string)
+		password, _ := args[1].(string)
+		r, err := sdkjavacert.Info(ksPath, password)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["java_cert.import_chain"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 4 {
+			return nil, fmt.Errorf("java_cert.import_chain() requires 4 arguments (keystore_path, password, p12_path, p12_password)")
+		}
+		ksPath, _ := args[0].(string)
+		password, _ := args[1].(string)
+		p12Path, _ := args[2].(string)
+		p12Password, _ := args[3].(string)
+		r, err := sdkjavacert.ImportChain(ksPath, password, p12Path, p12Password)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["java_cert.change_password"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 3 {
+			return nil, fmt.Errorf("java_cert.change_password() requires 3 arguments (keystore_path, old_password, new_password)")
+		}
+		ksPath, _ := args[0].(string)
+		oldPass, _ := args[1].(string)
+		newPass, _ := args[2].(string)
+		r, err := sdkjavacert.ChangePassword(ksPath, oldPass, newPass)
 		if err != nil { return nil, err }
 		return r, nil
 	}

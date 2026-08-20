@@ -1180,6 +1180,16 @@ var sdkMapping = map[string]sdkFunc{
 	"tomcat.list_apps": {pkg: "tomcat", goName: "ListApps", args: true, params: []string{"s"}},
 	"tomcat.reload":    {pkg: "tomcat", goName: "Reload", args: true, params: []string{"s", "s"}},
 	"tomcat.version":   {pkg: "tomcat", goName: "Version", args: true, params: []string{"s"}},
+
+	// java_cert
+	"java_cert.import":          {pkg: "java_cert", goName: "Import", args: true, params: []string{"s", "s", "s", "s", "s"}},
+	"java_cert.remove":          {pkg: "java_cert", goName: "Remove", args: true, params: []string{"s", "s", "s"}},
+	"java_cert.list":            {pkg: "java_cert", goName: "List", args: true, params: []string{"s", "s"}},
+	"java_cert.exists":          {pkg: "java_cert", goName: "Exists", args: true, params: []string{"s", "s", "s"}},
+	"java_cert.export":          {pkg: "java_cert", goName: "Export", args: true, params: []string{"s", "s", "s", "s", "s"}},
+	"java_cert.info":            {pkg: "java_cert", goName: "Info", args: true, params: []string{"s", "s"}},
+	"java_cert.import_chain":    {pkg: "java_cert", goName: "ImportChain", args: true, params: []string{"s", "s", "s", "s"}},
+	"java_cert.change_password": {pkg: "java_cert", goName: "ChangePassword", args: true, params: []string{"s", "s", "s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1385,6 +1395,7 @@ var pkgImportAlias = map[string]string{
 	"nftables":       "opsnftables",
 	"mongodb":        "opsmongodb",
 	"tomcat":         "opstomcat",
+	"java_cert":      "opsjavacert",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1516,6 +1527,7 @@ var pkgImportPath = map[string]string{
 	"nftables":       "github.com/opslang/opslang/pkg/ops-core-sdk/nftables",
 	"mongodb":        "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb",
 	"tomcat":         "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat",
+	"java_cert":      "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
