@@ -111,6 +111,21 @@ var Funcs = []Func{
 	{Name: "dpkg_selections.hold", Args: []string{"name"}, Mutating: true},
 	{Name: "dpkg_selections.unhold", Args: []string{"name"}, Mutating: true},
 
+	// ── homebrew ──────────────────────────────────────────────────────
+	{Name: "homebrew.install", Args: []string{"name", "cask"}, Mutating: true},
+	{Name: "homebrew.remove", Args: []string{"name", "cask"}, Mutating: true},
+	{Name: "homebrew.upgrade", Args: []string{"name"}, Mutating: true},
+	{Name: "homebrew.update", Mutating: true},
+	{Name: "homebrew.info", Args: []string{"name"}},
+	{Name: "homebrew.list"},
+	{Name: "homebrew.list_casks"},
+	{Name: "homebrew.outdated"},
+	{Name: "homebrew.clean", Mutating: true},
+	{Name: "homebrew.tap", Args: []string{"name"}, Mutating: true},
+	{Name: "homebrew.untap", Args: []string{"name"}, Mutating: true},
+	{Name: "homebrew.list_taps"},
+	{Name: "homebrew.doctor"},
+
 	// ── apt_repo ──────────────────────────────────────────────────────
 	{Name: "apt_repo.list"},
 	{Name: "apt_repo.exists", Args: []string{"uri"}},

@@ -265,6 +265,21 @@ var sdkMapping = map[string]sdkFunc{
 	"dpkg_selections.hold":  {pkg: "dpkg_selections", goName: "Hold", args: true, params: []string{"s"}},
 	"dpkg_selections.unhold": {pkg: "dpkg_selections", goName: "Unhold", args: true, params: []string{"s"}},
 
+	// homebrew
+	"homebrew.install":   {pkg: "homebrew", goName: "Install", args: true, params: []string{"s", "b"}},
+	"homebrew.remove":    {pkg: "homebrew", goName: "Remove", args: true, params: []string{"s", "b"}},
+	"homebrew.upgrade":   {pkg: "homebrew", goName: "Upgrade", args: true, params: []string{"s"}},
+	"homebrew.update":    {pkg: "homebrew", goName: "Update"},
+	"homebrew.info":      {pkg: "homebrew", goName: "Info", args: true, params: []string{"s"}},
+	"homebrew.list":      {pkg: "homebrew", goName: "List"},
+	"homebrew.list_casks": {pkg: "homebrew", goName: "ListCasks"},
+	"homebrew.outdated":  {pkg: "homebrew", goName: "Outdated"},
+	"homebrew.clean":     {pkg: "homebrew", goName: "Clean"},
+	"homebrew.tap":       {pkg: "homebrew", goName: "Tap", args: true, params: []string{"s"}},
+	"homebrew.untap":     {pkg: "homebrew", goName: "Untap", args: true, params: []string{"s"}},
+	"homebrew.list_taps": {pkg: "homebrew", goName: "ListTaps"},
+	"homebrew.doctor":    {pkg: "homebrew", goName: "Doctor"},
+
 	// apt_repo
 	"apt_repo.list":   {pkg: "apt_repo", goName: "List"},
 	"apt_repo.exists": {pkg: "apt_repo", goName: "Exists", args: true, params: []string{"s"}},
@@ -1280,6 +1295,7 @@ var pkgImportAlias = map[string]string{
 	"apk":            "opsapk",
 	"sysvinit":       "opssysvinit",
 	"dpkg_selections": "opsdpkgsel",
+	"homebrew":       "opsbrew",
 	"dnf":            "opsdnf",
 	"kubernetes":     "opsk8s",
 	"svn":            "opssvn",
@@ -1404,6 +1420,7 @@ var pkgImportPath = map[string]string{
 	"apk":            "github.com/opslang/opslang/pkg/ops-core-sdk/apk",
 	"sysvinit":       "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit",
 	"dpkg_selections": "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections",
+	"homebrew":       "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew",
 	"dnf":            "github.com/opslang/opslang/pkg/ops-core-sdk/dnf",
 	"kubernetes":     "github.com/opslang/opslang/pkg/ops-core-sdk/kubernetes",
 	"svn":            "github.com/opslang/opslang/pkg/ops-core-sdk/svn",

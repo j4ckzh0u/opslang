@@ -11,6 +11,7 @@ import (
 	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
 	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
 	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
+	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	sdkcron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
@@ -4211,6 +4212,131 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return structToMap(r)
+	}
+
+	// ── homebrew.* ────────────────────────────────────────────────────
+	interp.builtins["homebrew.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("homebrew.install() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		cask := false
+		if len(args) >= 2 {
+			cask, _ = args[1].(bool)
+		}
+		r, err := sdkbrew.Install(name, cask)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["homebrew.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("homebrew.remove() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		cask := false
+		if len(args) >= 2 {
+			cask, _ = args[1].(bool)
+		}
+		r, err := sdkbrew.Remove(name, cask)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["homebrew.upgrade"] = func(args ...interface{}) (interface{}, error) {
+		name := ""
+		if len(args) >= 1 {
+			name, _ = args[0].(string)
+		}
+		r, err := sdkbrew.Upgrade(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["homebrew.update"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkbrew.Update()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["homebrew.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("homebrew.info() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkbrew.Info(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["homebrew.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkbrew.List()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["homebrew.list_casks"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkbrew.ListCasks()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["homebrew.outdated"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkbrew.Outdated()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["homebrew.clean"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkbrew.Clean()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["homebrew.tap"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("homebrew.tap() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkbrew.Tap(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["homebrew.untap"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("homebrew.untap() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkbrew.Untap(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["homebrew.list_taps"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkbrew.ListTaps()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["homebrew.doctor"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkbrew.Doctor()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
 	}
 
 	// ── apt_repo.* ──────────────────────────────────────────────────────

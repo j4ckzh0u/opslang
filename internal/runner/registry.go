@@ -12,6 +12,7 @@ import (
 	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
 	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
 	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
+	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	opscron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
@@ -1727,6 +1728,70 @@ func (r *Registry) registerExtensions() {
 			return nil, fmt.Errorf("dpkg_selections.unhold: %w", err)
 		}
 		return sdkdpkgsel.Unhold(name)
+	})
+
+	// ── homebrew.* ────────────────────────────────────────────────────
+	r.Register("homebrew.install", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("homebrew.install: %w", err)
+		}
+		cask, _ := args["cask"].(bool)
+		return sdkbrew.Install(name, cask)
+	})
+	r.Register("homebrew.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("homebrew.remove: %w", err)
+		}
+		cask, _ := args["cask"].(bool)
+		return sdkbrew.Remove(name, cask)
+	})
+	r.Register("homebrew.upgrade", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkbrew.Upgrade(name)
+	})
+	r.Register("homebrew.update", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkbrew.Update()
+	})
+	r.Register("homebrew.info", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("homebrew.info: %w", err)
+		}
+		return sdkbrew.Info(name)
+	})
+	r.Register("homebrew.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkbrew.List()
+	})
+	r.Register("homebrew.list_casks", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkbrew.ListCasks()
+	})
+	r.Register("homebrew.outdated", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkbrew.Outdated()
+	})
+	r.Register("homebrew.clean", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkbrew.Clean()
+	})
+	r.Register("homebrew.tap", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("homebrew.tap: %w", err)
+		}
+		return sdkbrew.Tap(name)
+	})
+	r.Register("homebrew.untap", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("homebrew.untap: %w", err)
+		}
+		return sdkbrew.Untap(name)
+	})
+	r.Register("homebrew.list_taps", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkbrew.ListTaps()
+	})
+	r.Register("homebrew.doctor", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkbrew.Doctor()
 	})
 
 	// ── apt_repo.* ──────────────────────────────────────────────────────
