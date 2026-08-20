@@ -1169,6 +1169,17 @@ var sdkMapping = map[string]sdkFunc{
 	"mongodb.list_indexes":        {pkg: "mongodb", goName: "ListIndexes", args: true, params: []string{"s", "i", "s", "s"}},
 	"mongodb.server_status":       {pkg: "mongodb", goName: "ServerStatus", args: true, params: []string{"s", "i"}},
 	"mongodb.replica_set_status":  {pkg: "mongodb", goName: "ReplicaSetStatus", args: true, params: []string{"s", "i"}},
+
+	// tomcat
+	"tomcat.start":     {pkg: "tomcat", goName: "Start", args: true, params: []string{"s"}},
+	"tomcat.stop":      {pkg: "tomcat", goName: "Stop", args: true, params: []string{"s"}},
+	"tomcat.restart":   {pkg: "tomcat", goName: "Restart", args: true, params: []string{"s"}},
+	"tomcat.status":    {pkg: "tomcat", goName: "Status", args: true, params: []string{"s"}},
+	"tomcat.deploy":    {pkg: "tomcat", goName: "Deploy", args: true, params: []string{"s", "s", "s"}},
+	"tomcat.undeploy":  {pkg: "tomcat", goName: "Undeploy", args: true, params: []string{"s", "s"}},
+	"tomcat.list_apps": {pkg: "tomcat", goName: "ListApps", args: true, params: []string{"s"}},
+	"tomcat.reload":    {pkg: "tomcat", goName: "Reload", args: true, params: []string{"s", "s"}},
+	"tomcat.version":   {pkg: "tomcat", goName: "Version", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1373,6 +1384,7 @@ var pkgImportAlias = map[string]string{
 	"podman":         "opspodman",
 	"nftables":       "opsnftables",
 	"mongodb":        "opsmongodb",
+	"tomcat":         "opstomcat",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1503,6 +1515,7 @@ var pkgImportPath = map[string]string{
 	"podman":         "github.com/opslang/opslang/pkg/ops-core-sdk/podman",
 	"nftables":       "github.com/opslang/opslang/pkg/ops-core-sdk/nftables",
 	"mongodb":        "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb",
+	"tomcat":         "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

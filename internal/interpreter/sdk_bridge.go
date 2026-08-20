@@ -149,6 +149,7 @@ import (
 	sdkpodman "github.com/opslang/opslang/pkg/ops-core-sdk/podman"
 	sdknftables "github.com/opslang/opslang/pkg/ops-core-sdk/nftables"
 	sdkmongodb "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb"
+	sdktomcat "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -9763,6 +9764,92 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		if len(args) >= 1 { host, _ = args[0].(string) }
 		if len(args) >= 2 { if p, ok := args[1].(int); ok { port = p } }
 		r, err := sdkmongodb.ReplicaSetStatus(host, port)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+
+	// ── tomcat.* ────────────────────────────────────────────────────────────
+	interp.builtins["tomcat.start"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("tomcat.start() requires 1 argument (catalina_home)")
+		}
+		home, _ := args[0].(string)
+		r, err := sdktomcat.Start(home)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["tomcat.stop"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("tomcat.stop() requires 1 argument (catalina_home)")
+		}
+		home, _ := args[0].(string)
+		r, err := sdktomcat.Stop(home)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["tomcat.restart"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("tomcat.restart() requires 1 argument (catalina_home)")
+		}
+		home, _ := args[0].(string)
+		r, err := sdktomcat.Restart(home)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["tomcat.status"] = func(args ...interface{}) (interface{}, error) {
+		home := ""
+		if len(args) >= 1 { home, _ = args[0].(string) }
+		r, err := sdktomcat.Status(home)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["tomcat.deploy"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("tomcat.deploy() requires at least 2 arguments (catalina_home, war_path)")
+		}
+		home, _ := args[0].(string)
+		warPath, _ := args[1].(string)
+		contextPath := ""
+		if len(args) >= 3 { contextPath, _ = args[2].(string) }
+		r, err := sdktomcat.Deploy(home, warPath, contextPath)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["tomcat.undeploy"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("tomcat.undeploy() requires 2 arguments (catalina_home, context_path)")
+		}
+		home, _ := args[0].(string)
+		contextPath, _ := args[1].(string)
+		r, err := sdktomcat.Undeploy(home, contextPath)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["tomcat.list_apps"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("tomcat.list_apps() requires 1 argument (catalina_home)")
+		}
+		home, _ := args[0].(string)
+		r, err := sdktomcat.ListApps(home)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["tomcat.reload"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("tomcat.reload() requires 2 arguments (catalina_home, context_path)")
+		}
+		home, _ := args[0].(string)
+		contextPath, _ := args[1].(string)
+		r, err := sdktomcat.Reload(home, contextPath)
+		if err != nil { return nil, err }
+		return r, nil
+	}
+	interp.builtins["tomcat.version"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("tomcat.version() requires 1 argument (catalina_home)")
+		}
+		home, _ := args[0].(string)
+		r, err := sdktomcat.Version(home)
 		if err != nil { return nil, err }
 		return r, nil
 	}

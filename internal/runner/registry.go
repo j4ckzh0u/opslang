@@ -150,6 +150,7 @@ import (
 	sdkpodman "github.com/opslang/opslang/pkg/ops-core-sdk/podman"
 	sdknftables "github.com/opslang/opslang/pkg/ops-core-sdk/nftables"
 	sdkmongodb "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb"
+	sdktomcat "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -5973,6 +5974,48 @@ func (r *Registry) registerExtensions() {
 		port := 27017
 		if v, ok := args["port"].(float64); ok { port = int(v) }
 		return sdkmongodb.ReplicaSetStatus(host, port)
+	})
+
+	// ── tomcat ──────────────────────────────────────────────────────────────
+	r.Register("tomcat.start", func(args map[string]interface{}) (interface{}, error) {
+		home, _ := args["catalina_home"].(string)
+		return sdktomcat.Start(home)
+	})
+	r.Register("tomcat.stop", func(args map[string]interface{}) (interface{}, error) {
+		home, _ := args["catalina_home"].(string)
+		return sdktomcat.Stop(home)
+	})
+	r.Register("tomcat.restart", func(args map[string]interface{}) (interface{}, error) {
+		home, _ := args["catalina_home"].(string)
+		return sdktomcat.Restart(home)
+	})
+	r.Register("tomcat.status", func(args map[string]interface{}) (interface{}, error) {
+		home, _ := args["catalina_home"].(string)
+		return sdktomcat.Status(home)
+	})
+	r.Register("tomcat.deploy", func(args map[string]interface{}) (interface{}, error) {
+		home, _ := args["catalina_home"].(string)
+		warPath, _ := args["war_path"].(string)
+		contextPath, _ := args["context_path"].(string)
+		return sdktomcat.Deploy(home, warPath, contextPath)
+	})
+	r.Register("tomcat.undeploy", func(args map[string]interface{}) (interface{}, error) {
+		home, _ := args["catalina_home"].(string)
+		contextPath, _ := args["context_path"].(string)
+		return sdktomcat.Undeploy(home, contextPath)
+	})
+	r.Register("tomcat.list_apps", func(args map[string]interface{}) (interface{}, error) {
+		home, _ := args["catalina_home"].(string)
+		return sdktomcat.ListApps(home)
+	})
+	r.Register("tomcat.reload", func(args map[string]interface{}) (interface{}, error) {
+		home, _ := args["catalina_home"].(string)
+		contextPath, _ := args["context_path"].(string)
+		return sdktomcat.Reload(home, contextPath)
+	})
+	r.Register("tomcat.version", func(args map[string]interface{}) (interface{}, error) {
+		home, _ := args["catalina_home"].(string)
+		return sdktomcat.Version(home)
 	})
 }
 

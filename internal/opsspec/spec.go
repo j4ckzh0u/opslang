@@ -1198,6 +1198,17 @@ var Funcs = []Func{
 	{Name: "mongodb.list_indexes", Args: []string{"host", "port", "database", "collection"}},
 	{Name: "mongodb.server_status", Args: []string{"host", "port"}},
 	{Name: "mongodb.replica_set_status", Args: []string{"host", "port"}},
+
+	// ── tomcat ──────────────────────────────────────────────────────────────
+	{Name: "tomcat.start", Args: []string{"catalina_home"}, Mutating: true},
+	{Name: "tomcat.stop", Args: []string{"catalina_home"}, Mutating: true},
+	{Name: "tomcat.restart", Args: []string{"catalina_home"}, Mutating: true},
+	{Name: "tomcat.status", Args: []string{"catalina_home"}},
+	{Name: "tomcat.deploy", Args: []string{"catalina_home", "war_path", "context_path"}, Mutating: true},
+	{Name: "tomcat.undeploy", Args: []string{"catalina_home", "context_path"}, Mutating: true},
+	{Name: "tomcat.list_apps", Args: []string{"catalina_home"}},
+	{Name: "tomcat.reload", Args: []string{"catalina_home", "context_path"}, Mutating: true},
+	{Name: "tomcat.version", Args: []string{"catalina_home"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.
