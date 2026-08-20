@@ -1277,6 +1277,31 @@ var sdkMapping = map[string]sdkFunc{
 	"add_host.get_group":   {pkg: "add_host", goName: "GetGroup", args: true, params: []string{"s"}},
 	"add_host.list_hosts":  {pkg: "add_host", goName: "ListHosts"},
 	"add_host.list_groups": {pkg: "add_host", goName: "ListGroups"},
+
+	// ── set_stats ───────────────────────────────────────────────────────
+	"set_stats.set":     {pkg: "set_stats", goName: "Set", args: true, params: []string{"ms"}},
+	"set_stats.get":     {pkg: "set_stats", goName: "Get", args: true, params: []string{"s"}},
+	"set_stats.get_all": {pkg: "set_stats", goName: "GetAll"},
+	"set_stats.clear":   {pkg: "set_stats", goName: "Clear"},
+
+	// ── include_vars ────────────────────────────────────────────────────
+	"include_vars.load":     {pkg: "include_vars", goName: "Load", args: true, params: []string{"s"}},
+	"include_vars.get":      {pkg: "include_vars", goName: "Get", args: true, params: []string{"s"}},
+	"include_vars.get_all":  {pkg: "include_vars", goName: "GetAll"},
+
+	// ── async_status ────────────────────────────────────────────────────
+	"async_status.poll":     {pkg: "async_status", goName: "Poll", args: true, params: []string{"s", "s"}},
+	"async_status.cleanup":  {pkg: "async_status", goName: "Cleanup", args: true, params: []string{"s", "s"}},
+	"async_status.wait_for": {pkg: "async_status", goName: "WaitFor", args: true, params: []string{"s", "s", "i", "i"}},
+
+	// ── package ─────────────────────────────────────────────────────────
+	"package.install": {pkg: "package", goName: "Install", args: true, params: []string{"s"}},
+	"package.remove":  {pkg: "package", goName: "Remove", args: true, params: []string{"s"}},
+	"package.update":  {pkg: "package", goName: "Update", args: true, params: []string{"s"}},
+	"package.info":    {pkg: "package", goName: "Info", args: true, params: []string{"s"}},
+
+	// ── type_debug ──────────────────────────────────────────────────────
+	"type_debug.debug": {pkg: "type_debug", goName: "Debug", args: true, params: []string{"a"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1502,6 +1527,11 @@ var pkgImportAlias = map[string]string{
 	"cronvar":        "opscronvar",
 	"stat":           "opsstat",
 	"add_host":       "opsaddhost",
+	"set_stats":      "opssetstats",
+	"include_vars":   "opsincludevars",
+	"async_status":   "opsasyncstatus",
+	"package":        "opspackage",
+	"type_debug":     "opstypedebug",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1653,6 +1683,11 @@ var pkgImportPath = map[string]string{
 	"cronvar":        "github.com/opslang/opslang/pkg/ops-core-sdk/cronvar",
 	"stat":           "github.com/opslang/opslang/pkg/ops-core-sdk/stat",
 	"add_host":       "github.com/opslang/opslang/pkg/ops-core-sdk/add_host",
+	"set_stats":      "github.com/opslang/opslang/pkg/ops-core-sdk/set_stats",
+	"include_vars":   "github.com/opslang/opslang/pkg/ops-core-sdk/include_vars",
+	"async_status":   "github.com/opslang/opslang/pkg/ops-core-sdk/async_status",
+	"package":        "github.com/opslang/opslang/pkg/ops-core-sdk/package",
+	"type_debug":     "github.com/opslang/opslang/pkg/ops-core-sdk/type_debug",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

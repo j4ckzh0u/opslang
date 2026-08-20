@@ -1302,6 +1302,26 @@ var Funcs = []Func{
 	{Name: "add_host.get_group", Args: []string{"group"}},
 	{Name: "add_host.list_hosts"},
 	{Name: "add_host.list_groups"},
+	// ── set_stats ──────────────────────────────────────────────────────────
+	{Name: "set_stats.set", Args: []string{"data"}, Mutating: true},
+	{Name: "set_stats.get", Args: []string{"key"}},
+	{Name: "set_stats.get_all"},
+	{Name: "set_stats.clear", Mutating: true},
+	// ── include_vars ───────────────────────────────────────────────────────
+	{Name: "include_vars.load", Args: []string{"file"}, Mutating: true},
+	{Name: "include_vars.get", Args: []string{"key"}},
+	{Name: "include_vars.get_all"},
+	// ── async_status ───────────────────────────────────────────────────────
+	{Name: "async_status.poll", Args: []string{"job_id", "results_dir"}},
+	{Name: "async_status.cleanup", Args: []string{"job_id", "results_dir"}, Mutating: true},
+	{Name: "async_status.wait_for", Args: []string{"job_id", "results_dir", "timeout_ms", "interval_ms"}},
+	// ── package ────────────────────────────────────────────────────────────
+	{Name: "package.install", Args: []string{"name"}, Mutating: true},
+	{Name: "package.remove", Args: []string{"name"}, Mutating: true},
+	{Name: "package.update", Args: []string{"name"}, Mutating: true},
+	{Name: "package.info", Args: []string{"name"}},
+	// ── type_debug ─────────────────────────────────────────────────────────
+	{Name: "type_debug.debug", Args: []string{"value"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

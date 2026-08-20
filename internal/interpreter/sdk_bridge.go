@@ -171,6 +171,11 @@ import (
 	sdkcronvar "github.com/opslang/opslang/pkg/ops-core-sdk/cronvar"
 	sdkstat "github.com/opslang/opslang/pkg/ops-core-sdk/stat"
 	sdkaddhost "github.com/opslang/opslang/pkg/ops-core-sdk/add_host"
+	sdksetstats "github.com/opslang/opslang/pkg/ops-core-sdk/set_stats"
+	sdkincludevars "github.com/opslang/opslang/pkg/ops-core-sdk/include_vars"
+	sdkasyncstatus "github.com/opslang/opslang/pkg/ops-core-sdk/async_status"
+	sdkpackagemgr "github.com/opslang/opslang/pkg/ops-core-sdk/package"
+	sdktypedebug "github.com/opslang/opslang/pkg/ops-core-sdk/type_debug"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10485,6 +10490,90 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["add_host.list_groups"] = func(args ...interface{}) (interface{}, error) {
 		return sdkaddhost.ListGroups(), nil
+	}
+	// ── set_stats ───────────────────────────────────────────────────────
+	interp.builtins["set_stats.set"] = func(args ...interface{}) (interface{}, error) {
+		data := map[string]string{}
+		if len(args) >= 1 {
+			if m, ok := args[0].(map[string]interface{}); ok {
+				for k, v := range m {
+					if s, ok := v.(string); ok {
+						data[k] = s
+					} else {
+						data[k] = fmt.Sprintf("%v", v)
+					}
+				}
+			}
+		}
+		return sdksetstats.Set(data), nil
+	}
+	interp.builtins["set_stats.get"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		v, ok := sdksetstats.Get(key)
+		return map[string]interface{}{"value": v, "found": ok}, nil
+	}
+	interp.builtins["set_stats.get_all"] = func(args ...interface{}) (interface{}, error) {
+		return sdksetstats.GetAll(), nil
+	}
+	interp.builtins["set_stats.clear"] = func(args ...interface{}) (interface{}, error) {
+		sdksetstats.Clear()
+		return map[string]interface{}{"cleared": true}, nil
+	}
+	// ── include_vars ────────────────────────────────────────────────────
+	interp.builtins["include_vars.load"] = func(args ...interface{}) (interface{}, error) {
+		file := getStringArgBridge(args, 0, "")
+		return sdkincludevars.Load(file), nil
+	}
+	interp.builtins["include_vars.get"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		v, ok := sdkincludevars.Get(key)
+		return map[string]interface{}{"value": v, "found": ok}, nil
+	}
+	interp.builtins["include_vars.get_all"] = func(args ...interface{}) (interface{}, error) {
+		return sdkincludevars.GetAll(), nil
+	}
+	// ── async_status ────────────────────────────────────────────────────
+	interp.builtins["async_status.poll"] = func(args ...interface{}) (interface{}, error) {
+		jobID := getStringArgBridge(args, 0, "")
+		resultsDir := getStringArgBridge(args, 1, "")
+		return sdkasyncstatus.Poll(jobID, resultsDir), nil
+	}
+	interp.builtins["async_status.cleanup"] = func(args ...interface{}) (interface{}, error) {
+		jobID := getStringArgBridge(args, 0, "")
+		resultsDir := getStringArgBridge(args, 1, "")
+		return map[string]interface{}{"removed": sdkasyncstatus.Cleanup(jobID, resultsDir)}, nil
+	}
+	interp.builtins["async_status.wait_for"] = func(args ...interface{}) (interface{}, error) {
+		jobID := getStringArgBridge(args, 0, "")
+		resultsDir := getStringArgBridge(args, 1, "")
+		timeoutMs := opsFloat(args, 2)
+		intervalMs := opsFloat(args, 3)
+		return sdkasyncstatus.WaitFor(jobID, resultsDir, time.Duration(timeoutMs)*time.Millisecond, time.Duration(intervalMs)*time.Millisecond), nil
+	}
+	// ── package ─────────────────────────────────────────────────────────
+	interp.builtins["package.install"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkpackagemgr.Install(name), nil
+	}
+	interp.builtins["package.remove"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkpackagemgr.Remove(name), nil
+	}
+	interp.builtins["package.update"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkpackagemgr.Update(name), nil
+	}
+	interp.builtins["package.info"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkpackagemgr.Info(name), nil
+	}
+	// ── type_debug ──────────────────────────────────────────────────────
+	interp.builtins["type_debug.debug"] = func(args ...interface{}) (interface{}, error) {
+		var value interface{}
+		if len(args) >= 1 {
+			value = args[0]
+		}
+		return sdktypedebug.Debug(value), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

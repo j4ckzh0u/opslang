@@ -171,6 +171,11 @@ import (
 	sdkcronvar "github.com/opslang/opslang/pkg/ops-core-sdk/cronvar"
 	sdkstat "github.com/opslang/opslang/pkg/ops-core-sdk/stat"
 	sdkaddhost "github.com/opslang/opslang/pkg/ops-core-sdk/add_host"
+	sdksetstats "github.com/opslang/opslang/pkg/ops-core-sdk/set_stats"
+	sdkincludevars "github.com/opslang/opslang/pkg/ops-core-sdk/include_vars"
+	sdkasyncstatus "github.com/opslang/opslang/pkg/ops-core-sdk/async_status"
+	sdkpackagemgr "github.com/opslang/opslang/pkg/ops-core-sdk/package"
+	sdktypedebug "github.com/opslang/opslang/pkg/ops-core-sdk/type_debug"
 	"time"
 )
 
@@ -6471,6 +6476,89 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("add_host.list_groups", func(args map[string]interface{}) (interface{}, error) {
 		return sdkaddhost.ListGroups(), nil
+	})
+
+	// ── set_stats ───────────────────────────────────────────────────────
+	r.Register("set_stats.set", func(args map[string]interface{}) (interface{}, error) {
+		data := map[string]string{}
+		if v, ok := args["data"].(map[string]interface{}); ok {
+			for k, val := range v {
+				if s, ok := val.(string); ok {
+					data[k] = s
+				} else {
+					data[k] = fmt.Sprintf("%v", val)
+				}
+			}
+		}
+		return sdksetstats.Set(data), nil
+	})
+	r.Register("set_stats.get", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := args["key"].(string)
+		v, ok := sdksetstats.Get(key)
+		return map[string]interface{}{"value": v, "found": ok}, nil
+	})
+	r.Register("set_stats.get_all", func(args map[string]interface{}) (interface{}, error) {
+		return sdksetstats.GetAll(), nil
+	})
+	r.Register("set_stats.clear", func(args map[string]interface{}) (interface{}, error) {
+		sdksetstats.Clear()
+		return map[string]interface{}{"cleared": true}, nil
+	})
+
+	// ── include_vars ────────────────────────────────────────────────────
+	r.Register("include_vars.load", func(args map[string]interface{}) (interface{}, error) {
+		file, _ := args["file"].(string)
+		return sdkincludevars.Load(file), nil
+	})
+	r.Register("include_vars.get", func(args map[string]interface{}) (interface{}, error) {
+		key, _ := args["key"].(string)
+		v, ok := sdkincludevars.Get(key)
+		return map[string]interface{}{"value": v, "found": ok}, nil
+	})
+	r.Register("include_vars.get_all", func(args map[string]interface{}) (interface{}, error) {
+		return sdkincludevars.GetAll(), nil
+	})
+
+	// ── async_status ────────────────────────────────────────────────────
+	r.Register("async_status.poll", func(args map[string]interface{}) (interface{}, error) {
+		jobID, _ := args["job_id"].(string)
+		resultsDir, _ := args["results_dir"].(string)
+		return sdkasyncstatus.Poll(jobID, resultsDir), nil
+	})
+	r.Register("async_status.cleanup", func(args map[string]interface{}) (interface{}, error) {
+		jobID, _ := args["job_id"].(string)
+		resultsDir, _ := args["results_dir"].(string)
+		return map[string]interface{}{"removed": sdkasyncstatus.Cleanup(jobID, resultsDir)}, nil
+	})
+	r.Register("async_status.wait_for", func(args map[string]interface{}) (interface{}, error) {
+		jobID, _ := args["job_id"].(string)
+		resultsDir, _ := args["results_dir"].(string)
+		timeoutMs, _ := args["timeout_ms"].(float64)
+		intervalMs, _ := args["interval_ms"].(float64)
+		return sdkasyncstatus.WaitFor(jobID, resultsDir, time.Duration(timeoutMs)*time.Millisecond, time.Duration(intervalMs)*time.Millisecond), nil
+	})
+
+	// ── package ─────────────────────────────────────────────────────────
+	r.Register("package.install", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkpackagemgr.Install(name), nil
+	})
+	r.Register("package.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkpackagemgr.Remove(name), nil
+	})
+	r.Register("package.update", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkpackagemgr.Update(name), nil
+	})
+	r.Register("package.info", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkpackagemgr.Info(name), nil
+	})
+
+	// ── type_debug ──────────────────────────────────────────────────────
+	r.Register("type_debug.debug", func(args map[string]interface{}) (interface{}, error) {
+		return sdktypedebug.Debug(args["value"]), nil
 	})
 }
 
