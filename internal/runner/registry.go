@@ -198,6 +198,7 @@ import (
 	sdkjournald "github.com/opslang/opslang/pkg/ops-core-sdk/journald"
 	sdknfsexports "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports"
 	sdkpostfix "github.com/opslang/opslang/pkg/ops-core-sdk/postfix"
+	sdkdnsmasq "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq"
 	"time"
 )
 
@@ -7191,6 +7192,23 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("postfix.reload", func(args map[string]interface{}) (interface{}, error) {
 		return sdkpostfix.Reload()
+	})
+
+	r.Register("dnsmasq.get", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		return sdkdnsmasq.Get(key)
+	})
+	r.Register("dnsmasq.set", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		value := mapStrArg(args, "value", "")
+		return sdkdnsmasq.Set(key, value)
+	})
+	r.Register("dnsmasq.absent", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		return sdkdnsmasq.Absent(key)
+	})
+	r.Register("dnsmasq.restart", func(args map[string]interface{}) (interface{}, error) {
+		return sdkdnsmasq.Restart()
 	})
 }
 

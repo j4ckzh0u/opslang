@@ -1440,6 +1440,12 @@ var Funcs = []Func{
 	{Name: "postfix.get", Args: []string{"key"}},
 	{Name: "postfix.set", Args: []string{"key", "value"}, Mutating: true},
 	{Name: "postfix.reload", Mutating: true},
+
+	// dnsmasq: DNS/DHCP server configuration
+	{Name: "dnsmasq.get", Args: []string{"key"}},
+	{Name: "dnsmasq.set", Args: []string{"key", "value"}, Mutating: true},
+	{Name: "dnsmasq.absent", Args: []string{"key"}, Mutating: true},
+	{Name: "dnsmasq.restart", Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

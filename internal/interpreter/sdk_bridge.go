@@ -198,6 +198,7 @@ import (
 	sdkjournald "github.com/opslang/opslang/pkg/ops-core-sdk/journald"
 	sdknfsexports "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports"
 	sdkpostfix "github.com/opslang/opslang/pkg/ops-core-sdk/postfix"
+	sdkdnsmasq "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11260,6 +11261,23 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["postfix.reload"] = func(args ...interface{}) (interface{}, error) {
 		return sdkpostfix.Reload()
+	}
+
+	interp.builtins["dnsmasq.get"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		return sdkdnsmasq.Get(key)
+	}
+	interp.builtins["dnsmasq.set"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		value := getStringArgBridge(args, 1, "")
+		return sdkdnsmasq.Set(key, value)
+	}
+	interp.builtins["dnsmasq.absent"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		return sdkdnsmasq.Absent(key)
+	}
+	interp.builtins["dnsmasq.restart"] = func(args ...interface{}) (interface{}, error) {
+		return sdkdnsmasq.Restart()
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

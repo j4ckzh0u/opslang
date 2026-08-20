@@ -1427,6 +1427,12 @@ var sdkMapping = map[string]sdkFunc{
 	"postfix.get":    {pkg: "postfix", goName: "Get", args: true, params: []string{"s"}},
 	"postfix.set":    {pkg: "postfix", goName: "Set", args: true, params: []string{"s", "s"}},
 	"postfix.reload": {pkg: "postfix", goName: "Reload", args: true},
+
+	// dnsmasq
+	"dnsmasq.get":     {pkg: "dnsmasq", goName: "Get", args: true, params: []string{"s"}},
+	"dnsmasq.set":     {pkg: "dnsmasq", goName: "Set", args: true, params: []string{"s", "s"}},
+	"dnsmasq.absent":  {pkg: "dnsmasq", goName: "Absent", args: true, params: []string{"s"}},
+	"dnsmasq.restart": {pkg: "dnsmasq", goName: "Restart", args: true},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1679,6 +1685,7 @@ var pkgImportAlias = map[string]string{
 	"journald":         "opsjournald",
 	"nfs_exports":      "opsnfsexports",
 	"postfix":          "opspostfix",
+	"dnsmasq":          "opsdnsmasq",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1857,6 +1864,7 @@ var pkgImportPath = map[string]string{
 	"journald":         "github.com/opslang/opslang/pkg/ops-core-sdk/journald",
 	"nfs_exports":      "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports",
 	"postfix":          "github.com/opslang/opslang/pkg/ops-core-sdk/postfix",
+	"dnsmasq":          "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
