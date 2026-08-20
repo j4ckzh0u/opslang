@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/opslang/opslang/internal/opsspec"
+	sdkapt "github.com/opslang/opslang/pkg/ops-core-sdk/apt"
 	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	sdkcron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
@@ -134,6 +135,10 @@ import (
 	sdkhtpasswd "github.com/opslang/opslang/pkg/ops-core-sdk/htpasswd"
 	sdksudoers "github.com/opslang/opslang/pkg/ops-core-sdk/sudoers"
 	sdkmonit "github.com/opslang/opslang/pkg/ops-core-sdk/monit"
+	sdkk8s "github.com/opslang/opslang/pkg/ops-core-sdk/kubernetes"
+	sdksvn "github.com/opslang/opslang/pkg/ops-core-sdk/svn"
+	sdkzypper "github.com/opslang/opslang/pkg/ops-core-sdk/zypper"
+	sdkpacman "github.com/opslang/opslang/pkg/ops-core-sdk/pacman"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -3684,6 +3689,127 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, fmt.Errorf("pip.uninstall(): name must be string")
 		}
 		r, err := sdkpip.Uninstall(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── apt.* ──────────────────────────────────────────────────────────
+	interp.builtins["apt.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apt.install() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		version, _ := args[1].(string)
+		updateCache, _ := args[2].(bool)
+		r, err := sdkapt.Install(name, version, updateCache)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apt.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		purge, _ := args[1].(bool)
+		r, err := sdkapt.Remove(name, purge)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt.upgrade"] = func(args ...interface{}) (interface{}, error) {
+		name, _ := args[0].(string)
+		r, err := sdkapt.Upgrade(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt.update_cache"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapt.UpdateCache()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt.full_upgrade"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapt.FullUpgrade()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt.dist_upgrade"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapt.DistUpgrade()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt.autoremove"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapt.Autoremove()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt.clean"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapt.Clean()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apt.info() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkapt.Info(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapt.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt.policy"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apt.policy() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkapt.Policy(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt.mark_auto"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apt.mark_auto() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkapt.MarkAuto(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apt.mark_manual"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apt.mark_manual() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkapt.MarkManual(name)
 		if err != nil {
 			return nil, err
 		}
@@ -7867,8 +7993,519 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		version, _ := args[1].(string)
 		return sdkpuppet.ModuleInstall(name, version), nil
 	}
+
+	// ── svn ───────────────────────────────────────────────────────────────
+	interp.builtins["svn.checkout"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("svn.checkout() requires at least 2 arguments (url, dest)")
+		}
+		url, _ := args[0].(string)
+		dest, _ := args[1].(string)
+		revision := getStringArgBridge(args, 2, "")
+		force := opsBool(args[3])
+		r, err := sdksvn.Checkout(url, dest, revision, force)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["svn.update"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("svn.update() requires 1 argument (dest)")
+		}
+		dest, _ := args[0].(string)
+		revision := getStringArgBridge(args, 1, "")
+		r, err := sdksvn.Update(dest, revision)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["svn.export"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("svn.export() requires at least 2 arguments (url, dest)")
+		}
+		url, _ := args[0].(string)
+		dest, _ := args[1].(string)
+		revision := getStringArgBridge(args, 2, "")
+		force := opsBool(args[3])
+		r, err := sdksvn.Export(url, dest, revision, force)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["svn.status"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("svn.status() requires 1 argument (dest)")
+		}
+		dest, _ := args[0].(string)
+		r, err := sdksvn.Status(dest)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["svn.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("svn.info() requires 1 argument (dest)")
+		}
+		dest, _ := args[0].(string)
+		r, err := sdksvn.Info(dest)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["svn.cleanup"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("svn.cleanup() requires 1 argument (dest)")
+		}
+		dest, _ := args[0].(string)
+		r, err := sdksvn.Cleanup(dest)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["svn.revert"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("svn.revert() requires 1 argument (dest)")
+		}
+		dest, _ := args[0].(string)
+		recursive := opsBool(args[1])
+		r, err := sdksvn.Revert(dest, recursive)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── zypper ────────────────────────────────────────────────────────────
+	interp.builtins["zypper.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("zypper.install() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		version := getStringArgBridge(args, 1, "")
+		r, err := sdkzypper.Install(name, version)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zypper.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("zypper.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkzypper.Remove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zypper.update"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		r, err := sdkzypper.Update(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zypper.dist_upgrade"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkzypper.DistUpgrade()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zypper.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("zypper.info() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkzypper.Info(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zypper.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkzypper.List()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["zypper.clean"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkzypper.Clean()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zypper.repo_list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkzypper.RepoList()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["zypper.repo_add"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("zypper.repo_add() requires 2 arguments (name, url)")
+		}
+		name, _ := args[0].(string)
+		url, _ := args[1].(string)
+		r, err := sdkzypper.RepoAdd(name, url)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zypper.repo_remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("zypper.repo_remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkzypper.RepoRemove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zypper.refresh"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkzypper.Refresh()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zypper.search"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("zypper.search() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkzypper.Search(name)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["zypper.patch"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkzypper.Patch()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zypper.pattern_install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("zypper.pattern_install() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkzypper.PatternInstall(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["zypper.pattern_remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("zypper.pattern_remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkzypper.PatternRemove(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── pacman ────────────────────────────────────────────────────────────
+	interp.builtins["pacman.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pacman.install() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkpacman.Install(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pacman.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pacman.remove() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		cascade := opsBool(args[1])
+		r, err := sdkpacman.Remove(name, cascade)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pacman.update"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		r, err := sdkpacman.Update(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pacman.upgrade"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpacman.Upgrade()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pacman.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pacman.info() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkpacman.Info(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pacman.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpacman.List()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["pacman.search"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pacman.search() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkpacman.Search(name)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["pacman.clean"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpacman.Clean()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pacman.install_file"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pacman.install_file() requires 1 argument (path)")
+		}
+		path, _ := args[0].(string)
+		r, err := sdkpacman.InstallFile(path)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pacman.remove_orphans"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpacman.RemoveOrphans()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["pacman.update_database"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkpacman.UpdateDatabase()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	// ── kubernetes.* ──────────────────────────────────────────────────────
+	interp.builtins["kubernetes.apply"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("kubernetes.apply() requires at least 1 argument (manifest)")
+		}
+		manifest, _ := args[0].(string)
+		namespace, _ := args[1].(string)
+		dryRun, _ := args[2].(bool)
+		r, err := sdkk8s.Apply(manifest, namespace, dryRun)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.delete"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("kubernetes.delete() requires at least 1 argument (manifest)")
+		}
+		manifest, _ := args[0].(string)
+		namespace, _ := args[1].(string)
+		r, err := sdkk8s.Delete(manifest, namespace)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.get"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("kubernetes.get() requires at least 2 arguments (resource_type, name)")
+		}
+		rt, _ := args[0].(string)
+		name, _ := args[1].(string)
+		ns, _ := args[2].(string)
+		r, err := sdkk8s.Get(rt, name, ns)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.list"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("kubernetes.list() requires at least 1 argument (resource_type)")
+		}
+		rt, _ := args[0].(string)
+		ns, _ := args[1].(string)
+		labels, _ := args[2].(string)
+		r, err := sdkk8s.List(rt, ns, labels)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.create_namespace"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("kubernetes.create_namespace() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkk8s.CreateNamespace(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.delete_namespace"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("kubernetes.delete_namespace() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkk8s.DeleteNamespace(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.get_pods"] = func(args ...interface{}) (interface{}, error) {
+		ns, _ := args[0].(string)
+		labels, _ := args[1].(string)
+		r, err := sdkk8s.GetPods(ns, labels)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.get_services"] = func(args ...interface{}) (interface{}, error) {
+		ns, _ := args[0].(string)
+		r, err := sdkk8s.GetServices(ns)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.get_deployments"] = func(args ...interface{}) (interface{}, error) {
+		ns, _ := args[0].(string)
+		r, err := sdkk8s.GetDeployments(ns)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.scale"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("kubernetes.scale() requires at least 2 arguments (deployment, replicas)")
+		}
+		dep, _ := args[0].(string)
+		replicas := 1
+		if v, ok := args[1].(int); ok {
+			replicas = v
+		} else if v, ok := args[1].(float64); ok {
+			replicas = int(v)
+		}
+		ns, _ := args[2].(string)
+		r, err := sdkk8s.Scale(dep, replicas, ns)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.rollout_status"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("kubernetes.rollout_status() requires at least 1 argument (deployment)")
+		}
+		dep, _ := args[0].(string)
+		ns, _ := args[1].(string)
+		r, err := sdkk8s.RolloutStatus(dep, ns)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.exec"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("kubernetes.exec() requires at least 2 arguments (pod, command)")
+		}
+		pod, _ := args[0].(string)
+		cmd, _ := args[1].(string)
+		ns, _ := args[2].(string)
+		container, _ := args[3].(string)
+		r, err := sdkk8s.Exec(pod, cmd, ns, container)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.logs"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("kubernetes.logs() requires at least 1 argument (pod)")
+		}
+		pod, _ := args[0].(string)
+		ns, _ := args[1].(string)
+		container, _ := args[2].(string)
+		tail := 0
+		if v, ok := args[3].(int); ok {
+			tail = v
+		} else if v, ok := args[3].(float64); ok {
+			tail = int(v)
+		}
+		r, err := sdkk8s.Logs(pod, ns, container, tail)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["kubernetes.wait_ready"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("kubernetes.wait_ready() requires at least 2 arguments (resource_type, name)")
+		}
+		rt, _ := args[0].(string)
+		name, _ := args[1].(string)
+		ns, _ := args[2].(string)
+		timeout := 300
+		if v, ok := args[3].(int); ok {
+			timeout = v
+		} else if v, ok := args[3].(float64); ok {
+			timeout = int(v)
+		}
+		r, err := sdkk8s.WaitReady(rt, name, ns, timeout)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
 }
-// If the arg at idx is a map[string]interface{}, values are converted to strings.
 // Returns an empty map if no arg is present at idx.
 func toStringMap(args []interface{}, idx int) map[string]string {
 	result := make(map[string]string)

@@ -50,6 +50,21 @@ var Funcs = []Func{
 	{Name: "archive.create", Args: []string{"dest", "sources"}, Mutating: true},
 	{Name: "archive.extract", Args: []string{"src", "dest"}, Mutating: true},
 
+	// ── apt ─────────────────────────────────────────────────────────
+	{Name: "apt.install", Args: []string{"name", "version", "update_cache"}, Mutating: true},
+	{Name: "apt.remove", Args: []string{"name", "purge"}, Mutating: true},
+	{Name: "apt.upgrade", Args: []string{"name"}, Mutating: true},
+	{Name: "apt.update_cache", Mutating: true},
+	{Name: "apt.full_upgrade", Mutating: true},
+	{Name: "apt.dist_upgrade", Mutating: true},
+	{Name: "apt.autoremove", Mutating: true},
+	{Name: "apt.clean", Mutating: true},
+	{Name: "apt.info", Args: []string{"name"}},
+	{Name: "apt.list"},
+	{Name: "apt.policy", Args: []string{"name"}},
+	{Name: "apt.mark_auto", Args: []string{"name"}, Mutating: true},
+	{Name: "apt.mark_manual", Args: []string{"name"}, Mutating: true},
+
 	// ── apt_repo ──────────────────────────────────────────────────────
 	{Name: "apt_repo.list"},
 	{Name: "apt_repo.exists", Args: []string{"uri"}},
@@ -413,6 +428,15 @@ var Funcs = []Func{
 	{Name: "sys.uptime"},
 	{Name: "sys.users"},
 
+	// ── svn ───────────────────────────────────────────────────────────────
+	{Name: "svn.checkout", Args: []string{"url", "dest", "revision", "force"}, Mutating: true},
+	{Name: "svn.cleanup", Args: []string{"dest"}, Mutating: true},
+	{Name: "svn.export", Args: []string{"url", "dest", "revision", "force"}, Mutating: true},
+	{Name: "svn.info", Args: []string{"dest"}},
+	{Name: "svn.revert", Args: []string{"dest", "recursive"}, Mutating: true},
+	{Name: "svn.status", Args: []string{"dest"}},
+	{Name: "svn.update", Args: []string{"dest", "revision"}, Mutating: true},
+
 	// ── sysctl ────────────────────────────────────────────────────────
 	{Name: "sysctl.get", Args: []string{"name"}},
 	{Name: "sysctl.list"},
@@ -443,6 +467,23 @@ var Funcs = []Func{
 	{Name: "yum_repo.exists", Args: []string{"id"}},
 	{Name: "yum_repo.add", Args: []string{"id", "name", "base_url", "gpg_check", "gpg_key"}, Mutating: true},
 	{Name: "yum_repo.remove", Args: []string{"id"}, Mutating: true},
+
+	// ── zypper ─────────────────────────────────────────────────────────────
+	{Name: "zypper.clean", Mutating: true},
+	{Name: "zypper.dist_upgrade", Mutating: true},
+	{Name: "zypper.info", Args: []string{"name"}},
+	{Name: "zypper.install", Args: []string{"name", "version"}, Mutating: true},
+	{Name: "zypper.list"},
+	{Name: "zypper.patch", Mutating: true},
+	{Name: "zypper.pattern_install", Args: []string{"name"}, Mutating: true},
+	{Name: "zypper.pattern_remove", Args: []string{"name"}, Mutating: true},
+	{Name: "zypper.refresh", Mutating: true},
+	{Name: "zypper.remove", Args: []string{"name"}, Mutating: true},
+	{Name: "zypper.repo_add", Args: []string{"name", "url"}, Mutating: true},
+	{Name: "zypper.repo_list"},
+	{Name: "zypper.repo_remove", Args: []string{"name"}, Mutating: true},
+	{Name: "zypper.search", Args: []string{"name"}},
+	{Name: "zypper.update", Args: []string{"name"}, Mutating: true},
 
 	// ── ufw ───────────────────────────────────────────────────────────
 	{Name: "ufw.status"},
@@ -964,6 +1005,19 @@ var Funcs = []Func{
 	{Name: "lvm_enhanced.lv_extend_all", Args: []string{"lv_path"}, Mutating: true},
 	{Name: "lvm_enhanced.lv_list"},
 
+	// ── pacman ────────────────────────────────────────────────────────────
+	{Name: "pacman.clean", Mutating: true},
+	{Name: "pacman.info", Args: []string{"name"}},
+	{Name: "pacman.install", Args: []string{"name"}, Mutating: true},
+	{Name: "pacman.install_file", Args: []string{"path"}, Mutating: true},
+	{Name: "pacman.list"},
+	{Name: "pacman.remove", Args: []string{"name", "cascade"}, Mutating: true},
+	{Name: "pacman.remove_orphans", Mutating: true},
+	{Name: "pacman.search", Args: []string{"name"}},
+	{Name: "pacman.update", Args: []string{"name"}, Mutating: true},
+	{Name: "pacman.update_database", Mutating: true},
+	{Name: "pacman.upgrade", Mutating: true},
+
 	// ── puppet ──────────────────────────────────────────────────────────────
 	{Name: "puppet.run", Args: []string{"environment", "tags"}, Mutating: true},
 	{Name: "puppet.run_noop", Args: []string{"environment", "tags"}},
@@ -996,6 +1050,22 @@ var Funcs = []Func{
 	{Name: "monit.restart", Args: []string{"service"}, Mutating: true},
 	{Name: "monit.status"},
 	{Name: "monit.reload", Mutating: true},
+
+	// ── kubernetes ─────────────────────────────────────────────────────────
+	{Name: "kubernetes.apply", Args: []string{"manifest", "namespace", "dry_run"}, Mutating: true},
+	{Name: "kubernetes.delete", Args: []string{"manifest", "namespace"}, Mutating: true},
+	{Name: "kubernetes.get", Args: []string{"resource_type", "name", "namespace"}},
+	{Name: "kubernetes.list", Args: []string{"resource_type", "namespace", "labels"}},
+	{Name: "kubernetes.create_namespace", Args: []string{"name"}, Mutating: true},
+	{Name: "kubernetes.delete_namespace", Args: []string{"name"}, Mutating: true},
+	{Name: "kubernetes.get_pods", Args: []string{"namespace", "labels"}},
+	{Name: "kubernetes.get_services", Args: []string{"namespace"}},
+	{Name: "kubernetes.get_deployments", Args: []string{"namespace"}},
+	{Name: "kubernetes.scale", Args: []string{"deployment", "replicas", "namespace"}, Mutating: true},
+	{Name: "kubernetes.rollout_status", Args: []string{"deployment", "namespace"}},
+	{Name: "kubernetes.exec", Args: []string{"pod", "command", "namespace", "container"}, Mutating: true},
+	{Name: "kubernetes.logs", Args: []string{"pod", "namespace", "container", "tail"}},
+	{Name: "kubernetes.wait_ready", Args: []string{"resource_type", "name", "namespace", "timeout"}},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

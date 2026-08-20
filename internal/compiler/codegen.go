@@ -204,6 +204,21 @@ var sdkMapping = map[string]sdkFunc{
 	"pip.install":  {pkg: "pip", goName: "Install", args: true, params: []string{"s", "s"}},
 	"pip.uninstall": {pkg: "pip", goName: "Uninstall", args: true, params: []string{"s"}},
 
+	// apt
+	"apt.install":       {pkg: "apt", goName: "Install", args: true, params: []string{"s", "s", "b"}},
+	"apt.remove":        {pkg: "apt", goName: "Remove", args: true, params: []string{"s", "b"}},
+	"apt.upgrade":       {pkg: "apt", goName: "Upgrade", args: true, params: []string{"s"}},
+	"apt.update_cache":  {pkg: "apt", goName: "UpdateCache"},
+	"apt.full_upgrade":  {pkg: "apt", goName: "FullUpgrade"},
+	"apt.dist_upgrade":  {pkg: "apt", goName: "DistUpgrade"},
+	"apt.autoremove":    {pkg: "apt", goName: "Autoremove"},
+	"apt.clean":         {pkg: "apt", goName: "Clean"},
+	"apt.info":          {pkg: "apt", goName: "Info", args: true, params: []string{"s"}},
+	"apt.list":          {pkg: "apt", goName: "List"},
+	"apt.policy":        {pkg: "apt", goName: "Policy", args: true, params: []string{"s"}},
+	"apt.mark_auto":     {pkg: "apt", goName: "MarkAuto", args: true, params: []string{"s"}},
+	"apt.mark_manual":   {pkg: "apt", goName: "MarkManual", args: true, params: []string{"s"}},
+
 	// apt_repo
 	"apt_repo.list":   {pkg: "apt_repo", goName: "List"},
 	"apt_repo.exists": {pkg: "apt_repo", goName: "Exists", args: true, params: []string{"s"}},
@@ -971,6 +986,61 @@ var sdkMapping = map[string]sdkFunc{
 	"monit.restart":           {pkg: "monit", goName: "Restart", args: true, params: []string{"s"}},
 	"monit.status":            {pkg: "monit", goName: "Status"},
 	"monit.reload":            {pkg: "monit", goName: "Reload"},
+
+	// svn
+	"svn.checkout": {pkg: "svn", goName: "Checkout", args: true, params: []string{"s", "s", "s", "b"}},
+	"svn.update":   {pkg: "svn", goName: "Update", args: true, params: []string{"s", "s"}},
+	"svn.export":   {pkg: "svn", goName: "Export", args: true, params: []string{"s", "s", "s", "b"}},
+	"svn.status":   {pkg: "svn", goName: "Status", args: true, params: []string{"s"}},
+	"svn.info":     {pkg: "svn", goName: "Info", args: true, params: []string{"s"}},
+	"svn.cleanup":  {pkg: "svn", goName: "Cleanup", args: true, params: []string{"s"}},
+	"svn.revert":   {pkg: "svn", goName: "Revert", args: true, params: []string{"s", "b"}},
+
+	// zypper
+	"zypper.install":         {pkg: "zypper", goName: "Install", args: true, params: []string{"s", "s"}},
+	"zypper.remove":          {pkg: "zypper", goName: "Remove", args: true, params: []string{"s"}},
+	"zypper.update":          {pkg: "zypper", goName: "Update", args: true, params: []string{"s"}},
+	"zypper.dist_upgrade":    {pkg: "zypper", goName: "DistUpgrade"},
+	"zypper.info":            {pkg: "zypper", goName: "Info", args: true, params: []string{"s"}},
+	"zypper.list":            {pkg: "zypper", goName: "List"},
+	"zypper.clean":           {pkg: "zypper", goName: "Clean"},
+	"zypper.repo_list":       {pkg: "zypper", goName: "RepoList"},
+	"zypper.repo_add":        {pkg: "zypper", goName: "RepoAdd", args: true, params: []string{"s", "s"}},
+	"zypper.repo_remove":     {pkg: "zypper", goName: "RepoRemove", args: true, params: []string{"s"}},
+	"zypper.refresh":         {pkg: "zypper", goName: "Refresh"},
+	"zypper.search":          {pkg: "zypper", goName: "Search", args: true, params: []string{"s"}},
+	"zypper.patch":           {pkg: "zypper", goName: "Patch"},
+	"zypper.pattern_install": {pkg: "zypper", goName: "PatternInstall", args: true, params: []string{"s"}},
+	"zypper.pattern_remove":  {pkg: "zypper", goName: "PatternRemove", args: true, params: []string{"s"}},
+
+	// pacman
+	"pacman.install":         {pkg: "pacman", goName: "Install", args: true, params: []string{"s"}},
+	"pacman.remove":          {pkg: "pacman", goName: "Remove", args: true, params: []string{"s", "b"}},
+	"pacman.update":          {pkg: "pacman", goName: "Update", args: true, params: []string{"s"}},
+	"pacman.upgrade":         {pkg: "pacman", goName: "Upgrade"},
+	"pacman.info":            {pkg: "pacman", goName: "Info", args: true, params: []string{"s"}},
+	"pacman.list":            {pkg: "pacman", goName: "List"},
+	"pacman.search":          {pkg: "pacman", goName: "Search", args: true, params: []string{"s"}},
+	"pacman.clean":           {pkg: "pacman", goName: "Clean"},
+	"pacman.install_file":    {pkg: "pacman", goName: "InstallFile", args: true, params: []string{"s"}},
+	"pacman.remove_orphans":  {pkg: "pacman", goName: "RemoveOrphans"},
+	"pacman.update_database": {pkg: "pacman", goName: "UpdateDatabase"},
+
+	// kubernetes
+	"kubernetes.apply":           {pkg: "kubernetes", goName: "Apply", args: true, params: []string{"s", "s", "b"}},
+	"kubernetes.delete":          {pkg: "kubernetes", goName: "Delete", args: true, params: []string{"s", "s"}},
+	"kubernetes.get":             {pkg: "kubernetes", goName: "Get", args: true, params: []string{"s", "s", "s"}},
+	"kubernetes.list":            {pkg: "kubernetes", goName: "List", args: true, params: []string{"s", "s", "s"}},
+	"kubernetes.create_namespace": {pkg: "kubernetes", goName: "CreateNamespace", args: true, params: []string{"s"}},
+	"kubernetes.delete_namespace": {pkg: "kubernetes", goName: "DeleteNamespace", args: true, params: []string{"s"}},
+	"kubernetes.get_pods":        {pkg: "kubernetes", goName: "GetPods", args: true, params: []string{"s", "s"}},
+	"kubernetes.get_services":    {pkg: "kubernetes", goName: "GetServices", args: true, params: []string{"s"}},
+	"kubernetes.get_deployments": {pkg: "kubernetes", goName: "GetDeployments", args: true, params: []string{"s"}},
+	"kubernetes.scale":           {pkg: "kubernetes", goName: "Scale", args: true, params: []string{"s", "s", "s"}},
+	"kubernetes.rollout_status":  {pkg: "kubernetes", goName: "RolloutStatus", args: true, params: []string{"s", "s"}},
+	"kubernetes.exec":            {pkg: "kubernetes", goName: "Exec", args: true, params: []string{"s", "s", "s", "s"}},
+	"kubernetes.logs":            {pkg: "kubernetes", goName: "Logs", args: true, params: []string{"s", "s", "s", "s"}},
+	"kubernetes.wait_ready":      {pkg: "kubernetes", goName: "WaitReady", args: true, params: []string{"s", "s", "s", "s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1159,6 +1229,12 @@ var pkgImportAlias = map[string]string{
 	"htpasswd":       "opshtpasswd",
 	"sudoers":        "opssudoers",
 	"monit":          "opsmonit",
+	"apt":            "opsapt",
+	"apt_repo":       "opsaptrepo",
+	"kubernetes":     "opsk8s",
+	"svn":            "opssvn",
+	"zypper":         "opszypper",
+	"pacman":         "opspacman",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1273,6 +1349,12 @@ var pkgImportPath = map[string]string{
 	"htpasswd":       "github.com/opslang/opslang/pkg/ops-core-sdk/htpasswd",
 	"sudoers":        "github.com/opslang/opslang/pkg/ops-core-sdk/sudoers",
 	"monit":          "github.com/opslang/opslang/pkg/ops-core-sdk/monit",
+	"apt":            "github.com/opslang/opslang/pkg/ops-core-sdk/apt",
+	"apt_repo":       "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo",
+	"kubernetes":     "github.com/opslang/opslang/pkg/ops-core-sdk/kubernetes",
+	"svn":            "github.com/opslang/opslang/pkg/ops-core-sdk/svn",
+	"zypper":         "github.com/opslang/opslang/pkg/ops-core-sdk/zypper",
+	"pacman":         "github.com/opslang/opslang/pkg/ops-core-sdk/pacman",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

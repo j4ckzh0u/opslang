@@ -7,6 +7,7 @@ import (
 
 	"github.com/opslang/opslang/internal/ast"
 	"github.com/opslang/opslang/internal/opsspec"
+	sdkapt "github.com/opslang/opslang/pkg/ops-core-sdk/apt"
 	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	opscron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
@@ -135,6 +136,10 @@ import (
 	sdkhtpasswd "github.com/opslang/opslang/pkg/ops-core-sdk/htpasswd"
 	sdksudoers "github.com/opslang/opslang/pkg/ops-core-sdk/sudoers"
 	sdkmonit "github.com/opslang/opslang/pkg/ops-core-sdk/monit"
+	sdkk8s "github.com/opslang/opslang/pkg/ops-core-sdk/kubernetes"
+	sdksvn "github.com/opslang/opslang/pkg/ops-core-sdk/svn"
+	sdkzypper "github.com/opslang/opslang/pkg/ops-core-sdk/zypper"
+	sdkpacman "github.com/opslang/opslang/pkg/ops-core-sdk/pacman"
 )
 
 // Registry holds all registered operations and provides lookup and execution.
@@ -1425,6 +1430,75 @@ func (r *Registry) registerExtensions() {
 			return nil, fmt.Errorf("pip.uninstall: %w", err)
 		}
 		return sdkpip.Uninstall(name)
+	})
+
+	// ── apt.* ─────────────────────────────────────────────────────────────
+	r.Register("apt.install", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apt.install: %w", err)
+		}
+		version, _ := args["version"].(string)
+		updateCache, _ := args["update_cache"].(bool)
+		return sdkapt.Install(name, version, updateCache)
+	})
+	r.Register("apt.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apt.remove: %w", err)
+		}
+		purge, _ := args["purge"].(bool)
+		return sdkapt.Remove(name, purge)
+	})
+	r.Register("apt.upgrade", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkapt.Upgrade(name)
+	})
+	r.Register("apt.update_cache", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkapt.UpdateCache()
+	})
+	r.Register("apt.full_upgrade", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkapt.FullUpgrade()
+	})
+	r.Register("apt.dist_upgrade", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkapt.DistUpgrade()
+	})
+	r.Register("apt.autoremove", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkapt.Autoremove()
+	})
+	r.Register("apt.clean", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkapt.Clean()
+	})
+	r.Register("apt.info", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apt.info: %w", err)
+		}
+		return sdkapt.Info(name)
+	})
+	r.Register("apt.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkapt.List()
+	})
+	r.Register("apt.policy", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apt.policy: %w", err)
+		}
+		return sdkapt.Policy(name)
+	})
+	r.Register("apt.mark_auto", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apt.mark_auto: %w", err)
+		}
+		return sdkapt.MarkAuto(name)
+	})
+	r.Register("apt.mark_manual", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apt.mark_manual: %w", err)
+		}
+		return sdkapt.MarkManual(name)
 	})
 
 	// ── apt_repo.* ──────────────────────────────────────────────────────
@@ -4816,6 +4890,279 @@ func (r *Registry) registerExtensions() {
 		name, _ := argString(args, "name")
 		version, _ := argString(args, "version")
 		return sdkpuppet.ModuleInstall(name, version), nil
+	})
+
+	// ── svn ───────────────────────────────────────────────────────────────
+	r.Register("svn.checkout", func(args map[string]interface{}) (interface{}, error) {
+		url, _ := argString(args, "url")
+		dest, _ := argString(args, "dest")
+		revision, _ := argString(args, "revision")
+		force, _ := argBool(args, "force")
+		return sdksvn.Checkout(url, dest, revision, force)
+	})
+	r.Register("svn.update", func(args map[string]interface{}) (interface{}, error) {
+		dest, _ := argString(args, "dest")
+		revision, _ := argString(args, "revision")
+		return sdksvn.Update(dest, revision)
+	})
+	r.Register("svn.export", func(args map[string]interface{}) (interface{}, error) {
+		url, _ := argString(args, "url")
+		dest, _ := argString(args, "dest")
+		revision, _ := argString(args, "revision")
+		force, _ := argBool(args, "force")
+		return sdksvn.Export(url, dest, revision, force)
+	})
+	r.Register("svn.status", func(args map[string]interface{}) (interface{}, error) {
+		dest, _ := argString(args, "dest")
+		return sdksvn.Status(dest)
+	})
+	r.Register("svn.info", func(args map[string]interface{}) (interface{}, error) {
+		dest, _ := argString(args, "dest")
+		return sdksvn.Info(dest)
+	})
+	r.Register("svn.cleanup", func(args map[string]interface{}) (interface{}, error) {
+		dest, _ := argString(args, "dest")
+		return sdksvn.Cleanup(dest)
+	})
+	r.Register("svn.revert", func(args map[string]interface{}) (interface{}, error) {
+		dest, _ := argString(args, "dest")
+		recursive, _ := argBool(args, "recursive")
+		return sdksvn.Revert(dest, recursive)
+	})
+
+	// ── zypper ────────────────────────────────────────────────────────────
+	r.Register("zypper.install", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		version, _ := argString(args, "version")
+		return sdkzypper.Install(name, version)
+	})
+	r.Register("zypper.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkzypper.Remove(name)
+	})
+	r.Register("zypper.update", func(args map[string]interface{}) (interface{}, error) {
+		name := getStringArg(args, "name", "")
+		return sdkzypper.Update(name)
+	})
+	r.Register("zypper.dist_upgrade", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkzypper.DistUpgrade()
+	})
+	r.Register("zypper.info", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkzypper.Info(name)
+	})
+	r.Register("zypper.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkzypper.List()
+	})
+	r.Register("zypper.clean", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkzypper.Clean()
+	})
+	r.Register("zypper.repo_list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkzypper.RepoList()
+	})
+	r.Register("zypper.repo_add", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		url, _ := argString(args, "url")
+		return sdkzypper.RepoAdd(name, url)
+	})
+	r.Register("zypper.repo_remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkzypper.RepoRemove(name)
+	})
+	r.Register("zypper.refresh", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkzypper.Refresh()
+	})
+	r.Register("zypper.search", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkzypper.Search(name)
+	})
+	r.Register("zypper.patch", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkzypper.Patch()
+	})
+	r.Register("zypper.pattern_install", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkzypper.PatternInstall(name)
+	})
+	r.Register("zypper.pattern_remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkzypper.PatternRemove(name)
+	})
+
+	// ── pacman ────────────────────────────────────────────────────────────
+	r.Register("pacman.install", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkpacman.Install(name)
+	})
+	r.Register("pacman.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		cascade, _ := argBool(args, "cascade")
+		return sdkpacman.Remove(name, cascade)
+	})
+	r.Register("pacman.update", func(args map[string]interface{}) (interface{}, error) {
+		name := getStringArg(args, "name", "")
+		return sdkpacman.Update(name)
+	})
+	r.Register("pacman.upgrade", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkpacman.Upgrade()
+	})
+	r.Register("pacman.info", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkpacman.Info(name)
+	})
+	r.Register("pacman.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkpacman.List()
+	})
+	r.Register("pacman.search", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := argString(args, "name")
+		return sdkpacman.Search(name)
+	})
+	r.Register("pacman.clean", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkpacman.Clean()
+	})
+	r.Register("pacman.install_file", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := argString(args, "path")
+		return sdkpacman.InstallFile(path)
+	})
+	r.Register("pacman.remove_orphans", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkpacman.RemoveOrphans()
+	})
+	r.Register("pacman.update_database", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkpacman.UpdateDatabase()
+	})
+
+	// ── kubernetes.* ──────────────────────────────────────────────────
+	r.Register("kubernetes.apply", func(args map[string]interface{}) (interface{}, error) {
+		manifest, err := argString(args, "manifest")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.apply: %w", err)
+		}
+		namespace, _ := args["namespace"].(string)
+		dryRun, _ := args["dry_run"].(bool)
+		return sdkk8s.Apply(manifest, namespace, dryRun)
+	})
+	r.Register("kubernetes.delete", func(args map[string]interface{}) (interface{}, error) {
+		manifest, err := argString(args, "manifest")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.delete: %w", err)
+		}
+		namespace, _ := args["namespace"].(string)
+		return sdkk8s.Delete(manifest, namespace)
+	})
+	r.Register("kubernetes.get", func(args map[string]interface{}) (interface{}, error) {
+		rt, err := argString(args, "resource_type")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.get: %w", err)
+		}
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.get: %w", err)
+		}
+		namespace, _ := args["namespace"].(string)
+		return sdkk8s.Get(rt, name, namespace)
+	})
+	r.Register("kubernetes.list", func(args map[string]interface{}) (interface{}, error) {
+		rt, err := argString(args, "resource_type")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.list: %w", err)
+		}
+		namespace, _ := args["namespace"].(string)
+		labels, _ := args["labels"].(string)
+		return sdkk8s.List(rt, namespace, labels)
+	})
+	r.Register("kubernetes.create_namespace", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.create_namespace: %w", err)
+		}
+		return sdkk8s.CreateNamespace(name)
+	})
+	r.Register("kubernetes.delete_namespace", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.delete_namespace: %w", err)
+		}
+		return sdkk8s.DeleteNamespace(name)
+	})
+	r.Register("kubernetes.get_pods", func(args map[string]interface{}) (interface{}, error) {
+		namespace, _ := args["namespace"].(string)
+		labels, _ := args["labels"].(string)
+		return sdkk8s.GetPods(namespace, labels)
+	})
+	r.Register("kubernetes.get_services", func(args map[string]interface{}) (interface{}, error) {
+		namespace, _ := args["namespace"].(string)
+		return sdkk8s.GetServices(namespace)
+	})
+	r.Register("kubernetes.get_deployments", func(args map[string]interface{}) (interface{}, error) {
+		namespace, _ := args["namespace"].(string)
+		return sdkk8s.GetDeployments(namespace)
+	})
+	r.Register("kubernetes.scale", func(args map[string]interface{}) (interface{}, error) {
+		dep, err := argString(args, "deployment")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.scale: %w", err)
+		}
+		replicas := 1
+		if v, ok := args["replicas"].(int); ok {
+			replicas = v
+		} else if v, ok := args["replicas"].(float64); ok {
+			replicas = int(v)
+		}
+		namespace, _ := args["namespace"].(string)
+		return sdkk8s.Scale(dep, replicas, namespace)
+	})
+	r.Register("kubernetes.rollout_status", func(args map[string]interface{}) (interface{}, error) {
+		dep, err := argString(args, "deployment")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.rollout_status: %w", err)
+		}
+		namespace, _ := args["namespace"].(string)
+		return sdkk8s.RolloutStatus(dep, namespace)
+	})
+	r.Register("kubernetes.exec", func(args map[string]interface{}) (interface{}, error) {
+		pod, err := argString(args, "pod")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.exec: %w", err)
+		}
+		command, err := argString(args, "command")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.exec: %w", err)
+		}
+		namespace, _ := args["namespace"].(string)
+		container, _ := args["container"].(string)
+		return sdkk8s.Exec(pod, command, namespace, container)
+	})
+	r.Register("kubernetes.logs", func(args map[string]interface{}) (interface{}, error) {
+		pod, err := argString(args, "pod")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.logs: %w", err)
+		}
+		namespace, _ := args["namespace"].(string)
+		container, _ := args["container"].(string)
+		tail := 0
+		if v, ok := args["tail"].(int); ok {
+			tail = v
+		} else if v, ok := args["tail"].(float64); ok {
+			tail = int(v)
+		}
+		return sdkk8s.Logs(pod, namespace, container, tail)
+	})
+	r.Register("kubernetes.wait_ready", func(args map[string]interface{}) (interface{}, error) {
+		rt, err := argString(args, "resource_type")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.wait_ready: %w", err)
+		}
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("kubernetes.wait_ready: %w", err)
+		}
+		namespace, _ := args["namespace"].(string)
+		timeout := 300
+		if v, ok := args["timeout"].(int); ok {
+			timeout = v
+		} else if v, ok := args["timeout"].(float64); ok {
+			timeout = int(v)
+		}
+		return sdkk8s.WaitReady(rt, name, namespace, timeout)
 	})
 }
 
