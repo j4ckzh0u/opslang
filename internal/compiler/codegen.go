@@ -1255,6 +1255,28 @@ var sdkMapping = map[string]sdkFunc{
 	"docker_container.inspect": {pkg: "docker_container", goName: "Inspect", args: true, params: []string{"s"}},
 	"docker_container.list":    {pkg: "docker_container", goName: "List", args: true, params: []string{"b"}},
 	"docker_container.logs":    {pkg: "docker_container", goName: "Logs", args: true, params: []string{"s", "s"}},
+
+	// ── script ──────────────────────────────────────────────────────────
+	"script.run": {pkg: "script", goName: "Run", args: true, params: []string{"s", "l", "s", "s", "s", "i", "s"}},
+
+	// ── copy ────────────────────────────────────────────────────────────
+	"copy.file":    {pkg: "copy", goName: "File", args: true, params: []string{"s", "s", "s", "s", "s", "b"}},
+	"copy.content": {pkg: "copy", goName: "Content", args: true, params: []string{"s", "s", "s", "s", "s", "b"}},
+
+	// ── cronvar ─────────────────────────────────────────────────────────
+	"cronvar.present": {pkg: "cronvar", goName: "Present", args: true, params: []string{"s", "s", "s", "s", "s"}},
+	"cronvar.absent":  {pkg: "cronvar", goName: "Absent", args: true, params: []string{"s", "s"}},
+	"cronvar.get":     {pkg: "cronvar", goName: "Get", args: true, params: []string{"s", "s"}},
+
+	// ── stat ────────────────────────────────────────────────────────────
+	"stat.stat": {pkg: "stat", goName: "Stat", args: true, params: []string{"s", "b", "s"}},
+
+	// ── add_host ────────────────────────────────────────────────────────
+	"add_host.add":         {pkg: "add_host", goName: "Add", args: true, params: []string{"s", "l", "ms"}},
+	"add_host.get_host":    {pkg: "add_host", goName: "GetHost", args: true, params: []string{"s"}},
+	"add_host.get_group":   {pkg: "add_host", goName: "GetGroup", args: true, params: []string{"s"}},
+	"add_host.list_hosts":  {pkg: "add_host", goName: "ListHosts"},
+	"add_host.list_groups": {pkg: "add_host", goName: "ListGroups"},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1475,6 +1497,11 @@ var pkgImportAlias = map[string]string{
 	"package_facts":  "opspackagefacts",
 	"service_facts":  "opsservicefacts",
 	"command":        "opscommand",
+	"script":         "opsscript",
+	"copy":           "opscopy",
+	"cronvar":        "opscronvar",
+	"stat":           "opsstat",
+	"add_host":       "opsaddhost",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1621,6 +1648,11 @@ var pkgImportPath = map[string]string{
 	"package_facts":  "github.com/opslang/opslang/pkg/ops-core-sdk/package_facts",
 	"service_facts":  "github.com/opslang/opslang/pkg/ops-core-sdk/service_facts",
 	"command":        "github.com/opslang/opslang/pkg/ops-core-sdk/command",
+	"script":         "github.com/opslang/opslang/pkg/ops-core-sdk/script",
+	"copy":           "github.com/opslang/opslang/pkg/ops-core-sdk/copy",
+	"cronvar":        "github.com/opslang/opslang/pkg/ops-core-sdk/cronvar",
+	"stat":           "github.com/opslang/opslang/pkg/ops-core-sdk/stat",
+	"add_host":       "github.com/opslang/opslang/pkg/ops-core-sdk/add_host",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

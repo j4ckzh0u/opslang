@@ -166,6 +166,11 @@ import (
 	sdkpackagefacts "github.com/opslang/opslang/pkg/ops-core-sdk/package_facts"
 	sdkservicefacts "github.com/opslang/opslang/pkg/ops-core-sdk/service_facts"
 	sdkcommand "github.com/opslang/opslang/pkg/ops-core-sdk/command"
+	sdkscript "github.com/opslang/opslang/pkg/ops-core-sdk/script"
+	sdkcopy "github.com/opslang/opslang/pkg/ops-core-sdk/copy"
+	sdkcronvar "github.com/opslang/opslang/pkg/ops-core-sdk/cronvar"
+	sdkstat "github.com/opslang/opslang/pkg/ops-core-sdk/stat"
+	sdkaddhost "github.com/opslang/opslang/pkg/ops-core-sdk/add_host"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10364,6 +10369,122 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		if len(args) >= 6 { executable, _ = args[5].(string) }
 		timeout := time.Duration(timeoutMs) * time.Millisecond
 		return sdkcommand.Shell(cmdArgs, chdir, creates, removes, timeout, executable), nil
+	}
+	// ── script ────────────────────────────────────────────────────────
+	interp.builtins["script.run"] = func(args ...interface{}) (interface{}, error) {
+		sp := getStringArgBridge(args, 0, "")
+		var scriptArgs []string
+		// Re-parse: script.run(script_path, args_list, chdir, creates, removes, timeout_ms, executable)
+		if len(args) >= 2 {
+			if v, ok := args[1].([]interface{}); ok {
+				for _, a := range v {
+					if s, ok := a.(string); ok {
+						scriptArgs = append(scriptArgs, s)
+					}
+				}
+			}
+		}
+		chdir := getStringArgBridge(args, 2, "")
+		creates := getStringArgBridge(args, 3, "")
+		removes := getStringArgBridge(args, 4, "")
+		timeoutMs := opsFloat(args, 5)
+		executable := getStringArgBridge(args, 6, "")
+		timeout := time.Duration(timeoutMs) * time.Millisecond
+		return sdkscript.Run(sp, scriptArgs, chdir, creates, removes, timeout, executable), nil
+	}
+	// ── copy ──────────────────────────────────────────────────────────
+	interp.builtins["copy.file"] = func(args ...interface{}) (interface{}, error) {
+		src := getStringArgBridge(args, 0, "")
+		dest := getStringArgBridge(args, 1, "")
+		mode := getStringArgBridge(args, 2, "")
+		owner := getStringArgBridge(args, 3, "")
+		group := getStringArgBridge(args, 4, "")
+		backup := false
+		if len(args) >= 6 {
+			backup, _ = args[5].(bool)
+		}
+		return sdkcopy.File(src, dest, mode, owner, group, backup), nil
+	}
+	interp.builtins["copy.content"] = func(args ...interface{}) (interface{}, error) {
+		content := getStringArgBridge(args, 0, "")
+		dest := getStringArgBridge(args, 1, "")
+		mode := getStringArgBridge(args, 2, "")
+		owner := getStringArgBridge(args, 3, "")
+		group := getStringArgBridge(args, 4, "")
+		backup := false
+		if len(args) >= 6 {
+			backup, _ = args[5].(bool)
+		}
+		return sdkcopy.Content(content, dest, mode, owner, group, backup), nil
+	}
+	// ── cronvar ───────────────────────────────────────────────────────
+	interp.builtins["cronvar.present"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		value := getStringArgBridge(args, 1, "")
+		user := getStringArgBridge(args, 2, "")
+		insertAfter := getStringArgBridge(args, 3, "")
+		insertBefore := getStringArgBridge(args, 4, "")
+		return sdkcronvar.Present(name, value, user, insertAfter, insertBefore), nil
+	}
+	interp.builtins["cronvar.absent"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		user := getStringArgBridge(args, 1, "")
+		return sdkcronvar.Absent(name, user), nil
+	}
+	interp.builtins["cronvar.get"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		user := getStringArgBridge(args, 1, "")
+		return sdkcronvar.Get(name, user), nil
+	}
+	// ── stat ──────────────────────────────────────────────────────────
+	interp.builtins["stat.stat"] = func(args ...interface{}) (interface{}, error) {
+		path := getStringArgBridge(args, 0, "")
+		getChecksum := false
+		if len(args) >= 2 {
+			getChecksum, _ = args[1].(bool)
+		}
+		algo := getStringArgBridge(args, 2, "sha256")
+		return sdkstat.Stat(path, getChecksum, algo), nil
+	}
+	// ── add_host ──────────────────────────────────────────────────────
+	interp.builtins["add_host.add"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		var groups []string
+		if len(args) >= 2 {
+			if v, ok := args[1].([]interface{}); ok {
+				for _, g := range v {
+					if s, ok := g.(string); ok {
+						groups = append(groups, s)
+					}
+				}
+			}
+		}
+		vars := map[string]string{}
+		if len(args) >= 3 {
+			if m, ok := args[2].(map[string]interface{}); ok {
+				for k, val := range m {
+					if s, ok := val.(string); ok {
+						vars[k] = s
+					}
+				}
+			}
+		}
+		return sdkaddhost.Add(name, groups, vars), nil
+	}
+	interp.builtins["add_host.get_host"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		v, ok := sdkaddhost.GetHost(name)
+		return map[string]interface{}{"vars": v, "found": ok}, nil
+	}
+	interp.builtins["add_host.get_group"] = func(args ...interface{}) (interface{}, error) {
+		group := getStringArgBridge(args, 0, "")
+		return sdkaddhost.GetGroup(group), nil
+	}
+	interp.builtins["add_host.list_hosts"] = func(args ...interface{}) (interface{}, error) {
+		return sdkaddhost.ListHosts(), nil
+	}
+	interp.builtins["add_host.list_groups"] = func(args ...interface{}) (interface{}, error) {
+		return sdkaddhost.ListGroups(), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

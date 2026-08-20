@@ -1285,6 +1285,23 @@ var Funcs = []Func{
 	// ── command ───────────────────────────────────────────────────────────────
 	{Name: "command.run", Args: []string{"command_args", "chdir", "creates", "removes", "timeout_ms"}, Mutating: true},
 	{Name: "command.shell", Args: []string{"command_args", "chdir", "creates", "removes", "timeout_ms", "executable"}, Mutating: true},
+	// ── script ──────────────────────────────────────────────────────────────
+	{Name: "script.run", Args: []string{"script_path", "args", "chdir", "creates", "removes", "timeout_ms", "executable"}, Mutating: true},
+	// ── copy ────────────────────────────────────────────────────────────────
+	{Name: "copy.file", Args: []string{"src", "dest", "mode", "owner", "group", "backup"}, Mutating: true},
+	{Name: "copy.content", Args: []string{"content", "dest", "mode", "owner", "group", "backup"}, Mutating: true},
+	// ── cronvar ─────────────────────────────────────────────────────────────
+	{Name: "cronvar.present", Args: []string{"name", "value", "user", "insertafter", "insertbefore"}, Mutating: true},
+	{Name: "cronvar.absent", Args: []string{"name", "user"}, Mutating: true},
+	{Name: "cronvar.get", Args: []string{"name", "user"}},
+	// ── stat ────────────────────────────────────────────────────────────────
+	{Name: "stat.stat", Args: []string{"path", "get_checksum", "checksum_algo"}},
+	// ── add_host ────────────────────────────────────────────────────────────
+	{Name: "add_host.add", Args: []string{"name", "groups", "vars"}, Mutating: true},
+	{Name: "add_host.get_host", Args: []string{"name"}},
+	{Name: "add_host.get_group", Args: []string{"group"}},
+	{Name: "add_host.list_hosts"},
+	{Name: "add_host.list_groups"},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

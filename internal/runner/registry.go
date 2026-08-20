@@ -166,6 +166,11 @@ import (
 	sdkpackagefacts "github.com/opslang/opslang/pkg/ops-core-sdk/package_facts"
 	sdkservicefacts "github.com/opslang/opslang/pkg/ops-core-sdk/service_facts"
 	sdkcommand "github.com/opslang/opslang/pkg/ops-core-sdk/command"
+	sdkscript "github.com/opslang/opslang/pkg/ops-core-sdk/script"
+	sdkcopy "github.com/opslang/opslang/pkg/ops-core-sdk/copy"
+	sdkcronvar "github.com/opslang/opslang/pkg/ops-core-sdk/cronvar"
+	sdkstat "github.com/opslang/opslang/pkg/ops-core-sdk/stat"
+	sdkaddhost "github.com/opslang/opslang/pkg/ops-core-sdk/add_host"
 	"time"
 )
 
@@ -6372,6 +6377,100 @@ func (r *Registry) registerExtensions() {
 		executable, _ := args["executable"].(string)
 		timeout := time.Duration(timeoutMs) * time.Millisecond
 		return sdkcommand.Shell(cmdArgs, chdir, creates, removes, timeout, executable), nil
+	})
+
+	// ── script ────────────────────────────────────────────────────────
+	r.Register("script.run", func(args map[string]interface{}) (interface{}, error) {
+		sp, _ := args["script_path"].(string)
+		var scriptArgs []string
+		if v, ok := args["args"].([]interface{}); ok {
+			for _, a := range v { if s, ok := a.(string); ok { scriptArgs = append(scriptArgs, s) } }
+		}
+		chdir, _ := args["chdir"].(string)
+		creates, _ := args["creates"].(string)
+		removes, _ := args["removes"].(string)
+		executable, _ := args["executable"].(string)
+		timeoutMs := 0.0
+		if t, ok := args["timeout_ms"].(float64); ok { timeoutMs = t }
+		timeout := time.Duration(timeoutMs) * time.Millisecond
+		return sdkscript.Run(sp, scriptArgs, chdir, creates, removes, timeout, executable), nil
+	})
+
+	// ── copy ──────────────────────────────────────────────────────────
+	r.Register("copy.file", func(args map[string]interface{}) (interface{}, error) {
+		src, _ := args["src"].(string)
+		dest, _ := args["dest"].(string)
+		mode, _ := args["mode"].(string)
+		owner, _ := args["owner"].(string)
+		group, _ := args["group"].(string)
+		backup, _ := args["backup"].(bool)
+		return sdkcopy.File(src, dest, mode, owner, group, backup), nil
+	})
+	r.Register("copy.content", func(args map[string]interface{}) (interface{}, error) {
+		content, _ := args["content"].(string)
+		dest, _ := args["dest"].(string)
+		mode, _ := args["mode"].(string)
+		owner, _ := args["owner"].(string)
+		group, _ := args["group"].(string)
+		backup, _ := args["backup"].(bool)
+		return sdkcopy.Content(content, dest, mode, owner, group, backup), nil
+	})
+
+	// ── cronvar ───────────────────────────────────────────────────────
+	r.Register("cronvar.present", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		value, _ := args["value"].(string)
+		user, _ := args["user"].(string)
+		insertAfter, _ := args["insertafter"].(string)
+		insertBefore, _ := args["insertbefore"].(string)
+		return sdkcronvar.Present(name, value, user, insertAfter, insertBefore), nil
+	})
+	r.Register("cronvar.absent", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		user, _ := args["user"].(string)
+		return sdkcronvar.Absent(name, user), nil
+	})
+	r.Register("cronvar.get", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		user, _ := args["user"].(string)
+		return sdkcronvar.Get(name, user), nil
+	})
+
+	// ── stat ──────────────────────────────────────────────────────────
+	r.Register("stat.stat", func(args map[string]interface{}) (interface{}, error) {
+		path, _ := args["path"].(string)
+		getChecksum, _ := args["get_checksum"].(bool)
+		algo, _ := args["checksum_algo"].(string)
+		return sdkstat.Stat(path, getChecksum, algo), nil
+	})
+
+	// ── add_host ──────────────────────────────────────────────────────
+	r.Register("add_host.add", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		var groups []string
+		if v, ok := args["groups"].([]interface{}); ok {
+			for _, g := range v { if s, ok := g.(string); ok { groups = append(groups, s) } }
+		}
+		vars := map[string]string{}
+		if v, ok := args["vars"].(map[string]interface{}); ok {
+			for k, val := range v { if s, ok := val.(string); ok { vars[k] = s } }
+		}
+		return sdkaddhost.Add(name, groups, vars), nil
+	})
+	r.Register("add_host.get_host", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		v, ok := sdkaddhost.GetHost(name)
+		return map[string]interface{}{"vars": v, "found": ok}, nil
+	})
+	r.Register("add_host.get_group", func(args map[string]interface{}) (interface{}, error) {
+		group, _ := args["group"].(string)
+		return sdkaddhost.GetGroup(group), nil
+	})
+	r.Register("add_host.list_hosts", func(args map[string]interface{}) (interface{}, error) {
+		return sdkaddhost.ListHosts(), nil
+	})
+	r.Register("add_host.list_groups", func(args map[string]interface{}) (interface{}, error) {
+		return sdkaddhost.ListGroups(), nil
 	})
 }
 
