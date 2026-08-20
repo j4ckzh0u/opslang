@@ -1302,6 +1302,26 @@ var sdkMapping = map[string]sdkFunc{
 
 	// ── type_debug ──────────────────────────────────────────────────────
 	"type_debug.debug": {pkg: "type_debug", goName: "Debug", args: true, params: []string{"a"}},
+
+	// ── group_by ────────────────────────────────────────────────────────
+	"group_by.group_by":   {pkg: "group_by", goName: "GroupBy", args: true, params: []string{"a", "s"}},
+	"group_by.get_hosts":  {pkg: "group_by", goName: "GetHosts", args: true, params: []string{"s"}},
+	"group_by.list_groups": {pkg: "group_by", goName: "ListGroups"},
+	"group_by.clear":      {pkg: "group_by", goName: "Clear"},
+
+	// ── normalize ───────────────────────────────────────────────────────
+	"normalize.lower":      {pkg: "normalize", goName: "Lower", args: true, params: []string{"s"}},
+	"normalize.upper":      {pkg: "normalize", goName: "Upper", args: true, params: []string{"s"}},
+	"normalize.trim":       {pkg: "normalize", goName: "Trim", args: true, params: []string{"s"}},
+	"normalize.slugify":    {pkg: "normalize", goName: "Slugify", args: true, params: []string{"s"}},
+	"normalize.title":      {pkg: "normalize", goName: "Title", args: true, params: []string{"s"}},
+	"normalize.camel_case": {pkg: "normalize", goName: "CamelCase", args: true, params: []string{"s"}},
+	"normalize.snake_case": {pkg: "normalize", goName: "SnakeCase", args: true, params: []string{"s"}},
+	"normalize.kebab_case": {pkg: "normalize", goName: "KebabCase", args: true, params: []string{"s"}},
+
+	// ── validate_certs ──────────────────────────────────────────────────
+	"validate_certs.validate":     {pkg: "validate_certs", goName: "Validate", args: true, params: []string{"s", "i", "d"}},
+	"validate_certs.check_expiry": {pkg: "validate_certs", goName: "CheckExpiry", args: true, params: []string{"s", "i", "i", "d"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1532,6 +1552,9 @@ var pkgImportAlias = map[string]string{
 	"async_status":   "opsasyncstatus",
 	"package":        "opspackage",
 	"type_debug":     "opstypedebug",
+	"group_by":       "opsgroupby",
+	"normalize":      "opsnormalize",
+	"validate_certs": "opsvalidatecerts",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1688,6 +1711,9 @@ var pkgImportPath = map[string]string{
 	"async_status":   "github.com/opslang/opslang/pkg/ops-core-sdk/async_status",
 	"package":        "github.com/opslang/opslang/pkg/ops-core-sdk/package",
 	"type_debug":     "github.com/opslang/opslang/pkg/ops-core-sdk/type_debug",
+	"group_by":       "github.com/opslang/opslang/pkg/ops-core-sdk/group_by",
+	"normalize":      "github.com/opslang/opslang/pkg/ops-core-sdk/normalize",
+	"validate_certs": "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
