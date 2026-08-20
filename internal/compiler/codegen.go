@@ -1396,6 +1396,11 @@ var sdkMapping = map[string]sdkFunc{
 	"git_config.set":   {pkg: "git_config", goName: "Set", args: true, params: []string{"s", "s", "s"}},
 	"git_config.unset": {pkg: "git_config", goName: "Unset", args: true, params: []string{"s", "s"}},
 	"git_config.list":  {pkg: "git_config", goName: "List", args: true, params: []string{"s"}},
+
+	// sshd_config
+	"sshd_config.get":   {pkg: "sshd_config", goName: "Get", args: true, params: []string{"s"}},
+	"sshd_config.set":   {pkg: "sshd_config", goName: "Set", args: true, params: []string{"s", "s"}},
+	"sshd_config.absent": {pkg: "sshd_config", goName: "Absent", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1642,6 +1647,7 @@ var pkgImportAlias = map[string]string{
 	"zookeeper":        "opszookeeper",
 	"vault":            "opsvault",
 	"git_config":       "opsgitconfig",
+	"sshd_config":      "opssshdconfig",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1814,6 +1820,7 @@ var pkgImportPath = map[string]string{
 	"zookeeper":        "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper",
 	"vault":            "github.com/opslang/opslang/pkg/ops-core-sdk/vault",
 	"git_config":       "github.com/opslang/opslang/pkg/ops-core-sdk/git_config",
+	"sshd_config":      "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

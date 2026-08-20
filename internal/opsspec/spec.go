@@ -1409,6 +1409,11 @@ var Funcs = []Func{
 	{Name: "git_config.set", Args: []string{"key", "value", "scope"}, Mutating: true},
 	{Name: "git_config.unset", Args: []string{"key", "scope"}, Mutating: true},
 	{Name: "git_config.list", Args: []string{"scope"}},
+
+	// sshd_config: SSH daemon configuration management
+	{Name: "sshd_config.get", Args: []string{"key"}},
+	{Name: "sshd_config.set", Args: []string{"key", "value"}, Mutating: true},
+	{Name: "sshd_config.absent", Args: []string{"key"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

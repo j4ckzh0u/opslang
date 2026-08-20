@@ -192,6 +192,7 @@ import (
 	sdkzookeeper "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper"
 	sdkvault "github.com/opslang/opslang/pkg/ops-core-sdk/vault"
 	sdkgitconfig "github.com/opslang/opslang/pkg/ops-core-sdk/git_config"
+	sdksshdconfig "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config"
 	"time"
 )
 
@@ -7100,6 +7101,20 @@ func (r *Registry) registerExtensions() {
 	r.Register("git_config.list", func(args map[string]interface{}) (interface{}, error) {
 		scope := mapStrArg(args, "scope", "")
 		return sdkgitconfig.List(scope)
+	})
+
+	r.Register("sshd_config.get", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		return sdksshdconfig.Get(key)
+	})
+	r.Register("sshd_config.set", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		value := mapStrArg(args, "value", "")
+		return sdksshdconfig.Set(key, value)
+	})
+	r.Register("sshd_config.absent", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		return sdksshdconfig.Absent(key)
 	})
 }
 

@@ -192,6 +192,7 @@ import (
 	sdkzookeeper "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper"
 	sdkvault "github.com/opslang/opslang/pkg/ops-core-sdk/vault"
 	sdkgitconfig "github.com/opslang/opslang/pkg/ops-core-sdk/git_config"
+	sdksshdconfig "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11169,6 +11170,20 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	interp.builtins["git_config.list"] = func(args ...interface{}) (interface{}, error) {
 		scope := getStringArgBridge(args, 0, "")
 		return sdkgitconfig.List(scope)
+	}
+
+	interp.builtins["sshd_config.get"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		return sdksshdconfig.Get(key)
+	}
+	interp.builtins["sshd_config.set"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		value := getStringArgBridge(args, 1, "")
+		return sdksshdconfig.Set(key, value)
+	}
+	interp.builtins["sshd_config.absent"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		return sdksshdconfig.Absent(key)
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {
