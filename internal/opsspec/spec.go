@@ -1358,6 +1358,14 @@ var Funcs = []Func{
 	{Name: "ip_route.delete", Args: []string{"destination", "table"}, Mutating: true},
 	{Name: "ip_route.flush", Args: []string{"dev", "table"}, Mutating: true},
 	{Name: "ip_route.get", Args: []string{"destination"}},
+	// ip_link - Network interface management
+	{Name: "ip_link.list"},
+	{Name: "ip_link.get", Args: []string{"name"}},
+	{Name: "ip_link.set_up", Args: []string{"name"}, Mutating: true},
+	{Name: "ip_link.set_down", Args: []string{"name"}, Mutating: true},
+	{Name: "ip_link.set_mtu", Args: []string{"name", "mtu"}, Mutating: true},
+	{Name: "ip_link.set_mac", Args: []string{"name", "mac"}, Mutating: true},
+	{Name: "ip_link.set_name", Args: []string{"old_name", "new_name"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

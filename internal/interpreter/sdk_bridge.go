@@ -183,6 +183,7 @@ import (
 	sdkwebhook "github.com/opslang/opslang/pkg/ops-core-sdk/webhook"
 	sdkopensslprivatekey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey"
 	sdkiproute "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route"
+	sdkiplink "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10816,6 +10817,42 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	interp.builtins["ip_route.get"] = func(args ...interface{}) (interface{}, error) {
 		destination := getStringArgBridge(args, 0, "")
 		return sdkiproute.Get(destination), nil
+	}
+	// ip_link
+	interp.builtins["ip_link.list"] = func(args ...interface{}) (interface{}, error) {
+		return sdkiplink.List(), nil
+	}
+	interp.builtins["ip_link.get"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkiplink.Get(name), nil
+	}
+	interp.builtins["ip_link.set_up"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkiplink.SetUp(name), nil
+	}
+	interp.builtins["ip_link.set_down"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		return sdkiplink.SetDown(name), nil
+	}
+	interp.builtins["ip_link.set_mtu"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		mtu := 1500
+		if len(args) > 1 {
+			if v, ok := args[1].(int); ok {
+				mtu = v
+			}
+		}
+		return sdkiplink.SetMTU(name, mtu), nil
+	}
+	interp.builtins["ip_link.set_mac"] = func(args ...interface{}) (interface{}, error) {
+		name := getStringArgBridge(args, 0, "")
+		mac := getStringArgBridge(args, 1, "")
+		return sdkiplink.SetMAC(name, mac), nil
+	}
+	interp.builtins["ip_link.set_name"] = func(args ...interface{}) (interface{}, error) {
+		oldName := getStringArgBridge(args, 0, "")
+		newName := getStringArgBridge(args, 1, "")
+		return sdkiplink.SetName(oldName, newName), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

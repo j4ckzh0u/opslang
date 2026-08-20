@@ -183,6 +183,7 @@ import (
 	sdkwebhook "github.com/opslang/opslang/pkg/ops-core-sdk/webhook"
 	sdkopensslprivatekey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey"
 	sdkiproute "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route"
+	sdkiplink "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link"
 	"time"
 )
 
@@ -6790,6 +6791,37 @@ func (r *Registry) registerExtensions() {
 	r.Register("ip_route.get", func(args map[string]interface{}) (interface{}, error) {
 		destination, _ := args["destination"].(string)
 		return sdkiproute.Get(destination), nil
+	})
+	// ip_link
+	r.Register("ip_link.list", func(args map[string]interface{}) (interface{}, error) {
+		return sdkiplink.List(), nil
+	})
+	r.Register("ip_link.get", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkiplink.Get(name), nil
+	})
+	r.Register("ip_link.set_up", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkiplink.SetUp(name), nil
+	})
+	r.Register("ip_link.set_down", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkiplink.SetDown(name), nil
+	})
+	r.Register("ip_link.set_mtu", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		mtu, _ := args["mtu"].(int)
+		return sdkiplink.SetMTU(name, mtu), nil
+	})
+	r.Register("ip_link.set_mac", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		mac, _ := args["mac"].(string)
+		return sdkiplink.SetMAC(name, mac), nil
+	})
+	r.Register("ip_link.set_name", func(args map[string]interface{}) (interface{}, error) {
+		oldName, _ := args["old_name"].(string)
+		newName, _ := args["new_name"].(string)
+		return sdkiplink.SetName(oldName, newName), nil
 	})
 }
 
