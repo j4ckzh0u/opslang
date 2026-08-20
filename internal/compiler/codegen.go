@@ -1533,6 +1533,7 @@ var sdkMapping = map[string]sdkFunc{
 	"btrfs.balance_status":    {pkg: "btrfs", goName: "BalanceStatus", args: true, params: []string{"s"}},
 	"btrfs.quota_enable":      {pkg: "btrfs", goName: "QuotaEnable", args: true, params: []string{"s"}},
 	"btrfs.quota_disable":     {pkg: "btrfs", goName: "QuotaDisable", args: true, params: []string{"s"}},
+
 }
 
 // SDKMappingNames returns every canonical function name the code generator

@@ -7689,6 +7689,21 @@ func mapStrSliceArg(m map[string]interface{}, key string) []string {
 	return nil
 }
 
+// mapIntArg extracts an int from a map with a default.
+func mapIntArg(m map[string]interface{}, key string, def int) int {
+	if v, ok := m[key]; ok {
+		switch n := v.(type) {
+		case int:
+			return n
+		case float64:
+			return int(n)
+		case int64:
+			return int(n)
+		}
+	}
+	return def
+}
+
 // ============================================================
 // built-in operations (log, alert, set, report, binary.exec)
 // ============================================================
