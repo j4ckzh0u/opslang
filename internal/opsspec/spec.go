@@ -82,6 +82,18 @@ var Funcs = []Func{
 	{Name: "dnf.modulelist"},
 	{Name: "dnf.module_enable", Args: []string{"spec"}, Mutating: true},
 
+	// ── apk ─────────────────────────────────────────────────────────
+	{Name: "apk.install", Args: []string{"name", "version"}, Mutating: true},
+	{Name: "apk.remove", Args: []string{"name", "purge"}, Mutating: true},
+	{Name: "apk.update", Mutating: true},
+	{Name: "apk.upgrade", Args: []string{"name"}, Mutating: true},
+	{Name: "apk.info", Args: []string{"name"}},
+	{Name: "apk.list"},
+	{Name: "apk.search", Args: []string{"name"}},
+	{Name: "apk.cache", Mutating: true},
+	{Name: "apk.upgrade_available"},
+	{Name: "apk.repository"},
+
 	// ── apt_repo ──────────────────────────────────────────────────────
 	{Name: "apt_repo.list"},
 	{Name: "apt_repo.exists", Args: []string{"uri"}},

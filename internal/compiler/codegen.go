@@ -236,6 +236,18 @@ var sdkMapping = map[string]sdkFunc{
 	"dnf.modulelist":    {pkg: "dnf", goName: "ModuleList"},
 	"dnf.module_enable": {pkg: "dnf", goName: "ModuleEnable", args: true, params: []string{"s"}},
 
+	// apk
+	"apk.install":           {pkg: "apk", goName: "Install", args: true, params: []string{"s", "s"}},
+	"apk.remove":            {pkg: "apk", goName: "Remove", args: true, params: []string{"s", "b"}},
+	"apk.update":            {pkg: "apk", goName: "Update"},
+	"apk.upgrade":           {pkg: "apk", goName: "Upgrade", args: true, params: []string{"s"}},
+	"apk.info":              {pkg: "apk", goName: "Info", args: true, params: []string{"s"}},
+	"apk.list":              {pkg: "apk", goName: "List"},
+	"apk.search":            {pkg: "apk", goName: "Search", args: true, params: []string{"s"}},
+	"apk.cache":             {pkg: "apk", goName: "Cache"},
+	"apk.upgrade_available": {pkg: "apk", goName: "UpgradeAvailable"},
+	"apk.repository":        {pkg: "apk", goName: "Repository"},
+
 	// apt_repo
 	"apt_repo.list":   {pkg: "apt_repo", goName: "List"},
 	"apt_repo.exists": {pkg: "apt_repo", goName: "Exists", args: true, params: []string{"s"}},
@@ -1248,6 +1260,7 @@ var pkgImportAlias = map[string]string{
 	"monit":          "opsmonit",
 	"apt":            "opsapt",
 	"apt_repo":       "opsaptrepo",
+	"apk":            "opsapk",
 	"dnf":            "opsdnf",
 	"kubernetes":     "opsk8s",
 	"svn":            "opssvn",
@@ -1369,6 +1382,7 @@ var pkgImportPath = map[string]string{
 	"monit":          "github.com/opslang/opslang/pkg/ops-core-sdk/monit",
 	"apt":            "github.com/opslang/opslang/pkg/ops-core-sdk/apt",
 	"apt_repo":       "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo",
+	"apk":            "github.com/opslang/opslang/pkg/ops-core-sdk/apk",
 	"dnf":            "github.com/opslang/opslang/pkg/ops-core-sdk/dnf",
 	"kubernetes":     "github.com/opslang/opslang/pkg/ops-core-sdk/kubernetes",
 	"svn":            "github.com/opslang/opslang/pkg/ops-core-sdk/svn",

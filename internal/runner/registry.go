@@ -9,6 +9,7 @@ import (
 	"github.com/opslang/opslang/internal/opsspec"
 	sdkapt "github.com/opslang/opslang/pkg/ops-core-sdk/apt"
 	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
+	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	opscron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
@@ -1581,6 +1582,57 @@ func (r *Registry) registerExtensions() {
 			return nil, fmt.Errorf("dnf.module_enable: %w", err)
 		}
 		return sdkdnf.ModuleEnable(spec)
+	})
+
+	// ── apk.* ─────────────────────────────────────────────────────────
+	r.Register("apk.install", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apk.install: %w", err)
+		}
+		version, _ := args["version"].(string)
+		return sdkapk.Install(name, version)
+	})
+	r.Register("apk.remove", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apk.remove: %w", err)
+		}
+		purge, _ := args["purge"].(bool)
+		return sdkapk.Remove(name, purge)
+	})
+	r.Register("apk.update", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkapk.Update()
+	})
+	r.Register("apk.upgrade", func(args map[string]interface{}) (interface{}, error) {
+		name, _ := args["name"].(string)
+		return sdkapk.Upgrade(name)
+	})
+	r.Register("apk.info", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apk.info: %w", err)
+		}
+		return sdkapk.Info(name)
+	})
+	r.Register("apk.list", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkapk.List()
+	})
+	r.Register("apk.search", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("apk.search: %w", err)
+		}
+		return sdkapk.Search(name)
+	})
+	r.Register("apk.cache", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkapk.Cache()
+	})
+	r.Register("apk.upgrade_available", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkapk.UpgradeAvailable()
+	})
+	r.Register("apk.repository", func(_ map[string]interface{}) (interface{}, error) {
+		return sdkapk.Repository()
 	})
 
 	// ── apt_repo.* ──────────────────────────────────────────────────────

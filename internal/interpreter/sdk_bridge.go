@@ -8,6 +8,7 @@ import (
 	"github.com/opslang/opslang/internal/opsspec"
 	sdkapt "github.com/opslang/opslang/pkg/ops-core-sdk/apt"
 	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
+	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
 	sdkcron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
@@ -3964,6 +3965,106 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return structToMap(r)
+	}
+
+	// ── apk.* ─────────────────────────────────────────────────────────
+	interp.builtins["apk.install"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apk.install() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		version := ""
+		if len(args) >= 2 {
+			version, _ = args[1].(string)
+		}
+		r, err := sdkapk.Install(name, version)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apk.remove"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apk.remove() requires at least 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		purge := false
+		if len(args) >= 2 {
+			purge, _ = args[1].(bool)
+		}
+		r, err := sdkapk.Remove(name, purge)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apk.update"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapk.Update()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apk.upgrade"] = func(args ...interface{}) (interface{}, error) {
+		name := ""
+		if len(args) >= 1 {
+			name, _ = args[0].(string)
+		}
+		r, err := sdkapk.Upgrade(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apk.info"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apk.info() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkapk.Info(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apk.list"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapk.List()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["apk.search"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("apk.search() requires 1 argument (name)")
+		}
+		name, _ := args[0].(string)
+		r, err := sdkapk.Search(name)
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["apk.cache"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapk.Cache()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["apk.upgrade_available"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapk.UpgradeAvailable()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
+	}
+	interp.builtins["apk.repository"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkapk.Repository()
+		if err != nil {
+			return nil, err
+		}
+		return r, nil
 	}
 
 	// ── apt_repo.* ──────────────────────────────────────────────────────
