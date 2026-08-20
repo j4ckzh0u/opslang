@@ -187,6 +187,7 @@ import (
 	sdkipnetns "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns"
 	sdkipneighbor "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor"
 	sdkopensslcsr "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr"
+	sdkopensslpublickey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10960,6 +10961,26 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	interp.builtins["openssl_csr.delete"] = func(args ...interface{}) (interface{}, error) {
 		csrFile := getStringArgBridge(args, 0, "")
 		return sdkopensslcsr.Delete(csrFile), nil
+	}
+	// openssl_publickey
+	interp.builtins["openssl_publickey.extract"] = func(args ...interface{}) (interface{}, error) {
+		privKeyFile := getStringArgBridge(args, 0, "")
+		outputFile := getStringArgBridge(args, 1, "")
+		force := false
+		if len(args) > 2 {
+			if f, ok := args[2].(bool); ok {
+				force = f
+			}
+		}
+		return sdkopensslpublickey.Extract(privKeyFile, outputFile, force), nil
+	}
+	interp.builtins["openssl_publickey.info"] = func(args ...interface{}) (interface{}, error) {
+		pubKeyFile := getStringArgBridge(args, 0, "")
+		return sdkopensslpublickey.Info(pubKeyFile), nil
+	}
+	interp.builtins["openssl_publickey.delete"] = func(args ...interface{}) (interface{}, error) {
+		pubKeyFile := getStringArgBridge(args, 0, "")
+		return sdkopensslpublickey.Delete(pubKeyFile), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

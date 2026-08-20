@@ -1383,6 +1383,10 @@ var Funcs = []Func{
 	{Name: "openssl_csr.generate", Args: []string{"common_name", "key_file", "output_file", "organization", "organizational_unit", "country", "state", "locality", "email", "dns_names", "force"}, Mutating: true},
 	{Name: "openssl_csr.info", Args: []string{"csr_file"}},
 	{Name: "openssl_csr.delete", Args: []string{"csr_file"}, Mutating: true},
+	// openssl_publickey - Public key extraction
+	{Name: "openssl_publickey.extract", Args: []string{"private_key_file", "output_file", "force"}, Mutating: true},
+	{Name: "openssl_publickey.info", Args: []string{"public_key_file"}},
+	{Name: "openssl_publickey.delete", Args: []string{"public_key_file"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

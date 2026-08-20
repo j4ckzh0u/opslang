@@ -187,6 +187,7 @@ import (
 	sdkipnetns "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns"
 	sdkipneighbor "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor"
 	sdkopensslcsr "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr"
+	sdkopensslpublickey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey"
 	"time"
 )
 
@@ -6920,6 +6921,21 @@ func (r *Registry) registerExtensions() {
 	r.Register("openssl_csr.delete", func(args map[string]interface{}) (interface{}, error) {
 		csrFile, _ := args["csr_file"].(string)
 		return sdkopensslcsr.Delete(csrFile), nil
+	})
+	// openssl_publickey
+	r.Register("openssl_publickey.extract", func(args map[string]interface{}) (interface{}, error) {
+		privKeyFile, _ := args["private_key_file"].(string)
+		outputFile, _ := args["output_file"].(string)
+		force, _ := args["force"].(bool)
+		return sdkopensslpublickey.Extract(privKeyFile, outputFile, force), nil
+	})
+	r.Register("openssl_publickey.info", func(args map[string]interface{}) (interface{}, error) {
+		pubKeyFile, _ := args["public_key_file"].(string)
+		return sdkopensslpublickey.Info(pubKeyFile), nil
+	})
+	r.Register("openssl_publickey.delete", func(args map[string]interface{}) (interface{}, error) {
+		pubKeyFile, _ := args["public_key_file"].(string)
+		return sdkopensslpublickey.Delete(pubKeyFile), nil
 	})
 }
 
