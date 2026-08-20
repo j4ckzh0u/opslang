@@ -1379,6 +1379,10 @@ var Funcs = []Func{
 	{Name: "ip_neighbor.add", Args: []string{"ip", "dev", "mac"}, Mutating: true},
 	{Name: "ip_neighbor.delete", Args: []string{"ip", "dev"}, Mutating: true},
 	{Name: "ip_neighbor.flush", Args: []string{"dev"}, Mutating: true},
+	// openssl_csr - Certificate Signing Request generation
+	{Name: "openssl_csr.generate", Args: []string{"common_name", "key_file", "output_file", "organization", "organizational_unit", "country", "state", "locality", "email", "dns_names", "force"}, Mutating: true},
+	{Name: "openssl_csr.info", Args: []string{"csr_file"}},
+	{Name: "openssl_csr.delete", Args: []string{"csr_file"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

@@ -186,6 +186,7 @@ import (
 	sdkiplink "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link"
 	sdkipnetns "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns"
 	sdkipneighbor "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor"
+	sdkopensslcsr "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -10911,6 +10912,54 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	interp.builtins["ip_neighbor.flush"] = func(args ...interface{}) (interface{}, error) {
 		dev := getStringArgBridge(args, 0, "")
 		return sdkipneighbor.Flush(dev), nil
+	}
+	// openssl_csr
+	interp.builtins["openssl_csr.generate"] = func(args ...interface{}) (interface{}, error) {
+		commonName := getStringArgBridge(args, 0, "")
+		keyFile := getStringArgBridge(args, 1, "")
+		outputFile := getStringArgBridge(args, 2, "")
+		organization := getStringArgBridge(args, 3, "")
+		orgUnit := getStringArgBridge(args, 4, "")
+		country := getStringArgBridge(args, 5, "")
+		state := getStringArgBridge(args, 6, "")
+		locality := getStringArgBridge(args, 7, "")
+		email := getStringArgBridge(args, 8, "")
+		var dnsNames []string
+		if len(args) > 9 {
+			if list, ok := args[9].([]interface{}); ok {
+				for _, v := range list {
+					dnsNames = append(dnsNames, fmt.Sprintf("%v", v))
+				}
+			}
+		}
+		force := false
+		if len(args) > 10 {
+			if f, ok := args[10].(bool); ok {
+				force = f
+			}
+		}
+		cfg := sdkopensslcsr.CSRConfig{
+			CommonName:         commonName,
+			Organization:       organization,
+			OrganizationalUnit: orgUnit,
+			Country:            country,
+			State:              state,
+			Locality:           locality,
+			Email:              email,
+			DNSNames:           dnsNames,
+			KeyFile:            keyFile,
+			OutputFile:         outputFile,
+			Force:              force,
+		}
+		return sdkopensslcsr.Generate(cfg), nil
+	}
+	interp.builtins["openssl_csr.info"] = func(args ...interface{}) (interface{}, error) {
+		csrFile := getStringArgBridge(args, 0, "")
+		return sdkopensslcsr.Info(csrFile), nil
+	}
+	interp.builtins["openssl_csr.delete"] = func(args ...interface{}) (interface{}, error) {
+		csrFile := getStringArgBridge(args, 0, "")
+		return sdkopensslcsr.Delete(csrFile), nil
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

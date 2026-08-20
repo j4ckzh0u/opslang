@@ -1366,6 +1366,10 @@ var sdkMapping = map[string]sdkFunc{
 	"ip_neighbor.add":       {pkg: "ip_neighbor", goName: "Add", args: true, params: []string{"s", "s", "s"}},
 	"ip_neighbor.delete":    {pkg: "ip_neighbor", goName: "Delete", args: true, params: []string{"s", "s"}},
 	"ip_neighbor.flush":     {pkg: "ip_neighbor", goName: "Flush", args: true, params: []string{"s"}},
+	// openssl_csr
+	"openssl_csr.generate": {pkg: "openssl_csr", goName: "Generate", args: true, params: []string{"s", "s", "s", "s", "s", "s", "s", "s", "s", "l", "b"}},
+	"openssl_csr.info":     {pkg: "openssl_csr", goName: "Info", args: true, params: []string{"s"}},
+	"openssl_csr.delete":   {pkg: "openssl_csr", goName: "Delete", args: true, params: []string{"s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1606,6 +1610,7 @@ var pkgImportAlias = map[string]string{
 	"ip_link":          "opsiplink",
 	"ip_netns":         "opsipnetns",
 	"ip_neighbor":      "opsipneighbor",
+	"openssl_csr":      "opsopensslcsr",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1772,6 +1777,7 @@ var pkgImportPath = map[string]string{
 	"ip_link":          "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link",
 	"ip_netns":         "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns",
 	"ip_neighbor":      "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor",
+	"openssl_csr":      "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

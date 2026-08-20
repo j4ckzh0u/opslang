@@ -186,6 +186,7 @@ import (
 	sdkiplink "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link"
 	sdkipnetns "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns"
 	sdkipneighbor "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor"
+	sdkopensslcsr "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr"
 	"time"
 )
 
@@ -6878,6 +6879,47 @@ func (r *Registry) registerExtensions() {
 	r.Register("ip_neighbor.flush", func(args map[string]interface{}) (interface{}, error) {
 		dev, _ := args["dev"].(string)
 		return sdkipneighbor.Flush(dev), nil
+	})
+	// openssl_csr
+	r.Register("openssl_csr.generate", func(args map[string]interface{}) (interface{}, error) {
+		commonName, _ := args["common_name"].(string)
+		keyFile, _ := args["key_file"].(string)
+		outputFile, _ := args["output_file"].(string)
+		organization, _ := args["organization"].(string)
+		orgUnit, _ := args["organizational_unit"].(string)
+		country, _ := args["country"].(string)
+		state, _ := args["state"].(string)
+		locality, _ := args["locality"].(string)
+		email, _ := args["email"].(string)
+		var dnsNames []string
+		if list, ok := args["dns_names"].([]interface{}); ok {
+			for _, v := range list {
+				dnsNames = append(dnsNames, fmt.Sprintf("%v", v))
+			}
+		}
+		force, _ := args["force"].(bool)
+		cfg := sdkopensslcsr.CSRConfig{
+			CommonName:         commonName,
+			Organization:       organization,
+			OrganizationalUnit: orgUnit,
+			Country:            country,
+			State:              state,
+			Locality:           locality,
+			Email:              email,
+			DNSNames:           dnsNames,
+			KeyFile:            keyFile,
+			OutputFile:         outputFile,
+			Force:              force,
+		}
+		return sdkopensslcsr.Generate(cfg), nil
+	})
+	r.Register("openssl_csr.info", func(args map[string]interface{}) (interface{}, error) {
+		csrFile, _ := args["csr_file"].(string)
+		return sdkopensslcsr.Info(csrFile), nil
+	})
+	r.Register("openssl_csr.delete", func(args map[string]interface{}) (interface{}, error) {
+		csrFile, _ := args["csr_file"].(string)
+		return sdkopensslcsr.Delete(csrFile), nil
 	})
 }
 
