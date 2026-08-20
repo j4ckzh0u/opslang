@@ -195,6 +195,7 @@ import (
 	sdksshdconfig "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config"
 	sdkdockernet "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network"
 	sdkdockervol "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume"
+	sdkjournald "github.com/opslang/opslang/pkg/ops-core-sdk/journald"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -11220,6 +11221,16 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["docker_volume.list"] = func(args ...interface{}) (interface{}, error) {
 		return sdkdockervol.List()
+	}
+
+	interp.builtins["journald.get"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		return sdkjournald.Get(key)
+	}
+	interp.builtins["journald.set"] = func(args ...interface{}) (interface{}, error) {
+		key := getStringArgBridge(args, 0, "")
+		value := getStringArgBridge(args, 1, "")
+		return sdkjournald.Set(key, value)
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

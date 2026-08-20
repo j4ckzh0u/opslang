@@ -1413,6 +1413,10 @@ var sdkMapping = map[string]sdkFunc{
 	"docker_volume.create":  {pkg: "docker_volume", goName: "Create", args: true, params: []string{"s", "s"}},
 	"docker_volume.remove":  {pkg: "docker_volume", goName: "Remove", args: true, params: []string{"s"}},
 	"docker_volume.list":    {pkg: "docker_volume", goName: "List", args: true},
+
+	// journald
+	"journald.get": {pkg: "journald", goName: "Get", args: true, params: []string{"s"}},
+	"journald.set": {pkg: "journald", goName: "Set", args: true, params: []string{"s", "s"}},
 }
 
 // SDKMappingNames returns every canonical function name the code generator
@@ -1662,6 +1666,7 @@ var pkgImportAlias = map[string]string{
 	"sshd_config":      "opssshdconfig",
 	"docker_network":   "opsdockernet",
 	"docker_volume":    "opsdockervol",
+	"journald":         "opsjournald",
 }
 
 // pkgImportPath maps our short package key to the full import path.
@@ -1837,6 +1842,7 @@ var pkgImportPath = map[string]string{
 	"sshd_config":      "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config",
 	"docker_network":   "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network",
 	"docker_volume":    "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume",
+	"journald":         "github.com/opslang/opslang/pkg/ops-core-sdk/journald",
 }
 
 // CodeGenerator translates an AST Program into Go source code.

@@ -195,6 +195,7 @@ import (
 	sdksshdconfig "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config"
 	sdkdockernet "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network"
 	sdkdockervol "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume"
+	sdkjournald "github.com/opslang/opslang/pkg/ops-core-sdk/journald"
 	"time"
 )
 
@@ -7151,6 +7152,16 @@ func (r *Registry) registerExtensions() {
 	})
 	r.Register("docker_volume.list", func(args map[string]interface{}) (interface{}, error) {
 		return sdkdockervol.List()
+	})
+
+	r.Register("journald.get", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		return sdkjournald.Get(key)
+	})
+	r.Register("journald.set", func(args map[string]interface{}) (interface{}, error) {
+		key := mapStrArg(args, "key", "")
+		value := mapStrArg(args, "value", "")
+		return sdkjournald.Set(key, value)
 	})
 }
 
