@@ -27,20 +27,20 @@ type MailResult struct {
 
 // MailConfig holds SMTP configuration.
 type MailConfig struct {
-	Host       string
-	Port       int
-	Username   string
-	Password   string
-	From       string
-	To         []string
-	CC         []string
-	BCC        []string
-	Subject    string
-	Body       string
-	HTML       bool
+	Host        string
+	Port        int
+	Username    string
+	Password    string
+	From        string
+	To          []string
+	CC          []string
+	BCC         []string
+	Subject     string
+	Body        string
+	HTML        bool
 	Attachments []string
-	Timeout    time.Duration
-	StartTLS   bool
+	Timeout     time.Duration
+	StartTLS    bool
 	InsecureTLS bool
 }
 
@@ -129,7 +129,7 @@ func validateConfig(cfg MailConfig) error {
 }
 
 func sendMail(cfg MailConfig) error {
-	addr := fmt.Sprintf("%s:%d", cfg.Host, cfg.Port)
+	addr := net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.Port))
 
 	// Connect to SMTP server with timeout
 	conn, err := net.DialTimeout("tcp", addr, cfg.Timeout)

@@ -1547,15 +1547,6 @@ var Funcs = []Func{
 	{Name: "btrfs.quota_enable", Args: []string{"mount_point"}, Mutating: true},
 	{Name: "btrfs.quota_disable", Args: []string{"mount_point"}, Mutating: true},
 
-	// ── lvol ─────────────────────────────────────────────────────────
-	{Name: "lvol.list"},
-	{Name: "lvol.create", Args: []string{"vg_name", "lv_name", "size"}, Mutating: true},
-	{Name: "lvol.remove", Args: []string{"vg_name", "lv_name", "force"}, Mutating: true},
-	{Name: "lvol.resize", Args: []string{"vg_name", "lv_name", "size", "resizefs"}, Mutating: true},
-	{Name: "lvol.rename", Args: []string{"vg_name", "old_name", "new_name"}, Mutating: true},
-	{Name: "lvol.activate", Args: []string{"vg_name", "lv_name"}, Mutating: true},
-	{Name: "lvol.deactivate", Args: []string{"vg_name", "lv_name"}, Mutating: true},
-
 	// ── certbot ───────────────────────────────────────────────────────
 	{Name: "certbot.certificates"},
 	{Name: "certbot.obtain", Args: []string{"domains", "email", "webroot", "standalone"}, Mutating: true},
@@ -1571,6 +1562,14 @@ var Funcs = []Func{
 	{Name: "gluster.peer_list"},
 	{Name: "gluster.peer_probe", Args: []string{"host"}, Mutating: true},
 	{Name: "gluster.peer_detach", Args: []string{"host"}, Mutating: true},
+
+	// ── nomad ─────────────────────────────────────────────────────────
+	{Name: "nomad.job_list", Args: []string{"namespace"}},
+	{Name: "nomad.job_run", Args: []string{"job_file", "namespace"}, Mutating: true},
+	{Name: "nomad.job_stop", Args: []string{"job_id", "namespace"}, Mutating: true},
+	{Name: "nomad.alloc_list", Args: []string{"job_id", "namespace"}},
+	{Name: "nomad.node_list"},
+	{Name: "nomad.node_drain", Args: []string{"node_id", "enable"}, Mutating: true},
 }
 
 // BuiltinOps are runner instruction ops that are not SDK calls.

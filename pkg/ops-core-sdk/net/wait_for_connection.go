@@ -21,7 +21,7 @@ func WaitForConnection(host string, port int, timeout int) (WaitForConnectionRes
 	result := WaitForConnectionResult{Host: host, Port: port}
 	start := time.Now()
 	deadline := start.Add(time.Duration(timeout) * time.Second)
-	addr := fmt.Sprintf("%s:%d", host, port)
+	addr := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 
 	for time.Now().Before(deadline) {
 		result.Attempts++

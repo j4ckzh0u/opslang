@@ -7,213 +7,214 @@ import (
 
 	"github.com/opslang/opslang/internal/ast"
 	"github.com/opslang/opslang/internal/opsspec"
+	sdkacl "github.com/opslang/opslang/pkg/ops-core-sdk/acl"
+	sdkaddhost "github.com/opslang/opslang/pkg/ops-core-sdk/add_host"
+	sdkalternatives "github.com/opslang/opslang/pkg/ops-core-sdk/alternatives"
+	sdkapache2 "github.com/opslang/opslang/pkg/ops-core-sdk/apache2"
+	sdkapache2mod "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module"
+	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
 	sdkapt "github.com/opslang/opslang/pkg/ops-core-sdk/apt"
 	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
-	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
-	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
-	sdkrunit "github.com/opslang/opslang/pkg/ops-core-sdk/runit"
-	sdkfail2ban "github.com/opslang/opslang/pkg/ops-core-sdk/fail2ban"
-	sdklsb "github.com/opslang/opslang/pkg/ops-core-sdk/lsb_release"
-	sdkcompose "github.com/opslang/opslang/pkg/ops-core-sdk/docker_compose"
-	sdkcloudinit "github.com/opslang/opslang/pkg/ops-core-sdk/cloud_init"
-	sdksyspersist "github.com/opslang/opslang/pkg/ops-core-sdk/sys_persist"
-	sdkwireguard "github.com/opslang/opslang/pkg/ops-core-sdk/wireguard"
-	sdksmartnotify "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl_notify"
-	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
-	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
+	sdkaptkey "github.com/opslang/opslang/pkg/ops-core-sdk/aptkey"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
+	sdkassert "github.com/opslang/opslang/pkg/ops-core-sdk/assert"
+	sdkasyncstatus "github.com/opslang/opslang/pkg/ops-core-sdk/async_status"
+	sdkat "github.com/opslang/opslang/pkg/ops-core-sdk/at"
+	sdkauthorized_key "github.com/opslang/opslang/pkg/ops-core-sdk/authorized_key"
+	sdkblockdev "github.com/opslang/opslang/pkg/ops-core-sdk/blockdev"
+	sdkblockinfile "github.com/opslang/opslang/pkg/ops-core-sdk/blockinfile"
+	sdkbtrfs "github.com/opslang/opslang/pkg/ops-core-sdk/btrfs"
+	sdkcargo "github.com/opslang/opslang/pkg/ops-core-sdk/cargo"
+	sdkcertbot "github.com/opslang/opslang/pkg/ops-core-sdk/certbot"
+	sdkcloudinit "github.com/opslang/opslang/pkg/ops-core-sdk/cloud_init"
+	sdkcommand "github.com/opslang/opslang/pkg/ops-core-sdk/command"
+	sdkcomposer "github.com/opslang/opslang/pkg/ops-core-sdk/composer"
+	sdkconsul "github.com/opslang/opslang/pkg/ops-core-sdk/consul"
+	sdkcopy "github.com/opslang/opslang/pkg/ops-core-sdk/copy"
 	opscron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
+	sdkcronvar "github.com/opslang/opslang/pkg/ops-core-sdk/cronvar"
+	sdkcrypttab "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab"
+	sdkdconf "github.com/opslang/opslang/pkg/ops-core-sdk/dconf"
+	sdkdebconf "github.com/opslang/opslang/pkg/ops-core-sdk/debconf"
+	sdkdebug "github.com/opslang/opslang/pkg/ops-core-sdk/debug"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
+	sdkdmidecode "github.com/opslang/opslang/pkg/ops-core-sdk/dmidecode"
+	sdkdmsetup "github.com/opslang/opslang/pkg/ops-core-sdk/dmsetup"
 	sdkdnf "github.com/opslang/opslang/pkg/ops-core-sdk/dnf"
+	sdkdnsmasq "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq"
 	sdkdocker "github.com/opslang/opslang/pkg/ops-core-sdk/docker"
+	sdkcompose "github.com/opslang/opslang/pkg/ops-core-sdk/docker_compose"
+	sdkdockercontainer "github.com/opslang/opslang/pkg/ops-core-sdk/docker_container"
+	sdkdockerimage "github.com/opslang/opslang/pkg/ops-core-sdk/docker_image"
+	sdkdockernet "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network"
+	sdkdockervol "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume"
+	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
+	sdketcd "github.com/opslang/opslang/pkg/ops-core-sdk/etcd"
+	sdkethtool "github.com/opslang/opslang/pkg/ops-core-sdk/ethtool"
+	sdkexpect "github.com/opslang/opslang/pkg/ops-core-sdk/expect"
+	sdkfail "github.com/opslang/opslang/pkg/ops-core-sdk/fail"
+	sdkfail2ban "github.com/opslang/opslang/pkg/ops-core-sdk/fail2ban"
+	sdkfetch "github.com/opslang/opslang/pkg/ops-core-sdk/fetch"
 	"github.com/opslang/opslang/pkg/ops-core-sdk/file"
+	sdkfilesystem "github.com/opslang/opslang/pkg/ops-core-sdk/filesystem"
+	sdkfind "github.com/opslang/opslang/pkg/ops-core-sdk/find"
 	sdkfirewalld "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld"
+	sdkfirewalld_ipset "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_ipset"
+	sdkfirewalld_rich_rule "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_rich_rule"
+	sdkfirewalldzone "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone"
+	sdkflatpak "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak"
+	sdkgem "github.com/opslang/opslang/pkg/ops-core-sdk/gem"
+	sdkgeturl "github.com/opslang/opslang/pkg/ops-core-sdk/get_url"
+	sdkgetent "github.com/opslang/opslang/pkg/ops-core-sdk/getent"
 	opsgit "github.com/opslang/opslang/pkg/ops-core-sdk/git"
+	sdkgitconfig "github.com/opslang/opslang/pkg/ops-core-sdk/git_config"
+	sdkgluster "github.com/opslang/opslang/pkg/ops-core-sdk/gluster"
 	opsgrp "github.com/opslang/opslang/pkg/ops-core-sdk/group"
+	sdkgroupby "github.com/opslang/opslang/pkg/ops-core-sdk/group_by"
+	sdkhaproxy "github.com/opslang/opslang/pkg/ops-core-sdk/haproxy"
+	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
+	sdkhostname "github.com/opslang/opslang/pkg/ops-core-sdk/hostname"
 	opshosts "github.com/opslang/opslang/pkg/ops-core-sdk/hosts"
+	sdkhtpasswd "github.com/opslang/opslang/pkg/ops-core-sdk/htpasswd"
+	sdkhwclock "github.com/opslang/opslang/pkg/ops-core-sdk/hwclock"
+	sdkincludevars "github.com/opslang/opslang/pkg/ops-core-sdk/include_vars"
+	sdkinifile "github.com/opslang/opslang/pkg/ops-core-sdk/ini_file"
+	sdkiplink "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link"
+	sdkipneighbor "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor"
+	sdkipnetns "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns"
+	sdkiproute "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route"
+	sdkipaddr "github.com/opslang/opslang/pkg/ops-core-sdk/ipaddr"
+	sdkiptables "github.com/opslang/opslang/pkg/ops-core-sdk/iptables"
+	sdkissue "github.com/opslang/opslang/pkg/ops-core-sdk/issue"
+	sdkjavacert "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert"
+	sdkjournald "github.com/opslang/opslang/pkg/ops-core-sdk/journald"
 	opsjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
 	sdkkernel "github.com/opslang/opslang/pkg/ops-core-sdk/kernel"
 	sdkknownhosts "github.com/opslang/opslang/pkg/ops-core-sdk/known_hosts"
-	sdklimits "github.com/opslang/opslang/pkg/ops-core-sdk/limits"
-	sdklocale "github.com/opslang/opslang/pkg/ops-core-sdk/locale"
-	sdklogrotate "github.com/opslang/opslang/pkg/ops-core-sdk/logrotate"
-	sdklvg "github.com/opslang/opslang/pkg/ops-core-sdk/lvg"
-	opsnet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
-	sdkntp "github.com/opslang/opslang/pkg/ops-core-sdk/ntp"
-	sdkpip "github.com/opslang/opslang/pkg/ops-core-sdk/pip"
-	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
-	"github.com/opslang/opslang/pkg/ops-core-sdk/process"
-	sdkresolv "github.com/opslang/opslang/pkg/ops-core-sdk/resolv"
-	sdksnap "github.com/opslang/opslang/pkg/ops-core-sdk/snap"
-	sdkselinux "github.com/opslang/opslang/pkg/ops-core-sdk/selinux"
-	"github.com/opslang/opslang/pkg/ops-core-sdk/service"
-	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
-	"github.com/opslang/opslang/pkg/ops-core-sdk/sys"
-	sdksysctl "github.com/opslang/opslang/pkg/ops-core-sdk/sysctl"
-	optime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
-	opsuser "github.com/opslang/opslang/pkg/ops-core-sdk/user"
-	opsyaml "github.com/opslang/opslang/pkg/ops-core-sdk/yaml"
-	sdkyumrepo "github.com/opslang/opslang/pkg/ops-core-sdk/yum_repo"
-	sdkufw "github.com/opslang/opslang/pkg/ops-core-sdk/ufw"
-	sdkinifile "github.com/opslang/opslang/pkg/ops-core-sdk/ini_file"
-	sdkmount "github.com/opslang/opslang/pkg/ops-core-sdk/mount"
-	sdkhostname "github.com/opslang/opslang/pkg/ops-core-sdk/hostname"
-	sdkiptables "github.com/opslang/opslang/pkg/ops-core-sdk/iptables"
-	sdknpm "github.com/opslang/opslang/pkg/ops-core-sdk/npm"
-	sdkmysql "github.com/opslang/opslang/pkg/ops-core-sdk/mysql"
-	sdknginx "github.com/opslang/opslang/pkg/ops-core-sdk/nginx"
-	sdkmodprobe "github.com/opslang/opslang/pkg/ops-core-sdk/modprobe"
-	sdkalternatives "github.com/opslang/opslang/pkg/ops-core-sdk/alternatives"
-	sdkblockdev "github.com/opslang/opslang/pkg/ops-core-sdk/blockdev"
-	sdkat "github.com/opslang/opslang/pkg/ops-core-sdk/at"
-	sdkpostgresql "github.com/opslang/opslang/pkg/ops-core-sdk/postgresql"
-	sdkapache2 "github.com/opslang/opslang/pkg/ops-core-sdk/apache2"
-	sdkfilesystem "github.com/opslang/opslang/pkg/ops-core-sdk/filesystem"
-	sdkparted "github.com/opslang/opslang/pkg/ops-core-sdk/parted"
-	sdkacl "github.com/opslang/opslang/pkg/ops-core-sdk/acl"
-	sdkwaitfor "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for"
-	sdklvol "github.com/opslang/opslang/pkg/ops-core-sdk/lvol"
-	sdksync "github.com/opslang/opslang/pkg/ops-core-sdk/synchronize"
-	sdkfetch "github.com/opslang/opslang/pkg/ops-core-sdk/fetch"
-	sdksebool "github.com/opslang/opslang/pkg/ops-core-sdk/seboolean"
-	sdktimezone "github.com/opslang/opslang/pkg/ops-core-sdk/timezone"
-	sdkuri "github.com/opslang/opslang/pkg/ops-core-sdk/uri"
-	sdklineinfile "github.com/opslang/opslang/pkg/ops-core-sdk/lineinfile"
-	sdkreplace "github.com/opslang/opslang/pkg/ops-core-sdk/replace"
-	sdkxml "github.com/opslang/opslang/pkg/ops-core-sdk/xml"
-	sdksystemd "github.com/opslang/opslang/pkg/ops-core-sdk/systemd"
-	sdkpatch "github.com/opslang/opslang/pkg/ops-core-sdk/patch"
-	sdkxattr "github.com/opslang/opslang/pkg/ops-core-sdk/xattr"
-	sdkfirewalldzone "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone"
-	sdkgeturl "github.com/opslang/opslang/pkg/ops-core-sdk/get_url"
-	sdkseport "github.com/opslang/opslang/pkg/ops-core-sdk/seport"
-	sdksefcontext "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext"
-	sdkflatpak "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak"
-	sdkzfs "github.com/opslang/opslang/pkg/ops-core-sdk/zfs"
-	sdknmcli "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli"
-	sdkcrypttab "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab"
-	sdksysfs "github.com/opslang/opslang/pkg/ops-core-sdk/sysfs"
-	sdkpamd "github.com/opslang/opslang/pkg/ops-core-sdk/pamd"
-	sdkgetent "github.com/opslang/opslang/pkg/ops-core-sdk/getent"
-	sdkhaproxy "github.com/opslang/opslang/pkg/ops-core-sdk/haproxy"
-	sdkopenssl "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_cert"
-	sdkredis "github.com/opslang/opslang/pkg/ops-core-sdk/redis"
-	sdkgem "github.com/opslang/opslang/pkg/ops-core-sdk/gem"
-	sdkrabbitmq "github.com/opslang/opslang/pkg/ops-core-sdk/rabbitmq"
-	sdkconsul "github.com/opslang/opslang/pkg/ops-core-sdk/consul"
-	sdkmemcached "github.com/opslang/opslang/pkg/ops-core-sdk/memcached"
-	sdkcomposer "github.com/opslang/opslang/pkg/ops-core-sdk/composer"
-	sdkcargo "github.com/opslang/opslang/pkg/ops-core-sdk/cargo"
-	sdkrpmkey "github.com/opslang/opslang/pkg/ops-core-sdk/rpmkey"
-	sdkaptkey "github.com/opslang/opslang/pkg/ops-core-sdk/aptkey"
-	sdkdmidecode "github.com/opslang/opslang/pkg/ops-core-sdk/dmidecode"
-	sdktuned "github.com/opslang/opslang/pkg/ops-core-sdk/tuned"
-	sdksupervisor "github.com/opslang/opslang/pkg/ops-core-sdk/supervisor"
-	sdksmartctl "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl"
-	sdkvirsh "github.com/opslang/opslang/pkg/ops-core-sdk/virsh"
-	sdkethtool "github.com/opslang/opslang/pkg/ops-core-sdk/ethtool"
-	sdksystemd_analyze "github.com/opslang/opslang/pkg/ops-core-sdk/systemd_analyze"
-	sdknvme "github.com/opslang/opslang/pkg/ops-core-sdk/nvme"
-	sdkslshw "github.com/opslang/opslang/pkg/ops-core-sdk/lshw"
-	sdkipaddr "github.com/opslang/opslang/pkg/ops-core-sdk/ipaddr"
-	sdkudevadm "github.com/opslang/opslang/pkg/ops-core-sdk/udevadm"
-	sdkmodinfo "github.com/opslang/opslang/pkg/ops-core-sdk/modinfo"
-	sdkdconf "github.com/opslang/opslang/pkg/ops-core-sdk/dconf"
-	sdklocale_gen "github.com/opslang/opslang/pkg/ops-core-sdk/locale_gen"
-	sdkpam_limits "github.com/opslang/opslang/pkg/ops-core-sdk/pam_limits"
-	sdkmotd "github.com/opslang/opslang/pkg/ops-core-sdk/motd"
-	sdkissue "github.com/opslang/opslang/pkg/ops-core-sdk/issue"
-	sdkauthorized_key "github.com/opslang/opslang/pkg/ops-core-sdk/authorized_key"
-	sdkblockinfile "github.com/opslang/opslang/pkg/ops-core-sdk/blockinfile"
-	sdkdebconf "github.com/opslang/opslang/pkg/ops-core-sdk/debconf"
-	sdkreboot "github.com/opslang/opslang/pkg/ops-core-sdk/reboot"
-	sdkswap "github.com/opslang/opslang/pkg/ops-core-sdk/swap"
-	sdkraw "github.com/opslang/opslang/pkg/ops-core-sdk/raw"
-	sdkexpect "github.com/opslang/opslang/pkg/ops-core-sdk/expect"
-	sdkslurp "github.com/opslang/opslang/pkg/ops-core-sdk/slurp"
-	sdkwait_for_connection "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for_connection"
-	sdkfirewalld_rich_rule "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_rich_rule"
-	sdkfirewalld_ipset "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_ipset"
-	sdkpause "github.com/opslang/opslang/pkg/ops-core-sdk/pause"
-	sdkmeta "github.com/opslang/opslang/pkg/ops-core-sdk/meta"
-	sdkuri_ext "github.com/opslang/opslang/pkg/ops-core-sdk/uri_ext"
-	sdkhwclock "github.com/opslang/opslang/pkg/ops-core-sdk/hwclock"
-	sdkmdadm "github.com/opslang/opslang/pkg/ops-core-sdk/mdadm"
-	sdkopen_iscsi "github.com/opslang/opslang/pkg/ops-core-sdk/open_iscsi"
-	sdkrfkill "github.com/opslang/opslang/pkg/ops-core-sdk/rfkill"
-	sdkmultipath "github.com/opslang/opslang/pkg/ops-core-sdk/multipath"
-	sdkdmsetup "github.com/opslang/opslang/pkg/ops-core-sdk/dmsetup"
-	sdklvm_enhanced "github.com/opslang/opslang/pkg/ops-core-sdk/lvm_enhanced"
-	sdkpuppet "github.com/opslang/opslang/pkg/ops-core-sdk/puppet"
-	sdkyarn "github.com/opslang/opslang/pkg/ops-core-sdk/yarn"
-	sdkhtpasswd "github.com/opslang/opslang/pkg/ops-core-sdk/htpasswd"
-	sdksudoers "github.com/opslang/opslang/pkg/ops-core-sdk/sudoers"
-	sdkmonit "github.com/opslang/opslang/pkg/ops-core-sdk/monit"
 	sdkk8s "github.com/opslang/opslang/pkg/ops-core-sdk/kubernetes"
-	sdksvn "github.com/opslang/opslang/pkg/ops-core-sdk/svn"
-	sdkzypper "github.com/opslang/opslang/pkg/ops-core-sdk/zypper"
+	sdklimits "github.com/opslang/opslang/pkg/ops-core-sdk/limits"
+	sdklineinfile "github.com/opslang/opslang/pkg/ops-core-sdk/lineinfile"
+	sdklocale "github.com/opslang/opslang/pkg/ops-core-sdk/locale"
+	sdklocale_gen "github.com/opslang/opslang/pkg/ops-core-sdk/locale_gen"
+	sdklogrotate "github.com/opslang/opslang/pkg/ops-core-sdk/logrotate"
+	sdklsb "github.com/opslang/opslang/pkg/ops-core-sdk/lsb_release"
+	sdkslshw "github.com/opslang/opslang/pkg/ops-core-sdk/lshw"
+	sdklvg "github.com/opslang/opslang/pkg/ops-core-sdk/lvg"
+	sdklvm_enhanced "github.com/opslang/opslang/pkg/ops-core-sdk/lvm_enhanced"
+	sdklvol "github.com/opslang/opslang/pkg/ops-core-sdk/lvol"
+	sdkmail "github.com/opslang/opslang/pkg/ops-core-sdk/mail"
+	sdkmaven "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact"
+	sdkmdadm "github.com/opslang/opslang/pkg/ops-core-sdk/mdadm"
+	sdkmemcached "github.com/opslang/opslang/pkg/ops-core-sdk/memcached"
+	sdkmeta "github.com/opslang/opslang/pkg/ops-core-sdk/meta"
+	sdkmodinfo "github.com/opslang/opslang/pkg/ops-core-sdk/modinfo"
+	sdkmodprobe "github.com/opslang/opslang/pkg/ops-core-sdk/modprobe"
+	sdkmongodb "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb"
+	sdkmonit "github.com/opslang/opslang/pkg/ops-core-sdk/monit"
+	sdkmotd "github.com/opslang/opslang/pkg/ops-core-sdk/motd"
+	sdkmount "github.com/opslang/opslang/pkg/ops-core-sdk/mount"
+	sdkmultipath "github.com/opslang/opslang/pkg/ops-core-sdk/multipath"
+	sdkmysql "github.com/opslang/opslang/pkg/ops-core-sdk/mysql"
+	opsnet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
+	sdknfsexports "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports"
+	sdknftables "github.com/opslang/opslang/pkg/ops-core-sdk/nftables"
+	sdknginx "github.com/opslang/opslang/pkg/ops-core-sdk/nginx"
+	sdknmcli "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli"
+	sdknomad "github.com/opslang/opslang/pkg/ops-core-sdk/nomad"
+	sdknormalize "github.com/opslang/opslang/pkg/ops-core-sdk/normalize"
+	sdknpm "github.com/opslang/opslang/pkg/ops-core-sdk/npm"
+	sdkntp "github.com/opslang/opslang/pkg/ops-core-sdk/ntp"
+	sdknvme "github.com/opslang/opslang/pkg/ops-core-sdk/nvme"
+	sdkopen_iscsi "github.com/opslang/opslang/pkg/ops-core-sdk/open_iscsi"
+	sdkopenssl "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_cert"
+	sdkopensslcsr "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr"
+	sdkopensslprivatekey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey"
+	sdkopensslpublickey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey"
+	sdkopenvpn "github.com/opslang/opslang/pkg/ops-core-sdk/openvpn"
+	sdkpackagemgr "github.com/opslang/opslang/pkg/ops-core-sdk/package"
+	sdkpackagefacts "github.com/opslang/opslang/pkg/ops-core-sdk/package_facts"
 	sdkpacman "github.com/opslang/opslang/pkg/ops-core-sdk/pacman"
-	sdkportage "github.com/opslang/opslang/pkg/ops-core-sdk/portage"
+	sdkpam_limits "github.com/opslang/opslang/pkg/ops-core-sdk/pam_limits"
+	sdkpamd "github.com/opslang/opslang/pkg/ops-core-sdk/pamd"
+	sdkparted "github.com/opslang/opslang/pkg/ops-core-sdk/parted"
+	sdkpatch "github.com/opslang/opslang/pkg/ops-core-sdk/patch"
+	sdkpause "github.com/opslang/opslang/pkg/ops-core-sdk/pause"
+	sdkping "github.com/opslang/opslang/pkg/ops-core-sdk/ping"
+	sdkpip "github.com/opslang/opslang/pkg/ops-core-sdk/pip"
+	sdkpipx "github.com/opslang/opslang/pkg/ops-core-sdk/pipx"
+	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	sdkpkgng "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng"
 	sdkpodman "github.com/opslang/opslang/pkg/ops-core-sdk/podman"
-	sdknftables "github.com/opslang/opslang/pkg/ops-core-sdk/nftables"
-	sdkmongodb "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb"
-	sdktomcat "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat"
-	sdkjavacert "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert"
-	sdkmaven "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact"
-	sdkdockerimage "github.com/opslang/opslang/pkg/ops-core-sdk/docker_image"
-	sdkdockercontainer "github.com/opslang/opslang/pkg/ops-core-sdk/docker_container"
-	sdkping "github.com/opslang/opslang/pkg/ops-core-sdk/ping"
-	sdkfind "github.com/opslang/opslang/pkg/ops-core-sdk/find"
-	sdktempfile "github.com/opslang/opslang/pkg/ops-core-sdk/tempfile"
-	sdkfail "github.com/opslang/opslang/pkg/ops-core-sdk/fail"
-	sdkassert "github.com/opslang/opslang/pkg/ops-core-sdk/assert"
-	sdkdebug "github.com/opslang/opslang/pkg/ops-core-sdk/debug"
-	sdksetfact "github.com/opslang/opslang/pkg/ops-core-sdk/set_fact"
-	sdkunarchive "github.com/opslang/opslang/pkg/ops-core-sdk/unarchive"
-	sdkpackagefacts "github.com/opslang/opslang/pkg/ops-core-sdk/package_facts"
-	sdkservicefacts "github.com/opslang/opslang/pkg/ops-core-sdk/service_facts"
-	sdkcommand "github.com/opslang/opslang/pkg/ops-core-sdk/command"
-	sdkscript "github.com/opslang/opslang/pkg/ops-core-sdk/script"
-	sdkcopy "github.com/opslang/opslang/pkg/ops-core-sdk/copy"
-	sdkcronvar "github.com/opslang/opslang/pkg/ops-core-sdk/cronvar"
-	sdkstat "github.com/opslang/opslang/pkg/ops-core-sdk/stat"
-	sdkaddhost "github.com/opslang/opslang/pkg/ops-core-sdk/add_host"
-	sdksetstats "github.com/opslang/opslang/pkg/ops-core-sdk/set_stats"
-	sdkincludevars "github.com/opslang/opslang/pkg/ops-core-sdk/include_vars"
-	sdkasyncstatus "github.com/opslang/opslang/pkg/ops-core-sdk/async_status"
-	sdkpackagemgr "github.com/opslang/opslang/pkg/ops-core-sdk/package"
-	sdktypedebug "github.com/opslang/opslang/pkg/ops-core-sdk/type_debug"
-	sdkgroupby "github.com/opslang/opslang/pkg/ops-core-sdk/group_by"
-	sdknormalize "github.com/opslang/opslang/pkg/ops-core-sdk/normalize"
-	sdkvalidatecerts "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs"
-	sdkmail "github.com/opslang/opslang/pkg/ops-core-sdk/mail"
-	sdkwebhook "github.com/opslang/opslang/pkg/ops-core-sdk/webhook"
-	sdkopensslprivatekey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey"
-	sdkiproute "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route"
-	sdkiplink "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link"
-	sdkipnetns "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns"
-	sdkipneighbor "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor"
-	sdkopensslcsr "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr"
-	sdkopensslpublickey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey"
-	sdketcd "github.com/opslang/opslang/pkg/ops-core-sdk/etcd"
-	sdkzookeeper "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper"
-	sdkvault "github.com/opslang/opslang/pkg/ops-core-sdk/vault"
-	sdkgitconfig "github.com/opslang/opslang/pkg/ops-core-sdk/git_config"
-	sdksshdconfig "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config"
-	sdkdockernet "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network"
-	sdkdockervol "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume"
-	sdkjournald "github.com/opslang/opslang/pkg/ops-core-sdk/journald"
-	sdknfsexports "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports"
+	sdkportage "github.com/opslang/opslang/pkg/ops-core-sdk/portage"
 	sdkpostfix "github.com/opslang/opslang/pkg/ops-core-sdk/postfix"
-	sdkdnsmasq "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq"
-	sdkapache2mod "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module"
-	sdkpipx "github.com/opslang/opslang/pkg/ops-core-sdk/pipx"
+	sdkpostgresql "github.com/opslang/opslang/pkg/ops-core-sdk/postgresql"
+	"github.com/opslang/opslang/pkg/ops-core-sdk/process"
+	sdkpuppet "github.com/opslang/opslang/pkg/ops-core-sdk/puppet"
+	sdkrabbitmq "github.com/opslang/opslang/pkg/ops-core-sdk/rabbitmq"
+	sdkraw "github.com/opslang/opslang/pkg/ops-core-sdk/raw"
+	sdkreboot "github.com/opslang/opslang/pkg/ops-core-sdk/reboot"
+	sdkredis "github.com/opslang/opslang/pkg/ops-core-sdk/redis"
+	sdkreplace "github.com/opslang/opslang/pkg/ops-core-sdk/replace"
+	sdkresolv "github.com/opslang/opslang/pkg/ops-core-sdk/resolv"
+	sdkrfkill "github.com/opslang/opslang/pkg/ops-core-sdk/rfkill"
+	sdkrpmkey "github.com/opslang/opslang/pkg/ops-core-sdk/rpmkey"
+	sdkrunit "github.com/opslang/opslang/pkg/ops-core-sdk/runit"
+	sdkscript "github.com/opslang/opslang/pkg/ops-core-sdk/script"
+	sdksebool "github.com/opslang/opslang/pkg/ops-core-sdk/seboolean"
+	sdksefcontext "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext"
+	sdkselinux "github.com/opslang/opslang/pkg/ops-core-sdk/selinux"
+	sdkseport "github.com/opslang/opslang/pkg/ops-core-sdk/seport"
+	"github.com/opslang/opslang/pkg/ops-core-sdk/service"
+	sdkservicefacts "github.com/opslang/opslang/pkg/ops-core-sdk/service_facts"
+	sdksetfact "github.com/opslang/opslang/pkg/ops-core-sdk/set_fact"
+	sdksetstats "github.com/opslang/opslang/pkg/ops-core-sdk/set_stats"
+	sdkslurp "github.com/opslang/opslang/pkg/ops-core-sdk/slurp"
+	sdksmartctl "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl"
+	sdksmartnotify "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl_notify"
+	sdksnap "github.com/opslang/opslang/pkg/ops-core-sdk/snap"
+	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
 	sdksshconfig "github.com/opslang/opslang/pkg/ops-core-sdk/ssh_config"
-	sdkopenvpn "github.com/opslang/opslang/pkg/ops-core-sdk/openvpn"
-	sdkbtrfs "github.com/opslang/opslang/pkg/ops-core-sdk/btrfs"
-	sdkcertbot "github.com/opslang/opslang/pkg/ops-core-sdk/certbot"
-	sdkgluster "github.com/opslang/opslang/pkg/ops-core-sdk/gluster"
+	sdksshdconfig "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config"
+	sdkstat "github.com/opslang/opslang/pkg/ops-core-sdk/stat"
+	sdksudoers "github.com/opslang/opslang/pkg/ops-core-sdk/sudoers"
+	sdksupervisor "github.com/opslang/opslang/pkg/ops-core-sdk/supervisor"
+	sdksvn "github.com/opslang/opslang/pkg/ops-core-sdk/svn"
+	sdkswap "github.com/opslang/opslang/pkg/ops-core-sdk/swap"
+	sdksync "github.com/opslang/opslang/pkg/ops-core-sdk/synchronize"
+	"github.com/opslang/opslang/pkg/ops-core-sdk/sys"
+	sdksyspersist "github.com/opslang/opslang/pkg/ops-core-sdk/sys_persist"
+	sdksysctl "github.com/opslang/opslang/pkg/ops-core-sdk/sysctl"
+	sdksysfs "github.com/opslang/opslang/pkg/ops-core-sdk/sysfs"
+	sdksystemd "github.com/opslang/opslang/pkg/ops-core-sdk/systemd"
+	sdksystemd_analyze "github.com/opslang/opslang/pkg/ops-core-sdk/systemd_analyze"
+	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
+	sdktempfile "github.com/opslang/opslang/pkg/ops-core-sdk/tempfile"
+	optime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
+	sdktimezone "github.com/opslang/opslang/pkg/ops-core-sdk/timezone"
+	sdktomcat "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat"
+	sdktuned "github.com/opslang/opslang/pkg/ops-core-sdk/tuned"
+	sdktypedebug "github.com/opslang/opslang/pkg/ops-core-sdk/type_debug"
+	sdkudevadm "github.com/opslang/opslang/pkg/ops-core-sdk/udevadm"
+	sdkufw "github.com/opslang/opslang/pkg/ops-core-sdk/ufw"
+	sdkunarchive "github.com/opslang/opslang/pkg/ops-core-sdk/unarchive"
+	sdkuri "github.com/opslang/opslang/pkg/ops-core-sdk/uri"
+	sdkuri_ext "github.com/opslang/opslang/pkg/ops-core-sdk/uri_ext"
+	opsuser "github.com/opslang/opslang/pkg/ops-core-sdk/user"
+	sdkvalidatecerts "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs"
+	sdkvault "github.com/opslang/opslang/pkg/ops-core-sdk/vault"
+	sdkvirsh "github.com/opslang/opslang/pkg/ops-core-sdk/virsh"
+	sdkwaitfor "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for"
+	sdkwait_for_connection "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for_connection"
+	sdkwebhook "github.com/opslang/opslang/pkg/ops-core-sdk/webhook"
+	sdkwireguard "github.com/opslang/opslang/pkg/ops-core-sdk/wireguard"
+	sdkxattr "github.com/opslang/opslang/pkg/ops-core-sdk/xattr"
+	sdkxml "github.com/opslang/opslang/pkg/ops-core-sdk/xml"
+	opsyaml "github.com/opslang/opslang/pkg/ops-core-sdk/yaml"
+	sdkyarn "github.com/opslang/opslang/pkg/ops-core-sdk/yarn"
+	sdkyumrepo "github.com/opslang/opslang/pkg/ops-core-sdk/yum_repo"
+	sdkzfs "github.com/opslang/opslang/pkg/ops-core-sdk/zfs"
+	sdkzookeeper "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper"
+	sdkzypper "github.com/opslang/opslang/pkg/ops-core-sdk/zypper"
 	"time"
 )
 
@@ -4164,7 +4165,9 @@ func (r *Registry) registerExtensions() {
 		cp, _ := argString(args, "csr_path")
 		subj, _ := argString(args, "subject")
 		bits, _ := argInt(args, "key_bits")
-		if bits <= 0 { bits = 2048 }
+		if bits <= 0 {
+			bits = 2048
+		}
 		return sdkopenssl.CreateCSR(kp, cp, subj, bits)
 	})
 	r.Register("openssl_cert.generate_self_signed", func(args map[string]interface{}) (interface{}, error) {
@@ -6221,27 +6224,35 @@ func (r *Registry) registerExtensions() {
 	r.Register("mongodb.create_database", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		name, _ := args["name"].(string)
 		return sdkmongodb.CreateDatabase(host, port, name)
 	})
 	r.Register("mongodb.drop_database", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		name, _ := args["name"].(string)
 		return sdkmongodb.DropDatabase(host, port, name)
 	})
 	r.Register("mongodb.list_databases", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		return sdkmongodb.ListDatabases(host, port)
 	})
 	r.Register("mongodb.create_user", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		database, _ := args["database"].(string)
 		user, _ := args["user"].(string)
 		password, _ := args["password"].(string)
@@ -6251,7 +6262,9 @@ func (r *Registry) registerExtensions() {
 	r.Register("mongodb.drop_user", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		database, _ := args["database"].(string)
 		user, _ := args["user"].(string)
 		return sdkmongodb.DropUser(host, port, database, user)
@@ -6259,14 +6272,18 @@ func (r *Registry) registerExtensions() {
 	r.Register("mongodb.list_users", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		database, _ := args["database"].(string)
 		return sdkmongodb.ListUsers(host, port, database)
 	})
 	r.Register("mongodb.create_collection", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		database, _ := args["database"].(string)
 		collection, _ := args["collection"].(string)
 		return sdkmongodb.CreateCollection(host, port, database, collection)
@@ -6274,7 +6291,9 @@ func (r *Registry) registerExtensions() {
 	r.Register("mongodb.drop_collection", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		database, _ := args["database"].(string)
 		collection, _ := args["collection"].(string)
 		return sdkmongodb.DropCollection(host, port, database, collection)
@@ -6282,14 +6301,18 @@ func (r *Registry) registerExtensions() {
 	r.Register("mongodb.list_collections", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		database, _ := args["database"].(string)
 		return sdkmongodb.ListCollections(host, port, database)
 	})
 	r.Register("mongodb.create_index", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		database, _ := args["database"].(string)
 		collection, _ := args["collection"].(string)
 		keys, _ := args["keys"].(string)
@@ -6300,7 +6323,9 @@ func (r *Registry) registerExtensions() {
 	r.Register("mongodb.drop_index", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		database, _ := args["database"].(string)
 		collection, _ := args["collection"].(string)
 		indexName, _ := args["index_name"].(string)
@@ -6309,7 +6334,9 @@ func (r *Registry) registerExtensions() {
 	r.Register("mongodb.list_indexes", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		database, _ := args["database"].(string)
 		collection, _ := args["collection"].(string)
 		return sdkmongodb.ListIndexes(host, port, database, collection)
@@ -6317,13 +6344,17 @@ func (r *Registry) registerExtensions() {
 	r.Register("mongodb.server_status", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		return sdkmongodb.ServerStatus(host, port)
 	})
 	r.Register("mongodb.replica_set_status", func(args map[string]interface{}) (interface{}, error) {
 		host, _ := args["host"].(string)
 		port := 27017
-		if v, ok := args["port"].(float64); ok { port = int(v) }
+		if v, ok := args["port"].(float64); ok {
+			port = int(v)
+		}
 		return sdkmongodb.ReplicaSetStatus(host, port)
 	})
 
@@ -6714,14 +6745,20 @@ func (r *Registry) registerExtensions() {
 		sp, _ := args["script_path"].(string)
 		var scriptArgs []string
 		if v, ok := args["args"].([]interface{}); ok {
-			for _, a := range v { if s, ok := a.(string); ok { scriptArgs = append(scriptArgs, s) } }
+			for _, a := range v {
+				if s, ok := a.(string); ok {
+					scriptArgs = append(scriptArgs, s)
+				}
+			}
 		}
 		chdir, _ := args["chdir"].(string)
 		creates, _ := args["creates"].(string)
 		removes, _ := args["removes"].(string)
 		executable, _ := args["executable"].(string)
 		timeoutMs := 0.0
-		if t, ok := args["timeout_ms"].(float64); ok { timeoutMs = t }
+		if t, ok := args["timeout_ms"].(float64); ok {
+			timeoutMs = t
+		}
 		timeout := time.Duration(timeoutMs) * time.Millisecond
 		return sdkscript.Run(sp, scriptArgs, chdir, creates, removes, timeout, executable), nil
 	})
@@ -6779,11 +6816,19 @@ func (r *Registry) registerExtensions() {
 		name, _ := args["name"].(string)
 		var groups []string
 		if v, ok := args["groups"].([]interface{}); ok {
-			for _, g := range v { if s, ok := g.(string); ok { groups = append(groups, s) } }
+			for _, g := range v {
+				if s, ok := g.(string); ok {
+					groups = append(groups, s)
+				}
+			}
 		}
 		vars := map[string]string{}
 		if v, ok := args["vars"].(map[string]interface{}); ok {
-			for k, val := range v { if s, ok := val.(string); ok { vars[k] = s } }
+			for k, val := range v {
+				if s, ok := val.(string); ok {
+					vars[k] = s
+				}
+			}
 		}
 		return sdkaddhost.Add(name, groups, vars), nil
 	})
@@ -7693,6 +7738,28 @@ func (r *Registry) registerExtensions() {
 	r.Register("gluster.peer_detach", func(args map[string]interface{}) (interface{}, error) {
 		host := mapStrArg(args, "host", "")
 		return sdkgluster.PeerDetach(host)
+	})
+	r.Register("nomad.job_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdknomad.JobList(mapStrArg(args, "namespace", ""))
+	})
+	r.Register("nomad.job_run", func(args map[string]interface{}) (interface{}, error) {
+		return sdknomad.JobRun(mapStrArg(args, "job_file", ""), mapStrArg(args, "namespace", ""))
+	})
+	r.Register("nomad.job_stop", func(args map[string]interface{}) (interface{}, error) {
+		return sdknomad.JobStop(mapStrArg(args, "job_id", ""), mapStrArg(args, "namespace", ""))
+	})
+	r.Register("nomad.alloc_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdknomad.AllocList(mapStrArg(args, "job_id", ""), mapStrArg(args, "namespace", ""))
+	})
+	r.Register("nomad.node_list", func(args map[string]interface{}) (interface{}, error) {
+		return sdknomad.NodeList()
+	})
+	r.Register("nomad.node_drain", func(args map[string]interface{}) (interface{}, error) {
+		enable, err := argBool(args, "enable")
+		if err != nil {
+			return nil, err
+		}
+		return sdknomad.NodeDrain(mapStrArg(args, "node_id", ""), enable)
 	})
 }
 

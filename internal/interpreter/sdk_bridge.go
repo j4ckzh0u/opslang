@@ -7,213 +7,214 @@ import (
 	"time"
 
 	"github.com/opslang/opslang/internal/opsspec"
+	sdkacl "github.com/opslang/opslang/pkg/ops-core-sdk/acl"
+	sdkaddhost "github.com/opslang/opslang/pkg/ops-core-sdk/add_host"
+	sdkalternatives "github.com/opslang/opslang/pkg/ops-core-sdk/alternatives"
+	sdkapache2 "github.com/opslang/opslang/pkg/ops-core-sdk/apache2"
+	sdkapache2mod "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module"
+	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
 	sdkapt "github.com/opslang/opslang/pkg/ops-core-sdk/apt"
 	sdkaptrepo "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo"
-	sdkapk "github.com/opslang/opslang/pkg/ops-core-sdk/apk"
-	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
-	sdkrunit "github.com/opslang/opslang/pkg/ops-core-sdk/runit"
-	sdkfail2ban "github.com/opslang/opslang/pkg/ops-core-sdk/fail2ban"
-	sdklsb "github.com/opslang/opslang/pkg/ops-core-sdk/lsb_release"
-	sdkcompose "github.com/opslang/opslang/pkg/ops-core-sdk/docker_compose"
-	sdkcloudinit "github.com/opslang/opslang/pkg/ops-core-sdk/cloud_init"
-	sdksyspersist "github.com/opslang/opslang/pkg/ops-core-sdk/sys_persist"
-	sdkwireguard "github.com/opslang/opslang/pkg/ops-core-sdk/wireguard"
-	sdksmartnotify "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl_notify"
-	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
-	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
+	sdkaptkey "github.com/opslang/opslang/pkg/ops-core-sdk/aptkey"
 	sdkarchive "github.com/opslang/opslang/pkg/ops-core-sdk/archive"
+	sdkassert "github.com/opslang/opslang/pkg/ops-core-sdk/assert"
+	sdkasyncstatus "github.com/opslang/opslang/pkg/ops-core-sdk/async_status"
+	sdkat "github.com/opslang/opslang/pkg/ops-core-sdk/at"
+	sdkauthorized_key "github.com/opslang/opslang/pkg/ops-core-sdk/authorized_key"
+	sdkblockdev "github.com/opslang/opslang/pkg/ops-core-sdk/blockdev"
+	sdkblockinfile "github.com/opslang/opslang/pkg/ops-core-sdk/blockinfile"
+	sdkbtrfs "github.com/opslang/opslang/pkg/ops-core-sdk/btrfs"
+	sdkcargo "github.com/opslang/opslang/pkg/ops-core-sdk/cargo"
+	sdkcertbot "github.com/opslang/opslang/pkg/ops-core-sdk/certbot"
+	sdkcloudinit "github.com/opslang/opslang/pkg/ops-core-sdk/cloud_init"
+	sdkcommand "github.com/opslang/opslang/pkg/ops-core-sdk/command"
+	sdkcomposer "github.com/opslang/opslang/pkg/ops-core-sdk/composer"
+	sdkconsul "github.com/opslang/opslang/pkg/ops-core-sdk/consul"
+	sdkcopy "github.com/opslang/opslang/pkg/ops-core-sdk/copy"
 	sdkcron "github.com/opslang/opslang/pkg/ops-core-sdk/cron"
+	sdkcronvar "github.com/opslang/opslang/pkg/ops-core-sdk/cronvar"
+	sdkcrypttab "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab"
+	sdkdconf "github.com/opslang/opslang/pkg/ops-core-sdk/dconf"
+	sdkdebconf "github.com/opslang/opslang/pkg/ops-core-sdk/debconf"
+	sdkdebug "github.com/opslang/opslang/pkg/ops-core-sdk/debug"
 	sdkdisk "github.com/opslang/opslang/pkg/ops-core-sdk/disk"
+	sdkdmidecode "github.com/opslang/opslang/pkg/ops-core-sdk/dmidecode"
+	sdkdmsetup "github.com/opslang/opslang/pkg/ops-core-sdk/dmsetup"
 	sdkdnf "github.com/opslang/opslang/pkg/ops-core-sdk/dnf"
+	sdkdnsmasq "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq"
 	sdkdocker "github.com/opslang/opslang/pkg/ops-core-sdk/docker"
+	sdkcompose "github.com/opslang/opslang/pkg/ops-core-sdk/docker_compose"
+	sdkdockercontainer "github.com/opslang/opslang/pkg/ops-core-sdk/docker_container"
+	sdkdockerimage "github.com/opslang/opslang/pkg/ops-core-sdk/docker_image"
+	sdkdockernet "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network"
+	sdkdockervol "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume"
+	sdkdpkgsel "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections"
+	sdketcd "github.com/opslang/opslang/pkg/ops-core-sdk/etcd"
+	sdkethtool "github.com/opslang/opslang/pkg/ops-core-sdk/ethtool"
+	sdkexpect "github.com/opslang/opslang/pkg/ops-core-sdk/expect"
+	sdkfail "github.com/opslang/opslang/pkg/ops-core-sdk/fail"
+	sdkfail2ban "github.com/opslang/opslang/pkg/ops-core-sdk/fail2ban"
+	sdkfetch "github.com/opslang/opslang/pkg/ops-core-sdk/fetch"
 	sdkfile "github.com/opslang/opslang/pkg/ops-core-sdk/file"
+	sdkfilesystem "github.com/opslang/opslang/pkg/ops-core-sdk/filesystem"
+	sdkfind "github.com/opslang/opslang/pkg/ops-core-sdk/find"
 	sdkfirewalld "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld"
+	sdkfirewalld_ipset "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_ipset"
+	sdkfirewalld_rich_rule "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_rich_rule"
+	sdkfirewalldzone "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone"
+	sdkflatpak "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak"
+	sdkgem "github.com/opslang/opslang/pkg/ops-core-sdk/gem"
+	sdkgeturl "github.com/opslang/opslang/pkg/ops-core-sdk/get_url"
+	sdkgetent "github.com/opslang/opslang/pkg/ops-core-sdk/getent"
 	sdkgit "github.com/opslang/opslang/pkg/ops-core-sdk/git"
+	sdkgitconfig "github.com/opslang/opslang/pkg/ops-core-sdk/git_config"
+	sdkgluster "github.com/opslang/opslang/pkg/ops-core-sdk/gluster"
 	sdkgroup "github.com/opslang/opslang/pkg/ops-core-sdk/group"
+	sdkgroupby "github.com/opslang/opslang/pkg/ops-core-sdk/group_by"
+	sdkhaproxy "github.com/opslang/opslang/pkg/ops-core-sdk/haproxy"
+	sdkbrew "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew"
+	sdkhostname "github.com/opslang/opslang/pkg/ops-core-sdk/hostname"
 	sdkhosts "github.com/opslang/opslang/pkg/ops-core-sdk/hosts"
+	sdkhtpasswd "github.com/opslang/opslang/pkg/ops-core-sdk/htpasswd"
+	sdkhwclock "github.com/opslang/opslang/pkg/ops-core-sdk/hwclock"
+	sdkincludevars "github.com/opslang/opslang/pkg/ops-core-sdk/include_vars"
+	sdkinifile "github.com/opslang/opslang/pkg/ops-core-sdk/ini_file"
+	sdkiplink "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link"
+	sdkipneighbor "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor"
+	sdkipnetns "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns"
+	sdkiproute "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route"
+	sdkipaddr "github.com/opslang/opslang/pkg/ops-core-sdk/ipaddr"
+	sdkiptables "github.com/opslang/opslang/pkg/ops-core-sdk/iptables"
+	sdkissue "github.com/opslang/opslang/pkg/ops-core-sdk/issue"
+	sdkjavacert "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert"
+	sdkjournald "github.com/opslang/opslang/pkg/ops-core-sdk/journald"
 	sdkjson "github.com/opslang/opslang/pkg/ops-core-sdk/json"
 	sdkkernel "github.com/opslang/opslang/pkg/ops-core-sdk/kernel"
 	sdkknownhosts "github.com/opslang/opslang/pkg/ops-core-sdk/known_hosts"
-	sdklimits "github.com/opslang/opslang/pkg/ops-core-sdk/limits"
-	sdklocale "github.com/opslang/opslang/pkg/ops-core-sdk/locale"
-	sdklogrotate "github.com/opslang/opslang/pkg/ops-core-sdk/logrotate"
-	sdklvg "github.com/opslang/opslang/pkg/ops-core-sdk/lvg"
-	sdknet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
-	sdkntp "github.com/opslang/opslang/pkg/ops-core-sdk/ntp"
-	sdkpip "github.com/opslang/opslang/pkg/ops-core-sdk/pip"
-	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
-	sdkprocess "github.com/opslang/opslang/pkg/ops-core-sdk/process"
-	sdkresolv "github.com/opslang/opslang/pkg/ops-core-sdk/resolv"
-	sdksnap "github.com/opslang/opslang/pkg/ops-core-sdk/snap"
-	sdkselinux "github.com/opslang/opslang/pkg/ops-core-sdk/selinux"
-	sdkservice "github.com/opslang/opslang/pkg/ops-core-sdk/service"
-	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
-	sdksys "github.com/opslang/opslang/pkg/ops-core-sdk/sys"
-	sdkufw "github.com/opslang/opslang/pkg/ops-core-sdk/ufw"
-	sdkinifile "github.com/opslang/opslang/pkg/ops-core-sdk/ini_file"
-	sdkmount "github.com/opslang/opslang/pkg/ops-core-sdk/mount"
-	sdkhostname "github.com/opslang/opslang/pkg/ops-core-sdk/hostname"
-	sdktimezone "github.com/opslang/opslang/pkg/ops-core-sdk/timezone"
-	sdksysctl "github.com/opslang/opslang/pkg/ops-core-sdk/sysctl"
-	sdktime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
-	sdkuser "github.com/opslang/opslang/pkg/ops-core-sdk/user"
-	sdkyaml "github.com/opslang/opslang/pkg/ops-core-sdk/yaml"
-	sdkiptables "github.com/opslang/opslang/pkg/ops-core-sdk/iptables"
-	sdknpm "github.com/opslang/opslang/pkg/ops-core-sdk/npm"
-	sdkmysql "github.com/opslang/opslang/pkg/ops-core-sdk/mysql"
-	sdknginx "github.com/opslang/opslang/pkg/ops-core-sdk/nginx"
-	sdkmodprobe "github.com/opslang/opslang/pkg/ops-core-sdk/modprobe"
-	sdkalternatives "github.com/opslang/opslang/pkg/ops-core-sdk/alternatives"
-	sdkblockdev "github.com/opslang/opslang/pkg/ops-core-sdk/blockdev"
-	sdkat "github.com/opslang/opslang/pkg/ops-core-sdk/at"
-	sdkpostgresql "github.com/opslang/opslang/pkg/ops-core-sdk/postgresql"
-	sdkapache2 "github.com/opslang/opslang/pkg/ops-core-sdk/apache2"
-	sdkfilesystem "github.com/opslang/opslang/pkg/ops-core-sdk/filesystem"
-	sdkparted "github.com/opslang/opslang/pkg/ops-core-sdk/parted"
-	sdkacl "github.com/opslang/opslang/pkg/ops-core-sdk/acl"
-	sdkwaitfor "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for"
-	sdklvol "github.com/opslang/opslang/pkg/ops-core-sdk/lvol"
-	sdksync "github.com/opslang/opslang/pkg/ops-core-sdk/synchronize"
-	sdkfetch "github.com/opslang/opslang/pkg/ops-core-sdk/fetch"
-	sdksebool "github.com/opslang/opslang/pkg/ops-core-sdk/seboolean"
-	sdkyumrepo "github.com/opslang/opslang/pkg/ops-core-sdk/yum_repo"
-	sdkuri "github.com/opslang/opslang/pkg/ops-core-sdk/uri"
-	sdklineinfile "github.com/opslang/opslang/pkg/ops-core-sdk/lineinfile"
-	sdkreplace "github.com/opslang/opslang/pkg/ops-core-sdk/replace"
-	sdkxml "github.com/opslang/opslang/pkg/ops-core-sdk/xml"
-	sdksystemd "github.com/opslang/opslang/pkg/ops-core-sdk/systemd"
-	sdkpatch "github.com/opslang/opslang/pkg/ops-core-sdk/patch"
-	sdkxattr "github.com/opslang/opslang/pkg/ops-core-sdk/xattr"
-	sdkfirewalldzone "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone"
-	sdkgeturl "github.com/opslang/opslang/pkg/ops-core-sdk/get_url"
-	seport "github.com/opslang/opslang/pkg/ops-core-sdk/seport"
-	sefcontext "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext"
-	sdkflatpak "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak"
-	sdkzfs "github.com/opslang/opslang/pkg/ops-core-sdk/zfs"
-	sdknmcli "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli"
-	sdkcrypttab "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab"
-	sdksysfs "github.com/opslang/opslang/pkg/ops-core-sdk/sysfs"
-	sdkpamd "github.com/opslang/opslang/pkg/ops-core-sdk/pamd"
-	sdkgetent "github.com/opslang/opslang/pkg/ops-core-sdk/getent"
-	sdkhaproxy "github.com/opslang/opslang/pkg/ops-core-sdk/haproxy"
-	sdkopenssl "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_cert"
-	sdkredis "github.com/opslang/opslang/pkg/ops-core-sdk/redis"
-	sdkgem "github.com/opslang/opslang/pkg/ops-core-sdk/gem"
-	sdkrabbitmq "github.com/opslang/opslang/pkg/ops-core-sdk/rabbitmq"
-	sdkconsul "github.com/opslang/opslang/pkg/ops-core-sdk/consul"
-	sdkmemcached "github.com/opslang/opslang/pkg/ops-core-sdk/memcached"
-	sdkcomposer "github.com/opslang/opslang/pkg/ops-core-sdk/composer"
-	sdkcargo "github.com/opslang/opslang/pkg/ops-core-sdk/cargo"
-	sdkrpmkey "github.com/opslang/opslang/pkg/ops-core-sdk/rpmkey"
-	sdkaptkey "github.com/opslang/opslang/pkg/ops-core-sdk/aptkey"
-	sdkdmidecode "github.com/opslang/opslang/pkg/ops-core-sdk/dmidecode"
-	sdktuned "github.com/opslang/opslang/pkg/ops-core-sdk/tuned"
-	sdksupervisor "github.com/opslang/opslang/pkg/ops-core-sdk/supervisor"
-	sdksmartctl "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl"
-	sdkvirsh "github.com/opslang/opslang/pkg/ops-core-sdk/virsh"
-	sdkethtool "github.com/opslang/opslang/pkg/ops-core-sdk/ethtool"
-	sdksystemd_analyze "github.com/opslang/opslang/pkg/ops-core-sdk/systemd_analyze"
-	sdknvme "github.com/opslang/opslang/pkg/ops-core-sdk/nvme"
-	sdkslshw "github.com/opslang/opslang/pkg/ops-core-sdk/lshw"
-	sdkipaddr "github.com/opslang/opslang/pkg/ops-core-sdk/ipaddr"
-	sdkudevadm "github.com/opslang/opslang/pkg/ops-core-sdk/udevadm"
-	sdkmodinfo "github.com/opslang/opslang/pkg/ops-core-sdk/modinfo"
-	sdkdconf "github.com/opslang/opslang/pkg/ops-core-sdk/dconf"
-	sdklocale_gen "github.com/opslang/opslang/pkg/ops-core-sdk/locale_gen"
-	sdkpam_limits "github.com/opslang/opslang/pkg/ops-core-sdk/pam_limits"
-	sdkmotd "github.com/opslang/opslang/pkg/ops-core-sdk/motd"
-	sdkissue "github.com/opslang/opslang/pkg/ops-core-sdk/issue"
-	sdkauthorized_key "github.com/opslang/opslang/pkg/ops-core-sdk/authorized_key"
-	sdkblockinfile "github.com/opslang/opslang/pkg/ops-core-sdk/blockinfile"
-	sdkdebconf "github.com/opslang/opslang/pkg/ops-core-sdk/debconf"
-	sdkreboot "github.com/opslang/opslang/pkg/ops-core-sdk/reboot"
-	sdkswap "github.com/opslang/opslang/pkg/ops-core-sdk/swap"
-	sdkraw "github.com/opslang/opslang/pkg/ops-core-sdk/raw"
-	sdkexpect "github.com/opslang/opslang/pkg/ops-core-sdk/expect"
-	sdkslurp "github.com/opslang/opslang/pkg/ops-core-sdk/slurp"
-	sdkwait_for_connection "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for_connection"
-	sdkfirewalld_rich_rule "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_rich_rule"
-	sdkfirewalld_ipset "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_ipset"
-	sdkpause "github.com/opslang/opslang/pkg/ops-core-sdk/pause"
-	sdkmeta "github.com/opslang/opslang/pkg/ops-core-sdk/meta"
-	sdkuri_ext "github.com/opslang/opslang/pkg/ops-core-sdk/uri_ext"
-	sdkhwclock "github.com/opslang/opslang/pkg/ops-core-sdk/hwclock"
-	sdkmdadm "github.com/opslang/opslang/pkg/ops-core-sdk/mdadm"
-	sdkopen_iscsi "github.com/opslang/opslang/pkg/ops-core-sdk/open_iscsi"
-	sdkrfkill "github.com/opslang/opslang/pkg/ops-core-sdk/rfkill"
-	sdkmultipath "github.com/opslang/opslang/pkg/ops-core-sdk/multipath"
-	sdkdmsetup "github.com/opslang/opslang/pkg/ops-core-sdk/dmsetup"
-	sdklvm_enhanced "github.com/opslang/opslang/pkg/ops-core-sdk/lvm_enhanced"
-	sdkpuppet "github.com/opslang/opslang/pkg/ops-core-sdk/puppet"
-	sdkyarn "github.com/opslang/opslang/pkg/ops-core-sdk/yarn"
-	sdkhtpasswd "github.com/opslang/opslang/pkg/ops-core-sdk/htpasswd"
-	sdksudoers "github.com/opslang/opslang/pkg/ops-core-sdk/sudoers"
-	sdkmonit "github.com/opslang/opslang/pkg/ops-core-sdk/monit"
 	sdkk8s "github.com/opslang/opslang/pkg/ops-core-sdk/kubernetes"
-	sdksvn "github.com/opslang/opslang/pkg/ops-core-sdk/svn"
-	sdkzypper "github.com/opslang/opslang/pkg/ops-core-sdk/zypper"
+	sdklimits "github.com/opslang/opslang/pkg/ops-core-sdk/limits"
+	sdklineinfile "github.com/opslang/opslang/pkg/ops-core-sdk/lineinfile"
+	sdklocale "github.com/opslang/opslang/pkg/ops-core-sdk/locale"
+	sdklocale_gen "github.com/opslang/opslang/pkg/ops-core-sdk/locale_gen"
+	sdklogrotate "github.com/opslang/opslang/pkg/ops-core-sdk/logrotate"
+	sdklsb "github.com/opslang/opslang/pkg/ops-core-sdk/lsb_release"
+	sdkslshw "github.com/opslang/opslang/pkg/ops-core-sdk/lshw"
+	sdklvg "github.com/opslang/opslang/pkg/ops-core-sdk/lvg"
+	sdklvm_enhanced "github.com/opslang/opslang/pkg/ops-core-sdk/lvm_enhanced"
+	sdklvol "github.com/opslang/opslang/pkg/ops-core-sdk/lvol"
+	sdkmail "github.com/opslang/opslang/pkg/ops-core-sdk/mail"
+	sdkmaven "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact"
+	sdkmdadm "github.com/opslang/opslang/pkg/ops-core-sdk/mdadm"
+	sdkmemcached "github.com/opslang/opslang/pkg/ops-core-sdk/memcached"
+	sdkmeta "github.com/opslang/opslang/pkg/ops-core-sdk/meta"
+	sdkmodinfo "github.com/opslang/opslang/pkg/ops-core-sdk/modinfo"
+	sdkmodprobe "github.com/opslang/opslang/pkg/ops-core-sdk/modprobe"
+	sdkmongodb "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb"
+	sdkmonit "github.com/opslang/opslang/pkg/ops-core-sdk/monit"
+	sdkmotd "github.com/opslang/opslang/pkg/ops-core-sdk/motd"
+	sdkmount "github.com/opslang/opslang/pkg/ops-core-sdk/mount"
+	sdkmultipath "github.com/opslang/opslang/pkg/ops-core-sdk/multipath"
+	sdkmysql "github.com/opslang/opslang/pkg/ops-core-sdk/mysql"
+	sdknet "github.com/opslang/opslang/pkg/ops-core-sdk/net"
+	sdknfsexports "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports"
+	sdknftables "github.com/opslang/opslang/pkg/ops-core-sdk/nftables"
+	sdknginx "github.com/opslang/opslang/pkg/ops-core-sdk/nginx"
+	sdknmcli "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli"
+	sdknomad "github.com/opslang/opslang/pkg/ops-core-sdk/nomad"
+	sdknormalize "github.com/opslang/opslang/pkg/ops-core-sdk/normalize"
+	sdknpm "github.com/opslang/opslang/pkg/ops-core-sdk/npm"
+	sdkntp "github.com/opslang/opslang/pkg/ops-core-sdk/ntp"
+	sdknvme "github.com/opslang/opslang/pkg/ops-core-sdk/nvme"
+	sdkopen_iscsi "github.com/opslang/opslang/pkg/ops-core-sdk/open_iscsi"
+	sdkopenssl "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_cert"
+	sdkopensslcsr "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr"
+	sdkopensslprivatekey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey"
+	sdkopensslpublickey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey"
+	sdkopenvpn "github.com/opslang/opslang/pkg/ops-core-sdk/openvpn"
+	sdkpackagemgr "github.com/opslang/opslang/pkg/ops-core-sdk/package"
+	sdkpackagefacts "github.com/opslang/opslang/pkg/ops-core-sdk/package_facts"
 	sdkpacman "github.com/opslang/opslang/pkg/ops-core-sdk/pacman"
-	sdkportage "github.com/opslang/opslang/pkg/ops-core-sdk/portage"
+	sdkpam_limits "github.com/opslang/opslang/pkg/ops-core-sdk/pam_limits"
+	sdkpamd "github.com/opslang/opslang/pkg/ops-core-sdk/pamd"
+	sdkparted "github.com/opslang/opslang/pkg/ops-core-sdk/parted"
+	sdkpatch "github.com/opslang/opslang/pkg/ops-core-sdk/patch"
+	sdkpause "github.com/opslang/opslang/pkg/ops-core-sdk/pause"
+	sdkping "github.com/opslang/opslang/pkg/ops-core-sdk/ping"
+	sdkpip "github.com/opslang/opslang/pkg/ops-core-sdk/pip"
+	sdkpipx "github.com/opslang/opslang/pkg/ops-core-sdk/pipx"
+	opspkg "github.com/opslang/opslang/pkg/ops-core-sdk/pkg"
 	sdkpkgng "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng"
 	sdkpodman "github.com/opslang/opslang/pkg/ops-core-sdk/podman"
-	sdknftables "github.com/opslang/opslang/pkg/ops-core-sdk/nftables"
-	sdkmongodb "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb"
-	sdktomcat "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat"
-	sdkjavacert "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert"
-	sdkmaven "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact"
-	sdkdockerimage "github.com/opslang/opslang/pkg/ops-core-sdk/docker_image"
-	sdkdockercontainer "github.com/opslang/opslang/pkg/ops-core-sdk/docker_container"
-	sdkping "github.com/opslang/opslang/pkg/ops-core-sdk/ping"
-	sdkfind "github.com/opslang/opslang/pkg/ops-core-sdk/find"
-	sdktempfile "github.com/opslang/opslang/pkg/ops-core-sdk/tempfile"
-	sdkfail "github.com/opslang/opslang/pkg/ops-core-sdk/fail"
-	sdkassert "github.com/opslang/opslang/pkg/ops-core-sdk/assert"
-	sdkdebug "github.com/opslang/opslang/pkg/ops-core-sdk/debug"
-	sdksetfact "github.com/opslang/opslang/pkg/ops-core-sdk/set_fact"
-	sdkunarchive "github.com/opslang/opslang/pkg/ops-core-sdk/unarchive"
-	sdkpackagefacts "github.com/opslang/opslang/pkg/ops-core-sdk/package_facts"
-	sdkservicefacts "github.com/opslang/opslang/pkg/ops-core-sdk/service_facts"
-	sdkcommand "github.com/opslang/opslang/pkg/ops-core-sdk/command"
-	sdkscript "github.com/opslang/opslang/pkg/ops-core-sdk/script"
-	sdkcopy "github.com/opslang/opslang/pkg/ops-core-sdk/copy"
-	sdkcronvar "github.com/opslang/opslang/pkg/ops-core-sdk/cronvar"
-	sdkstat "github.com/opslang/opslang/pkg/ops-core-sdk/stat"
-	sdkaddhost "github.com/opslang/opslang/pkg/ops-core-sdk/add_host"
-	sdksetstats "github.com/opslang/opslang/pkg/ops-core-sdk/set_stats"
-	sdkincludevars "github.com/opslang/opslang/pkg/ops-core-sdk/include_vars"
-	sdkasyncstatus "github.com/opslang/opslang/pkg/ops-core-sdk/async_status"
-	sdkpackagemgr "github.com/opslang/opslang/pkg/ops-core-sdk/package"
-	sdktypedebug "github.com/opslang/opslang/pkg/ops-core-sdk/type_debug"
-	sdkgroupby "github.com/opslang/opslang/pkg/ops-core-sdk/group_by"
-	sdknormalize "github.com/opslang/opslang/pkg/ops-core-sdk/normalize"
-	sdkvalidatecerts "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs"
-	sdkmail "github.com/opslang/opslang/pkg/ops-core-sdk/mail"
-	sdkwebhook "github.com/opslang/opslang/pkg/ops-core-sdk/webhook"
-	sdkopensslprivatekey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey"
-	sdkiproute "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route"
-	sdkiplink "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link"
-	sdkipnetns "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns"
-	sdkipneighbor "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor"
-	sdkopensslcsr "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr"
-	sdkopensslpublickey "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey"
-	sdketcd "github.com/opslang/opslang/pkg/ops-core-sdk/etcd"
-	sdkzookeeper "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper"
-	sdkvault "github.com/opslang/opslang/pkg/ops-core-sdk/vault"
-	sdkgitconfig "github.com/opslang/opslang/pkg/ops-core-sdk/git_config"
-	sdksshdconfig "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config"
-	sdkdockernet "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network"
-	sdkdockervol "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume"
-	sdkjournald "github.com/opslang/opslang/pkg/ops-core-sdk/journald"
-	sdknfsexports "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports"
+	sdkportage "github.com/opslang/opslang/pkg/ops-core-sdk/portage"
 	sdkpostfix "github.com/opslang/opslang/pkg/ops-core-sdk/postfix"
-	sdkdnsmasq "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq"
-	sdkapache2mod "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module"
-	sdkpipx "github.com/opslang/opslang/pkg/ops-core-sdk/pipx"
+	sdkpostgresql "github.com/opslang/opslang/pkg/ops-core-sdk/postgresql"
+	sdkprocess "github.com/opslang/opslang/pkg/ops-core-sdk/process"
+	sdkpuppet "github.com/opslang/opslang/pkg/ops-core-sdk/puppet"
+	sdkrabbitmq "github.com/opslang/opslang/pkg/ops-core-sdk/rabbitmq"
+	sdkraw "github.com/opslang/opslang/pkg/ops-core-sdk/raw"
+	sdkreboot "github.com/opslang/opslang/pkg/ops-core-sdk/reboot"
+	sdkredis "github.com/opslang/opslang/pkg/ops-core-sdk/redis"
+	sdkreplace "github.com/opslang/opslang/pkg/ops-core-sdk/replace"
+	sdkresolv "github.com/opslang/opslang/pkg/ops-core-sdk/resolv"
+	sdkrfkill "github.com/opslang/opslang/pkg/ops-core-sdk/rfkill"
+	sdkrpmkey "github.com/opslang/opslang/pkg/ops-core-sdk/rpmkey"
+	sdkrunit "github.com/opslang/opslang/pkg/ops-core-sdk/runit"
+	sdkscript "github.com/opslang/opslang/pkg/ops-core-sdk/script"
+	sdksebool "github.com/opslang/opslang/pkg/ops-core-sdk/seboolean"
+	sefcontext "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext"
+	sdkselinux "github.com/opslang/opslang/pkg/ops-core-sdk/selinux"
+	seport "github.com/opslang/opslang/pkg/ops-core-sdk/seport"
+	sdkservice "github.com/opslang/opslang/pkg/ops-core-sdk/service"
+	sdkservicefacts "github.com/opslang/opslang/pkg/ops-core-sdk/service_facts"
+	sdksetfact "github.com/opslang/opslang/pkg/ops-core-sdk/set_fact"
+	sdksetstats "github.com/opslang/opslang/pkg/ops-core-sdk/set_stats"
+	sdkslurp "github.com/opslang/opslang/pkg/ops-core-sdk/slurp"
+	sdksmartctl "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl"
+	sdksmartnotify "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl_notify"
+	sdksnap "github.com/opslang/opslang/pkg/ops-core-sdk/snap"
+	sdkssh "github.com/opslang/opslang/pkg/ops-core-sdk/ssh"
 	sdksshconfig "github.com/opslang/opslang/pkg/ops-core-sdk/ssh_config"
-	sdkopenvpn "github.com/opslang/opslang/pkg/ops-core-sdk/openvpn"
-	sdkbtrfs "github.com/opslang/opslang/pkg/ops-core-sdk/btrfs"
-	sdkcertbot "github.com/opslang/opslang/pkg/ops-core-sdk/certbot"
-	sdkgluster "github.com/opslang/opslang/pkg/ops-core-sdk/gluster"
+	sdksshdconfig "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config"
+	sdkstat "github.com/opslang/opslang/pkg/ops-core-sdk/stat"
+	sdksudoers "github.com/opslang/opslang/pkg/ops-core-sdk/sudoers"
+	sdksupervisor "github.com/opslang/opslang/pkg/ops-core-sdk/supervisor"
+	sdksvn "github.com/opslang/opslang/pkg/ops-core-sdk/svn"
+	sdkswap "github.com/opslang/opslang/pkg/ops-core-sdk/swap"
+	sdksync "github.com/opslang/opslang/pkg/ops-core-sdk/synchronize"
+	sdksys "github.com/opslang/opslang/pkg/ops-core-sdk/sys"
+	sdksyspersist "github.com/opslang/opslang/pkg/ops-core-sdk/sys_persist"
+	sdksysctl "github.com/opslang/opslang/pkg/ops-core-sdk/sysctl"
+	sdksysfs "github.com/opslang/opslang/pkg/ops-core-sdk/sysfs"
+	sdksystemd "github.com/opslang/opslang/pkg/ops-core-sdk/systemd"
+	sdksystemd_analyze "github.com/opslang/opslang/pkg/ops-core-sdk/systemd_analyze"
+	sdksysvinit "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit"
+	sdktempfile "github.com/opslang/opslang/pkg/ops-core-sdk/tempfile"
+	sdktime "github.com/opslang/opslang/pkg/ops-core-sdk/time"
+	sdktimezone "github.com/opslang/opslang/pkg/ops-core-sdk/timezone"
+	sdktomcat "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat"
+	sdktuned "github.com/opslang/opslang/pkg/ops-core-sdk/tuned"
+	sdktypedebug "github.com/opslang/opslang/pkg/ops-core-sdk/type_debug"
+	sdkudevadm "github.com/opslang/opslang/pkg/ops-core-sdk/udevadm"
+	sdkufw "github.com/opslang/opslang/pkg/ops-core-sdk/ufw"
+	sdkunarchive "github.com/opslang/opslang/pkg/ops-core-sdk/unarchive"
+	sdkuri "github.com/opslang/opslang/pkg/ops-core-sdk/uri"
+	sdkuri_ext "github.com/opslang/opslang/pkg/ops-core-sdk/uri_ext"
+	sdkuser "github.com/opslang/opslang/pkg/ops-core-sdk/user"
+	sdkvalidatecerts "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs"
+	sdkvault "github.com/opslang/opslang/pkg/ops-core-sdk/vault"
+	sdkvirsh "github.com/opslang/opslang/pkg/ops-core-sdk/virsh"
+	sdkwaitfor "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for"
+	sdkwait_for_connection "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for_connection"
+	sdkwebhook "github.com/opslang/opslang/pkg/ops-core-sdk/webhook"
+	sdkwireguard "github.com/opslang/opslang/pkg/ops-core-sdk/wireguard"
+	sdkxattr "github.com/opslang/opslang/pkg/ops-core-sdk/xattr"
+	sdkxml "github.com/opslang/opslang/pkg/ops-core-sdk/xml"
+	sdkyaml "github.com/opslang/opslang/pkg/ops-core-sdk/yaml"
+	sdkyarn "github.com/opslang/opslang/pkg/ops-core-sdk/yarn"
+	sdkyumrepo "github.com/opslang/opslang/pkg/ops-core-sdk/yum_repo"
+	sdkzfs "github.com/opslang/opslang/pkg/ops-core-sdk/zfs"
+	sdkzookeeper "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper"
+	sdkzypper "github.com/opslang/opslang/pkg/ops-core-sdk/zypper"
 )
 
 // SDKBuiltinNames returns every SDK function name registered by
@@ -1641,33 +1642,51 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 
 	// ── pamd.* ──────────────────────────────────────────────────────────
 	interp.builtins["pamd.get"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("pamd.get() requires 1 argument (service)") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pamd.get() requires 1 argument (service)")
+		}
 		service, ok := args[0].(string)
-		if !ok { return nil, fmt.Errorf("pamd.get(): first argument must be string") }
+		if !ok {
+			return nil, fmt.Errorf("pamd.get(): first argument must be string")
+		}
 		return sdkpamd.Get(service)
 	}
 	interp.builtins["pamd.list"] = func(args ...interface{}) (interface{}, error) {
 		return sdkpamd.List()
 	}
 	interp.builtins["pamd.add_rule"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 5 { return nil, fmt.Errorf("pamd.add_rule() requires 5 arguments") }
-		svc := args[0].(string); rt := args[1].(string); ctrl := args[2].(string); mod := args[3].(string); a := args[4].(string)
+		if len(args) < 5 {
+			return nil, fmt.Errorf("pamd.add_rule() requires 5 arguments")
+		}
+		svc := args[0].(string)
+		rt := args[1].(string)
+		ctrl := args[2].(string)
+		mod := args[3].(string)
+		a := args[4].(string)
 		return sdkpamd.AddRule(svc, rt, ctrl, mod, a)
 	}
 	interp.builtins["pamd.remove_rule"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 3 { return nil, fmt.Errorf("pamd.remove_rule() requires 3 arguments") }
+		if len(args) < 3 {
+			return nil, fmt.Errorf("pamd.remove_rule() requires 3 arguments")
+		}
 		return sdkpamd.RemoveRule(args[0].(string), args[1].(string), args[2].(string))
 	}
 	interp.builtins["pamd.modify_rule"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 5 { return nil, fmt.Errorf("pamd.modify_rule() requires 5 arguments") }
+		if len(args) < 5 {
+			return nil, fmt.Errorf("pamd.modify_rule() requires 5 arguments")
+		}
 		return sdkpamd.ModifyRule(args[0].(string), args[1].(string), args[2].(string), args[3].(string), args[4].(string))
 	}
 	interp.builtins["pamd.validate"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("pamd.validate() requires 1 argument") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pamd.validate() requires 1 argument")
+		}
 		return sdkpamd.Validate(args[0].(string))
 	}
 	interp.builtins["pamd.backup"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("pamd.backup() requires 2 arguments") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("pamd.backup() requires 2 arguments")
+		}
 		return sdkpamd.Backup(args[0].(string), args[1].(string))
 	}
 
@@ -1676,28 +1695,36 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return sdkgetent.GetPasswd()
 	}
 	interp.builtins["getent.lookup_user"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("getent.lookup_user() requires 1 argument") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getent.lookup_user() requires 1 argument")
+		}
 		return sdkgetent.LookupUser(args[0].(string))
 	}
 	interp.builtins["getent.groups"] = func(args ...interface{}) (interface{}, error) {
 		return sdkgetent.GetGroups()
 	}
 	interp.builtins["getent.lookup_group"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("getent.lookup_group() requires 1 argument") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getent.lookup_group() requires 1 argument")
+		}
 		return sdkgetent.LookupGroup(args[0].(string))
 	}
 	interp.builtins["getent.services"] = func(args ...interface{}) (interface{}, error) {
 		return sdkgetent.GetServices()
 	}
 	interp.builtins["getent.lookup_service"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("getent.lookup_service() requires 1 argument") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getent.lookup_service() requires 1 argument")
+		}
 		return sdkgetent.LookupService(args[0].(string))
 	}
 	interp.builtins["getent.protocols"] = func(args ...interface{}) (interface{}, error) {
 		return sdkgetent.GetProtocols()
 	}
 	interp.builtins["getent.lookup_protocol"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("getent.lookup_protocol() requires 1 argument") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("getent.lookup_protocol() requires 1 argument")
+		}
 		return sdkgetent.LookupProtocol(args[0].(string))
 	}
 	interp.builtins["getent.shells"] = func(args ...interface{}) (interface{}, error) {
@@ -1709,23 +1736,33 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return sdkhaproxy.GetStatus()
 	}
 	interp.builtins["haproxy.list_backends"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("haproxy.list_backends() requires 1 argument") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("haproxy.list_backends() requires 1 argument")
+		}
 		return sdkhaproxy.ListBackends(args[0].(string))
 	}
 	interp.builtins["haproxy.enable_backend"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 3 { return nil, fmt.Errorf("haproxy.enable_backend() requires 3 arguments") }
+		if len(args) < 3 {
+			return nil, fmt.Errorf("haproxy.enable_backend() requires 3 arguments")
+		}
 		return sdkhaproxy.EnableBackend(args[0].(string), args[1].(string), args[2].(string))
 	}
 	interp.builtins["haproxy.disable_backend"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 3 { return nil, fmt.Errorf("haproxy.disable_backend() requires 3 arguments") }
+		if len(args) < 3 {
+			return nil, fmt.Errorf("haproxy.disable_backend() requires 3 arguments")
+		}
 		return sdkhaproxy.DisableBackend(args[0].(string), args[1].(string), args[2].(string))
 	}
 	interp.builtins["haproxy.validate_config"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("haproxy.validate_config() requires 1 argument") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("haproxy.validate_config() requires 1 argument")
+		}
 		return sdkhaproxy.ValidateConfig(args[0].(string))
 	}
 	interp.builtins["haproxy.reload"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("haproxy.reload() requires 1 argument") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("haproxy.reload() requires 1 argument")
+		}
 		return sdkhaproxy.Reload(args[0].(string))
 	}
 	interp.builtins["haproxy.restart"] = func(args ...interface{}) (interface{}, error) {
@@ -1737,7 +1774,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 
 	// ── openssl_cert.* ──────────────────────────────────────────────────
 	interp.builtins["openssl_cert.create_csr"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 4 { return nil, fmt.Errorf("openssl_cert.create_csr() requires 4 arguments") }
+		if len(args) < 4 {
+			return nil, fmt.Errorf("openssl_cert.create_csr() requires 4 arguments")
+		}
 		kp, _ := args[0].(string)
 		cp, _ := args[1].(string)
 		subj, _ := args[2].(string)
@@ -1745,7 +1784,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return sdkopenssl.CreateCSR(kp, cp, subj, int(bitsF))
 	}
 	interp.builtins["openssl_cert.generate_self_signed"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 5 { return nil, fmt.Errorf("openssl_cert.generate_self_signed() requires 5 arguments") }
+		if len(args) < 5 {
+			return nil, fmt.Errorf("openssl_cert.generate_self_signed() requires 5 arguments")
+		}
 		cp, _ := args[0].(string)
 		kp, _ := args[1].(string)
 		subj, _ := args[2].(string)
@@ -1754,23 +1795,31 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return sdkopenssl.GenerateSelfSigned(cp, kp, subj, int(daysF), int(bitsF))
 	}
 	interp.builtins["openssl_cert.inspect"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("openssl_cert.inspect() requires 1 argument") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("openssl_cert.inspect() requires 1 argument")
+		}
 		cp, _ := args[0].(string)
 		return sdkopenssl.Inspect(cp)
 	}
 	interp.builtins["openssl_cert.verify"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("openssl_cert.verify() requires 2 arguments") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("openssl_cert.verify() requires 2 arguments")
+		}
 		cp, _ := args[0].(string)
 		ca, _ := args[1].(string)
 		return sdkopenssl.Verify(cp, ca)
 	}
 	interp.builtins["openssl_cert.check_expiry"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("openssl_cert.check_expiry() requires 1 argument") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("openssl_cert.check_expiry() requires 1 argument")
+		}
 		cp, _ := args[0].(string)
 		return sdkopenssl.CheckExpiry(cp)
 	}
 	interp.builtins["openssl_cert.convert_format"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 3 { return nil, fmt.Errorf("openssl_cert.convert_format() requires 3 arguments") }
+		if len(args) < 3 {
+			return nil, fmt.Errorf("openssl_cert.convert_format() requires 3 arguments")
+		}
 		ip, _ := args[0].(string)
 		op, _ := args[1].(string)
 		of, _ := args[2].(string)
@@ -1780,33 +1829,63 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	// ── redis.* ─────────────────────────────────────────────────────────
 	interp.builtins["redis.ping"] = func(args ...interface{}) (interface{}, error) {
 		h, p, a := "", 0, ""
-		if len(args) > 0 { h, _ = args[0].(string) }
-		if len(args) > 1 { pf, _ := toFloat(args[1]); p = int(pf) }
-		if len(args) > 2 { a, _ = args[2].(string) }
+		if len(args) > 0 {
+			h, _ = args[0].(string)
+		}
+		if len(args) > 1 {
+			pf, _ := toFloat(args[1])
+			p = int(pf)
+		}
+		if len(args) > 2 {
+			a, _ = args[2].(string)
+		}
 		return sdkredis.Ping(h, p, a)
 	}
 	interp.builtins["redis.get"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("redis.get() requires key") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("redis.get() requires key")
+		}
 		key, _ := args[0].(string)
 		h, p, a := "", 0, ""
-		if len(args) > 1 { h, _ = args[1].(string) }
-		if len(args) > 2 { pf, _ := toFloat(args[2]); p = int(pf) }
-		if len(args) > 3 { a, _ = args[3].(string) }
+		if len(args) > 1 {
+			h, _ = args[1].(string)
+		}
+		if len(args) > 2 {
+			pf, _ := toFloat(args[2])
+			p = int(pf)
+		}
+		if len(args) > 3 {
+			a, _ = args[3].(string)
+		}
 		return sdkredis.Get(key, h, p, a)
 	}
 	interp.builtins["redis.set"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("redis.set() requires key and value") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("redis.set() requires key and value")
+		}
 		key, _ := args[0].(string)
 		val, _ := args[1].(string)
 		h, p, a, exp := "", 0, "", 0
-		if len(args) > 2 { h, _ = args[2].(string) }
-		if len(args) > 3 { pf, _ := toFloat(args[3]); p = int(pf) }
-		if len(args) > 4 { a, _ = args[4].(string) }
-		if len(args) > 5 { ef, _ := toFloat(args[5]); exp = int(ef) }
+		if len(args) > 2 {
+			h, _ = args[2].(string)
+		}
+		if len(args) > 3 {
+			pf, _ := toFloat(args[3])
+			p = int(pf)
+		}
+		if len(args) > 4 {
+			a, _ = args[4].(string)
+		}
+		if len(args) > 5 {
+			ef, _ := toFloat(args[5])
+			exp = int(ef)
+		}
 		return sdkredis.Set(key, val, h, p, a, exp)
 	}
 	interp.builtins["redis.del"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("redis.del() requires keys") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("redis.del() requires keys")
+		}
 		// Convert []interface{} to []string
 		var keys []string
 		if arr, ok := args[0].([]interface{}); ok {
@@ -1817,57 +1896,101 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			}
 		}
 		h, p, a := "", 0, ""
-		if len(args) > 1 { h, _ = args[1].(string) }
-		if len(args) > 2 { pf, _ := toFloat(args[2]); p = int(pf) }
-		if len(args) > 3 { a, _ = args[3].(string) }
+		if len(args) > 1 {
+			h, _ = args[1].(string)
+		}
+		if len(args) > 2 {
+			pf, _ := toFloat(args[2])
+			p = int(pf)
+		}
+		if len(args) > 3 {
+			a, _ = args[3].(string)
+		}
 		return sdkredis.Del(keys, h, p, a)
 	}
 	interp.builtins["redis.keys"] = func(args ...interface{}) (interface{}, error) {
 		pat, h, p, a := "*", "", 0, ""
-		if len(args) > 0 { pat, _ = args[0].(string) }
-		if len(args) > 1 { h, _ = args[1].(string) }
-		if len(args) > 2 { pf, _ := toFloat(args[2]); p = int(pf) }
-		if len(args) > 3 { a, _ = args[3].(string) }
+		if len(args) > 0 {
+			pat, _ = args[0].(string)
+		}
+		if len(args) > 1 {
+			h, _ = args[1].(string)
+		}
+		if len(args) > 2 {
+			pf, _ := toFloat(args[2])
+			p = int(pf)
+		}
+		if len(args) > 3 {
+			a, _ = args[3].(string)
+		}
 		return sdkredis.Keys(pat, h, p, a)
 	}
 	interp.builtins["redis.info"] = func(args ...interface{}) (interface{}, error) {
 		h, p, a := "", 0, ""
-		if len(args) > 0 { h, _ = args[0].(string) }
-		if len(args) > 1 { pf, _ := toFloat(args[1]); p = int(pf) }
-		if len(args) > 2 { a, _ = args[2].(string) }
+		if len(args) > 0 {
+			h, _ = args[0].(string)
+		}
+		if len(args) > 1 {
+			pf, _ := toFloat(args[1])
+			p = int(pf)
+		}
+		if len(args) > 2 {
+			a, _ = args[2].(string)
+		}
 		return sdkredis.Info(h, p, a)
 	}
 	interp.builtins["redis.flush_db"] = func(args ...interface{}) (interface{}, error) {
 		h, p, a := "", 0, ""
-		if len(args) > 0 { h, _ = args[0].(string) }
-		if len(args) > 1 { pf, _ := toFloat(args[1]); p = int(pf) }
-		if len(args) > 2 { a, _ = args[2].(string) }
+		if len(args) > 0 {
+			h, _ = args[0].(string)
+		}
+		if len(args) > 1 {
+			pf, _ := toFloat(args[1])
+			p = int(pf)
+		}
+		if len(args) > 2 {
+			a, _ = args[2].(string)
+		}
 		return sdkredis.FlushDB(h, p, a)
 	}
 
 	// ── gem.* ───────────────────────────────────────────────────────────
 	interp.builtins["gem.install"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("gem.install() requires name") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("gem.install() requires name")
+		}
 		name, _ := args[0].(string)
 		v, u := "", false
-		if len(args) > 1 { v, _ = args[1].(string) }
-		if len(args) > 2 { u = opsBool(args[2]) }
+		if len(args) > 1 {
+			v, _ = args[1].(string)
+		}
+		if len(args) > 2 {
+			u = opsBool(args[2])
+		}
 		return sdkgem.Install(name, v, u)
 	}
 	interp.builtins["gem.uninstall"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("gem.uninstall() requires name") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("gem.uninstall() requires name")
+		}
 		name, _ := args[0].(string)
 		f := false
-		if len(args) > 1 { f = opsBool(args[1]) }
+		if len(args) > 1 {
+			f = opsBool(args[1])
+		}
 		return sdkgem.Uninstall(name, f)
 	}
 	interp.builtins["gem.update"] = func(args ...interface{}) (interface{}, error) {
 		n := ""
-		if len(args) > 0 { n, _ = args[0].(string) }
+		if len(args) > 0 {
+			n, _ = args[0].(string)
+		}
 		return sdkgem.Update(n)
 	}
 	interp.builtins["gem.info"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("gem.info() requires name") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("gem.info() requires name")
+		}
 		return sdkgem.Info(args[0].(string))
 	}
 	interp.builtins["gem.list"] = func(args ...interface{}) (interface{}, error) {
@@ -1879,13 +2002,17 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 
 	// ── rabbitmq.* ──────────────────────────────────────────────────────
 	interp.builtins["rabbitmq.add_vhost"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("rabbitmq.add_vhost() requires name") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("rabbitmq.add_vhost() requires name")
+		}
 		name, _ := args[0].(string)
 		r := sdkrabbitmq.AddVhost(name)
 		return r, nil
 	}
 	interp.builtins["rabbitmq.delete_vhost"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("rabbitmq.delete_vhost() requires name") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("rabbitmq.delete_vhost() requires name")
+		}
 		name, _ := args[0].(string)
 		r := sdkrabbitmq.DeleteVhost(name)
 		return r, nil
@@ -1895,7 +2022,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, err
 	}
 	interp.builtins["rabbitmq.add_user"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 3 { return nil, fmt.Errorf("rabbitmq.add_user() requires name, password, tags") }
+		if len(args) < 3 {
+			return nil, fmt.Errorf("rabbitmq.add_user() requires name, password, tags")
+		}
 		name, _ := args[0].(string)
 		pass, _ := args[1].(string)
 		tags, _ := args[2].(string)
@@ -1903,13 +2032,17 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, nil
 	}
 	interp.builtins["rabbitmq.delete_user"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("rabbitmq.delete_user() requires name") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("rabbitmq.delete_user() requires name")
+		}
 		name, _ := args[0].(string)
 		r := sdkrabbitmq.DeleteUser(name)
 		return r, nil
 	}
 	interp.builtins["rabbitmq.set_user_tags"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("rabbitmq.set_user_tags() requires name, tags") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("rabbitmq.set_user_tags() requires name, tags")
+		}
 		name, _ := args[0].(string)
 		tags, _ := args[1].(string)
 		r := sdkrabbitmq.SetUserTags(name, tags)
@@ -1920,7 +2053,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, err
 	}
 	interp.builtins["rabbitmq.set_permission"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 5 { return nil, fmt.Errorf("rabbitmq.set_permission() requires user, vhost, configure, write, read") }
+		if len(args) < 5 {
+			return nil, fmt.Errorf("rabbitmq.set_permission() requires user, vhost, configure, write, read")
+		}
 		user, _ := args[0].(string)
 		vhost, _ := args[1].(string)
 		configure, _ := args[2].(string)
@@ -1930,14 +2065,18 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, nil
 	}
 	interp.builtins["rabbitmq.clear_permission"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("rabbitmq.clear_permission() requires user, vhost") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("rabbitmq.clear_permission() requires user, vhost")
+		}
 		user, _ := args[0].(string)
 		vhost, _ := args[1].(string)
 		r := sdkrabbitmq.ClearPermission(user, vhost)
 		return r, nil
 	}
 	interp.builtins["rabbitmq.set_policy"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 5 { return nil, fmt.Errorf("rabbitmq.set_policy() requires name, vhost, pattern, definition, apply_to") }
+		if len(args) < 5 {
+			return nil, fmt.Errorf("rabbitmq.set_policy() requires name, vhost, pattern, definition, apply_to")
+		}
 		name, _ := args[0].(string)
 		vhost, _ := args[1].(string)
 		pattern, _ := args[2].(string)
@@ -1947,14 +2086,18 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, nil
 	}
 	interp.builtins["rabbitmq.delete_policy"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("rabbitmq.delete_policy() requires name, vhost") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("rabbitmq.delete_policy() requires name, vhost")
+		}
 		name, _ := args[0].(string)
 		vhost, _ := args[1].(string)
 		r := sdkrabbitmq.DeletePolicy(name, vhost)
 		return r, nil
 	}
 	interp.builtins["rabbitmq.declare_queue"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 5 { return nil, fmt.Errorf("rabbitmq.declare_queue() requires name, vhost, queue_type, durable, auto_delete") }
+		if len(args) < 5 {
+			return nil, fmt.Errorf("rabbitmq.declare_queue() requires name, vhost, queue_type, durable, auto_delete")
+		}
 		name, _ := args[0].(string)
 		vhost, _ := args[1].(string)
 		queueType, _ := args[2].(string)
@@ -1964,14 +2107,18 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, nil
 	}
 	interp.builtins["rabbitmq.delete_queue"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("rabbitmq.delete_queue() requires name, vhost") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("rabbitmq.delete_queue() requires name, vhost")
+		}
 		name, _ := args[0].(string)
 		vhost, _ := args[1].(string)
 		r := sdkrabbitmq.DeleteQueue(name, vhost)
 		return r, nil
 	}
 	interp.builtins["rabbitmq.declare_exchange"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 5 { return nil, fmt.Errorf("rabbitmq.declare_exchange() requires name, vhost, type, durable, auto_delete") }
+		if len(args) < 5 {
+			return nil, fmt.Errorf("rabbitmq.declare_exchange() requires name, vhost, type, durable, auto_delete")
+		}
 		name, _ := args[0].(string)
 		vhost, _ := args[1].(string)
 		exType, _ := args[2].(string)
@@ -1981,14 +2128,18 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, nil
 	}
 	interp.builtins["rabbitmq.delete_exchange"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("rabbitmq.delete_exchange() requires name, vhost") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("rabbitmq.delete_exchange() requires name, vhost")
+		}
 		name, _ := args[0].(string)
 		vhost, _ := args[1].(string)
 		r := sdkrabbitmq.DeleteExchange(name, vhost)
 		return r, nil
 	}
 	interp.builtins["rabbitmq.bind_queue"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 4 { return nil, fmt.Errorf("rabbitmq.bind_queue() requires queue, exchange, vhost, routing_key") }
+		if len(args) < 4 {
+			return nil, fmt.Errorf("rabbitmq.bind_queue() requires queue, exchange, vhost, routing_key")
+		}
 		queue, _ := args[0].(string)
 		exchange, _ := args[1].(string)
 		vhost, _ := args[2].(string)
@@ -1997,7 +2148,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, nil
 	}
 	interp.builtins["rabbitmq.unbind_queue"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 4 { return nil, fmt.Errorf("rabbitmq.unbind_queue() requires queue, exchange, vhost, routing_key") }
+		if len(args) < 4 {
+			return nil, fmt.Errorf("rabbitmq.unbind_queue() requires queue, exchange, vhost, routing_key")
+		}
 		queue, _ := args[0].(string)
 		exchange, _ := args[1].(string)
 		vhost, _ := args[2].(string)
@@ -2012,14 +2165,18 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 
 	// ── consul.* ────────────────────────────────────────────────────────
 	interp.builtins["consul.kv_get"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("consul.kv_get() requires key, addr") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("consul.kv_get() requires key, addr")
+		}
 		key, _ := args[0].(string)
 		addr, _ := args[1].(string)
 		r := sdkconsul.KVGet(key, addr)
 		return r, nil
 	}
 	interp.builtins["consul.kv_put"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 3 { return nil, fmt.Errorf("consul.kv_put() requires key, value, addr") }
+		if len(args) < 3 {
+			return nil, fmt.Errorf("consul.kv_put() requires key, value, addr")
+		}
 		key, _ := args[0].(string)
 		value, _ := args[1].(string)
 		addr, _ := args[2].(string)
@@ -2027,21 +2184,27 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, nil
 	}
 	interp.builtins["consul.kv_delete"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("consul.kv_delete() requires key, addr") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("consul.kv_delete() requires key, addr")
+		}
 		key, _ := args[0].(string)
 		addr, _ := args[1].(string)
 		r := sdkconsul.KVDelete(key, addr)
 		return r, nil
 	}
 	interp.builtins["consul.kv_list"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("consul.kv_list() requires prefix, addr") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("consul.kv_list() requires prefix, addr")
+		}
 		prefix, _ := args[0].(string)
 		addr, _ := args[1].(string)
 		r, err := sdkconsul.KVList(prefix, addr)
 		return r, err
 	}
 	interp.builtins["consul.service_register"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 5 { return nil, fmt.Errorf("consul.service_register() requires name, id, addr, port, consul_addr") }
+		if len(args) < 5 {
+			return nil, fmt.Errorf("consul.service_register() requires name, id, addr, port, consul_addr")
+		}
 		name, _ := args[0].(string)
 		id, _ := args[1].(string)
 		addr, _ := args[2].(string)
@@ -2051,26 +2214,34 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, nil
 	}
 	interp.builtins["consul.service_deregister"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("consul.service_deregister() requires id, consul_addr") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("consul.service_deregister() requires id, consul_addr")
+		}
 		id, _ := args[0].(string)
 		consulAddr, _ := args[1].(string)
 		r := sdkconsul.ServiceDeregister(id, consulAddr)
 		return r, nil
 	}
 	interp.builtins["consul.members"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("consul.members() requires addr") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("consul.members() requires addr")
+		}
 		addr, _ := args[0].(string)
 		r := sdkconsul.Members(addr)
 		return r, nil
 	}
 	interp.builtins["consul.info"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 1 { return nil, fmt.Errorf("consul.info() requires addr") }
+		if len(args) < 1 {
+			return nil, fmt.Errorf("consul.info() requires addr")
+		}
 		addr, _ := args[0].(string)
 		r := sdkconsul.Info(addr)
 		return r, nil
 	}
 	interp.builtins["consul.health_check"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("consul.health_check() requires service, addr") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("consul.health_check() requires service, addr")
+		}
 		service, _ := args[0].(string)
 		addr, _ := args[1].(string)
 		r := sdkconsul.HealthCheck(service, addr)
@@ -2083,7 +2254,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 
 	// ── memcached.* ─────────────────────────────────────────────────────
 	interp.builtins["memcached.get"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 3 { return nil, fmt.Errorf("memcached.get() requires key, host, port") }
+		if len(args) < 3 {
+			return nil, fmt.Errorf("memcached.get() requires key, host, port")
+		}
 		key, _ := args[0].(string)
 		host, _ := args[1].(string)
 		pf, _ := toFloat(args[2])
@@ -2091,7 +2264,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, nil
 	}
 	interp.builtins["memcached.set"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 5 { return nil, fmt.Errorf("memcached.set() requires key, value, host, port, expiry") }
+		if len(args) < 5 {
+			return nil, fmt.Errorf("memcached.set() requires key, value, host, port, expiry")
+		}
 		key, _ := args[0].(string)
 		value, _ := args[1].(string)
 		host, _ := args[2].(string)
@@ -2101,7 +2276,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, nil
 	}
 	interp.builtins["memcached.delete"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 3 { return nil, fmt.Errorf("memcached.delete() requires key, host, port") }
+		if len(args) < 3 {
+			return nil, fmt.Errorf("memcached.delete() requires key, host, port")
+		}
 		key, _ := args[0].(string)
 		host, _ := args[1].(string)
 		pf, _ := toFloat(args[2])
@@ -2109,21 +2286,27 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return r, nil
 	}
 	interp.builtins["memcached.flush_all"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("memcached.flush_all() requires host, port") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("memcached.flush_all() requires host, port")
+		}
 		host, _ := args[0].(string)
 		pf, _ := toFloat(args[1])
 		r := sdkmemcached.FlushAll(host, int(pf))
 		return r, nil
 	}
 	interp.builtins["memcached.stats"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("memcached.stats() requires host, port") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("memcached.stats() requires host, port")
+		}
 		host, _ := args[0].(string)
 		pf, _ := toFloat(args[1])
 		r := sdkmemcached.Stats(host, int(pf))
 		return r, nil
 	}
 	interp.builtins["memcached.version"] = func(args ...interface{}) (interface{}, error) {
-		if len(args) < 2 { return nil, fmt.Errorf("memcached.version() requires host, port") }
+		if len(args) < 2 {
+			return nil, fmt.Errorf("memcached.version() requires host, port")
+		}
 		host, _ := args[0].(string)
 		pf, _ := toFloat(args[1])
 		r := sdkmemcached.Version(host, int(pf))
@@ -10124,10 +10307,14 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		host, _ := args[0].(string)
 		port := 27017
-		if p, ok := args[1].(int); ok { port = p }
+		if p, ok := args[1].(int); ok {
+			port = p
+		}
 		name, _ := args[2].(string)
 		r, err := sdkmongodb.CreateDatabase(host, port, name)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.drop_database"] = func(args ...interface{}) (interface{}, error) {
@@ -10136,19 +10323,31 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		host, _ := args[0].(string)
 		port := 27017
-		if p, ok := args[1].(int); ok { port = p }
+		if p, ok := args[1].(int); ok {
+			port = p
+		}
 		name, _ := args[2].(string)
 		r, err := sdkmongodb.DropDatabase(host, port, name)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.list_databases"] = func(args ...interface{}) (interface{}, error) {
 		host := "localhost"
 		port := 27017
-		if len(args) >= 1 { host, _ = args[0].(string) }
-		if len(args) >= 2 { if p, ok := args[1].(int); ok { port = p } }
+		if len(args) >= 1 {
+			host, _ = args[0].(string)
+		}
+		if len(args) >= 2 {
+			if p, ok := args[1].(int); ok {
+				port = p
+			}
+		}
 		r, err := sdkmongodb.ListDatabases(host, port)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.create_user"] = func(args ...interface{}) (interface{}, error) {
@@ -10157,13 +10356,17 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		host, _ := args[0].(string)
 		port := 27017
-		if p, ok := args[1].(int); ok { port = p }
+		if p, ok := args[1].(int); ok {
+			port = p
+		}
 		database, _ := args[2].(string)
 		user, _ := args[3].(string)
 		password, _ := args[4].(string)
 		roles, _ := args[5].(string)
 		r, err := sdkmongodb.CreateUser(host, port, database, user, password, roles)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.drop_user"] = func(args ...interface{}) (interface{}, error) {
@@ -10172,22 +10375,36 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		host, _ := args[0].(string)
 		port := 27017
-		if p, ok := args[1].(int); ok { port = p }
+		if p, ok := args[1].(int); ok {
+			port = p
+		}
 		database, _ := args[2].(string)
 		user, _ := args[3].(string)
 		r, err := sdkmongodb.DropUser(host, port, database, user)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.list_users"] = func(args ...interface{}) (interface{}, error) {
 		host := "localhost"
 		port := 27017
 		database := "admin"
-		if len(args) >= 1 { host, _ = args[0].(string) }
-		if len(args) >= 2 { if p, ok := args[1].(int); ok { port = p } }
-		if len(args) >= 3 { database, _ = args[2].(string) }
+		if len(args) >= 1 {
+			host, _ = args[0].(string)
+		}
+		if len(args) >= 2 {
+			if p, ok := args[1].(int); ok {
+				port = p
+			}
+		}
+		if len(args) >= 3 {
+			database, _ = args[2].(string)
+		}
 		r, err := sdkmongodb.ListUsers(host, port, database)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.create_collection"] = func(args ...interface{}) (interface{}, error) {
@@ -10196,11 +10413,15 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		host, _ := args[0].(string)
 		port := 27017
-		if p, ok := args[1].(int); ok { port = p }
+		if p, ok := args[1].(int); ok {
+			port = p
+		}
 		database, _ := args[2].(string)
 		collection, _ := args[3].(string)
 		r, err := sdkmongodb.CreateCollection(host, port, database, collection)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.drop_collection"] = func(args ...interface{}) (interface{}, error) {
@@ -10209,22 +10430,36 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		host, _ := args[0].(string)
 		port := 27017
-		if p, ok := args[1].(int); ok { port = p }
+		if p, ok := args[1].(int); ok {
+			port = p
+		}
 		database, _ := args[2].(string)
 		collection, _ := args[3].(string)
 		r, err := sdkmongodb.DropCollection(host, port, database, collection)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.list_collections"] = func(args ...interface{}) (interface{}, error) {
 		host := "localhost"
 		port := 27017
 		database := "admin"
-		if len(args) >= 1 { host, _ = args[0].(string) }
-		if len(args) >= 2 { if p, ok := args[1].(int); ok { port = p } }
-		if len(args) >= 3 { database, _ = args[2].(string) }
+		if len(args) >= 1 {
+			host, _ = args[0].(string)
+		}
+		if len(args) >= 2 {
+			if p, ok := args[1].(int); ok {
+				port = p
+			}
+		}
+		if len(args) >= 3 {
+			database, _ = args[2].(string)
+		}
 		r, err := sdkmongodb.ListCollections(host, port, database)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.create_index"] = func(args ...interface{}) (interface{}, error) {
@@ -10233,16 +10468,24 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		host, _ := args[0].(string)
 		port := 27017
-		if p, ok := args[1].(int); ok { port = p }
+		if p, ok := args[1].(int); ok {
+			port = p
+		}
 		database, _ := args[2].(string)
 		collection, _ := args[3].(string)
 		keys, _ := args[4].(string)
 		unique := false
 		name := ""
-		if len(args) >= 6 { unique, _ = args[5].(bool) }
-		if len(args) >= 7 { name, _ = args[6].(string) }
+		if len(args) >= 6 {
+			unique, _ = args[5].(bool)
+		}
+		if len(args) >= 7 {
+			name, _ = args[6].(string)
+		}
 		r, err := sdkmongodb.CreateIndex(host, port, database, collection, keys, unique, name)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.drop_index"] = func(args ...interface{}) (interface{}, error) {
@@ -10251,12 +10494,16 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		host, _ := args[0].(string)
 		port := 27017
-		if p, ok := args[1].(int); ok { port = p }
+		if p, ok := args[1].(int); ok {
+			port = p
+		}
 		database, _ := args[2].(string)
 		collection, _ := args[3].(string)
 		indexName, _ := args[4].(string)
 		r, err := sdkmongodb.DropIndex(host, port, database, collection, indexName)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.list_indexes"] = func(args ...interface{}) (interface{}, error) {
@@ -10265,29 +10512,49 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		host, _ := args[0].(string)
 		port := 27017
-		if p, ok := args[1].(int); ok { port = p }
+		if p, ok := args[1].(int); ok {
+			port = p
+		}
 		database, _ := args[2].(string)
 		collection, _ := args[3].(string)
 		r, err := sdkmongodb.ListIndexes(host, port, database, collection)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.server_status"] = func(args ...interface{}) (interface{}, error) {
 		host := "localhost"
 		port := 27017
-		if len(args) >= 1 { host, _ = args[0].(string) }
-		if len(args) >= 2 { if p, ok := args[1].(int); ok { port = p } }
+		if len(args) >= 1 {
+			host, _ = args[0].(string)
+		}
+		if len(args) >= 2 {
+			if p, ok := args[1].(int); ok {
+				port = p
+			}
+		}
 		r, err := sdkmongodb.ServerStatus(host, port)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["mongodb.replica_set_status"] = func(args ...interface{}) (interface{}, error) {
 		host := "localhost"
 		port := 27017
-		if len(args) >= 1 { host, _ = args[0].(string) }
-		if len(args) >= 2 { if p, ok := args[1].(int); ok { port = p } }
+		if len(args) >= 1 {
+			host, _ = args[0].(string)
+		}
+		if len(args) >= 2 {
+			if p, ok := args[1].(int); ok {
+				port = p
+			}
+		}
 		r, err := sdkmongodb.ReplicaSetStatus(host, port)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 
@@ -10298,7 +10565,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		home, _ := args[0].(string)
 		r, err := sdktomcat.Start(home)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["tomcat.stop"] = func(args ...interface{}) (interface{}, error) {
@@ -10307,7 +10576,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		home, _ := args[0].(string)
 		r, err := sdktomcat.Stop(home)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["tomcat.restart"] = func(args ...interface{}) (interface{}, error) {
@@ -10316,14 +10587,20 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		home, _ := args[0].(string)
 		r, err := sdktomcat.Restart(home)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["tomcat.status"] = func(args ...interface{}) (interface{}, error) {
 		home := ""
-		if len(args) >= 1 { home, _ = args[0].(string) }
+		if len(args) >= 1 {
+			home, _ = args[0].(string)
+		}
 		r, err := sdktomcat.Status(home)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["tomcat.deploy"] = func(args ...interface{}) (interface{}, error) {
@@ -10333,9 +10610,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		home, _ := args[0].(string)
 		warPath, _ := args[1].(string)
 		contextPath := ""
-		if len(args) >= 3 { contextPath, _ = args[2].(string) }
+		if len(args) >= 3 {
+			contextPath, _ = args[2].(string)
+		}
 		r, err := sdktomcat.Deploy(home, warPath, contextPath)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["tomcat.undeploy"] = func(args ...interface{}) (interface{}, error) {
@@ -10345,7 +10626,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		home, _ := args[0].(string)
 		contextPath, _ := args[1].(string)
 		r, err := sdktomcat.Undeploy(home, contextPath)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["tomcat.list_apps"] = func(args ...interface{}) (interface{}, error) {
@@ -10354,7 +10637,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		home, _ := args[0].(string)
 		r, err := sdktomcat.ListApps(home)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["tomcat.reload"] = func(args ...interface{}) (interface{}, error) {
@@ -10364,7 +10649,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		home, _ := args[0].(string)
 		contextPath, _ := args[1].(string)
 		r, err := sdktomcat.Reload(home, contextPath)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["tomcat.version"] = func(args ...interface{}) (interface{}, error) {
@@ -10373,7 +10660,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		home, _ := args[0].(string)
 		r, err := sdktomcat.Version(home)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 
@@ -10387,9 +10676,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		alias, _ := args[2].(string)
 		certPath, _ := args[3].(string)
 		certType := ""
-		if len(args) >= 5 { certType, _ = args[4].(string) }
+		if len(args) >= 5 {
+			certType, _ = args[4].(string)
+		}
 		r, err := sdkjavacert.Import(ksPath, password, alias, certPath, certType)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["java_cert.remove"] = func(args ...interface{}) (interface{}, error) {
@@ -10400,7 +10693,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		password, _ := args[1].(string)
 		alias, _ := args[2].(string)
 		r, err := sdkjavacert.Remove(ksPath, password, alias)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["java_cert.list"] = func(args ...interface{}) (interface{}, error) {
@@ -10410,7 +10705,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		ksPath, _ := args[0].(string)
 		password, _ := args[1].(string)
 		r, err := sdkjavacert.List(ksPath, password)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["java_cert.exists"] = func(args ...interface{}) (interface{}, error) {
@@ -10421,7 +10718,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		password, _ := args[1].(string)
 		alias, _ := args[2].(string)
 		r, err := sdkjavacert.Exists(ksPath, password, alias)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["java_cert.export"] = func(args ...interface{}) (interface{}, error) {
@@ -10433,9 +10732,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		alias, _ := args[2].(string)
 		outputPath, _ := args[3].(string)
 		certType := ""
-		if len(args) >= 5 { certType, _ = args[4].(string) }
+		if len(args) >= 5 {
+			certType, _ = args[4].(string)
+		}
 		r, err := sdkjavacert.Export(ksPath, password, alias, outputPath, certType)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["java_cert.info"] = func(args ...interface{}) (interface{}, error) {
@@ -10445,7 +10748,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		ksPath, _ := args[0].(string)
 		password, _ := args[1].(string)
 		r, err := sdkjavacert.Info(ksPath, password)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["java_cert.import_chain"] = func(args ...interface{}) (interface{}, error) {
@@ -10457,7 +10762,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		p12Path, _ := args[2].(string)
 		p12Password, _ := args[3].(string)
 		r, err := sdkjavacert.ImportChain(ksPath, password, p12Path, p12Password)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["java_cert.change_password"] = func(args ...interface{}) (interface{}, error) {
@@ -10468,7 +10775,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		oldPass, _ := args[1].(string)
 		newPass, _ := args[2].(string)
 		r, err := sdkjavacert.ChangePassword(ksPath, oldPass, newPass)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 
@@ -10483,9 +10792,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		version, _ := args[3].(string)
 		dest, _ := args[4].(string)
 		extension := ""
-		if len(args) >= 6 { extension, _ = args[5].(string) }
+		if len(args) >= 6 {
+			extension, _ = args[5].(string)
+		}
 		r, err := sdkmaven.Download(repoURL, groupID, artifactID, version, dest, extension)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["maven_artifact.resolve"] = func(args ...interface{}) (interface{}, error) {
@@ -10497,9 +10810,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		artifactID, _ := args[2].(string)
 		version, _ := args[3].(string)
 		extension := ""
-		if len(args) >= 5 { extension, _ = args[4].(string) }
+		if len(args) >= 5 {
+			extension, _ = args[4].(string)
+		}
 		r, err := sdkmaven.Resolve(repoURL, groupID, artifactID, version, extension)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["maven_artifact.deploy"] = func(args ...interface{}) (interface{}, error) {
@@ -10512,9 +10829,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		version, _ := args[3].(string)
 		srcPath, _ := args[4].(string)
 		extension := ""
-		if len(args) >= 6 { extension, _ = args[5].(string) }
+		if len(args) >= 6 {
+			extension, _ = args[5].(string)
+		}
 		r, err := sdkmaven.Deploy(repoURL, groupID, artifactID, version, srcPath, extension)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["maven_artifact.get_latest_version"] = func(args ...interface{}) (interface{}, error) {
@@ -10525,7 +10846,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		groupID, _ := args[1].(string)
 		artifactID, _ := args[2].(string)
 		r, err := sdkmaven.GetLatestVersion(repoURL, groupID, artifactID)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["maven_artifact.checksum"] = func(args ...interface{}) (interface{}, error) {
@@ -10534,7 +10857,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		filePath, _ := args[0].(string)
 		r, err := sdkmaven.Checksum(filePath)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 
@@ -10546,10 +10871,16 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		name, _ := args[0].(string)
 		tag := ""
 		force := false
-		if len(args) >= 2 { tag, _ = args[1].(string) }
-		if len(args) >= 3 { force, _ = args[2].(bool) }
+		if len(args) >= 2 {
+			tag, _ = args[1].(string)
+		}
+		if len(args) >= 3 {
+			force, _ = args[2].(bool)
+		}
 		r, err := sdkdockerimage.Pull(name, tag, force)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_image.build"] = func(args ...interface{}) (interface{}, error) {
@@ -10560,10 +10891,16 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		name, _ := args[1].(string)
 		tag := ""
 		dockerfile := ""
-		if len(args) >= 3 { tag, _ = args[2].(string) }
-		if len(args) >= 4 { dockerfile, _ = args[3].(string) }
+		if len(args) >= 3 {
+			tag, _ = args[2].(string)
+		}
+		if len(args) >= 4 {
+			dockerfile, _ = args[3].(string)
+		}
 		r, err := sdkdockerimage.Build(path, name, tag, dockerfile)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_image.remove"] = func(args ...interface{}) (interface{}, error) {
@@ -10573,10 +10910,16 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		name, _ := args[0].(string)
 		tag := ""
 		force := false
-		if len(args) >= 2 { tag, _ = args[1].(string) }
-		if len(args) >= 3 { force, _ = args[2].(bool) }
+		if len(args) >= 2 {
+			tag, _ = args[1].(string)
+		}
+		if len(args) >= 3 {
+			force, _ = args[2].(bool)
+		}
 		r, err := sdkdockerimage.Remove(name, tag, force)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_image.tag"] = func(args ...interface{}) (interface{}, error) {
@@ -10586,7 +10929,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		source, _ := args[0].(string)
 		target, _ := args[1].(string)
 		r, err := sdkdockerimage.Tag(source, target)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_image.inspect"] = func(args ...interface{}) (interface{}, error) {
@@ -10595,12 +10940,16 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		r, err := sdkdockerimage.Inspect(name)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_image.list"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdkdockerimage.List()
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_image.push"] = func(args ...interface{}) (interface{}, error) {
@@ -10609,9 +10958,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		tag := ""
-		if len(args) >= 2 { tag, _ = args[1].(string) }
+		if len(args) >= 2 {
+			tag, _ = args[1].(string)
+		}
 		r, err := sdkdockerimage.Push(name, tag)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 
@@ -10622,7 +10975,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		r, err := sdkdockercontainer.Start(name)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_container.stop"] = func(args ...interface{}) (interface{}, error) {
@@ -10631,9 +10986,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		timeout := 0
-		if len(args) >= 2 { timeout, _ = args[1].(int) }
+		if len(args) >= 2 {
+			timeout, _ = args[1].(int)
+		}
 		r, err := sdkdockercontainer.Stop(name, timeout)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_container.remove"] = func(args ...interface{}) (interface{}, error) {
@@ -10642,9 +11001,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		force := false
-		if len(args) >= 2 { force, _ = args[1].(bool) }
+		if len(args) >= 2 {
+			force, _ = args[1].(bool)
+		}
 		r, err := sdkdockercontainer.Remove(name, force)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_container.restart"] = func(args ...interface{}) (interface{}, error) {
@@ -10653,9 +11016,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		timeout := 0
-		if len(args) >= 2 { timeout, _ = args[1].(int) }
+		if len(args) >= 2 {
+			timeout, _ = args[1].(int)
+		}
 		r, err := sdkdockercontainer.Restart(name, timeout)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_container.pause"] = func(args ...interface{}) (interface{}, error) {
@@ -10664,7 +11031,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		r, err := sdkdockercontainer.Pause(name)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_container.unpause"] = func(args ...interface{}) (interface{}, error) {
@@ -10673,7 +11042,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		r, err := sdkdockercontainer.Unpause(name)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_container.inspect"] = func(args ...interface{}) (interface{}, error) {
@@ -10682,14 +11053,20 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		r, err := sdkdockercontainer.Inspect(name)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_container.list"] = func(args ...interface{}) (interface{}, error) {
 		all := false
-		if len(args) >= 1 { all, _ = args[0].(bool) }
+		if len(args) >= 1 {
+			all, _ = args[0].(bool)
+		}
 		r, err := sdkdockercontainer.List(all)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 	interp.builtins["docker_container.logs"] = func(args ...interface{}) (interface{}, error) {
@@ -10698,21 +11075,29 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		name, _ := args[0].(string)
 		tail := "100"
-		if len(args) >= 2 { tail, _ = args[1].(string) }
+		if len(args) >= 2 {
+			tail, _ = args[1].(string)
+		}
 		r, err := sdkdockercontainer.Logs(name, tail)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		return r, nil
 	}
 
 	// ── ping.* ────────────────────────────────────────────────────────
 	interp.builtins["ping.ping"] = func(args ...interface{}) (interface{}, error) {
 		data := ""
-		if len(args) >= 1 { data, _ = args[0].(string) }
+		if len(args) >= 1 {
+			data, _ = args[0].(string)
+		}
 		return sdkping.Ping(data), nil
 	}
 	interp.builtins["ping.win_ping"] = func(args ...interface{}) (interface{}, error) {
 		data := ""
-		if len(args) >= 1 { data, _ = args[0].(string) }
+		if len(args) >= 1 {
+			data, _ = args[0].(string)
+		}
 		return sdkping.WinPing(data), nil
 	}
 
@@ -10721,45 +11106,77 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		opts := sdkfind.FindOptions{}
 		if len(args) >= 1 {
 			if v, ok := args[0].([]interface{}); ok {
-				for _, p := range v { if s, ok := p.(string); ok { opts.Paths = append(opts.Paths, s) } }
+				for _, p := range v {
+					if s, ok := p.(string); ok {
+						opts.Paths = append(opts.Paths, s)
+					}
+				}
 			}
 		}
 		if len(args) >= 2 {
 			if v, ok := args[1].([]interface{}); ok {
-				for _, p := range v { if s, ok := p.(string); ok { opts.Patterns = append(opts.Patterns, s) } }
+				for _, p := range v {
+					if s, ok := p.(string); ok {
+						opts.Patterns = append(opts.Patterns, s)
+					}
+				}
 			}
 		}
-		if len(args) >= 3 { opts.FileType, _ = args[2].(string) }
-		if len(args) >= 4 { opts.Recurse, _ = args[3].(bool) }
-		if len(args) >= 5 { if d, ok := args[4].(float64); ok { opts.Depth = int(d) } }
+		if len(args) >= 3 {
+			opts.FileType, _ = args[2].(string)
+		}
+		if len(args) >= 4 {
+			opts.Recurse, _ = args[3].(bool)
+		}
+		if len(args) >= 5 {
+			if d, ok := args[4].(float64); ok {
+				opts.Depth = int(d)
+			}
+		}
 		return sdkfind.Find(opts), nil
 	}
 
 	// ── tempfile.* ────────────────────────────────────────────────────
 	interp.builtins["tempfile.create_file"] = func(args ...interface{}) (interface{}, error) {
 		prefix, suffix, path := "", "", ""
-		if len(args) >= 1 { prefix, _ = args[0].(string) }
-		if len(args) >= 2 { suffix, _ = args[1].(string) }
-		if len(args) >= 3 { path, _ = args[2].(string) }
+		if len(args) >= 1 {
+			prefix, _ = args[0].(string)
+		}
+		if len(args) >= 2 {
+			suffix, _ = args[1].(string)
+		}
+		if len(args) >= 3 {
+			path, _ = args[2].(string)
+		}
 		return sdktempfile.CreateFile(prefix, suffix, path), nil
 	}
 	interp.builtins["tempfile.create_dir"] = func(args ...interface{}) (interface{}, error) {
 		prefix, suffix, path := "", "", ""
-		if len(args) >= 1 { prefix, _ = args[0].(string) }
-		if len(args) >= 2 { suffix, _ = args[1].(string) }
-		if len(args) >= 3 { path, _ = args[2].(string) }
+		if len(args) >= 1 {
+			prefix, _ = args[0].(string)
+		}
+		if len(args) >= 2 {
+			suffix, _ = args[1].(string)
+		}
+		if len(args) >= 3 {
+			path, _ = args[2].(string)
+		}
 		return sdktempfile.CreateDir(prefix, suffix, path), nil
 	}
 	interp.builtins["tempfile.delete"] = func(args ...interface{}) (interface{}, error) {
 		path := ""
-		if len(args) >= 1 { path, _ = args[0].(string) }
+		if len(args) >= 1 {
+			path, _ = args[0].(string)
+		}
 		return sdktempfile.Delete(path), nil
 	}
 
 	// ── fail.* ────────────────────────────────────────────────────────
 	interp.builtins["fail.fail"] = func(args ...interface{}) (interface{}, error) {
 		msg := ""
-		if len(args) >= 1 { msg, _ = args[0].(string) }
+		if len(args) >= 1 {
+			msg, _ = args[0].(string)
+		}
 		return sdkfail.Fail(msg), nil
 	}
 
@@ -10767,29 +11184,43 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	interp.builtins["assert.assert"] = func(args ...interface{}) (interface{}, error) {
 		cond := false
 		successMsg, failMsg := "", ""
-		if len(args) >= 1 { cond, _ = args[0].(bool) }
-		if len(args) >= 2 { successMsg, _ = args[1].(string) }
-		if len(args) >= 3 { failMsg, _ = args[2].(string) }
+		if len(args) >= 1 {
+			cond, _ = args[0].(bool)
+		}
+		if len(args) >= 2 {
+			successMsg, _ = args[1].(string)
+		}
+		if len(args) >= 3 {
+			failMsg, _ = args[2].(string)
+		}
 		return sdkassert.Assert(cond, successMsg, failMsg), nil
 	}
 
 	// ── debug.* ───────────────────────────────────────────────────────
 	interp.builtins["debug.debug"] = func(args ...interface{}) (interface{}, error) {
 		msg := ""
-		if len(args) >= 1 { msg, _ = args[0].(string) }
+		if len(args) >= 1 {
+			msg, _ = args[0].(string)
+		}
 		return sdkdebug.Debug(msg), nil
 	}
 	interp.builtins["debug.debug_var"] = func(args ...interface{}) (interface{}, error) {
 		name, value := "", ""
-		if len(args) >= 1 { name, _ = args[0].(string) }
-		if len(args) >= 2 { value, _ = args[1].(string) }
+		if len(args) >= 1 {
+			name, _ = args[0].(string)
+		}
+		if len(args) >= 2 {
+			value, _ = args[1].(string)
+		}
 		return sdkdebug.DebugVar(name, value), nil
 	}
 
 	// ── set_fact.* ────────────────────────────────────────────────────
 	interp.builtins["set_fact.set"] = func(args ...interface{}) (interface{}, error) {
 		kvJSON := "{}"
-		if len(args) >= 1 { kvJSON, _ = args[0].(string) }
+		if len(args) >= 1 {
+			kvJSON, _ = args[0].(string)
+		}
 		var kv map[string]interface{}
 		if err := json.Unmarshal([]byte(kvJSON), &kv); err != nil {
 			return sdksetfact.Set(map[string]interface{}{"raw": kvJSON}), nil
@@ -10798,7 +11229,9 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 	interp.builtins["set_fact.get"] = func(args ...interface{}) (interface{}, error) {
 		key := ""
-		if len(args) >= 1 { key, _ = args[0].(string) }
+		if len(args) >= 1 {
+			key, _ = args[0].(string)
+		}
 		v, ok := sdksetfact.Get(key)
 		return map[string]interface{}{"value": v, "found": ok}, nil
 	}
@@ -10812,12 +11245,24 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	// ── unarchive.* ───────────────────────────────────────────────────
 	interp.builtins["unarchive.unarchive"] = func(args ...interface{}) (interface{}, error) {
 		src, dest, owner, group, mode, creates := "", "", "", "", "", ""
-		if len(args) >= 1 { src, _ = args[0].(string) }
-		if len(args) >= 2 { dest, _ = args[1].(string) }
-		if len(args) >= 3 { owner, _ = args[2].(string) }
-		if len(args) >= 4 { group, _ = args[3].(string) }
-		if len(args) >= 5 { mode, _ = args[4].(string) }
-		if len(args) >= 6 { creates, _ = args[5].(string) }
+		if len(args) >= 1 {
+			src, _ = args[0].(string)
+		}
+		if len(args) >= 2 {
+			dest, _ = args[1].(string)
+		}
+		if len(args) >= 3 {
+			owner, _ = args[2].(string)
+		}
+		if len(args) >= 4 {
+			group, _ = args[3].(string)
+		}
+		if len(args) >= 5 {
+			mode, _ = args[4].(string)
+		}
+		if len(args) >= 6 {
+			creates, _ = args[5].(string)
+		}
 		return sdkunarchive.Unarchive(src, dest, owner, group, mode, creates), nil
 	}
 
@@ -10826,7 +11271,11 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		var managers []string
 		if len(args) >= 1 {
 			if v, ok := args[0].([]interface{}); ok {
-				for _, m := range v { if s, ok := m.(string); ok { managers = append(managers, s) } }
+				for _, m := range v {
+					if s, ok := m.(string); ok {
+						managers = append(managers, s)
+					}
+				}
 			}
 		}
 		return sdkpackagefacts.Collect(managers), nil
@@ -10842,15 +11291,27 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		var cmdArgs []string
 		if len(args) >= 1 {
 			if v, ok := args[0].([]interface{}); ok {
-				for _, a := range v { if s, ok := a.(string); ok { cmdArgs = append(cmdArgs, s) } }
+				for _, a := range v {
+					if s, ok := a.(string); ok {
+						cmdArgs = append(cmdArgs, s)
+					}
+				}
 			}
 		}
 		chdir, creates, removes := "", "", ""
-		if len(args) >= 2 { chdir, _ = args[1].(string) }
-		if len(args) >= 3 { creates, _ = args[2].(string) }
-		if len(args) >= 4 { removes, _ = args[3].(string) }
+		if len(args) >= 2 {
+			chdir, _ = args[1].(string)
+		}
+		if len(args) >= 3 {
+			creates, _ = args[2].(string)
+		}
+		if len(args) >= 4 {
+			removes, _ = args[3].(string)
+		}
 		timeoutMs := 0.0
-		if len(args) >= 5 { timeoutMs, _ = args[4].(float64) }
+		if len(args) >= 5 {
+			timeoutMs, _ = args[4].(float64)
+		}
 		timeout := time.Duration(timeoutMs) * time.Millisecond
 		return sdkcommand.Run(cmdArgs, chdir, creates, removes, timeout), nil
 	}
@@ -10858,17 +11319,31 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		var cmdArgs []string
 		if len(args) >= 1 {
 			if v, ok := args[0].([]interface{}); ok {
-				for _, a := range v { if s, ok := a.(string); ok { cmdArgs = append(cmdArgs, s) } }
+				for _, a := range v {
+					if s, ok := a.(string); ok {
+						cmdArgs = append(cmdArgs, s)
+					}
+				}
 			}
 		}
 		chdir, creates, removes := "", "", ""
-		if len(args) >= 2 { chdir, _ = args[1].(string) }
-		if len(args) >= 3 { creates, _ = args[2].(string) }
-		if len(args) >= 4 { removes, _ = args[3].(string) }
+		if len(args) >= 2 {
+			chdir, _ = args[1].(string)
+		}
+		if len(args) >= 3 {
+			creates, _ = args[2].(string)
+		}
+		if len(args) >= 4 {
+			removes, _ = args[3].(string)
+		}
 		timeoutMs := 0.0
-		if len(args) >= 5 { timeoutMs, _ = args[4].(float64) }
+		if len(args) >= 5 {
+			timeoutMs, _ = args[4].(float64)
+		}
 		executable := ""
-		if len(args) >= 6 { executable, _ = args[5].(string) }
+		if len(args) >= 6 {
+			executable, _ = args[5].(string)
+		}
 		timeout := time.Duration(timeoutMs) * time.Millisecond
 		return sdkcommand.Shell(cmdArgs, chdir, creates, removes, timeout, executable), nil
 	}
@@ -11944,6 +12419,28 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	interp.builtins["gluster.peer_detach"] = func(args ...interface{}) (interface{}, error) {
 		host := getStringArgBridge(args, 0, "")
 		return sdkgluster.PeerDetach(host)
+	}
+	interp.builtins["nomad.job_list"] = func(args ...interface{}) (interface{}, error) {
+		return sdknomad.JobList(getStringArgBridge(args, 0, ""))
+	}
+	interp.builtins["nomad.job_run"] = func(args ...interface{}) (interface{}, error) {
+		return sdknomad.JobRun(getStringArgBridge(args, 0, ""), getStringArgBridge(args, 1, ""))
+	}
+	interp.builtins["nomad.job_stop"] = func(args ...interface{}) (interface{}, error) {
+		return sdknomad.JobStop(getStringArgBridge(args, 0, ""), getStringArgBridge(args, 1, ""))
+	}
+	interp.builtins["nomad.alloc_list"] = func(args ...interface{}) (interface{}, error) {
+		return sdknomad.AllocList(getStringArgBridge(args, 0, ""), getStringArgBridge(args, 1, ""))
+	}
+	interp.builtins["nomad.node_list"] = func(args ...interface{}) (interface{}, error) {
+		return sdknomad.NodeList()
+	}
+	interp.builtins["nomad.node_drain"] = func(args ...interface{}) (interface{}, error) {
+		enable := false
+		if len(args) > 1 {
+			enable = opsBool(args[1])
+		}
+		return sdknomad.NodeDrain(getStringArgBridge(args, 0, ""), enable)
 	}
 }
 func toStringMap(args []interface{}, idx int) map[string]string {

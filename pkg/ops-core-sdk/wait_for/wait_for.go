@@ -11,10 +11,10 @@ import (
 
 // Result represents the result of a wait operation.
 type Result struct {
-	Success    bool   `json:"success"`
-	Target     string `json:"target"`
-	ElapsedMs  int64  `json:"elapsed_ms"`
-	Message    string `json:"message"`
+	Success   bool   `json:"success"`
+	Target    string `json:"target"`
+	ElapsedMs int64  `json:"elapsed_ms"`
+	Message   string `json:"message"`
 }
 
 // Port waits until a TCP port is open or times out.
@@ -22,7 +22,7 @@ func Port(host string, port int, timeoutMs int) (*Result, error) {
 	if timeoutMs <= 0 {
 		timeoutMs = 30000
 	}
-	target := fmt.Sprintf("%s:%d", host, port)
+	target := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	deadline := time.Now().Add(time.Duration(timeoutMs) * time.Millisecond)
 	start := time.Now()
 
