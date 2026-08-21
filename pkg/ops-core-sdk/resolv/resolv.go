@@ -29,9 +29,9 @@ type SetResult struct {
 
 // AddNameserverResult is returned by AddNameserver.
 type AddNameserverResult struct {
-	Changed     bool   `json:"changed"`
-	Nameserver  string `json:"nameserver"`
-	Error       string `json:"error,omitempty"`
+	Changed    bool   `json:"changed"`
+	Nameserver string `json:"nameserver"`
+	Error      string `json:"error,omitempty"`
 }
 
 // RemoveNameserverResult is returned by RemoveNameserver.
@@ -50,7 +50,13 @@ func Get() (GetResult, error) {
 		return GetResult{}, fmt.Errorf("read resolv.conf: %w", err)
 	}
 
-	config := Config{}
+	// Keep collection fields non-nil so the structured result is safe for
+	// callers that iterate or call len() without special-casing null.
+	config := Config{
+		Nameservers: make([]string, 0),
+		Search:      make([]string, 0),
+		Options:     make([]string, 0),
+	}
 	for _, line := range strings.Split(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, ";") {

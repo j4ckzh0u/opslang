@@ -1,6 +1,7 @@
 package nomad
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -53,13 +54,17 @@ type NomadResult struct {
 
 // JobList lists all jobs
 func JobList(namespace string) ([]JobInfo, error) {
+	return JobListContext(context.Background(), namespace)
+}
+
+// JobListContext lists jobs and stops promptly when ctx is cancelled.
+func JobListContext(ctx context.Context, namespace string) ([]JobInfo, error) {
 	args := []string{"job", "status", "-json"}
 	if namespace != "" {
 		args = append(args, "-namespace", namespace)
 	}
 
-	cmd := exec.Command("nomad", args...)
-	output, err := cmd.CombinedOutput()
+	output, err := run(ctx, args...)
 
 	if err != nil {
 		return nil, fmt.Errorf("nomad job list failed: %v, output: %s", err, string(output))
@@ -75,6 +80,11 @@ func JobList(namespace string) ([]JobInfo, error) {
 
 // JobRun runs a job
 func JobRun(jobFile, namespace string) (NomadResult, error) {
+	return JobRunContext(context.Background(), jobFile, namespace)
+}
+
+// JobRunContext runs a job and stops promptly when ctx is cancelled.
+func JobRunContext(ctx context.Context, jobFile, namespace string) (NomadResult, error) {
 	start := time.Now()
 
 	if jobFile == "" {
@@ -87,8 +97,7 @@ func JobRun(jobFile, namespace string) (NomadResult, error) {
 	}
 	args = append(args, jobFile)
 
-	cmd := exec.Command("nomad", args...)
-	output, err := cmd.CombinedOutput()
+	output, err := run(ctx, args...)
 	duration := time.Since(start).Milliseconds()
 
 	result := NomadResult{
@@ -107,6 +116,11 @@ func JobRun(jobFile, namespace string) (NomadResult, error) {
 
 // JobStop stops a job
 func JobStop(jobID, namespace string) (NomadResult, error) {
+	return JobStopContext(context.Background(), jobID, namespace)
+}
+
+// JobStopContext stops a job and stops promptly when ctx is cancelled.
+func JobStopContext(ctx context.Context, jobID, namespace string) (NomadResult, error) {
 	start := time.Now()
 
 	if jobID == "" {
@@ -119,8 +133,7 @@ func JobStop(jobID, namespace string) (NomadResult, error) {
 	}
 	args = append(args, jobID)
 
-	cmd := exec.Command("nomad", args...)
-	output, err := cmd.CombinedOutput()
+	output, err := run(ctx, args...)
 	duration := time.Since(start).Milliseconds()
 
 	result := NomadResult{
@@ -140,6 +153,11 @@ func JobStop(jobID, namespace string) (NomadResult, error) {
 
 // AllocList lists allocations
 func AllocList(jobID, namespace string) ([]AllocInfo, error) {
+	return AllocListContext(context.Background(), jobID, namespace)
+}
+
+// AllocListContext lists allocations and stops promptly when ctx is cancelled.
+func AllocListContext(ctx context.Context, jobID, namespace string) ([]AllocInfo, error) {
 	args := []string{"alloc", "status", "-json"}
 	if namespace != "" {
 		args = append(args, "-namespace", namespace)
@@ -148,8 +166,7 @@ func AllocList(jobID, namespace string) ([]AllocInfo, error) {
 		args = append(args, "-job", jobID)
 	}
 
-	cmd := exec.Command("nomad", args...)
-	output, err := cmd.CombinedOutput()
+	output, err := run(ctx, args...)
 
 	if err != nil {
 		return nil, fmt.Errorf("nomad alloc list failed: %v, output: %s", err, string(output))
@@ -165,8 +182,12 @@ func AllocList(jobID, namespace string) ([]AllocInfo, error) {
 
 // NodeList lists all nodes
 func NodeList() ([]NodeInfo, error) {
-	cmd := exec.Command("nomad", "node", "status", "-json")
-	output, err := cmd.CombinedOutput()
+	return NodeListContext(context.Background())
+}
+
+// NodeListContext lists nodes and stops promptly when ctx is cancelled.
+func NodeListContext(ctx context.Context) ([]NodeInfo, error) {
+	output, err := run(ctx, "node", "status", "-json")
 
 	if err != nil {
 		return nil, fmt.Errorf("nomad node list failed: %v, output: %s", err, string(output))
@@ -182,6 +203,11 @@ func NodeList() ([]NodeInfo, error) {
 
 // NodeDrain toggles drain mode on a node
 func NodeDrain(nodeID string, enable bool) (NomadResult, error) {
+	return NodeDrainContext(context.Background(), nodeID, enable)
+}
+
+// NodeDrainContext toggles node drain mode and stops promptly when ctx is cancelled.
+func NodeDrainContext(ctx context.Context, nodeID string, enable bool) (NomadResult, error) {
 	start := time.Now()
 
 	if nodeID == "" {
@@ -196,8 +222,7 @@ func NodeDrain(nodeID string, enable bool) (NomadResult, error) {
 	}
 	args = append(args, nodeID)
 
-	cmd := exec.Command("nomad", args...)
-	output, err := cmd.CombinedOutput()
+	output, err := run(ctx, args...)
 	duration := time.Since(start).Milliseconds()
 
 	result := NomadResult{
@@ -213,4 +238,11 @@ func NodeDrain(nodeID string, enable bool) (NomadResult, error) {
 
 	result.Message = "Node drain updated successfully"
 	return result, nil
+}
+
+func run(ctx context.Context, args ...string) ([]byte, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return exec.CommandContext(ctx, "nomad", args...).CombinedOutput()
 }

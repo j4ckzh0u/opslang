@@ -49,6 +49,9 @@ func TestExamplesAllRun(t *testing.T) {
 		}
 		name := entry.Name()
 		t.Run(name, func(t *testing.T) {
+			if name == "archive_and_download.ops" && os.Getenv("OPSLANG_RUN_NETWORK_EXAMPLES") != "1" {
+				t.Skip("requires external network; set OPSLANG_RUN_NETWORK_EXAMPLES=1 to enable")
+			}
 			path := filepath.Join(examplesDir, name)
 			source, err := os.ReadFile(path)
 			if err != nil {
