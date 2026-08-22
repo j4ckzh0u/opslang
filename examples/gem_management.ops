@@ -12,90 +12,30 @@ rescue {
     print("gem.version failed (ruby may not be installed): " + _error)
 }
 
-// 列出已安装的 gem
+// 列出已安装的 gem（真实调用本机 gem，返回状态与原始输出）
 block {
     let gems = gem.list()
     report {
-        total_gems: gems.count
+        status: gems.status,
+        output_preview: gems.output
     }
 }
 rescue {
     print("gem.list failed: " + _error)
 }
 
-// 查询 gem 信息
+// 查询 gem 信息（本地 specification 查询，未安装则真实报错）
 block {
     let info = gem.info("bundler")
     report {
-        name: "bundler",
-        found: info.found,
-        version: info.info.version
+        name: info.package,
+        status: info.status
     }
 }
 rescue {
     print("gem.info failed: " + _error)
 }
 
-// 安装 gem
-block {
-    let result = gem.install("rake", "", false)
-    report {
-        name: result.name,
-        success: result.success,
-        changed: result.changed
-    }
-}
-rescue {
-    print("gem.install failed (expected without root): " + _error)
-}
-
-// 安装指定版本
-block {
-    let result = gem.install("json", "2.6.0", false)
-    report {
-        name: result.name,
-        success: result.success,
-        changed: result.changed
-    }
-}
-rescue {
-    print("gem.install with version failed: " + _error)
-}
-
-// 用户级安装
-block {
-    let result = gem.install("rubocop", "", true)
-    report {
-        name: result.name,
-        success: result.success
-    }
-}
-rescue {
-    print("gem.install --user-install failed: " + _error)
-}
-
-// 卸载 gem
-block {
-    let result = gem.uninstall("old-gem", true)
-    report {
-        name: result.name,
-        success: result.success,
-        changed: result.changed
-    }
-}
-rescue {
-    print("gem.uninstall failed: " + _error)
-}
-
-// 更新 gem
-block {
-    let result = gem.update("bundler")
-    report {
-        name: result.name,
-        success: result.success,
-        changed: result.changed
-    }
-}
-rescue {
-    print("gem.update failed: " + _error)
-}
+// 变更操作说明：gem.install 是真实安装（写用户的 gem 目录并联网下载），
+// 示例不应该改动物理机的 ruby 环境，因此这里不执行、也不假装执行。
+// 用法: gem.install(name, version, force) —— 详见 docs/stdlib-reference.md

@@ -39,22 +39,10 @@ rescue {
     print("  ✗ 无法检查仓库（需要 Linux 系统）")
 }
 
-// 3. 演示添加仓库（不实际执行，避免副作用）
-print("\n添加仓库示例（伪代码）:")
-print(`
-  yum_repo.add(
-      "myrepo",
-      "My Custom Repository",
-      "https://repo.example.com/centos/$releasever/os/$basearch/",
-      true,
-      "https://repo.example.com/RPM-GPG-KEY-myrepo"
-  )
-`)
-
-// 4. 演示移除仓库
-print("\n移除仓库示例（伪代码）:")
-print(`
-  yum_repo.remove("myrepo")
-`)
+// 3. 变更操作说明（本示例不执行变更，也不假装执行）
+print("\n变更操作（本示例不执行 — 会真实修改 /etc/yum.repos.d/）:")
+print("  yum_repo.add(id, name, baseurl, gpgcheck, gpgkey)   真实写入 repo 文件")
+print("  yum_repo.remove(id)                                 真实删除 repo 文件")
+print("\n执行前提: Linux + yum/dnf + root。用法与返回值详见 docs/stdlib-reference.md")
 
 print("\n=== yum_repo 管理演示完成 ===")

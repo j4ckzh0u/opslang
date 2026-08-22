@@ -1,0 +1,80 @@
+// ensure_user_group.ops - 真实的用户/组生命周期管理（对标 Ansible user/group 模块）
+//
+// 演示完整的运维场景：建组 → 建用户（指定 shell）→ 校验 → 制造漂移 →
+// ensure 自动收敛 → user.absent / group.absent 清理。
+//
+// 真实性说明：
+//   - useradd/usermod/userdel/groupadd/groupdel 是真实系统调用
+//   - 变更需要 Linux + root；不满足时本示例显式跳过并列出真实原因，
+//     绝不打印伪造的成功结果
+//   - 在 macOS / 非 root Linux 上运行只会看到明确的 SKIP 输出
+//
+// 运行：opsctl run examples/ensure_user_group.ops
+
+privilege: admin
+
+let group_name = "opslang-demo"
+let user_name = "opslang-demo"
+
+let os = sys.os()
+print("=== 用户/组生命周期（platform=" + os.platform + "）===")
+
+// ── 前提探测：必须 Linux 且具备 root 写权限（探测本身是真实操作）──
+let can_manage = false
+let is_linux = os.platform_family == "debian" || os.platform_family == "rhel" || os.platform_family == "fedora" || os.platform_family == "suse" || os.platform == "linux"
+if !is_linux {
+    print("SKIP: 用户/组变更需要 Linux，当前 platform=" + os.platform + " family=" + os.platform_family)
+} else {
+    block {
+        // /run 仅 root 可写；能创建即证明当前具备 root 能力，
+        // 失败（非 root/目录只读）会抛错进入 rescue —— 两种引擎行为一致
+        file.ensure("/run/opslang-root-probe", "touch", "")
+        file.ensure("/run/opslang-root-probe", "absent", "")
+        can_manage = true
+    }
+    rescue {
+        print("SKIP: root 探测失败 — " + _error)
+    }
+}
+
+if can_manage {
+    // 1. 组：不存在则创建，存在则零动作
+    let g1 = group.ensure(group_name, {})
+    print("\n[group.ensure] changed=" + str(g1.changed) + " msg=" + g1.message + " gid=" + str(g1.gid))
+    let g2 = group.ensure(group_name, {})
+    print("[group.ensure 复跑] changed=" + str(g2.changed) + " msg=" + g2.message)
+
+    // 2. 用户：首次创建（登录 shell 为 nologin，演示典型的服务账号）
+    let u1 = user.ensure(user_name, { "shell": "/usr/sbin/nologin", "create_home": "false" })
+    print("\n[user.ensure] changed=" + str(u1.changed) + " msg=" + u1.message + " shell=" + u1.shell)
+
+    // 3. 校验：从 /etc/passwd 读回真实状态
+    let info = user.info(user_name)
+    print("[user.info] uid=" + str(info.user.uid) + " shell=" + info.user.shell)
+
+    // 4. 制造漂移：把 shell 改成 /bin/bash，再让 ensure 收敛回 nologin
+    let drift = user.modify(user_name, { "shell": "/bin/bash" })
+    let converge = user.ensure(user_name, { "shell": "/usr/sbin/nologin" })
+    print("\n[漂移演练] 改为 bash 后 ensure 收敛: changed=" + str(converge.changed) + " shell=" + converge.shell)
+    if !converge.changed || converge.shell != "/usr/sbin/nologin" {
+        alert("用户 shell 漂移未被收敛")
+    }
+
+    // 5. 清理：真实删除用户和组
+    let ua = user.absent(user_name, false)
+    let ga = group.absent(group_name)
+    print("\n[user.absent] changed=" + str(ua.changed) + " msg=" + ua.message)
+    print("[group.absent] changed=" + str(ga.changed) + " msg=" + ga.message)
+
+    report {
+        platform: os.platform,
+        group_created: g1.changed,
+        group_idempotent: !g2.changed,
+        user_created: u1.changed,
+        drift_recovered: converge.changed && converge.shell == "/usr/sbin/nologin",
+        user_removed: ua.changed,
+        group_removed: ga.changed
+    }
+} else {
+    report { platform: os.platform, skipped: true, reason: "requires Linux + root" }
+}

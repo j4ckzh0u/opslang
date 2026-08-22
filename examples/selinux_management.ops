@@ -20,13 +20,13 @@ rescue {
     print("  ✗ SELinux 不可用（可能在非 Linux 系统或未安装）")
 }
 
-// 2. 演示设置（伪代码）
-print("\n设置 SELinux 示例（伪代码）:")
-print(`
-  selinux.set("enforcing")    // 设置为强制模式
-  selinux.set("permissive")   // 设置为宽容模式
-  selinux.set("disabled")     // 禁用（需重启生效）
-`)
+// 2. 变更操作说明（SELinux 模式影响全局安全策略，本示例不执行）
+print("\n变更操作（本示例不执行 — 会真实修改 /etc/selinux/config）:")
+print("  selinux.set(\"enforcing\")   强制执行安全策略")
+print("  selinux.set(\"permissive\")  仅记录违规，不阻止")
+print("  selinux.set(\"disabled\")    完全禁用（需重启生效）")
+print("\n修改 SELinux 模式可能影响系统安全，确认影响面后再执行。")
+print("用法与返回值详见 docs/stdlib-reference.md")
 
 print("\n注意：修改 SELinux 模式可能影响系统安全")
 print("enforcing: 强制执行安全策略")

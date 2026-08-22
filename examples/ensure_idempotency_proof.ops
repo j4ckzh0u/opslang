@@ -1,0 +1,65 @@
+// ensure_idempotency_proof.ops - 用真实文件系统证明 ensure 家族的幂等性
+//
+// 本示例在临时目录里执行两轮完全相同的收敛操作，对比两轮的
+// changed / actions 输出：第一轮产生真实变更，第二轮必须是纯只读
+// 判定（changed=false，actions 为空）。所有数据来自真实系统调用，
+// 没有任何模拟值。
+//
+// 运行：opsctl run examples/ensure_idempotency_proof.ops
+
+privilege: admin
+
+let base = "/tmp/opslang-idempotency-proof"
+
+print("=== 幂等性实证：两轮相同的收敛 ===")
+print("工作目录: " + base)
+
+// 第一轮：目录不存在，必须真实创建
+print("\n--- 第 1 轮（首次收敛，预期 changed=true）---")
+let r1_dir = file.ensure(base + "/conf.d", "directory", "0750")
+print("file.ensure(directory): changed=" + str(r1_dir.changed) + " actions=" + str(r1_dir.actions))
+
+let r1_flag = file.ensure(base + "/conf.d/deploy.flag", "touch", "0640")
+print("file.ensure(touch):     changed=" + str(r1_flag.changed) + " actions=" + str(r1_flag.actions))
+
+// 用 lineinfile 写入真实配置行（先 touch 建文件，第二遍不会再插入）
+file.ensure(base + "/conf.d/app.env", "touch", "0644")
+let r1_line = file.lineinfile(base + "/conf.d/app.env", "APP_ENV=production", true, "")
+print("file.lineinfile:        changed=" + str(r1_line.changed))
+
+// 第二轮：状态已收敛，必须是只读判定
+print("\n--- 第 2 轮（重复收敛，预期 changed=false 且零动作）---")
+let r2_dir = file.ensure(base + "/conf.d", "directory", "0750")
+print("file.ensure(directory): changed=" + str(r2_dir.changed) + " msg=" + r2_dir.message)
+
+let r2_flag = file.ensure(base + "/conf.d/deploy.flag", "touch", "0640")
+print("file.ensure(touch):     changed=" + str(r2_flag.changed))
+
+let r2_line = file.lineinfile(base + "/conf.d/app.env", "APP_ENV=production", true, "")
+print("file.lineinfile:        changed=" + str(r2_line.changed))
+
+// 校验逻辑：这不是打出来给人看的，是真的会失败的断言
+if r2_dir.changed || r2_flag.changed || r2_line.changed {
+    alert("幂等性被破坏：第二轮收敛不应产生任何变更")
+}
+
+// 再证一遍权限漂移收敛：手工改掉权限，ensure 必须能拉回来
+print("\n--- 权限漂移恢复 ---")
+let chmod = file.chmod(base + "/conf.d/deploy.flag", "0644")  // 人为制造权限漂移
+let r3 = file.ensure(base + "/conf.d/deploy.flag", "touch", "0640")
+print("漂移后收敛: changed=" + str(r3.changed) + " mode=" + r3.mode)
+if !r3.changed || r3.mode != "0640" {
+    alert("权限漂移未被正确收敛: changed=" + str(r3.changed) + " mode=" + r3.mode)
+}
+
+// 清理（真实删除目录树）
+let cleanup = file.ensure(base, "absent", "")
+print("\n清理: changed=" + str(cleanup.changed) + " msg=" + cleanup.message)
+
+report {
+    first_round_dir_changed:  r1_dir.changed,
+    second_round_dir_changed: r2_dir.changed,
+    second_round_noop:        !r2_dir.changed && !r2_flag.changed && !r2_line.changed,
+    drift_recovered:          r3.changed && r3.mode == "0640",
+    cleaned_up:               cleanup.changed
+}

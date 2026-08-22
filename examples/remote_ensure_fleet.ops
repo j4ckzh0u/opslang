@@ -1,0 +1,67 @@
+// remote_ensure_fleet.ops - 舰队级幂等供给（对标 Ansible playbook + inventory）
+//
+// 用 opsctl deploy 执行（opsctl run 会拒绝带 on 目标的 task）：
+//
+//   opsctl deploy --inventory hosts.yaml examples/remote_ensure_fleet.ops
+//
+// 场景：一个真实的服务器舰队供给 playbook：
+//   - 所有主机（on "*"）：报告真实平台与资源（无模拟数据）
+//   - root 组主机（on "root"）：收敛 opslang-fleet 服务账号（组+用户），
+//     并把 cron 服务收敛为 started + enabled —— 全部幂等，
+//     重复部署第二次 changed 全部为 false
+//
+// on 子句按 主机名/IP/user@host/inventory 组名 路由（组名路由对标
+// Ansible 的 hosts: 字段）。inventory 示例：
+//
+//   hosts:
+//     - name: host2
+//       host: 10.0.0.12
+//       user: root
+//       group: root        # 组名 = 该主机具备 root 执行能力
+//
+// 注意：本文件不含任何主机凭据；凭据全部来自 --inventory / CLI 参数。
+
+privilege: admin
+
+task "fleet_facts" on "*" {
+    // 只读采集：所有主机都可以安全执行。
+    // 注意：runner 模式不支持 let 中的计算表达式，report 值须为
+    // 简单变量引用；需要运算/分支时 deploy 会自动改用 AOT 模式。
+    let os = sys.os()
+    let mem = sys.memory.info()
+    let up = sys.uptime()
+    report {
+        role: "facts",
+        platform: os.platform,
+        platform_version: os.platform_version,
+        mem_total_bytes: mem.total,
+        uptime_seconds: up.uptime
+    }
+}
+
+task "provision_service_account" on "root" {
+    // 真实的用户/组收敛：第一次部署创建，之后每次部署零变更
+    let g = group.ensure("opslang-fleet", {})
+    let u = user.ensure("opslang-fleet", { "shell": "/usr/sbin/nologin", "create_home": "false" })
+    report {
+        role: "service-account",
+        group_changed: g.changed,
+        group_gid: g.gid,
+        user_changed: u.changed,
+        user_shell: u.shell
+    }
+}
+
+task "converge_cron" on "root" {
+    // 真实服务收敛：cron 应始终 started + enabled（幂等）
+    let run = service.ensure("cron", "started")
+    let boot = service.ensure_enabled("cron", true)
+    report {
+        role: "cron",
+        start_changed: run.changed,
+        start_actions: run.actions,
+        enable_changed: boot.changed,
+        active: run.active,
+        enabled: boot.enabled
+    }
+}

@@ -38,26 +38,11 @@ rescue {
     print("  ✗ 无法检查仓库（需要 Linux 系统）")
 }
 
-// 3. 演示添加仓库
-print("\n添加仓库示例（伪代码）:")
-print(`
-  apt_repo.add(
-      "https://ppa.launchpadcontent.net/myppa/ubuntu",
-      "jammy",
-      "main"
-  )
-`)
-
-// 4. 演示更新仓库缓存
-print("\n更新仓库缓存示例（伪代码）:")
-print(`
-  apt_repo.update()
-`)
-
-// 5. 演示移除仓库
-print("\n移除仓库示例（伪代码）:")
-print(`
-  apt_repo.remove("https://ppa.launchpadcontent.net/myppa/ubuntu")
-`)
+// 3. 变更操作说明（本示例不执行变更，也不假装执行）
+print("\n变更操作（本示例不执行 — 会真实修改 /etc/apt/sources.list.d/）:")
+print("  apt_repo.add(uri, dist, components)   真实写入软件源配置")
+print("  apt_repo.update()                     真实执行 apt-get update")
+print("  apt_repo.remove(uri)                  真实移除软件源")
+print("\n执行前提: Linux + apt + root。用法与返回值详见 docs/stdlib-reference.md")
 
 print("\n=== apt_repo 管理演示完成 ===")

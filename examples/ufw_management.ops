@@ -38,27 +38,39 @@ rescue {
     print("  ✗ 无法列出规则")
 }
 
-// 3. 演示允许端口（伪代码）
-print("\n允许端口示例（伪代码）:")
-print(`
-  ufw.allow("22", "tcp")    // SSH
-  ufw.allow("80", "tcp")    // HTTP
-  ufw.allow("443", "tcp")   // HTTPS
-`)
+// 3. 真实服务收敛：ufw 已安装且具备管理权限时，确保服务可用并放行 SSH
+//    （幂等：已满足则零动作）；否则显式跳过，绝不打印假成功
+print("\n真实收敛演示（ufw 服务确保运行 + 放行 22/tcp）:")
+let ufw_loaded = false
+block {
+    let st = service.status("ufw")
+    if st.load_state == "loaded" {
+        ufw_loaded = true
+    }
+}
+rescue {
+    // systemd 不可用或单元不存在
+}
 
-// 4. 演示拒绝端口
-print("\n拒绝端口示例（伪代码）:")
-print(`
-  ufw.deny("23", "tcp")     // Telnet
-  ufw.deny("3306", "tcp")   // MySQL
-`)
+if !ufw_loaded {
+    print("  SKIP: 本机未安装 ufw 单元（UFW 仅在 Ubuntu/Debian 可用）")
+} else {
+    block {
+        // /run 仅 root 可写：探测真实管理权限
+        file.ensure("/run/opslang-root-probe", "touch", "")
+        file.ensure("/run/opslang-root-probe", "absent", "")
 
-// 5. 演示启用/禁用
-print("\n启用/禁用示例（伪代码）:")
-print(`
-  ufw.enable()
-  ufw.disable()
-`)
+        let boot = service.ensure_enabled("ufw", true)
+        print("  ensure_enabled(ufw, true): changed=" + str(boot.changed) + " actions=" + str(boot.actions))
+
+        // 先保证 SSH 不会被后续防火墙规则锁在外面（运维铁律）
+        let allow_ssh = ufw.allow("22", "tcp")
+        print("  ufw.allow(22/tcp):         changed=" + str(allow_ssh.changed))
+    }
+    rescue {
+        print("  SKIP: 管理 ufw 需要 root — " + _error)
+    }
+}
 
 print("\n注意：UFW 仅在 Ubuntu/Debian 系统上可用")
 print("对于 RHEL/CentOS，请使用 firewalld")

@@ -1,0 +1,74 @@
+// ensure_app_layout.ops - 真实的应用目录结构收敛（对标 Ansible file/copy/template 模块）
+//
+// 运维场景：一台应用服务器需要标准目录骨架 + 配置文件 + 权限基线。
+// 无论重复执行多少次，结果一致且第二次起零变更 —— 这就是收敛式运维。
+//
+// 全程真实文件系统操作（在本机 /tmp 下），任何平台可跑，无模拟数据。
+//
+// 运行：opsctl run examples/ensure_app_layout.ops
+
+privilege: admin
+
+let root = "/tmp/opslang-app"
+
+print("=== 应用目录基线收敛 ===")
+print("目标根目录: " + root)
+
+// 1. 目录骨架：不存在则建，存在且权限正确则零动作
+let dirs = ["/opt/app", "/opt/app/conf", "/opt/app/logs", "/opt/app/data"]
+let created = 0
+for d in dirs {
+    let full = root + d
+    let r = file.ensure(full, "directory", "0755")
+    if r.changed {
+        created = created + 1
+        print("  + 创建 " + full + " (0755)")
+    }
+}
+print("本轮新建目录数: " + str(created) + " / " + str(len(dirs)))
+
+// 2. 配置文件：touch 建骨架 + lineinfile 写真实配置行 + 权限收敛
+let conf = root + "/opt/app/conf/app.conf"
+file.ensure(conf, "touch", "0640")
+
+let env_line = file.lineinfile(conf, "ENV=production", true, "")
+let port_line = file.lineinfile(conf, "LISTEN=8080", true, "")
+print("配置写入: env_changed=" + str(env_line.changed) + " port_changed=" + str(port_line.changed))
+
+// 3. 日志目录权限收紧为 0750（如果之前是 0755 会真实 chmod）
+let logs_mode = file.ensure(root + "/opt/app/logs", "directory", "0750")
+if logs_mode.changed {
+    print("权限收紧: logs → 0750")
+}
+
+// 4. 复跑一遍证明收敛：全部零变更（logs 的目标权限是 0750，单独校验）
+let again_dirs = 0
+for d in ["/opt/app", "/opt/app/conf", "/opt/app/data"] {
+    let r = file.ensure(root + d, "directory", "0755")
+    if r.changed {
+        again_dirs = again_dirs + 1
+    }
+}
+let again_conf = file.lineinfile(conf, "ENV=production", true, "")
+let again_logs = file.ensure(root + "/opt/app/logs", "directory", "0750")
+
+if again_dirs != 0 || again_conf.changed || again_logs.changed {
+    alert("收敛失败：复跑仍产生变更")
+}
+
+print("复跑零变更验证: dirs=" + str(again_dirs == 0) + " conf=" + str(!again_conf.changed) + " logs=" + str(!again_logs.changed))
+
+// 5. 读回真实配置做终态断言（写入顺序固定，lineinfile 每行带尾随换行）
+let content = file.read(conf)
+if content.content != "ENV=production\nLISTEN=8080\n" {
+    alert("配置文件终态不符合预期: " + content.content)
+}
+
+report {
+    root: root,
+    dirs_total: len(dirs),
+    dirs_created_this_round: created,
+    conf_mode: "0640",
+    logs_mode: logs_mode.mode,
+    second_round_noop: again_dirs == 0 && !again_conf.changed && !again_logs.changed
+}

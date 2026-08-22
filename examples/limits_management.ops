@@ -45,24 +45,45 @@ rescue {
     print("  ✗ 无法获取 root 限制")
 }
 
-// 3. 演示设置限制（伪代码）
-print("\n设置限制示例（伪代码）:")
-print(`
-  // 设置 root 用户最大进程数
-  limits.set("root", "hard", "nproc", "65535")
+// 3. 真实设置/移除限制（需要 Linux + root，写入 /etc/security/limits.conf
+//    使用专用演示域，结束后完全清理）
+print("\n真实写入演示（limits.conf 域 opslang-demo-user，结束后清理）:")
+let can_write = false
+block {
+    // /run 仅 root 可写：探测真实写权限
+    file.ensure("/run/opslang-root-probe", "touch", "")
+    file.ensure("/run/opslang-root-probe", "absent", "")
+    can_write = true
+}
+rescue {
+    print("  SKIP: 写入 limits.conf 需要 root — " + _error)
+}
 
-  // 设置所有用户最大打开文件数
-  limits.set("*", "soft", "nofile", "65535")
-  limits.set("*", "hard", "nofile", "65535")
+if can_write {
+    block {
+        let s1 = limits.set("opslang-demo-user", "soft", "nofile", "65535")
+        let s2 = limits.set("opslang-demo-user", "hard", "nofile", "65535")
+        print("  set soft/hard nofile: changed=" + str(s1.changed) + "/" + str(s2.changed))
 
-  // 设置 @staff 组的核心转储限制
-  limits.set("@staff", "hard", "core", "unlimited")
-`)
+        // 从 limits.conf 读回验证（真实读取）
+        let got = limits.get("opslang-demo-user")
+        print("  读回验证: " + str(len(got.entries)) + " 条记录")
 
-// 4. 演示移除限制
-print("\n移除限制示例（伪代码）:")
-print(`
-  limits.remove("myuser")
-`)
+        // 清理演示域，不留下任何残留
+        let rm = limits.remove("opslang-demo-user")
+        print("  remove: changed=" + str(rm.changed))
+
+        let after = limits.get("opslang-demo-user")
+        if len(after.entries) != 0 {
+            alert("limits.remove 后仍有残留记录")
+        }
+    }
+    rescue {
+        // 即使中途失败也尝试清理
+        block { limits.remove("opslang-demo-user") }
+        rescue { }
+        print("  ✗ 操作失败: " + _error)
+    }
+}
 
 print("\n=== limits 管理演示完成 ===")

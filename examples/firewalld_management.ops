@@ -34,14 +34,36 @@ rescue {
     print("  ✗ 无法获取区域信息")
 }
 
-// 3. 演示操作（伪代码）
-print("\n操作示例（伪代码）:")
-print(`
-  firewalld.start()     // 启动防火墙
-  firewalld.stop()      // 停止防火墙
-  firewalld.enable()    // 设置开机启动
-  firewalld.disable()   // 取消开机启动
-  firewalld.reload()    // 重载配置
-`)
+// 3. 真实服务收敛：firewalld 已安装且当前用户可管理系统时，收敛为
+//    started + enabled（幂等：已满足则零动作）；否则显式跳过
+print("\n真实收敛演示（service.ensure firewalld → started+enabled）:")
+let fw_loaded = false
+block {
+    let st = service.status("firewalld")
+    if st.load_state == "loaded" {
+        fw_loaded = true
+    }
+}
+rescue {
+    // systemd 不可用或单元不存在
+}
+
+if !fw_loaded {
+    print("  SKIP: 本机未安装 firewalld 单元，无可收敛对象")
+} else {
+    block {
+        // /run 仅 root 可写：探测真实管理权限
+        file.ensure("/run/opslang-root-probe", "touch", "")
+        file.ensure("/run/opslang-root-probe", "absent", "")
+
+        let run = service.ensure("firewalld", "started")
+        let boot = service.ensure_enabled("firewalld", true)
+        print("  ensure(started):       changed=" + str(run.changed) + " actions=" + str(run.actions))
+        print("  ensure_enabled(true):  changed=" + str(boot.changed) + " actions=" + str(boot.actions))
+    }
+    rescue {
+        print("  SKIP: 收敛 firewalld 需要 root — " + _error)
+    }
+}
 
 print("\n=== firewalld 管理演示完成 ===")

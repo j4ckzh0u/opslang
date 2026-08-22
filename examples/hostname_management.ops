@@ -15,19 +15,12 @@ rescue {
     print("  ✗ 无法获取主机名")
 }
 
-// 2. 演示设置主机名（伪代码）
-print("\n设置主机名示例（伪代码）:")
-print(`
-  hostname.set("web-server-01")
-  hostname.set("db-server-01")
-`)
-
-// 3. 演示设置 FQDN
-print("\n设置 FQDN 示例（伪代码）:")
-print(`
-  hostname.set_fqdn("web-server-01.example.com")
-  hostname.set_fqdn("api.example.com")
-`)
+// 2. 变更操作说明（改主机名影响面大，本示例不执行，也不假装执行）
+print("\n变更操作（本示例不执行 — 会真实修改 /etc/hostname 与 /etc/hosts）:")
+print("  hostname.set(host)        设置主机名（立即生效）")
+print("  hostname.set_fqdn(fqdn)   设置 FQDN")
+print("\n执行前提: Linux + root。改动主机名会影响集群身份识别，")
+print("请确认影响面后再执行。用法详见 docs/stdlib-reference.md")
 
 print("\n注意：")
 print("  - 设置主机名需要 root 权限")

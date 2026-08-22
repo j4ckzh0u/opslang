@@ -34,19 +34,34 @@ rescue {
     print("  ✗ 无法获取配置")
 }
 
-// 3. 演示设置配置（伪代码）
-print("\n设置配置示例（伪代码）:")
-print(`
-  ini_file.set("/etc/mysql/my.cnf", "mysqld", "max_connections", "500")
-  ini_file.set("/etc/mysql/my.cnf", "mysqld", "innodb_buffer_pool_size", "2G")
-`)
+// 3. 真实写入配置（在 /tmp 下操作真实文件，非伪代码）
+print("\n真实写入演示（/tmp/opslang-ini-demo/my.cnf）:")
+let demo_conf = "/tmp/opslang-ini-demo/my.cnf"
+file.ensure("/tmp/opslang-ini-demo", "directory", "0755")
+file.ensure(demo_conf, "touch", "0644")
 
-// 4. 演示删除配置
-print("\n删除配置示例（伪代码）:")
-print(`
-  ini_file.remove("/etc/mysql/my.cnf", "mysqld", "old_option")
-  ini_file.remove_section("/etc/mysql/my.cnf", "deprecated_section")
-`)
+let s1 = ini_file.set(demo_conf, "mysqld", "max_connections", "500")
+let s2 = ini_file.set(demo_conf, "mysqld", "innodb_buffer_pool_size", "2G")
+print("  set max_connections: changed=" + str(s1.changed))
+print("  set innodb_buffer_pool_size: changed=" + str(s2.changed))
+
+// 读回验证（真实读取，不是相信写入的返回值）
+let check = ini_file.get(demo_conf, "mysqld", "max_connections")
+if !check.exists || check.value != "500" {
+    alert("ini_file.set 写入后读回不一致")
+} else {
+    print("  读回验证: max_connections=" + check.value)
+}
+
+// 4. 真实删除配置
+let rm1 = ini_file.remove(demo_conf, "mysqld", "max_connections")
+let rm2 = ini_file.remove_section(demo_conf, "mysqld")
+print("\n真实删除演示:")
+print("  remove max_connections: changed=" + str(rm1.changed))
+print("  remove_section mysqld: changed=" + str(rm2.changed))
+
+// 清理演示文件
+file.ensure("/tmp/opslang-ini-demo", "absent", "")
 
 print("\nINI 文件管理适用于:")
 print("  - MySQL/MariaDB 配置")

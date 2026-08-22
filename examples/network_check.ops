@@ -31,7 +31,9 @@ print("Total: " + str(len(ifaces)) + " interfaces, " + str(up_count) + " up")
 // 2. DNS lookups
 print("")
 print("--- DNS Lookups ---")
-let domains = ["example.com"]
+// Resolve localhost via the real resolver (/etc/hosts) — no external
+// network dependency, so this check is always real and always fast.
+let domains = ["localhost"]
 
 for let i = 0; i < len(domains); i = i + 1 {
     let domain = domains[i]

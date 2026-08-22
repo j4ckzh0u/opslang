@@ -23,14 +23,40 @@ rescue {
     print("  ✗ 无法获取 NTP 状态（可能未安装 NTP 守护进程）")
 }
 
-// 2. 演示设置 NTP 服务器（伪代码）
-print("\n设置 NTP 服务器示例（伪代码）:")
-print(`
-  // 使用 chrony
-  ntp.set("pool.ntp.org")
-  ntp.set("time.google.com")
-  ntp.set("ntp.aliyun.com")
-`)
+// 2. 真实服务收敛：探测 chronyd/systemd-timesyncd，把第一个存在的
+//    时间同步服务收敛为 started（幂等；需要 Linux + root，否则显式跳过）
+print("\n真实收敛演示（时间同步服务 → started）:")
+let ntp_unit = ""
+for unit in ["chronyd", "chrony", "systemd-timesyncd"] {
+    if ntp_unit == "" {
+        block {
+            let st = service.status(unit)
+            if st.load_state == "loaded" {
+                ntp_unit = unit
+            }
+        }
+        rescue { }
+    }
+}
+
+if ntp_unit == "" {
+    print("  SKIP: 本机未找到 chronyd / systemd-timesyncd 单元")
+} else {
+    block {
+        // /run 仅 root 可写：探测真实管理权限
+        file.ensure("/run/opslang-root-probe", "touch", "")
+        file.ensure("/run/opslang-root-probe", "absent", "")
+
+        let run = service.ensure(ntp_unit, "started")
+        let boot = service.ensure_enabled(ntp_unit, true)
+        print("  单元: " + ntp_unit)
+        print("  ensure(started):      changed=" + str(run.changed) + " actions=" + str(run.actions))
+        print("  ensure_enabled(true): changed=" + str(boot.changed) + " actions=" + str(boot.actions))
+    }
+    rescue {
+        print("  SKIP: 收敛 " + ntp_unit + " 需要 root — " + _error)
+    }
+}
 
 print("\n注意：ntp.set 仅支持 chrony 守护进程")
 print("支持的 NTP 守护进程:")

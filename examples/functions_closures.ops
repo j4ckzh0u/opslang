@@ -49,7 +49,7 @@ print("Total resources (ifaces + parts + cores): " + str(total_resources))
 
 // Nested function that computes average CPU then compares to threshold
 fn cpu_health(warning_threshold) {
-    // Take 3 readings and average (simulated by 3 sequential calls)
+    // Take 3 sequential real readings and average them
     let total_pct = 0
     let readings = 3
     for let i = 0; i < readings; i = i + 1 {

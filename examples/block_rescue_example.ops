@@ -10,7 +10,7 @@ print("=== 示例 1: 基本错误处理 ===")
 
 block {
     print("尝试执行操作...")
-    // 模拟可能失败的操作
+    // 触发一个真实的失败路径（读取不存在的文件）
     let result = file.read("/nonexistent/file.txt")
     print("读取成功: " + result.content)
 }

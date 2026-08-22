@@ -56,36 +56,11 @@ rescue {
     print("  2. 当前用户在 docker 用户组中，或使用 root 权限")
 }
 
-// 4. 演示容器操作（不实际执行，避免副作用）
-print("\n容器操作示例（伪代码）:")
-print(`
-  // 拉取镜像
-  docker.image_pull("nginx:latest")
-
-  // 运行容器
-  docker.container_run("my-nginx", "nginx:latest", {
-      "ports": "8080:80",
-      "volumes": "/data:/usr/share/nginx/html"
-  })
-
-  // 检查容器是否存在
-  let exists = docker.container_exists("my-nginx")
-  if exists.exists {
-      print("容器正在运行: " + exists.id)
-  }
-
-  // 停止容器
-  docker.container_stop("my-nginx")
-
-  // 移除容器
-  docker.container_remove("my-nginx", false)
-
-  // 强制移除容器
-  docker.container_remove("my-nginx", true)
-
-  // 移除镜像
-  docker.image_remove("nginx:latest", false)
-`)
+// 4. 变更操作说明（本示例不执行变更，也不假装执行）
+print("\n容器变更操作（本示例不执行 — 会在本机真实拉取镜像/创建容器）:")
+print("  docker.image_pull / container_run / container_stop / container_remove")
+print("  以上全部为真实调用；执行前提: 本机 Docker daemon 可用。")
+print("  用法与返回值详见 docs/stdlib-reference.md 的 docker.* 条目")
 
 // 5. 实际演示：检查容器是否存在（带错误处理）
 print("\n检查容器是否存在:")

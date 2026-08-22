@@ -43,18 +43,12 @@ rescue {
     print("  ✗ 无法检查主机")
 }
 
-// 3. 演示添加主机（伪代码）
-print("\n添加主机示例（伪代码）:")
-print(`
-  known_hosts.add("github.com")
-  known_hosts.add("gitlab.example.com")
-`)
-
-// 4. 演示移除主机
-print("\n移除主机示例（伪代码）:")
-print(`
-  known_hosts.remove("old-server.example.com")
-`)
+// 3. 变更操作说明（本示例不执行变更，也不假装执行）
+print("\n变更操作（本示例不执行 — 会真实 ssh-keyscan 并写入 known_hosts）:")
+print("  known_hosts.add(host)     真实扫描公钥并追加到 known_hosts")
+print("  known_hosts.remove(host)  真实移除该主机的所有旧密钥")
+print("\nknown_hosts.add 使用 ssh-keyscan 获取密钥，需要网络连接和 SSH 客户端")
+print("用法与返回值详见 docs/stdlib-reference.md")
 
 print("\n注意：known_hosts.add 使用 ssh-keyscan 获取密钥")
 print("需要网络连接和 SSH 客户端")

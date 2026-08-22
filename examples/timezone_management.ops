@@ -32,14 +32,12 @@ rescue {
     print("  ✗ 无法列出时区")
 }
 
-// 3. 演示设置时区（伪代码）
-print("\n设置时区示例（伪代码）:")
-print(`
-  timezone.set("Asia/Shanghai")
-  timezone.set("America/New_York")
-  timezone.set("Europe/London")
-  timezone.set("UTC")
-`)
+// 3. 变更操作说明（改时区影响日志与定时任务语义，本示例不执行）
+print("\n变更操作（本示例不执行 — 会真实修改系统时区）:")
+print("  timezone.set(tz)   例如 timezone.set(\"Asia/Shanghai\")")
+print("\n设置时区需要 root 权限：systemd 系统通过 timedatectl，")
+print("其他系统通过更新 /etc/localtime 与 /etc/timezone 完成。")
+print("用法与返回值详见 docs/stdlib-reference.md")
 
 print("\n注意：")
 print("  - 设置时区需要 root 权限")

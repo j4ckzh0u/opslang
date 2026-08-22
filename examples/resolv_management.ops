@@ -21,28 +21,12 @@ if config.config.domain != "" {
     print("  Domain: " + config.config.domain)
 }
 
-// 2. 演示设置 DNS
-print("\n设置 DNS 示例（伪代码）:")
-print(`
-  resolv.set(
-      ["8.8.8.8", "8.8.4.4", "1.1.1.1"],
-      ["example.com", "local"],
-      ["ndots:2", "timeout:3"],
-      "example.com"
-  )
-`)
-
-// 3. 演示添加 nameserver
-print("\n添加 Nameserver 示例（伪代码）:")
-print(`
-  resolv.add_nameserver("9.9.9.9")
-`)
-
-// 4. 演示移除 nameserver
-print("\n移除 Nameserver 示例（伪代码）:")
-print(`
-  resolv.remove_nameserver("8.8.4.4")
-`)
+// 2. 变更操作说明（DNS 改动影响解析链路，本示例不执行，也不假装执行）
+print("\n变更操作（本示例不执行 — 会真实改写 /etc/resolv.conf）:")
+print("  resolv.set(nameservers, search, options, domain)  整体重写解析配置")
+print("  resolv.add_nameserver(ip) / remove_nameserver(ip) 增删单个 NS")
+print("\n修改 DNS 配置可能影响网络解析，建议先备份当前配置。")
+print("用法与返回值详见 docs/stdlib-reference.md")
 
 print("\n注意：修改 DNS 配置可能影响网络解析")
 print("建议先备份当前配置")

@@ -1,0 +1,91 @@
+// ensure_service.ops - 真实 systemd 服务状态收敛（对标 Ansible service/systemd 模块）
+//
+// 场景：把一台机器的基础服务收敛到「运行中 + 开机自启」。
+// 不硬编码假设装了哪个服务：先探测一组常见基础服务
+// （cron / sshd / ssh / systemd-timesyncd），取第一个真实 loaded
+// 的单元做收敛对象。
+//
+// 真实性说明：
+//   - systemctl show / is-enabled / start / enable 全部是真实调用
+//   - 需要 Linux + root + systemd；不满足时显式 SKIP 并给出真实原因
+//   - restarted/reloaded 语义演示依赖真实单元，不打印任何假成功
+//
+// 运行：opsctl run examples/ensure_service.ops
+
+privilege: admin
+
+let candidates = ["cron", "sshd", "ssh", "systemd-timesyncd"]
+let os = sys.os()
+print("=== 服务状态收敛（platform=" + os.platform + "）===")
+
+let can_manage = false
+let target = ""
+
+let is_linux = os.platform_family == "debian" || os.platform_family == "rhel" || os.platform_family == "fedora" || os.platform_family == "suse" || os.platform == "linux"
+if !is_linux {
+    print("SKIP: 服务收敛需要 Linux + systemd，当前 platform=" + os.platform + " family=" + os.platform_family)
+} else {
+    // 探测 root 能力（真实写探测：失败抛错进 rescue）
+    block {
+        file.ensure("/run/opslang-root-probe", "touch", "")
+        file.ensure("/run/opslang-root-probe", "absent", "")
+        can_manage = true
+    }
+    rescue {
+        print("SKIP: root 探测失败 — " + _error)
+    }
+}
+
+if can_manage {
+    // 在候选清单里找到第一个真实存在的单元
+    for unit in candidates {
+        if target == "" {
+            block {
+                let st = service.status(unit)
+                if st.load_state == "loaded" {
+                    target = unit
+                }
+            }
+            rescue {
+                // 单元不存在或 systemd 不可用，探测下一个
+            }
+        }
+    }
+
+    if target == "" {
+        print("SKIP: 候选服务 (" + str(candidates) + ") 在本机均未安装，没有可收敛对象")
+    } else {
+        print("收敛目标: " + target + "（从候选 " + str(candidates) + " 中探测到）")
+
+        // 1. 状态收敛：active → started 是零动作；inactive → start
+        let before = service.status(target)
+        print("\n[before] active=" + str(before.active) + " enabled=" + str(before.enabled))
+
+        let run = service.ensure(target, "started")
+        print("[service.ensure(started)]  changed=" + str(run.changed) + " actions=" + str(run.actions) + " msg=" + run.message)
+
+        // 2. 自启收敛：已启用则零动作
+        let boot = service.ensure_enabled(target, true)
+        print("[service.ensure_enabled(true)] changed=" + str(boot.changed) + " actions=" + str(boot.actions) + " msg=" + boot.message)
+
+        // 3. 终态校验：重新从 systemd 读回，而不是相信上一步的返回值
+        let after = service.status(target)
+        print("\n[after]  active=" + str(after.active) + " enabled=" + str(after.enabled))
+
+        if !after.active || !after.enabled {
+            alert("服务未收敛到目标状态: active=" + str(after.active) + " enabled=" + str(after.enabled))
+        }
+
+        report {
+            platform: os.platform,
+            unit: target,
+            active_before: before.active,
+            enabled_before: before.enabled,
+            start_changed: run.changed,
+            enable_changed: boot.changed,
+            converged: after.active && after.enabled
+        }
+    }
+} else {
+    report { platform: os.platform, skipped: true, reason: "requires Linux + root + systemd" }
+}

@@ -41,23 +41,42 @@ rescue {
     print("  ✗ nginx 日志轮转配置未找到或不可用")
 }
 
-// 3. 演示设置日志轮转
-print("\n设置日志轮转示例（伪代码）:")
-print(`
-  logrotate.set(
-      "myapp",
-      "/var/log/myapp/*.log",
-      "daily",
-      30,
-      true,
-      "/usr/bin/systemctl reload myapp"
-  )
-`)
+// 3. 真实设置/移除日志轮转（需要 Linux + root；不满足则显式跳过）
+print("\n真实写入演示（/etc/logrotate.d/opslang-demo，结束后清理）:")
+let can_write = false
+block {
+    // /run 仅 root 可写：探测真实写权限
+    file.ensure("/run/opslang-root-probe", "touch", "")
+    file.ensure("/run/opslang-root-probe", "absent", "")
+    can_write = true
+}
+rescue {
+    print("  SKIP: 写入 /etc/logrotate.d 需要 root — " + _error)
+}
 
-// 4. 演示移除日志轮转
-print("\n移除日志轮转示例（伪代码）:")
-print(`
-  logrotate.remove("myapp")
-`)
+if can_write {
+    block {
+        let set_r = logrotate.set("opslang-demo", "/var/log/opslang-demo/*.log", "daily", 7, true, "")
+        print("  logrotate.set: changed=" + str(set_r.changed) + " name=" + set_r.name)
+
+        // 从磁盘读回验证（真实读取）
+        let verify = logrotate.get("opslang-demo")
+        print("  读回验证: pattern=" + verify.config.pattern + " frequency=" + verify.config.frequency)
+
+        // 幂等复跑：已存在时 Changed=false 才对
+        let set_again = logrotate.set("opslang-demo", "/var/log/opslang-demo/*.log", "daily", 7, true, "")
+        print("  复跑: changed=" + str(set_again.changed))
+
+        // 清理，不留配置残留
+        let rm = logrotate.remove("opslang-demo")
+        print("  logrotate.remove: changed=" + str(rm.changed) + " name=" + rm.name)
+    }
+    rescue {
+        // 即使中途失败也尝试清理
+        block { logrotate.remove("opslang-demo") }
+        rescue { }
+        print("  ✗ 操作失败: " + _error)
+    }
+}
 
 print("\n=== logrotate 管理演示完成 ===")

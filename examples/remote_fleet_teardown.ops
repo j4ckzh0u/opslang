@@ -1,0 +1,23 @@
+// remote_fleet_teardown.ops - 舰队清理（remote_ensure_fleet.ops 的逆操作）
+//
+// 用 opsctl deploy 执行：
+//
+//   opsctl deploy --inventory hosts.yaml examples/remote_fleet_teardown.ops
+//
+// 场景：下线 remote_ensure_fleet.ops 供给的资源。与供给完全对称：
+// user.absent / group.absent 同样幂等，重复执行零变更。
+// 仅路由到 inventory 中 group=root 的主机。
+
+privilege: admin
+
+task "teardown_service_account" on "root" {
+    let ua = user.absent("opslang-fleet", false)
+    let ga = group.absent("opslang-fleet")
+    report {
+        role: "teardown",
+        user_removed: ua.changed,
+        group_removed: ga.changed,
+        user_message: ua.message,
+        group_message: ga.message
+    }
+}

@@ -39,25 +39,13 @@ rescue {
     print("  ✗ 无法读取 /etc/fstab")
 }
 
-// 3. 演示挂载（伪代码）
-print("\n挂载示例（伪代码）:")
-print(`
-  mount.mount("/dev/sdb1", "/mnt/data", "ext4", "defaults")
-  mount.mount("nfs-server:/export", "/mnt/nfs", "nfs", "rw,soft")
-`)
-
-// 4. 演示卸载
-print("\n卸载示例（伪代码）:")
-print(`
-  mount.umount("/mnt/data")
-`)
-
-// 5. 演示 fstab 管理
-print("\nfstab 管理示例（伪代码）:")
-print(`
-  mount.add_fstab("/dev/sdb1", "/mnt/data", "ext4", "defaults")
-  mount.remove_fstab("/mnt/data")
-`)
+// 3. 变更操作说明（挂载影响存储布局，本示例不执行，也不假装执行）
+print("\n变更操作（本示例不执行 — 会真实挂载/卸载/改写 fstab）:")
+print("  mount.mount(dev, dir, fs, opts)        真实挂载（写入 /etc/mtab）")
+print("  mount.umount(dir)                      真实卸载")
+print("  mount.add_fstab(...) / remove_fstab    真实增删 /etc/fstab 条目")
+print("\n挂载操作需要 root 权限；错误参数可能导致启动异常，请核对设备名。")
+print("用法与返回值详见 docs/stdlib-reference.md")
 
 print("\n注意：挂载操作需要 root 权限")
 
