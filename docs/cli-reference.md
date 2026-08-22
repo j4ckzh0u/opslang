@@ -262,6 +262,35 @@ opsctl deploy deploy_app.ops --targets web1 --dry-run
 - `status` 为 `failed` 或 `partial` 时命令返回非零退出码，且审计日志不会记录为成功。
 - 脚本含 `import "go <包路径>"` 时直接报错拒绝。
 - task 的 `on` 子句选不中任何 deploy 目标时报错。
+- 多 task 剧本的最终 JSON 按**主机**合并所有步骤的 `data` 与 `errors`：每一步的 report 都可见，后续步骤的失败不会覆盖先前步骤的结果。
+
+### 目标选择器与 inventory 组路由
+
+`on` 子句支持四种选择器（glob 语法）：
+
+| 选择器 | 匹配对象 |
+|---|---|
+| `"host2"` | inventory 主机名 / IP 精确匹配 |
+| `"root@10.0.0.12"` | user@host 精确匹配 |
+| `"web-*"` | 主机名/IP/user@host glob |
+| `"root"` | **inventory 组名**（对标 Ansible `hosts:` 字段）——路由到 `group: root` 的所有主机 |
+
+inventory 组路由示例（供给剧本只应在具备 root 能力的主机上执行变更）：
+
+```yaml
+hosts:
+  - name: host1
+    host: 10.0.0.11
+    user: deploy
+  - name: host2
+    host: 10.0.0.12
+    user: root
+    group: root      # task "..." on "root" 选中这台
+```
+
+### Runner 二进制缓存（内容寻址）
+
+deploy 每次会先确认远程 runner 为最新：本地 runner 缓存名由 **runner 全部源码（cmd/ops-runner、internal/runner、pkg/ops-core-sdk）的内容哈希**派生，注册表新增操作后哈希变化 → 自动重新编译上传，远程不会再出现 "unknown operation" 的陈旧 runner。远程主机侧按 SHA-256 内容寻址缓存：重复部署只做校验和比对，不重复传输 7MB 二进制。
 
 ### 审批流（生产环境保护）
 
@@ -472,7 +501,7 @@ ops> if true {
 | `OPSLANG_SSH_KEY` | `file.distribute` / `file.collect` 传输使用的 SSH 私钥路径 |
 | `OPSLANG_CACHE_DIR` | Runner 编译缓存目录（默认 `~/.cache/opslang/runners/`） |
 | `OPSLANG_PROJECT_ROOT` | 覆盖项目根目录探测（开发调试用） |
-| `OPSLANG_AUTO_APPROVE` | 设为 `1` 时放行审批流拦截的运行（CI 用）；`--auto-approve` flag 优先 |
+| `OPSCTL_AUTO_APPROVE` | 设为 `1` 时放行审批流拦截的运行（CI 用）；`--auto-approve` flag 优先 |
 | `OPSLANG_AUDIT_DIR` | 审计日志目录（默认 `/var/log/opsctl`，无权限时回退临时目录） |
 
 ---

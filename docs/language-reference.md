@@ -95,12 +95,20 @@ let diskUsage2 = 75.3        // 合法（包含数字）
 1.0e3
 ```
 
-**字符串（string）：** 双引号包裹
+**字符串（string）：** 双引号包裹（支持 `\n`、`\t`、`\"`、`\\` 转义）
 
 ```ops
 "hello"
 "server-01.example.com"
-""    // 空字符串
+""              // 空字符串
+"line1\nline2"  // 换行
+```
+
+反引号包裹的**原始字符串**不做任何转义，适合书写正则、Windows 路径与多行文本：
+
+```ops
+`C:\Users\admin`      // 就是字面的 C:\Users\admin，反斜杠不转义
+`d{4}-d{2}-d{2}`     // 正则模式常用
 ```
 
 **布尔值（bool）：**
@@ -338,9 +346,25 @@ for let i = 0; i < 3; i = i + 1 {
 }
 ```
 
-**注意：** 语言没有 `for x in list` 遍历语法；遍历集合请使用下标循环（见第 14 节 Roadmap）。
+### 6.3 for-in 遍历循环
 
-### 6.3 while 循环
+遍历 list、dict（迭代键）或 string（迭代字符）：
+
+```ops
+let services = ["nginx", "redis", "postgres"]
+for svc in services {
+    print("checking " + svc)
+}
+
+let config = {"host": "localhost", "port": 8080}
+for key in config {
+    print(key + " = " + str(config[key]))
+}
+```
+
+
+
+### 6.4 while 循环
 
 当条件为真时持续执行循环体：
 
@@ -353,6 +377,27 @@ while x > 0 {
 ```
 
 等价于省略初始化和更新语句的 for 循环。
+
+---
+
+### 6.5 block / rescue / always 错误处理
+
+对标 Ansible 的 `block/rescue/always`。`block` 内任意语句出错时：跳到 `rescue`（可读取 `_error` 字符串获取真实错误），`always` 无论成败都执行：
+
+```ops
+block {
+    let conf = file.read("/etc/myapp/app.conf")
+    print("读取成功: " + conf.content)
+}
+rescue {
+    print("读取失败: " + _error)   // _error 是真实错误信息，不是占位符
+}
+always {
+    print("清理临时资源")
+}
+```
+
+`rescue`/`always` 可省略；块可嵌套。这是编写"探测-降级"逻辑的标准写法（示例库大量使用：前提不满足时进入 rescue 打印真实原因并显式跳过）。
 
 ---
 
@@ -853,9 +898,10 @@ report {
 
 以下语法特性**尚未实现**，本文档不以现有功能描述它们：
 
-- **`for ... in ...` 遍历循环**：不存在此语法，遍历集合请用 C 风格下标循环
 - **`import "go <包路径>"` 第三方 Go 库**：所有执行引擎均报错拒绝
-- **task `on` 变量 / 动态选择器**：deploy 只支持字面量主机选择器（精确名 / `user@host` / glob）
+- **task `on` 变量 / 动态选择器**：deploy 只支持字面量主机选择器（精确名 / `user@host` / glob / inventory 组名）
+
+> `for ... in ...` 遍历循环与 `block/rescue/always` 错误处理**已实现**（见 6.3 节与 `examples/block_rescue_example.ops`）。
 
 ---
 
@@ -887,3 +933,5 @@ print(config.port)         // 8080
 ```
 
 两种语法等价。方括号语法支持动态键名，点号语法要求键名为合法标识符。
+
+**关键字成员名**：点号之后允许出现语言关键字（关键字在此位置没有语句含义）。标准库依赖这一规则提供了与关键字同名的操作，例如 `file.ensure(...)`、`user.absent(...)`、`group.ensure(...)`。

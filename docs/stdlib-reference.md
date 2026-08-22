@@ -12,6 +12,9 @@
 - [8. json 包 - JSON 编解码](#8-json-包---json-编解码)
 - [9. yaml 包 - YAML 编解码](#9-yaml-包---yaml-编解码)
 - [10. time 包 - 时间操作](#10-time-包---时间操作)
+- [18. user 包 - 用户管理](#18-user-包---用户管理)
+- [19. group 包 - 组管理](#19-group-包---组管理)
+- [20. 幂等收敛（ensure 家族）——对标 Ansible 核心模块](#20-幂等收敛ensure-家族对标-ansible-核心模块)
 
 ---
 
@@ -840,6 +843,56 @@ report {
 
 ---
 
+### 3.16 file.ensure(path, state, mode)
+
+幂等收敛文件/目录状态，对标 Ansible `file` 模块。这是"声明期望状态"的写法：
+无论当前是什么状态，执行后一定收敛到期望状态；已满足期望时**零动作**（`changed=false`，`actions` 为空）。
+
+**参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `path` | `string` | 是 | 目标路径 |
+| `state` | `string` | 是 | 期望状态：`"directory"` \| `"file"` \| `"touch"` \| `"absent"` |
+| `mode` | `string` | 否 | 期望权限位，八进制字符串如 `"0755"`；空串表示不管理权限 |
+
+**状态语义**：
+
+| state | 行为 |
+|---|---|
+| `directory` | 不存在则递归创建（mode 缺省 0755）；存在但类型是文件则**报错**（绝不静默覆盖）；权限漂移则 chmod |
+| `file` | 必须已存在（**不会创建**，与 Ansible 一致，需要创建请用 `touch`）；权限漂移则 chmod |
+| `touch` | 不存在则创建空文件；已存在则**保持不动**（与 Ansible 不同：Ansible 每次刷新 mtime，我们选择让收敛运行严格幂等） |
+| `absent` | 存在则删除（目录递归删除）；不存在则零动作 |
+
+**返回类型**：`EnsureResult`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `path` | `string` | 目标路径 |
+| `state` | `string` | 期望状态 |
+| `type` | `string` | 磁盘上的实际类型：`"directory"` / `"file"` / `"other"` / `""`(不存在) |
+| `mode` | `string` | 收敛后的权限位（未管理权限时为空） |
+| `changed` | `bool` | 本次是否产生了真实变更 |
+| `actions` | `[]string` | 实际执行的动作列表：`mkdir` / `create` / `chmod` / `remove`；幂等运行为空列表 |
+| `message` | `string` | 人类可读结果 |
+| `error` | `string` | 错误详情（仅失败时） |
+
+**平台与权限**：任何平台可运行；变更系统路径需要相应写权限。`Mutating`（需要 `privilege: admin`）。
+
+**示例**（摘自 `examples/ensure_idempotency_proof.ops`，真实运行输出）：
+
+```ops
+let r1 = file.ensure("/srv/app/conf.d", "directory", "0750")
+// r1 = { "path": "/srv/app/conf.d", "state": "directory", "type": "directory",
+//        "mode": "0750", "changed": true, "actions": ["mkdir"], ... }
+
+let r2 = file.ensure("/srv/app/conf.d", "directory", "0750")
+// r2 = { ..., "changed": false, "actions": [], "message": "directory already up to date" }
+```
+
+---
+
 ## 4. net 包 - 网络操作
 
 > Go 包路径：`pkg/ops-core-sdk/net`（Go 包名：`opsnet`）
@@ -1313,6 +1366,102 @@ service.disable("apache2")
 
 ---
 
+### 6.7 service.ensure(name, state)
+
+幂等收敛服务运行状态，对标 Ansible `service`/`systemd` 模块的 `state=` 参数。先读取真实状态再决定动作：已满足期望则**零动作**。
+
+**参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `name` | `string` | 是 | systemd 单元名 |
+| `state` | `string` | 是 | 期望状态：`"started"` \| `"stopped"` \| `"restarted"` \| `"reloaded"` |
+
+**状态语义**：
+
+| state | 当前 active | 动作 | changed |
+|---|---|---|---|
+| `started` | true | 无 | false |
+| `started` | false | `systemctl start` | true |
+| `stopped` | false | 无 | false |
+| `stopped` | true | `systemctl stop` | true |
+| `restarted` | 任意 | `systemctl restart` | 恒为 true（重启永不幂等） |
+| `reloaded` | 任意 | `systemctl reload`；单元不支持 reload 时**自动回退 restart**（与 Ansible 行为一致） | 恒为 true |
+
+**返回类型**：`EnsureResult`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `name` | `string` | 单元名 |
+| `state` | `string` | 期望状态 |
+| `active` | `bool` | 收敛后的运行状态 |
+| `enabled` | `bool` | 当前开机自启状态（ensure 不改动它） |
+| `changed` | `bool` | 是否产生真实变更 |
+| `actions` | `[]string` | 实际执行的 systemctl 动词（如 `["start"]`、reload 回退时 `["reload","restart"]`）；幂等运行为空 |
+| `message` | `string` | 结果说明 |
+| `error` | `string` | 错误详情（仅失败时） |
+
+**平台与权限**：Linux + systemd + root。`Mutating`。
+
+**示例**（真机 Ubuntu 22.04 上的真实输出，先手工 `systemctl stop cron`）：
+
+```ops
+let run = service.ensure("cron", "started")
+```
+
+```json
+{ "name": "cron", "state": "started", "active": true, "enabled": true,
+  "changed": true, "actions": ["start"],
+  "message": "service \"cron\" converged to started" }
+```
+
+再次执行（cron 已 active）：
+
+```json
+{ "name": "cron", "state": "started", "active": true, "enabled": true,
+  "changed": false, "actions": [],
+  "message": "service \"cron\" already active" }
+```
+
+---
+
+### 6.8 service.ensure_enabled(name, enabled)
+
+幂等收敛开机自启，对标 Ansible 的 `enabled=yes/no`。已满足期望则零动作。
+
+**参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `name` | `string` | 是 | systemd 单元名 |
+| `enabled` | `bool` | 是 | `true`=开机自启，`false`=禁用自启 |
+
+**返回类型**：同 `service.ensure`（`state` 字段报告 `"enabled"`/`"disabled"`）。
+
+**语义**：
+
+| enabled | 当前 is-enabled | 动作 | changed |
+|---|---|---|---|
+| true | enabled | 无 | false |
+| true | 其他 | `systemctl enable` | true |
+| false | disabled | 无 | false |
+| false | 其他 | `systemctl disable` | true |
+
+**平台与权限**：Linux + systemd + root。`Mutating`。
+
+**示例**：
+
+```ops
+// 典型组合：确保 nginx 运行且开机自启（重复执行零变更）
+let run  = service.ensure("nginx", "started")
+let boot = service.ensure_enabled("nginx", true)
+if run.changed || boot.changed {
+    log("nginx 本轮发生变更: start=" + str(run.actions) + " enable=" + str(boot.actions))
+}
+```
+
+---
+
 ## 7. pkg 包 - 包管理
 
 > Go 包路径：`pkg/ops-core-sdk/pkg`（Go 包名：`opspkg`）
@@ -1416,6 +1565,43 @@ print("Nginx 版本: " + info.version + " (" + info.status + ")")
 ```ops
 let pkgs = pkg.list()
 print("已安装 " + str(len(pkgs)) + " 个软件包")
+```
+
+---
+
+### 7.5 pkg.ensure(name)
+
+幂等安装软件包，对标 Ansible `package` 模块（`state=present`）。已安装则直接返回 `changed=false`，**不再触碰包管理器**；未安装则自动探测系统包管理器（apt → dnf → yum）执行安装。
+
+**参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `name` | `string` | 是 | 包名 |
+
+**返回类型**：`PackageAction`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `name` | `string` | 包名 |
+| `action` | `string` | `"ensure"` |
+| `manager` | `string` | 实际使用的包管理器（apt/dnf/yum） |
+| `success` | `bool` | 操作是否成功 |
+| `changed` | `bool` | `false` = 已安装（零动作）；`true` = 本次执行了安装 |
+| `message` | `string` | 结果说明 |
+| `error` | `string` | 错误详情（仅失败时） |
+
+**平台与权限**：Linux（macOS/无包管理器环境显式报错）。安装需要 root。`Mutating`。
+
+**示例**：
+
+```ops
+let r = pkg.ensure("htop")
+if r.changed {
+    log("htop 新安装完成")
+} else {
+    log("htop 已存在，零动作")   // 第二次运行必然走这里
+}
 ```
 
 ---
@@ -1963,6 +2149,156 @@ sys.timezone_set("Asia/Shanghai")
 重启系统。使用 `shutdown -r now`，回退到 `reboot`。
 
 **返回**：`sys.RebootResult`
+
+---
+
+## 18. user 包 - 用户管理
+
+直接调用 `useradd`/`usermod`/`userdel`（无 shell 包装）。读取 `/etc/passwd`，任何平台可查询，变更需要 Linux + root。除 `18.1`-`18.5` 的底层操作外，推荐日常使用 **18.6 `user.ensure` / 18.7 `user.absent`** 的幂等收敛形式。
+
+### 18.1 user.list()
+
+返回 `/etc/passwd` 全量用户。返回 `ListResult { users: []UserInfo{username, uid, gid, comment, home, shell} }`。
+
+### 18.2 user.exists(username)
+
+返回 `ExistsResult { exists bool }`。
+
+### 18.3 user.info(username)
+
+返回 `InfoResult { user UserInfo }`；用户不存在时报错。
+
+### 18.4 user.add(username, opts)
+
+创建用户（已存在则 `changed=false`）。`opts` 支持键：`shell`、`home`、`uid`、`groups`、`create_home`（`"true"`/`"1"`）。
+
+**同名组处理**：当 `/etc/group` 已存在同名组时（常见于先 `group.ensure` 再建服务账号的剧本），自动使用 `useradd -g <gid>` 绑定既有组，而不是让 useradd 因"组已存在"而失败。
+
+返回 `AddResult { changed, username, uid, error }`。
+
+### 18.5 user.remove(username, remove_home)
+
+删除用户（不存在则 `changed=false`）。`remove_home=true` 时连带删除家目录（`userdel -r`）。返回 `RemoveResult { changed, username, error }`。
+
+### 18.6 user.ensure(username, opts)
+
+幂等收敛用户状态（present + 属性），对标 Ansible `user` 模块 `state=present`：
+
+| 当前状态 | 行为 | changed |
+|---|---|---|
+| 用户不存在 | `useradd`（带 opts） | true |
+| 存在，shell/home 与期望一致 | **零动作** | false |
+| 存在，shell 或 home 漂移 | `usermod -s` / `usermod -d` 收敛 | true |
+
+**参数**：`username`（string，必填）、`opts`（dict，可选；支持 `shell`/`home`/`uid`/`groups`/`create_home`，其中 `shell`/`home` 参与漂移收敛）。
+
+**返回类型**：`EnsureResult`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `username` | `string` | 用户名 |
+| `present` | `bool` | 收敛后的存在状态（ensure 后恒 true） |
+| `changed` | `bool` | 是否产生真实变更 |
+| `action` | `string` | `"ensure"` |
+| `shell` / `home` | `string` | 收敛后的属性 |
+| `uid` | `int` | 用户 UID |
+| `message` | `string` | 结果说明（`"user created"` / `"user already up to date"` / `"user attributes converged"`） |
+| `error` | `string` | 错误详情（仅失败时） |
+
+**平台与权限**：Linux + root。`Mutating`。
+
+**示例**（真机 Ubuntu 22.04 真实输出，AOT 模式）：
+
+```ops
+let g = group.ensure("opslang-demo", {})
+let u = user.ensure("opslang-demo", { "shell": "/usr/sbin/nologin", "create_home": "false" })
+print("changed=" + str(u.changed) + " shell=" + u.shell)
+```
+
+```text
+changed=true shell=/usr/sbin/nologin        # 第一次：创建
+changed=false shell=/usr/sbin/nologin       # 第二次：零动作
+changed=true shell=/usr/sbin/nologin        # 手工 usermod 改成 /bin/bash 后：漂移被收敛回 nologin
+```
+
+### 18.7 user.absent(username, remove_home)
+
+幂等删除用户（对标 `state=absent`）：不存在则零动作；**拒绝删除 root**（远程主机上几乎不可能是本意且不可恢复）。`remove_home=true` 连带删除家目录。
+
+返回 `EnsureResult`（`present=false`，`message` 为 `"user removed"` / `"user already absent"`）。
+
+> 真实行为说明：`userdel` 在删除用户时会顺带删除其同名主组（无其他成员时），因此随后执行 `group.absent` 常见 `"group already absent"` —— 这不是 bug，是 shadow-utils 的真实语义。
+
+---
+
+## 19. group 包 - 组管理
+
+直接调用 `groupadd`/`groupdel`，读取 `/etc/group`。
+
+### 19.1 group.list()
+
+返回 `[]GroupInfo{gid, name, members}`。
+
+### 19.2 group.exists(name)
+
+返回 `ExistsResult { exists bool }`。
+
+### 19.3 group.info(name)
+
+返回 `GroupInfo`；组不存在时报错。
+
+### 19.4 group.add(name, opts)
+
+创建组。**已幂等**（对标 Ansible）：组已存在时 `changed=false` 且不执行 groupadd。`opts` 支持 `gid`、`system`（`"true"` 时 `groupadd -r`）。返回 `AddResult { changed, gid, error }`。
+
+### 19.5 group.remove(name)
+
+删除组（不存在则 `changed=false`）。返回 `RemoveResult { changed, error }`。
+
+### 19.6 group.ensure(name, opts)
+
+幂等收敛组存在性（对标 `state=present`）：不存在则按 opts 创建（`changed=true`），存在则零动作并回报现有 `gid`。不支持对既有组重编 GID（`groupmod -g` 几乎从不是运维想要的收敛行为）。
+
+返回 `EnsureResult { name, present, changed, action, gid, message, error }`。
+
+**平台与权限**：Linux + root。`Mutating`。
+
+### 19.7 group.absent(name)
+
+幂等删除组（对标 `state=absent`）：不存在则零动作。返回同上（`present=false`）。
+
+---
+
+## 20. 幂等收敛（ensure 家族）——对标 Ansible 核心模块
+
+OpsLang 的 ensure 家族是**收敛式运维**的核心：你声明期望状态，操作先读真实状态、再决定是否动作。重复执行同一脚本是安全的——第二次及以后全部 `changed=false`、`actions` 为空。这与 `install/start/add` 这类"动作式" API 的本质区别在于：动作式 API 无法安全重复执行。
+
+**与 Ansible 模块的对应关系**：
+
+| OpsLang | Ansible 模块 | Ansible 参数 | 语义差异 |
+|---|---|---|---|
+| `pkg.ensure(name)` | `package` | `state=present` | 无 |
+| `service.ensure(name, state)` | `service` / `systemd` | `state=started/stopped/restarted/reloaded` | reload 失败回退 restart，与 Ansible 一致 |
+| `service.ensure_enabled(name, enabled)` | `service` / `systemd` | `enabled=yes/no` | 拆成独立操作，组合使用 |
+| `user.ensure(name, opts)` | `user` | `state=present` + `shell`/`home` | 单次调用只收敛 shell/home 漂移 |
+| `user.absent(name, remove_home)` | `user` | `state=absent` | 额外拒绝删除 root |
+| `group.ensure(name, opts)` | `group` | `state=present` | 不支持 GID 重编 |
+| `group.absent(name)` | `group` | `state=absent` | 无 |
+| `file.ensure(path, state, mode)` | `file` | `state/path/mode` | `touch` 不刷新 mtime（保持严格幂等）；`state=file` 不创建（一致） |
+| `file.lineinfile(path, line, present, rx)` | `lineinfile` | `line/regexp/state` | 已有 |
+
+**通用返回约定**：每个 ensure 操作都返回 `changed`（本次是否真实变更）与 `actions`（实际执行的动作列表）。**审计这两 个字段**是判断"这次部署到底改了什么"的唯一可信来源。
+
+**三引擎一致性**：ensure 家族在解释器（`opsctl run`）、远程 Runner（deploy runner 模式）与 AOT 编译二进制（deploy aot 模式）中语义完全一致，由 `internal/opsspec` 规范表与跨引擎一致性测试保证。
+
+**真机验证记录**（3 台 Ubuntu 22.04，runner 与 AOT 双模式）：
+
+1. 首次部署：`group_changed=true, user_changed=true`（真实创建）
+2. 立即重复部署：**全部 `changed=false`**（幂等实证）
+3. `systemctl stop cron` 后部署：`start_changed=true, actions=["start"]`，终态 `active=true`（真实收敛）
+4. `user.absent`/`group.absent` 清理，重复执行零动作
+
+完整可复现示例见 `examples/remote_ensure_fleet.ops`（舰队供给）与 `examples/ensure_idempotency_proof.ops`（幂等性自证，带断言）。
 
 ---
 

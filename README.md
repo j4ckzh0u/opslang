@@ -9,6 +9,7 @@
 - **零依赖远程执行**：通过 SSH 下发预编译 Runner 或 AOT 二进制，目标机无需安装任何运行时
 - **异构架构支持**：纯 Go 实现，`CGO_ENABLED=0` 交叉编译覆盖 amd64/arm64
 - **声明式幂等**：内置 `ensure` 语法（check → apply → verify → notify），支持 dry-run 与状态收敛
+- **Ansible 核心模块对齐**：`pkg.ensure` / `service.ensure` / `user.ensure` / `group.ensure` / `file.ensure` 幂等收敛家族 —— 声明期望状态，重复执行零变更，`changed`/`actions` 如实报告每一次真实动作
 - **控制器侧文件分发/收集**：`file.distribute` / `file.collect` 经真实 SSH/SFTP 传输，支持传输后 SHA-256 校验与并发控制
 - **SSH 安全**：主机密钥 TOFU（首次信任）校验，密钥变更即拒绝，防中间人攻击
 
@@ -283,6 +284,60 @@ task "deploy_config" on "web*" {
 | `opsctl build --source <script.ops> --output <binary> --target-arch <os/arch>` | AOT 编译为静态二进制 |
 | `opsctl deploy <script.ops> --targets <hosts>` | 远程部署执行（`--mode auto/runner/aot`） |
 | `opsctl exec --hosts <hosts> --instructions <pkg.json> --parallel <n>` | 直接下发 JSON 指令包远程执行 |
+
+## 幂等收敛：对标 Ansible 核心模块
+
+Ansible 的价值不在模块数量，而在**幂等收敛**：声明期望状态，重复执行安全。OpsLang 用 ensure 家族操作实现同一语义，且在三种执行引擎（本地解释、远程 Runner、AOT 编译二进制）中行为完全一致：
+
+```ops
+// examples/remote_ensure_fleet.ops —— 舰队供给剧本（真实部署节选）
+privilege: admin
+
+task "fleet_facts" on "*" {
+    let os = sys.os()
+    report { platform: os.platform, platform_version: os.platform_version }
+}
+
+task "provision_service_account" on "root" {     // on "root" 路由到 inventory 中 group=root 的主机
+    let g = group.ensure("opslang-fleet", {})
+    let u = user.ensure("opslang-fleet", { "shell": "/usr/sbin/nologin", "create_home": "false" })
+    report { group_changed: g.changed, user_changed: u.changed, user_shell: u.shell }
+}
+
+task "converge_cron" on "root" {
+    let run = service.ensure("cron", "started")
+    let boot = service.ensure_enabled("cron", true)
+    report { start_changed: run.changed, start_actions: run.actions, active: run.active }
+}
+```
+
+部署与幂等性实证（3 台真实 Ubuntu 22.04 主机）：
+
+```bash
+opsctl deploy examples/remote_ensure_fleet.ops --inventory hosts.yaml --parallel 3 --auto-approve
+# 第一次：group_changed=true, user_changed=true（真实创建）
+# 第二次：全部 changed=false（幂等 —— 这正是 Ansible playbook 的核心承诺）
+```
+
+| OpsLang | Ansible 模块 | 语义 |
+|---|---|---|
+| `pkg.ensure(name)` | `package` (`state=present`) | 已安装零动作 |
+| `service.ensure(name, state)` | `service`/`systemd` (`state=`) | started/stopped 幂等；restarted 恒变更；reload 失败回退 restart |
+| `service.ensure_enabled(name, enabled)` | `service` (`enabled=`) | 自启收敛 |
+| `user.ensure(name, opts)` / `user.absent(...)` | `user` | 创建/漂移收敛（shell、home）/删除（拒绝删 root） |
+| `group.ensure(name, opts)` / `group.absent(name)` | `group` | 存在性收敛 |
+| `file.ensure(path, state, mode)` | `file` | directory/file/touch/absent + 权限位收敛 |
+
+所有 ensure 操作返回 `changed` 与 `actions`（实际执行的动作列表）——审计这两个字段是判断"这次部署到底改了什么"的唯一可信来源。完整文档见 `docs/stdlib-reference.md` 第 20 节。
+
+### 真实执行政策（Real Execution Policy）
+
+本项目对示例与文档执行一条铁律：**要么真实执行，要么显式说明为何未执行，绝不伪造成功**。
+
+- 所有示例中的数据来自真实系统调用；不存在"模拟数据/伪代码演示成功"的路径
+- 变更类示例内置真实前提探测（平台、root、systemd 单元、包管理器）：条件不满足时打印 `SKIP: <真实原因>` 并在 report 中如实标注 `skipped: true`
+- 破坏性/侵入性操作（改主机名、改防火墙、装软件包）在示例中不自动执行，但明确列出真实用法与前提，不假装已执行
+- 每个示例都被 `cmd/opsctl/examples_e2e_test.go` 通过真实解释器跑一遍，坏示例会直接挂 CI
 
 ## 语言特性
 

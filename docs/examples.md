@@ -716,6 +716,93 @@ runner 模式（线性任务体）按 `on` 选择器分发；含控制流/ensure
 
 ---
 
+## 9. 幂等收敛（ensure 家族，对标 Ansible）
+
+### 9.1 ensure_idempotency_proof.ops —— 幂等性自证
+
+在真实文件系统上跑两轮完全相同的收敛，第二轮必须零变更，且**脚本内带断言**（不满足会真的 alert）：
+
+```bash
+opsctl run examples/ensure_idempotency_proof.ops
+```
+
+```text
+--- 第 1 轮（首次收敛，预期 changed=true）---
+file.ensure(directory): changed=true actions=[mkdir]
+file.ensure(touch):     changed=true actions=[create]
+--- 第 2 轮（重复收敛，预期 changed=false 且零动作）---
+file.ensure(directory): changed=false msg=directory already up to date
+file.ensure(touch):     changed=false
+--- 权限漂移恢复 ---
+漂移后收敛: changed=true mode=0640
+```
+
+### 9.2 ensure_user_group.ops —— 用户/组生命周期（真机验证）
+
+完整的运维生命周期：建组 → 建用户 → 校验 → 制造 shell 漂移 → ensure 自动收敛 → 清理。变更需要 Linux + root（脚本内置 `/run` 写探测），其他平台显式 SKIP。
+
+```bash
+opsctl run examples/ensure_user_group.ops            # macOS/非 root：诚实 SKIP
+opsctl deploy examples/ensure_user_group.ops --inventory hosts.yaml --mode aot --auto-approve
+```
+
+真机（Ubuntu 22.04，AOT 模式）真实输出：
+
+```text
+[group.ensure] changed=true msg=group created gid=1002
+[group.ensure 复跑] changed=false msg=group already exists
+[user.ensure] changed=true msg=user created shell=/usr/sbin/nologin
+[漂移演练] 改为 bash 后 ensure 收敛: changed=true shell=/usr/sbin/nologin
+[user.absent] changed=true msg=user removed
+```
+
+### 9.3 ensure_service.ops —— 服务状态收敛（真机验证）
+
+不硬编码假设装了哪个服务：探测候选单元（cron/sshd/ssh/systemd-timesyncd），把第一个真实存在的收敛为 started + enabled。真机验证过两个方向：
+
+```text
+# cron 已在运行（幂等路径）：
+[service.ensure(started)]  changed=false actions=[] msg=service "cron" already active
+
+# 手工 systemctl stop cron 之后（真实收敛路径）：
+[before] active=false enabled=true
+[service.ensure(started)]  changed=true actions=[start] msg=service "cron" converged to started
+[after]  active=true enabled=true
+```
+
+### 9.4 ensure_app_layout.ops —— 应用目录基线收敛
+
+任何平台可跑（/tmp 下真实操作）：目录骨架 + 配置文件 + 权限基线 + lineinfile，复跑零变更断言。
+
+### 9.5 remote_ensure_fleet.ops / remote_fleet_teardown.ops —— 舰队供给与下线
+
+deploy 专用剧本（对标 Ansible playbook + inventory）：
+
+```bash
+# 供给：所有主机报 facts；group=root 的主机收敛服务账号 + cron
+opsctl deploy examples/remote_ensure_fleet.ops --inventory hosts.yaml --auto-approve
+# 幂等实证：立即重复部署，所有 changed=false
+
+# 下线（与供给完全对称）
+opsctl deploy examples/remote_fleet_teardown.ops --inventory hosts.yaml --auto-approve
+```
+
+inventory 按组路由（对标 Ansible `hosts:` 字段）：
+
+```yaml
+hosts:
+  - name: host2
+    host: 10.0.0.12
+    user: root
+    group: root      # task "..." on "root" 路由到这台
+```
+
+### 真实执行政策
+
+所有示例遵守同一铁律：**要么真实执行，要么显式 SKIP 并给出真实原因**。变更操作内置前提探测（平台/root/systemd 单元），探测本身也是真实系统调用（如向 `/run` 写探针文件验证 root 能力）。不存在打印假成功的路径；每个示例都被 `cmd/opsctl/examples_e2e_test.go` 在 CI 中真实执行。
+
+---
+
 ## 快速参考
 
 ### 数据类型

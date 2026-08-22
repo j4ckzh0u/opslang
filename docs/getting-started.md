@@ -158,6 +158,16 @@ i = 3
 i = 4
 ```
 
+### 幂等收敛（可选进阶）
+
+OpsLang 的 ensure 家族对标 Ansible 核心模块：声明期望状态，重复执行零变更。
+
+```bash
+opsctl run examples/ensure_idempotency_proof.ops   # 两轮收敛对比，第二轮 changed=false
+```
+
+真实主机部署（inventory + 组路由）见 `examples/remote_ensure_fleet.ops` 与 `docs/stdlib-reference.md` 第 20 节。
+
 ## 5. 编译脚本
 
 使用 `opsctl build` 将脚本编译为独立二进制，无需目标机器安装任何运行时：
