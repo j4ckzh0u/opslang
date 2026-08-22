@@ -286,18 +286,19 @@ func TestRunnerCachePath(t *testing.T) {
 	if !filepath.IsAbs(path) {
 		t.Errorf("expected absolute path, got %q", path)
 	}
-	expected := filepath.Join(rc.cacheDir, "ops-runner-v3-linux-amd64")
-	if path != expected {
-		t.Errorf("path = %q, want %q", path, expected)
+	if !strings.HasPrefix(filepath.Base(path), "ops-runner-src-") {
+		t.Errorf("path %q should embed the content-derived src- salt", path)
+	}
+	if !strings.HasSuffix(path, "-linux-amd64") {
+		t.Errorf("path %q should end with platform", path)
 	}
 }
 
 func TestRunnerCachePathArm64(t *testing.T) {
 	rc := newRunnerCache("/project")
 	path := rc.getCachedPath("linux", "arm64")
-	expected := filepath.Join(rc.cacheDir, "ops-runner-v3-linux-arm64")
-	if path != expected {
-		t.Errorf("path = %q, want %q", path, expected)
+	if !strings.HasSuffix(path, "-linux-arm64") {
+		t.Errorf("path %q should end with platform", path)
 	}
 }
 
@@ -490,8 +491,8 @@ func TestGetRunnerBinaryCachedHit(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create a fake cached runner.
-	cachedPath := filepath.Join(cacheDir, "ops-runner-v3-linux-amd64")
+	// Create a fake cached runner under the current content-derived salt.
+	cachedPath := filepath.Join(cacheDir, filepath.Base(newRunnerCache(dir).getCachedPath("linux", "amd64")))
 	if err := os.WriteFile(cachedPath, []byte("fake"), 0755); err != nil {
 		t.Fatal(err)
 	}

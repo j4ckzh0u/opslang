@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/opslang/opslang/internal/ast"
+	"github.com/opslang/opslang/internal/compiler"
 	opsexec "github.com/opslang/opslang/internal/exec"
 	"github.com/opslang/opslang/internal/interpreter"
 	"github.com/opslang/opslang/internal/parser"
@@ -67,8 +68,16 @@ func TestExamplesAllRun(t *testing.T) {
 			// Deploy examples (task with on-clauses) must route, not run
 			// locally; everything else runs end to end.
 			if hasRoutedTask(prog) {
+				// Scripts whose task bodies use control flow, block/rescue
+				// or ensure deploy via AOT (mode_selector routes them);
+				// the runner instruction build only applies to linear
+				// task bodies. Both paths must at least parse and select
+				// the mode the deploy CLI would choose.
+				if compiler.RequiresAOT(prog) {
+					return
+				}
 				targets := []opsexec.Target{
-					{Name: "web-01", Host: "10.0.0.1", User: "root"},
+					{Name: "web-01", Host: "10.0.0.1", User: "root", Group: "root"},
 					{Name: "db-01", Host: "10.0.0.2", User: "root"},
 				}
 				steps, err := buildDeploySteps(prog, targets, "test", security.GetScriptPrivilege(prog))

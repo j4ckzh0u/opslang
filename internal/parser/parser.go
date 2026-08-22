@@ -997,10 +997,18 @@ func (p *Parser) parsePratt(minPrec precedence) (ast.Expression, error) {
 			continue
 		case token.DOT:
 			p.advance()
-			memTok, err := p.expect(token.IDENT)
-			if err != nil {
-				return nil, err
+			// A member name may collide with a keyword (file.ensure,
+			// user.absent). Keywords carry no statement meaning after a
+			// dot, so both plain identifiers and keyword tokens are
+			// accepted here.
+			memTok := p.current()
+			if memTok.Type != token.IDENT && !token.IsKeyword(memTok.Literal) {
+				return nil, &ParseError{
+					Pos: memTok.Pos,
+					Msg: fmt.Sprintf("expected IDENT, got %s", memTok.Type),
+				}
 			}
+			p.advance()
 			left = &ast.MemberExpression{
 				Position: left.Pos(),
 				Object:   left,

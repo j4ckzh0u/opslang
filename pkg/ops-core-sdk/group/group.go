@@ -125,8 +125,17 @@ func List() ([]GroupInfo, error) {
 //   - "gid"    — numeric GID for the new group
 //   - "system" — "true" to create a system group
 func Add(name string, opts map[string]string) (AddResult, error) {
+	if name == "" {
+		return AddResult{Error: "group name is required"}, fmt.Errorf("group name is required")
+	}
 	if opts == nil {
 		opts = make(map[string]string)
+	}
+
+	// Idempotent like the Ansible group module: an existing group is left
+	// untouched and reported with changed=false.
+	if info, err := Info(name); err == nil {
+		return AddResult{Changed: false, GID: info.GID}, nil
 	}
 
 	args := []string{}

@@ -84,7 +84,10 @@ func Info(name string) (Result, error) {
 		return Result{Status: "failed", Error: "gem name is required"}, fmt.Errorf("gem name is required")
 	}
 
-	cmd := exec.Command("gem", "specification", name, "--remote", "--ruby")
+	// Local specification lookup: --remote would hit rubygems.org and hang
+	// on hosts without external network. A gem that is not installed fails
+	// fast with a real error instead.
+	cmd := exec.Command("gem", "specification", name, "--ruby")
 	out, err := cmd.CombinedOutput()
 	output := strings.TrimSpace(string(out))
 	if err != nil {

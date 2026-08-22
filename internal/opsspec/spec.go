@@ -218,6 +218,7 @@ var Funcs = []Func{
 	// runner executing them would need controller credentials.
 	{Name: "file.distribute", Args: []string{"source", "targets", "options"}, Avail: ControllerOnly, Mutating: true},
 	{Name: "file.exists", Args: []string{"path"}},
+	{Name: "file.ensure", Args: []string{"path", "state", "mode"}, Mutating: true},
 	{Name: "file.find", Args: []string{"paths", "patterns", "regex", "file_type", "max_depth", "age", "size"}},
 	{Name: "file.ini_get", Args: []string{"path", "section", "key"}},
 	{Name: "file.ini_set", Args: []string{"path", "section", "key", "value"}, Mutating: true},
@@ -252,6 +253,8 @@ var Funcs = []Func{
 
 	// ── group ─────────────────────────────────────────────────────────
 	{Name: "group.add", Args: []string{"name", "opts"}, Mutating: true},
+	{Name: "group.absent", Args: []string{"name"}, Mutating: true},
+	{Name: "group.ensure", Args: []string{"name", "opts"}, Mutating: true},
 	{Name: "group.exists", Args: []string{"name"}},
 	{Name: "group.info", Args: []string{"name"}},
 	{Name: "group.list"},
@@ -323,6 +326,7 @@ var Funcs = []Func{
 	{Name: "ntp.set", Args: []string{"server"}, Mutating: true},
 
 	// ── pkg ───────────────────────────────────────────────────────────
+	{Name: "pkg.ensure", Args: []string{"name"}, Mutating: true},
 	{Name: "pkg.info", Args: []string{"name"}},
 	{Name: "pkg.install", Args: []string{"name"}, Mutating: true},
 	{Name: "pkg.list"},
@@ -350,6 +354,8 @@ var Funcs = []Func{
 	// ── service ───────────────────────────────────────────────────────
 	{Name: "service.disable", Args: []string{"name"}, Mutating: true},
 	{Name: "service.enable", Args: []string{"name"}, Mutating: true},
+	{Name: "service.ensure", Args: []string{"name", "state"}, Mutating: true},
+	{Name: "service.ensure_enabled", Args: []string{"name", "enabled"}, Mutating: true},
 	{Name: "service.restart", Args: []string{"name"}, Mutating: true},
 	{Name: "service.start", Args: []string{"name"}, Mutating: true},
 	{Name: "service.status", Args: []string{"name"}},
@@ -571,7 +577,9 @@ var Funcs = []Func{
 	{Name: "time.sleep", Args: []string{"ms"}},
 
 	// ── user ──────────────────────────────────────────────────────────
+	{Name: "user.absent", Args: []string{"username", "remove_home"}, Mutating: true},
 	{Name: "user.add", Args: []string{"username", "opts"}, Mutating: true},
+	{Name: "user.ensure", Args: []string{"username", "opts"}, Mutating: true},
 	{Name: "user.exists", Args: []string{"username"}},
 	{Name: "user.info", Args: []string{"username"}},
 	{Name: "user.list"},

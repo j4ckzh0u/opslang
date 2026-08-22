@@ -4,13 +4,22 @@ package process
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 	"syscall"
+	"time"
 
 	gopsnet "github.com/shirou/gopsutil/v4/net"
 	"github.com/shirou/gopsutil/v4/process"
 )
+
+// Per-process info collection is best-effort with a timeout: on some hosts
+// gopsutil blocks indefinitely on a single process in an odd state (e.g. a
+// zombie under macOS SIP). One such process must not hang a whole fleet
+// probe, so slow processes are skipped instead of awaited forever.
+const perProcessTimeout = 500 * time.Millisecond
 
 // ProcessInfo holds information about a single process.
 type ProcessInfo struct {
@@ -69,24 +78,72 @@ func getProcessInfo(p *process.Process) (ProcessInfo, error) {
 	return info, nil
 }
 
-// List returns information about all running processes.
+// List returns information about all running processes. Collection is
+// best-effort: processes whose info cannot be gathered (permission denied,
+// exited mid-read, or a blocked syscall) are skipped rather than allowed to
+// hang the caller. Output order matches the process table.
 func List() ([]ProcessInfo, error) {
 	procs, err := process.Processes()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]ProcessInfo, 0, len(procs))
-	for _, p := range procs {
-		info, err := getProcessInfo(p)
-		if err != nil {
-			// Skip processes that error out during info gathering
-			continue
-		}
-		result = append(result, info)
+	infos := make([]ProcessInfo, len(procs))
+	collectable := make([]bool, len(procs))
+	idx := make(chan int)
+	var wg sync.WaitGroup
+	workers := 8
+	if workers > len(procs) {
+		workers = len(procs)
 	}
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := range idx {
+				info, err := getProcessInfoWithTimeout(procs[i])
+				if err != nil {
+					continue // skip processes that error out or time out
+				}
+				infos[i] = info
+				collectable[i] = true
+			}
+		}()
+	}
+	for i := range procs {
+		idx <- i
+	}
+	close(idx)
+	wg.Wait()
 
+	result := make([]ProcessInfo, 0, len(procs))
+	for i := range procs {
+		if collectable[i] {
+			result = append(result, infos[i])
+		}
+	}
 	return result, nil
+}
+
+// getProcessInfoWithTimeout runs getProcessInfo with a hard per-process
+// timeout. The collecting goroutine may stay blocked on a syscall — that is
+// the price of not hanging the caller; it cannot be preempted safely.
+func getProcessInfoWithTimeout(p *process.Process) (ProcessInfo, error) {
+	type outcome struct {
+		info ProcessInfo
+		err  error
+	}
+	ch := make(chan outcome, 1)
+	go func() {
+		info, err := getProcessInfo(p)
+		ch <- outcome{info, err}
+	}()
+	select {
+	case o := <-ch:
+		return o.info, o.err
+	case <-time.After(perProcessTimeout):
+		return ProcessInfo{}, fmt.Errorf("info collection for pid %d timed out after %s", p.Pid, perProcessTimeout)
+	}
 }
 
 // FindByName returns processes whose name contains the given string (case-insensitive).

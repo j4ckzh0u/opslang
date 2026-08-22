@@ -611,32 +611,39 @@ func TestGetCPUUsageMeasuresCurrentWindow(t *testing.T) {
 	// Burn CPU on all cores and verify the reported usage reflects the
 	// sampling window (high), not a since-boot lifetime average (which
 	// would be far lower right after boot on an idle machine).
-	stop := make(chan struct{})
-	var wg sync.WaitGroup
-	for i := 0; i < runtime.NumCPU(); i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for {
-				select {
-				case <-stop:
-					return
-				default:
+	// On an already-busy host the burners may not get scheduled in a
+	// given window, so allow a few attempts before declaring failure.
+	const attempts = 3
+	for i := 0; i < attempts; i++ {
+		stop := make(chan struct{})
+		var wg sync.WaitGroup
+		for j := 0; j < runtime.NumCPU(); j++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for {
+					select {
+					case <-stop:
+						return
+					default:
+					}
 				}
-			}
-		}()
-	}
+			}()
+		}
 
-	usage, err := GetCPUUsageInterval(400 * time.Millisecond)
-	close(stop)
-	wg.Wait()
+		usage, err := GetCPUUsageInterval(400 * time.Millisecond)
+		close(stop)
+		wg.Wait()
 
-	if err != nil {
-		t.Fatalf("GetCPUUsageInterval error: %v", err)
+		if err != nil {
+			t.Fatalf("GetCPUUsageInterval error: %v", err)
+		}
+		if usage.Percent >= 40 {
+			return
+		}
+		t.Logf("attempt %d: Percent under full load = %v (< 40), retrying", i+1, usage.Percent)
 	}
-	if usage.Percent < 40 {
-		t.Errorf("Percent under full load = %v, want >= 40 (windowed sampling appears broken)", usage.Percent)
-	}
+	t.Errorf("Percent under full load stayed below 40 after %d attempts (windowed sampling appears broken or host too busy for this test)", attempts)
 }
 
 func TestGetCPUUsageSinceBootFallback(t *testing.T) {

@@ -33,6 +33,7 @@ var sdkMapping = map[string]sdkFunc{
 	"file.write":    {pkg: "file", goName: "Write", args: true, params: []string{"s", "s"}},
 	"file.append":   {pkg: "file", goName: "Append", args: true, params: []string{"s", "s"}},
 	"file.exists":   {pkg: "file", goName: "Exists", args: true, params: []string{"s"}},
+	"file.ensure":   {pkg: "file", goName: "Ensure", args: true, params: []string{"s", "s", "s"}},
 	"file.copy":     {pkg: "file", goName: "Copy", args: true, params: []string{"s", "s"}},
 	"file.move":     {pkg: "file", goName: "Move", args: true, params: []string{"s", "s"}},
 	"file.delete":   {pkg: "file", goName: "Delete", args: true, params: []string{"s"}},
@@ -58,12 +59,14 @@ var sdkMapping = map[string]sdkFunc{
 	"process.exec":         {pkg: "process", goName: "Exec", args: true, params: []string{"s", "l"}},
 
 	// service
-	"service.status":  {pkg: "service", goName: "Status", args: true, params: []string{"s"}},
-	"service.start":   {pkg: "service", goName: "Start", args: true, params: []string{"s"}},
-	"service.stop":    {pkg: "service", goName: "Stop", args: true, params: []string{"s"}},
-	"service.restart": {pkg: "service", goName: "Restart", args: true, params: []string{"s"}},
-	"service.enable":  {pkg: "service", goName: "Enable", args: true, params: []string{"s"}},
-	"service.disable": {pkg: "service", goName: "Disable", args: true, params: []string{"s"}},
+	"service.status":         {pkg: "service", goName: "Status", args: true, params: []string{"s"}},
+	"service.start":          {pkg: "service", goName: "Start", args: true, params: []string{"s"}},
+	"service.stop":           {pkg: "service", goName: "Stop", args: true, params: []string{"s"}},
+	"service.restart":        {pkg: "service", goName: "Restart", args: true, params: []string{"s"}},
+	"service.enable":         {pkg: "service", goName: "Enable", args: true, params: []string{"s"}},
+	"service.disable":        {pkg: "service", goName: "Disable", args: true, params: []string{"s"}},
+	"service.ensure":         {pkg: "service", goName: "Ensure", args: true, params: []string{"s", "s"}},
+	"service.ensure_enabled": {pkg: "service", goName: "EnsureEnabled", args: true, params: []string{"s", "b"}},
 
 	// selinux
 	"selinux.get": {pkg: "selinux", goName: "Get"},
@@ -71,6 +74,7 @@ var sdkMapping = map[string]sdkFunc{
 
 	// pkg
 	"pkg.install": {pkg: "pkg", goName: "Install", args: true, params: []string{"s"}},
+	"pkg.ensure":  {pkg: "pkg", goName: "Ensure", args: true, params: []string{"s"}},
 	"pkg.remove":  {pkg: "pkg", goName: "Remove", args: true, params: []string{"s"}},
 	"pkg.info":    {pkg: "pkg", goName: "Info", args: true, params: []string{"s"}},
 	"pkg.list":    {pkg: "pkg", goName: "List"},
@@ -104,6 +108,8 @@ var sdkMapping = map[string]sdkFunc{
 	"user.remove": {pkg: "user", goName: "Remove", args: true, params: []string{"s", "b"}},
 	"user.modify": {pkg: "user", goName: "Modify", args: true, params: []string{"s", "ms"}},
 	"user.exists": {pkg: "user", goName: "Exists", args: true, params: []string{"s"}},
+	"user.ensure": {pkg: "user", goName: "Ensure", args: true, params: []string{"s", "ms"}},
+	"user.absent": {pkg: "user", goName: "Absent", args: true, params: []string{"s", "b"}},
 
 	// group
 	"group.info":   {pkg: "group", goName: "Info", args: true, params: []string{"s"}},
@@ -111,6 +117,8 @@ var sdkMapping = map[string]sdkFunc{
 	"group.add":    {pkg: "group", goName: "Add", args: true, params: []string{"s", "ms"}},
 	"group.remove": {pkg: "group", goName: "Remove", args: true, params: []string{"s"}},
 	"group.exists": {pkg: "group", goName: "Exists", args: true, params: []string{"s"}},
+	"group.ensure": {pkg: "group", goName: "Ensure", args: true, params: []string{"s", "ms"}},
+	"group.absent": {pkg: "group", goName: "Absent", args: true, params: []string{"s"}},
 
 	// cron
 	"cron.list":   {pkg: "cron", goName: "List", args: true, params: []string{"s"}},
@@ -1604,7 +1612,32 @@ func (f sdkFunc) generateSDKCall(alias string, argExprs []string) string {
 		}
 		callArgs[i] = convertArg(a, conv)
 	}
+	// Trailing optional parameters omitted by the script are padded with
+	// type-correct zero values so the interpreter's optional-argument
+	// semantics also hold in AOT mode.
+	for i := len(argExprs); i < len(f.params); i++ {
+		callArgs = append(callArgs, zeroValueFor(f.params[i]))
+	}
 	return fmt.Sprintf("%s.%s(%s)", alias, f.goName, strings.Join(callArgs, ", "))
+}
+
+// zeroValueFor returns a Go zero-value expression for a trailing parameter
+// of the given conversion type.
+func zeroValueFor(conv string) string {
+	switch conv {
+	case "s":
+		return `""`
+	case "i":
+		return "0"
+	case "i64":
+		return "int64(0)"
+	case "m":
+		return "uint32(0)"
+	case "b":
+		return "false"
+	default: // maps, slices, dicts
+		return "nil"
+	}
 }
 
 // convertArg wraps an interface{} expression into the target Go type.
@@ -2460,7 +2493,12 @@ func (g *CodeGenerator) genStatementTo(b *strings.Builder, stmt ast.Statement, i
 		// Dynamic typing: declare every variable as interface{} so that a
 		// later `x = <dynamic expr>` assignment always compiles. `x := int64(0)`
 		// followed by `x = func() interface{}{...}()` was a compile error.
-		b.WriteString(fmt.Sprintf("%svar %s interface{} = %s\n", prefix, sanitizeName(s.Name.Name), expr))
+		name := sanitizeName(s.Name.Name)
+		b.WriteString(fmt.Sprintf("%svar %s interface{} = %s\n", prefix, name, expr))
+		// Go rejects function-local variables that are never used; OpsLang
+		// allows `let x = <call>()` purely for its side effects. The blank
+		// assignment is always valid Go, used variable or not.
+		b.WriteString(fmt.Sprintf("%s_ = %s\n", prefix, name))
 
 	case *ast.AssignStatement:
 		target, err := g.genExpr(s.Target)
@@ -3168,15 +3206,28 @@ func (g *CodeGenerator) resolveFuncName(expr ast.Expression) string {
 
 // sanitizeName escapes Go reserved words and invalid identifier characters
 // that might appear in OpsLang variable names.
-func sanitizeName(name string) string {
-	goReserved := map[string]bool{
+// reservedIdents are identifiers a user variable may NOT take in generated
+// Go code: Go keywords, standard-library packages referenced by the runtime
+// prelude, and every SDK import alias. A user `let os = ...` used to shadow
+// the os package and break os.Stderr references emitted later in main().
+var reservedIdents = func() map[string]bool {
+	m := map[string]bool{
 		"break": true, "case": true, "chan": true, "const": true, "continue": true,
 		"default": true, "defer": true, "else": true, "fallthrough": true, "for": true,
 		"func": true, "go": true, "goto": true, "if": true, "import": true,
 		"interface": true, "map": true, "package": true, "range": true, "return": true,
 		"select": true, "struct": true, "switch": true, "type": true, "var": true,
+		"fmt": true, "os": true, "sort": true, "strings": true, "sync": true,
+		"time": true, "json": true,
 	}
-	if goReserved[name] {
+	for _, alias := range pkgImportAlias {
+		m[alias] = true
+	}
+	return m
+}()
+
+func sanitizeName(name string) string {
+	if reservedIdents[name] {
 		return "_" + name
 	}
 	var result strings.Builder

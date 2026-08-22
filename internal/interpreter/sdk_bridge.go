@@ -402,6 +402,32 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return structToMap(r)
 	}
 
+	interp.builtins["file.ensure"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("file.ensure() requires at least 2 arguments (path, state)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.ensure(): path must be string")
+		}
+		state, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.ensure(): state must be string (directory|file|touch|absent)")
+		}
+		mode := ""
+		if len(args) > 2 {
+			mode, ok = args[2].(string)
+			if !ok {
+				return nil, fmt.Errorf("file.ensure(): mode must be octal string like \"0755\"")
+			}
+		}
+		r, err := sdkfile.Ensure(path, state, mode)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
 	interp.builtins["file.copy"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 2 {
 			return nil, fmt.Errorf("file.copy() requires 2 arguments (src, dst)")
@@ -770,6 +796,44 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 	}
 
 	// ── service.* ──────────────────────────────────────────────────────
+	interp.builtins["service.ensure"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("service.ensure() requires 2 arguments (name, state)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("service.ensure(): name must be string")
+		}
+		state, ok := args[1].(string)
+		if !ok {
+			return nil, fmt.Errorf("service.ensure(): state must be string (started|stopped|restarted|reloaded)")
+		}
+		r, err := sdkservice.Ensure(name, state)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	interp.builtins["service.ensure_enabled"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 2 {
+			return nil, fmt.Errorf("service.ensure_enabled() requires 2 arguments (name, enabled)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("service.ensure_enabled(): name must be string")
+		}
+		enabled, ok := args[1].(bool)
+		if !ok {
+			return nil, fmt.Errorf("service.ensure_enabled(): enabled must be bool")
+		}
+		r, err := sdkservice.EnsureEnabled(name, enabled)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
 	interp.builtins["service.status"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 {
 			return nil, fmt.Errorf("service.status() requires 1 argument (name)")
@@ -1967,7 +2031,11 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		if len(args) > 2 {
 			u = opsBool(args[2])
 		}
-		return sdkgem.Install(name, v, u)
+		r, err := sdkgem.Install(name, v, u)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
 	}
 	interp.builtins["gem.uninstall"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 {
@@ -1978,26 +2046,46 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		if len(args) > 1 {
 			f = opsBool(args[1])
 		}
-		return sdkgem.Uninstall(name, f)
+		r, err := sdkgem.Uninstall(name, f)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
 	}
 	interp.builtins["gem.update"] = func(args ...interface{}) (interface{}, error) {
 		n := ""
 		if len(args) > 0 {
 			n, _ = args[0].(string)
 		}
-		return sdkgem.Update(n)
+		r, err := sdkgem.Update(n)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
 	}
 	interp.builtins["gem.info"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 {
 			return nil, fmt.Errorf("gem.info() requires name")
 		}
-		return sdkgem.Info(args[0].(string))
+		r, err := sdkgem.Info(args[0].(string))
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
 	}
 	interp.builtins["gem.list"] = func(args ...interface{}) (interface{}, error) {
-		return sdkgem.List()
+		r, err := sdkgem.List()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
 	}
 	interp.builtins["gem.version"] = func(args ...interface{}) (interface{}, error) {
-		return sdkgem.Version()
+		r, err := sdkgem.Version()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
 	}
 
 	// ── rabbitmq.* ──────────────────────────────────────────────────────
@@ -2597,6 +2685,20 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		r, _ := opspkg.Install(name)
 		return structToMap(r)
 	}
+	interp.builtins["pkg.ensure"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pkg.ensure() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("pkg.ensure(): argument must be string")
+		}
+		r, err := opspkg.Ensure(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
 
 	interp.builtins["pkg.remove"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 {
@@ -2706,6 +2808,39 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		return structToMap(r)
 	}
+	interp.builtins["user.ensure"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("user.ensure() requires at least 1 argument (username)")
+		}
+		username, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("user.ensure(): username must be string")
+		}
+		opts := toStringMap(args, 1)
+		r, err := sdkuser.Ensure(username, opts)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["user.absent"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("user.absent() requires at least 1 argument (username)")
+		}
+		username, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("user.absent(): username must be string")
+		}
+		removeHome := false
+		if len(args) > 1 {
+			removeHome, _ = args[1].(bool)
+		}
+		r, err := sdkuser.Absent(username, removeHome)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
 	interp.builtins["user.remove"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 {
 			return nil, fmt.Errorf("user.remove() requires at least 1 argument (username)")
@@ -2786,6 +2921,35 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		opts := toStringMap(args, 1)
 		r, err := sdkgroup.Add(name, opts)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["group.ensure"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("group.ensure() requires at least 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("group.ensure(): name must be string")
+		}
+		opts := toStringMap(args, 1)
+		r, err := sdkgroup.Ensure(name, opts)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["group.absent"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("group.absent() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("group.absent(): name must be string")
+		}
+		r, err := sdkgroup.Absent(name)
 		if err != nil {
 			return nil, err
 		}

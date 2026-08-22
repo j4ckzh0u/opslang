@@ -13,6 +13,7 @@ import (
 	"os"
 	osexec "os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -31,6 +32,10 @@ type Target struct {
 	User     string
 	Password string
 	KeyFile  string
+	// Group is the inventory group the host belongs to (e.g. "root",
+	// "web"). Task on-clauses may route by group name, mirroring
+	// Ansible's hosts: field. Inline targets have none.
+	Group string
 	// Tags carries the inventory entry's tags (e.g. env=prod). Inline
 	// targets have none. The approval gate classifies targets with them.
 	Tags map[string]string
@@ -275,7 +280,7 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	// <cache>/<name>-<sha256[:16]> and reused when the remote checksum
 	// already matches, so repeat runs transfer only a checksum query.
 	remoteRunner, err := ensureRemoteBinary(ctx, client, runnerPath,
-		fmt.Sprintf("ops-runner-%s-linux-%s", runnerProtoVersion, goarch))
+		fmt.Sprintf("ops-runner-%s-linux-%s", runnerVersionSalt, goarch))
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Sprintf("failed to stage runner: %v", err)
@@ -553,6 +558,7 @@ func TargetsFromInventory(inv *inventory.Inventory) []Target {
 			User:     h.User,
 			Password: h.Password,
 			KeyFile:  h.KeyFile,
+			Group:    h.Group,
 			Tags:     h.Tags,
 		}
 	}
@@ -606,14 +612,83 @@ func defaultCacheDir() string {
 	return filepath.Join(home, ".cache", "opslang", "runners")
 }
 
-// runnerProtoVersion salts the runner cache: bump whenever the runner's
-// instruction protocol or registry changes, so stale cached binaries (old
-// operation names) are never uploaded.
-const runnerProtoVersion = "v3"
+// runnerVersionSalt names the runner cache binary. It is derived from the
+// content of the runner's own sources plus everything it links (the
+// instruction protocol and the full op registry), so any registry change
+// (new/removed operations) produces a new salt and a fresh binary — a stale
+// cached runner that rejects new operation names can never be uploaded.
+var runnerVersionSalt = func() string {
+	h, err := hashRunnerSources()
+	if err != nil {
+		// Deterministic fallback: old-style manual salt. Should not
+		// happen in practice; hashing only fails on unreadable trees.
+		return "v3-fallback"
+	}
+	return fmt.Sprintf("src-%s", h[:16])
+}()
+
+// runnerSourceDirs are the trees whose content defines a runner binary.
+var runnerSourceDirs = []string{
+	filepath.Join("cmd", "ops-runner"),
+	filepath.Join("internal", "runner"),
+	filepath.Join("pkg", "ops-core-sdk"),
+}
+
+// hashRunnerSources walks the runner source trees and returns a hex sha256
+// over every file path and its content, sorted for determinism.
+func hashRunnerSources() (string, error) {
+	root := os.Getenv("OPSLANG_PROJECT_ROOT")
+	if root == "" {
+		if found, err := findProjectRoot(); err == nil {
+			root = found
+		} else {
+			wd, werr := os.Getwd()
+			if werr != nil {
+				return "", werr
+			}
+			root = wd
+		}
+	}
+
+	var paths []string
+	for _, dir := range runnerSourceDirs {
+		err := filepath.Walk(filepath.Join(root, dir), func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() || !strings.HasSuffix(path, ".go") {
+				return nil
+			}
+			paths = append(paths, path)
+			return nil
+		})
+		if err != nil {
+			return "", err
+		}
+	}
+	sort.Strings(paths)
+
+	hash := sha256.New()
+	for _, p := range paths {
+		rel, err := filepath.Rel(root, p)
+		if err != nil {
+			return "", err
+		}
+		data, err := os.ReadFile(p)
+		if err != nil {
+			return "", err
+		}
+		hash.Write([]byte(rel))
+		hash.Write([]byte{0})
+		hash.Write(data)
+		hash.Write([]byte{0})
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
+}
 
 // getCachedPath returns the path where a cached runner binary would be stored.
 func (c *runnerCache) getCachedPath(goos, goarch string) string {
-	name := fmt.Sprintf("ops-runner-%s-%s-%s", runnerProtoVersion, goos, goarch)
+	name := fmt.Sprintf("ops-runner-%s-%s-%s", runnerVersionSalt, goos, goarch)
 	return filepath.Join(c.cacheDir, name)
 }
 

@@ -30,9 +30,10 @@ func RequiresAOT(prog *ast.Program) bool {
 	var visit func(stmt ast.Statement) bool // returns true -> stop
 	visit = func(stmt ast.Statement) bool {
 		switch s := stmt.(type) {
-		case *ast.IfStatement, *ast.ForStatement, *ast.WhileStatement,
-			*ast.FnStatement, *ast.EnsureStatement, *ast.ParallelStatement,
-			*ast.ReturnStatement:
+		case *ast.IfStatement, *ast.ForStatement, *ast.ForInStatement,
+			*ast.WhileStatement, *ast.FnStatement, *ast.EnsureStatement,
+			*ast.ParallelStatement, *ast.ReturnStatement,
+			*ast.BlockRescueStatement:
 			requires = true
 			return true
 		case *ast.TaskStatement:

@@ -29,6 +29,16 @@ func TestPackageActionJSON(t *testing.T) {
 	}
 }
 
+func TestEnsureRejectsEmptyName(t *testing.T) {
+	result, err := Ensure("")
+	if err == nil {
+		t.Fatal("Ensure(\"\") should return an error")
+	}
+	if result.Changed || result.Success {
+		t.Fatalf("empty ensure must not report success: %+v", result)
+	}
+}
+
 func TestPackageInfoJSON(t *testing.T) {
 	info := PackageInfo{
 		Name:         "curl",

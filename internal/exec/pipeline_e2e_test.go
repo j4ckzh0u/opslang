@@ -52,6 +52,11 @@ func newPipelineServer(t *testing.T) *pipelineServer {
 	// the assertions below expect a full cold deployment.
 	t.Setenv("OPSLANG_REMOTE_CACHE_DIR", filepath.Join(t.TempDir(), "rcache"))
 
+	// Per-test TOFU store: each test server gets a fresh host key, and a
+	// shared ~/.ssh/opslang_known_hosts accumulates stale entries for
+	// reused local ports — reruns then fail the hostkey check.
+	t.Setenv("OPSLANG_KNOWN_HOSTS", filepath.Join(t.TempDir(), "known_hosts"))
+
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatal(err)

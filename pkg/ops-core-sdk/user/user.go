@@ -57,7 +57,9 @@ type ModifyResult struct {
 	Error    string `json:"error,omitempty"`
 }
 
-const passwdFile = "/etc/passwd"
+// passwdFile is the user database read for List/Info/Exists. It is a
+// variable so tests can point it at a fixture instead of /etc/passwd.
+var passwdFile = "/etc/passwd"
 
 // List returns all system users.
 func List() (ListResult, error) {
@@ -148,6 +150,13 @@ func Add(username string, opts map[string]string) (AddResult, error) {
 	}
 
 	args := []string{username}
+	// When a group with the same name already exists, useradd's default
+	// "create a matching primary group" fails. Bind the user to the
+	// existing group instead — the same thing the Ansible user module
+	// does when group=<name> pre-exists.
+	if gid, ok := sameNameGroupGID(username); ok {
+		args = append(args, "-g", gid)
+	}
 	if v, ok := opts["shell"]; ok && v != "" {
 		args = append(args, "-s", v)
 	}
@@ -164,17 +173,18 @@ func Add(username string, opts map[string]string) (AddResult, error) {
 		args = append(args, "-m")
 	}
 
-	cmd := exec.Command("useradd", args...)
+	cmd := exec.Command(useraddBin, args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return AddResult{Error: string(output)}, fmt.Errorf("useradd: %s", output)
 	}
 
-	info, err := Info(username)
-	if err != nil {
-		return AddResult{Username: username}, nil
+	// useradd succeeded: the user exists even if the read-back below
+	// fails, so Changed must be true regardless.
+	result := AddResult{Changed: true, Username: username}
+	if info, err := Info(username); err == nil {
+		result.UID = info.User.UID
 	}
-
-	return AddResult{Changed: true, Username: username, UID: info.User.UID}, nil
+	return result, nil
 }
 
 // Remove deletes a user.
@@ -193,7 +203,7 @@ func Remove(username string, removeHome bool) (RemoveResult, error) {
 		args = append(args, "-r")
 	}
 
-	cmd := exec.Command("userdel", args...)
+	cmd := exec.Command(userdelBin, args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return RemoveResult{Error: string(output)}, fmt.Errorf("userdel: %s", output)
 	}
@@ -228,7 +238,7 @@ func Modify(username string, opts map[string]string) (ModifyResult, error) {
 	}
 
 	args = append(args, username)
-	cmd := exec.Command("usermod", args...)
+	cmd := exec.Command(usermodBin, args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return ModifyResult{Error: string(output)}, fmt.Errorf("usermod: %s", output)
 	}

@@ -20,6 +20,26 @@ type PackageAction struct {
 	Error   string `json:"error,omitempty"`
 }
 
+// Ensure makes a package present. It is idempotent: an installed package is
+// reported with Changed=false and is not passed to the package manager again.
+func Ensure(name string) (PackageAction, error) {
+	if strings.TrimSpace(name) == "" {
+		return PackageAction{Name: name, Action: "ensure", Success: false, Error: "package name is required"}, fmt.Errorf("package name is required")
+	}
+	info, err := Info(name)
+	if err == nil && strings.Contains(strings.ToLower(info.Status), "installed") {
+		return PackageAction{Name: name, Action: "ensure", Manager: info.Manager, Success: true, Changed: false, Message: "package already installed"}, nil
+	}
+	result, installErr := Install(name)
+	result.Action = "ensure"
+	if installErr != nil {
+		result.Error = fmt.Sprintf("ensure %s failed: %v", name, installErr)
+		return result, installErr
+	}
+	result.Message = "package installed"
+	return result, nil
+}
+
 // PackageInfo represents metadata about an installed package.
 type PackageInfo struct {
 	Name         string `json:"name"`

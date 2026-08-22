@@ -372,6 +372,18 @@ func (r *Registry) registerFileOps() {
 		}
 		return file.Exists(path)
 	})
+	r.Register("file.ensure", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("file.ensure: %w", err)
+		}
+		state, err := argString(args, "state")
+		if err != nil {
+			return nil, fmt.Errorf("file.ensure: %w", err)
+		}
+		mode, _ := argString(args, "mode")
+		return file.Ensure(path, state, mode)
+	})
 	r.Register("file.copy", func(args map[string]interface{}) (interface{}, error) {
 		src, err := argString(args, "src")
 		if err != nil {
@@ -590,6 +602,28 @@ func (r *Registry) registerServiceOps() {
 	r.Register("service.restart", serviceOp("service.restart", service.Restart))
 	r.Register("service.enable", serviceOp("service.enable", service.Enable))
 	r.Register("service.disable", serviceOp("service.disable", service.Disable))
+	r.Register("service.ensure", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("service.ensure: %w", err)
+		}
+		state, err := argString(args, "state")
+		if err != nil {
+			return nil, fmt.Errorf("service.ensure: %w", err)
+		}
+		return service.Ensure(name, state)
+	})
+	r.Register("service.ensure_enabled", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("service.ensure_enabled: %w", err)
+		}
+		enabled, err := argBool(args, "enabled")
+		if err != nil {
+			return nil, fmt.Errorf("service.ensure_enabled: %w", err)
+		}
+		return service.EnsureEnabled(name, enabled)
+	})
 
 	// snap operations
 	r.Register("snap.install", func(args map[string]interface{}) (interface{}, error) {
@@ -675,6 +709,13 @@ func (r *Registry) registerPkgOps() {
 		}
 		r, _ := opspkg.Install(name)
 		return r, nil
+	})
+	r.Register("pkg.ensure", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("pkg.ensure: %w", err)
+		}
+		return opspkg.Ensure(name)
 	})
 	r.Register("pkg.remove", func(args map[string]interface{}) (interface{}, error) {
 		name, err := argString(args, "name")
@@ -866,6 +907,22 @@ func (r *Registry) registerPlatformOps() {
 		removeHome, _ := args["remove_home"].(bool)
 		return opsuser.Remove(username, removeHome)
 	})
+	r.Register("user.ensure", func(args map[string]interface{}) (interface{}, error) {
+		username, err := argString(args, "username")
+		if err != nil {
+			return nil, fmt.Errorf("user.ensure: %w", err)
+		}
+		opts := toStringMapArg(args, "opts")
+		return opsuser.Ensure(username, opts)
+	})
+	r.Register("user.absent", func(args map[string]interface{}) (interface{}, error) {
+		username, err := argString(args, "username")
+		if err != nil {
+			return nil, fmt.Errorf("user.absent: %w", err)
+		}
+		removeHome, _ := args["remove_home"].(bool)
+		return opsuser.Absent(username, removeHome)
+	})
 	r.Register("user.modify", func(args map[string]interface{}) (interface{}, error) {
 		username, err := argString(args, "username")
 		if err != nil {
@@ -907,6 +964,21 @@ func (r *Registry) registerPlatformOps() {
 			return nil, fmt.Errorf("group.remove: %w", err)
 		}
 		return opsgrp.Remove(name)
+	})
+	r.Register("group.ensure", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("group.ensure: %w", err)
+		}
+		opts := toStringMapArg(args, "opts")
+		return opsgrp.Ensure(name, opts)
+	})
+	r.Register("group.absent", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("group.absent: %w", err)
+		}
+		return opsgrp.Absent(name)
 	})
 	r.Register("group.exists", func(args map[string]interface{}) (interface{}, error) {
 		name, err := argString(args, "name")

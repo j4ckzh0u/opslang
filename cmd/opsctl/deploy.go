@@ -39,7 +39,7 @@ var (
 
 // Injection points so tests can drive the approval gate without a TTY.
 var (
-	deployConfirmFn         = security.PromptConfirm
+	deployConfirmFn          = security.PromptConfirm
 	deployStdinIsInteractive = security.StdinIsInteractive
 )
 
@@ -261,11 +261,30 @@ func (a *deployAggregate) add(summary *opsexec.Summary) {
 		a.Results = make(map[string]*opsexec.HostResult)
 	}
 	for name, r := range summary.Results {
-		// Earlier steps win the slot; later failures still downgrade status.
-		if existing, ok := a.Results[name]; ok && existing.Status == "failed" {
+		if existing, ok := a.Results[name]; ok {
+			// A playbook runs several steps per host. Later steps add
+			// their reports and errors to the host record instead of
+			// silently overwriting earlier ones: the final JSON must
+			// show every step's outcome, not just the last.
+			if len(r.Data) > 0 {
+				if existing.Data == nil {
+					existing.Data = make(map[string]interface{})
+				}
+				for k, v := range r.Data {
+					existing.Data[k] = v
+				}
+			}
+			if r.Status == "failed" || r.Status == "partial" {
+				existing.Status = r.Status
+			}
+			existing.Errors = append(existing.Errors, r.Errors...)
+			if len(existing.Errors) > 0 && existing.Error == "" {
+				existing.Error = existing.Errors[0]
+			}
 			continue
 		}
-		a.Results[name] = r
+		cp := *r
+		a.Results[name] = &cp
 	}
 	switch summary.Status {
 	case "failed":
@@ -418,6 +437,10 @@ func selectTaskTargets(task *ast.TaskStatement, targets []opsexec.Target) ([]ops
 // host address, or user@host form. Globbing via path.Match is allowed.
 func targetMatchesSelector(t opsexec.Target, selector string) bool {
 	candidates := []string{t.Name, t.Host, t.User + "@" + t.Host}
+	if t.Group != "" {
+		// Inventory groups route like Ansible's hosts: field.
+		candidates = append(candidates, t.Group)
+	}
 	for _, c := range candidates {
 		if c == selector {
 			return true
