@@ -2,7 +2,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"os"
@@ -28,12 +27,12 @@ Press Ctrl+C to cancel current input, Ctrl+D to exit.`,
 }
 
 func runREPL() error {
-	// Handle SIGINT gracefully (don't exit, just cancel current line).
+	// Handle SIGINT gracefully for the non-TTY path (raw mode handles
+	// Ctrl+C itself inside the line editor): cancel the line, keep running.
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT)
 	go func() {
 		for range sigCh {
-			// Print newline after ^C to keep prompt clean.
 			fmt.Println()
 			printPrompt()
 		}
@@ -42,22 +41,32 @@ func runREPL() error {
 	interp := interpreter.New(nil)
 	interpreter.RegisterSDKBuiltins(interp)
 
-	fmt.Println("OpsLang REPL v0.1.0")
-	fmt.Println("Type OpsLang expressions. Ctrl+D to exit, Ctrl+C to cancel line.")
-	fmt.Println()
-	fmt.Println("SDK builtins loaded: sys.*, file.*, net.*, process.*, service.*, pkg.*, time.*, json.*, yaml.*")
-	fmt.Println()
+	hist := &history{}
+	reader := newLineReader("ops> ", hist)
+	if err := reader.init(); err != nil {
+		return err
+	}
+	defer reader.close()
 
-	reader := bufio.NewReader(os.Stdin)
+	reader.emit("OpsLang REPL v0.1.0\n")
+	reader.emit("Type OpsLang expressions. Ctrl+D to exit, Ctrl+C to cancel line.\n")
+	reader.emit("Up/Down browse history, Left/Home/End edit the line.\n\n")
+	reader.emit("SDK builtins loaded: sys.*, file.*, net.*, process.*, service.*, pkg.*, time.*, json.*, yaml.*\n\n")
+
 	var multiLine strings.Builder
 
 	for {
-		printPrompt()
-
-		line, err := reader.ReadString('\n')
+		line, err := reader.read()
 		if err != nil {
+			if err == errInterrupted {
+				// Line discarded, fresh prompt on the next loop turn.
+				if multiLine.Len() > 0 {
+					multiLine.Reset()
+				}
+				continue
+			}
 			if err == io.EOF {
-				fmt.Println("\nBye!")
+				reader.emit("\nBye!\n")
 				return nil
 			}
 			return fmt.Errorf("read error: %w", err)
@@ -68,7 +77,7 @@ func runREPL() error {
 		// Empty line: if we have accumulated multi-line input, execute it.
 		if trimmed == "" {
 			if multiLine.Len() > 0 {
-				executeREPLInput(interp, multiLine.String())
+				submitREPLInput(interp, hist, reader, multiLine.String())
 				multiLine.Reset()
 			}
 			continue
@@ -76,39 +85,48 @@ func runREPL() error {
 
 		// Special commands.
 		if trimmed == "exit" || trimmed == "quit" {
-			fmt.Println("Bye!")
+			reader.emit("Bye!\n")
 			return nil
 		}
 
 		if trimmed == "help" {
-			printREPLHelp()
+			printREPLHelp(reader)
 			continue
 		}
 
 		// Check if this line opens a block (ends with {) for multi-line.
 		multiLine.WriteString(line)
+		multiLine.WriteString("\n")
 		if isOpenBlock(trimmed) {
 			// Continue reading more lines.
 			continue
 		}
 
-		// Execute accumulated input.
-		executeREPLInput(interp, multiLine.String())
+		// Execute accumulated input; the whole submission (including
+		// multi-line blocks) becomes one history entry, so Up recalls
+		// the complete block.
+		submitREPLInput(interp, hist, reader, multiLine.String())
 		multiLine.Reset()
 	}
 }
 
-func executeREPLInput(interp *interpreter.Interpreter, source string) {
+// submitREPLInput records the submission in history and executes it.
+func submitREPLInput(interp *interpreter.Interpreter, hist *history, reader *lineReader, source string) {
+	hist.add(source)
+	executeREPLInput(interp, reader, source)
+}
+
+func executeREPLInput(interp *interpreter.Interpreter, reader *lineReader, source string) {
 	p := parser.New(source, "<repl>")
 	prog, err := p.Parse()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "  parse error: %v\n", err)
+		reader.emit("  parse error: %v\n", err)
 		return
 	}
 
 	result, err := interp.Execute(prog)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "  error: %v\n", err)
+		reader.emit("  error: %v\n", err)
 		return
 	}
 
@@ -117,20 +135,20 @@ func executeREPLInput(interp *interpreter.Interpreter, source string) {
 		switch entry.Type {
 		case "print", "log":
 			if s, ok := entry.Data.(string); ok {
-				fmt.Println(" ", s)
+				reader.emit("  %s\n", s)
 			} else {
-				fmt.Printf(" %v\n", entry.Data)
+				reader.emit("  %v\n", entry.Data)
 			}
 		case "report", "metric":
-			fmt.Printf(" %v\n", entry.Data)
+			reader.emit("  %v\n", entry.Data)
 		case "alert":
-			fmt.Fprintf(os.Stderr, " ALERT: %v\n", entry.Data)
+			reader.emit("  ALERT: %v\n", entry.Data)
 		}
 	}
 
 	// Print return value if any.
 	if result.ReturnValue != nil {
-		fmt.Printf(" => %v\n", result.ReturnValue)
+		reader.emit("  => %v\n", result.ReturnValue)
 	}
 }
 
@@ -143,17 +161,23 @@ func printPrompt() {
 	fmt.Print("ops> ")
 }
 
-func printREPLHelp() {
-	fmt.Println("OpsLang REPL Commands:")
-	fmt.Println("  exit, quit  - Exit the REPL")
-	fmt.Println("  help        - Show this help")
-	fmt.Println()
-	fmt.Println("Multi-line input: lines ending with { continue to next line.")
-	fmt.Println("An empty line executes accumulated input.")
-	fmt.Println()
-	fmt.Println("Examples:")
-	fmt.Println("  let x = 42")
-	fmt.Println("  print(x)")
-	fmt.Println("  fn add(a, b) { return a + b }")
-	fmt.Println("  add(1, 2)")
+var _ = printPrompt // kept: referenced by the non-TTY SIGINT path
+
+func printREPLHelp(reader *lineReader) {
+	reader.emit("OpsLang REPL Commands:\n")
+	reader.emit("  exit, quit  - Exit the REPL\n")
+	reader.emit("  help        - Show this help\n")
+	reader.emit("\n")
+	reader.emit("Line editing: Up/Down browse history (multi-line blocks recalled\n")
+	reader.emit("as one entry), Left/Right/Home/End move, Backspace/Delete edit,\n")
+	reader.emit("Ctrl+A/E line edges, Ctrl+U/K delete to edge, Ctrl+L clear screen.\n")
+	reader.emit("\n")
+	reader.emit("Multi-line input: lines ending with { continue to next line.\n")
+	reader.emit("An empty line executes accumulated input.\n")
+	reader.emit("\n")
+	reader.emit("Examples:\n")
+	reader.emit("  let x = 42\n")
+	reader.emit("  print(x)\n")
+	reader.emit("  fn add(a, b) { return a + b }\n")
+	reader.emit("  add(1, 2)\n")
 }
