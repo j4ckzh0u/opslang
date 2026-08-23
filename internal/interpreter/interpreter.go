@@ -1382,6 +1382,12 @@ func formatValue(val interface{}) string {
 	case int64:
 		return fmt.Sprintf("%d", v)
 	case float64:
+		// Integral floats render without decimals or scientific notation:
+		// JSON round-trips turn every integer into a float64, and a pid
+		// printed as 3.752588e+06 is unreadable.
+		if v == float64(int64(v)) {
+			return fmt.Sprintf("%d", int64(v))
+		}
 		return fmt.Sprintf("%g", v)
 	case string:
 		return v

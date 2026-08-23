@@ -309,6 +309,7 @@ var Funcs = []Func{
 	{Name: "lvg.get", Args: []string{"name"}},
 
 	// ── net ───────────────────────────────────────────────────────────
+	{Name: "net.connections", Args: []string{"kind"}},
 	{Name: "net.dns_lookup", Args: []string{"host"}},
 	{Name: "net.download", Args: []string{"url", "dest", "checksum_algo", "checksum_expected"}, Mutating: true},
 	{Name: "net.http_get", Args: []string{"url"}},
@@ -330,6 +331,7 @@ var Funcs = []Func{
 	{Name: "pkg.info", Args: []string{"name"}},
 	{Name: "pkg.install", Args: []string{"name"}, Mutating: true},
 	{Name: "pkg.list"},
+	{Name: "pkg.owner", Args: []string{"path"}},
 	{Name: "pkg.remove", Args: []string{"name"}, Mutating: true},
 
 	// ── pip ───────────────────────────────────────────────────────────

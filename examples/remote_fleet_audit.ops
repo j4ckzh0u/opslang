@@ -1,0 +1,335 @@
+// remote_fleet_audit.ops - 舰队级主机巡检（复杂远程操作示例）
+//
+// 用 opsctl deploy 执行（脚本含 for/if/fn 控制流，deploy 自动选择 AOT
+// 模式，按目标机架构编译静态二进制后执行）：
+//
+//   opsctl deploy examples/remote_fleet_audit.ops --inventory hosts.yaml --parallel 5
+//   opsctl deploy examples/remote_fleet_audit.ops --targets root@host1,root@host2
+//
+// 巡检六个维度（全部真实采集，无任何模拟数据）：
+//   1. 硬件与负载：CPU / 内存 / 磁盘分区与用量 / 负载 / 运行时长
+//   2. 已安装软件包：名称 + 版本（dpkg/rpm 结构化字段解析，非文本切割）
+//   3. 用户态进程：排除内核线程（kthreadd 家族的 exe 为空），报告
+//      总数与 CPU / 内存 Top10
+//   4. 端口监听 ↔ 进程：全部 LISTEN 套接字及归属进程（纯 Go 读内核
+//      socket 表 + /proc/<pid>/fd 归属，等价 ss -tlnp 但不调用 ss）
+//   5. TCP 连接 ↔ 进程：全部 ESTABLISHED 连接及归属进程，含对端地址
+//   6. 进程 ↔ 文件路径 ↔ 软件包：CPU Top 进程的可执行文件完整路径、
+//      所在目录、工作目录，以及该二进制由哪个软件包安装（pkg.owner
+//      反查 dpkg/rpm 数据库；自编译/手工放置的二进制 found=false）
+//
+// 纯 Go 实现说明：sys.* / process.* / net.connections 直读 /proc 与
+// sysfs（gopsutil）；pkg.list 调 dpkg-query -W 做字段定界解析 —— 包管理
+// 器查询没有 /proc 接口，这是唯一的外部命令。全程无 shell、无 Python。
+//
+// 权限说明（诚实报告）：socket 表人人可读，但归属到进程需要 root ——
+// 非 root 部署时其他用户的套接字 pid=0，脚本如实统计 unattributed
+// 数量并说明原因，而不是假装知道归属。
+//
+// 语法注意（本示例使用的语言约定）：
+//   - dict 的 key 必须是字符串字面量：{ "key": value }
+//   - 三元判断用 if 表达式：let x = if cond { a } else { b }
+//   - 没有 break：提前退出用条件守卫
+
+// 权限说明：脚本内容全部为只读采集，但声明 admin —— deploy 的 AOT 通道
+// 把"执行编译二进制"本身视为特权操作（runner 无法验证不透明二进制内
+// 部是否只读，read_only 脚本只能以 runner 指令模式部署，而本脚本的
+// for/if/fn 控制流需要 AOT）。审计日志会如实记录这次 admin 部署。
+privilege: admin
+
+// ── 工具函数 ──────────────────────────────────────────────
+
+// pick_top 用选择法从进程表选出 field（"cpu"|"mem"）最大的前 n 个。
+// 语言没有内置排序，这里每轮选出最大项后从候选池剔除。
+fn pick_top(procs, field, n) {
+    let pool = procs
+    let top = []
+    for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] {
+        if len(top) < n && len(pool) > 0 {
+            // 第一遍：找最大值
+            let best_val = -1.0
+            for p in pool {
+                let v = p.memory_percent
+                if field == "cpu" {
+                    v = p.cpu_percent
+                }
+                if v > best_val {
+                    best_val = v
+                }
+            }
+            // 第二遍：摘出第一个等于最大值的进程，其余留在候选池
+            let best = nil
+            let rest = []
+            let taken = false
+            for p in pool {
+                let v = p.memory_percent
+                if field == "cpu" {
+                    v = p.cpu_percent
+                }
+                if !taken && v == best_val {
+                    best = p
+                    taken = true
+                } else {
+                    rest = rest + p
+                }
+            }
+            if taken {
+                top = top + best
+            }
+            pool = rest
+        }
+    }
+    return top
+}
+
+// gb 把字节数换算成 GiB（保留整数）
+fn gb(bytes) {
+    return bytes / 1073741824
+}
+
+// ── 1. 硬件与负载 ─────────────────────────────────────────
+
+let os_info = sys.os()
+let cpu_usage = sys.cpu.usage()
+let cpu_count = sys.cpu.count()
+let cpu_info = sys.cpu.info()
+let mem = sys.memory.info()
+let load = sys.load()
+let uptime = sys.uptime()
+let partitions = sys.disk.partitions()
+
+print("=== 主机巡检: " + os_info.platform + " " + os_info.platform_version + " (" + os_info.kernel_version + ") ===")
+print("CPU: " + str(cpu_count.logical) + " 逻辑核 / " + str(cpu_count.physical) + " 物理核, 使用率 " + str(int(cpu_usage.percent)) + "%")
+print("内存: " + str(gb(mem.total)) + " GiB, 使用率 " + str(int(mem.used_percent)) + "%")
+print("负载: " + str(load.load1) + " / " + str(load.load5) + " / " + str(load.load15))
+print("运行时长: " + str(uptime.uptime / 86400) + " 天")
+
+// 逐分区真实用量；跳过 swap 与虚拟文件系统，读取失败如实记录
+let disk_report = []
+for part in partitions {
+    if part.mountpoint != "" && part.fstype != "swap" && part.fstype != "tmpfs" && part.fstype != "devtmpfs" && part.fstype != "squashfs" {
+        block {
+            let du = sys.disk.usage(part.mountpoint)
+            disk_report = disk_report + {
+                "mount": part.mountpoint,
+                "device": part.device,
+                "fstype": part.fstype,
+                "total_gb": gb(du.total),
+                "used_percent": du.used_percent
+            }
+            if du.used_percent > 85 {
+                alert("磁盘使用率超阈值: " + part.mountpoint + " " + str(int(du.used_percent)) + "%")
+            }
+        }
+        rescue {
+            print("  (分区用量读取失败: " + part.mountpoint + " — " + _error + ")")
+        }
+    }
+}
+print("磁盘分区: " + str(len(disk_report)) + " 个数据分区完成采集")
+
+// ── 2. 已安装软件包（名称 + 版本） ────────────────────────
+
+// 包管理器查询没有 /proc 接口（dpkg-query -W 字段定界解析）。无包管理器
+// 的系统（如 macOS）上这一维如实降级为空清单并记录原因，其余维度照常。
+let packages = []
+let packages_note = "collected"
+block {
+    let pkgs = pkg.list()
+    packages = pkgs
+    print("已安装软件包: " + str(len(packages)) + " 个")
+}
+rescue {
+    packages_note = "unavailable: " + _error
+    print("软件包维度降级: " + packages_note)
+}
+
+// 关注清单里的基础设施包给出版本；未安装的不出现（真实状态）
+let watchlist = ["nginx", "openssh-server", "openssh-client", "docker-ce", "containerd.io", "postgresql", "redis-server", "mysql-server", "python3", "curl"]
+let key_packages = []
+for want in watchlist {
+    let hit = nil
+    for p in packages {
+        if p.name == want {
+            hit = { "name": p.name, "version": p.version, "status": p.status }
+        }
+    }
+    if hit != nil {
+        key_packages = key_packages + hit
+    }
+}
+print("关键包: " + str(len(key_packages)) + " / " + str(len(watchlist)) + " 个在关注清单中实际安装")
+
+// 全量包表太大，report 放样本；需要全量时增大 sample_limit
+let package_sample = []
+let sample_limit = 20
+let idx = 0
+for p in packages {
+    if idx < sample_limit {
+        package_sample = package_sample + { "name": p.name, "version": p.version }
+        idx = idx + 1
+    }
+}
+
+// ── 3. 用户态进程（排除内核线程） ─────────────────────────
+
+let all_procs = process.list()
+let userspace = []
+let kernel_threads = 0
+for p in all_procs {
+    // Linux 内核线程（kthreadd 家族：kworker/migration/...）没有可执行
+    // 文件路径。root 下 exe=="" 即内核线程；非 root 时其他用户的进程
+    // 同样读不到 exe，会被一并排除 —— 两种情况在报告口径里注明。
+    if p.exe == "" {
+        kernel_threads = kernel_threads + 1
+    } else {
+        userspace = userspace + p
+    }
+}
+print("进程: " + str(len(userspace)) + " 用户态 / " + str(kernel_threads) + " 内核线程 (共 " + str(len(all_procs)) + ")")
+
+let top_cpu = pick_top(userspace, "cpu", 10)
+let top_mem = pick_top(userspace, "mem", 10)
+
+print("CPU Top:")
+for p in top_cpu {
+    print("  pid " + str(p.pid) + "  " + p.name + "  cpu=" + str(p.cpu_percent) + "%  mem=" + str(p.memory_percent) + "%")
+}
+
+// ── 3.5 进程 ↔ 文件路径 ↔ 软件包 ─────────────────────────
+// 对 CPU Top 进程逐个回答四个问题：二进制在哪（exe）、在哪个目录
+// （exe_dir）、工作目录是什么（cwd）、这个文件是谁装的（pkg.owner）。
+// 重点关注对象通常是吃 CPU 的进程，全量扫描时把 pick_top 换成
+// userspace 即可。
+
+let proc_files = []
+for p in top_cpu {
+    let owner_pkg = "n/a (not a dpkg/rpm system)"
+    let owner_found = false
+    block {
+        let own = pkg.owner(p.exe)
+        owner_pkg = own.package
+        owner_found = own.found
+        if !own.found {
+            // 自编译 / snap 挂载 / 手工放置的二进制 —— 真实且重要的
+            // 安全审计信号，如实标注而不是报错
+            owner_pkg = "not owned by any package"
+        }
+    }
+    rescue {
+        owner_pkg = "lookup failed: " + _error
+    }
+    proc_files = proc_files + {
+        "pid": p.pid,
+        "name": p.name,
+        "exe": p.exe,
+        "exe_dir": p.exe_dir,
+        "cwd": p.cwd,
+        "owner_package": owner_pkg,
+        "owner_found": owner_found
+    }
+}
+print("进程文件路径: " + str(len(proc_files)) + " 个 CPU Top 进程已采集 exe/exe_dir/cwd/归属包")
+
+// ── 4. 端口监听 ↔ 进程 ───────────────────────────────────
+
+let conns = net.connections("inet")
+
+let listeners = []
+let listen_unattributed = 0
+for c in conns {
+    if c.status == "LISTEN" {
+        if c.pid > 0 {
+            listeners = listeners + {
+                "listen": c.local_addr,
+                "proto": c.protocol,
+                "pid": c.pid,
+                "process": c.process_name,
+                "uid": c.uid
+            }
+        } else {
+            listen_unattributed = listen_unattributed + 1
+        }
+    }
+}
+let listen_note = "全部已归属"
+if listen_unattributed > 0 {
+    listen_note = str(listen_unattributed) + " 个 LISTEN 套接字无法归属进程（非 root 读不到他人 /proc/<pid>/fd）"
+}
+print("监听端口: " + str(len(listeners)) + " 个已归属；" + listen_note)
+
+// ── 5. TCP 连接 ↔ 进程 ───────────────────────────────────
+
+let established = []
+let other_tcp = 0
+let conn_unattributed = 0
+for c in conns {
+    if c.protocol == "tcp" && c.status != "LISTEN" {
+        if c.status == "ESTABLISHED" {
+            if c.pid > 0 {
+                established = established + {
+                    "local": c.local_addr,
+                    "remote": c.remote_addr,
+                    "pid": c.pid,
+                    "process": c.process_name
+                }
+            } else {
+                conn_unattributed = conn_unattributed + 1
+            }
+        } else {
+            other_tcp = other_tcp + 1
+        }
+    }
+}
+print("TCP 连接: " + str(len(established)) + " 条 ESTABLISHED 已归属, " + str(other_tcp) + " 条其他状态(TIME_WAIT/CLOSE_WAIT 等), " + str(conn_unattributed) + " 条无法归属")
+
+// ── 汇总报告 ──────────────────────────────────────────────
+
+report {
+    audit: {
+        "platform": os_info.platform,
+        "platform_version": os_info.platform_version,
+        "kernel_version": os_info.kernel_version,
+        "cpu_model": cpu_info[0].model_name
+    },
+    hardware: {
+        "cpu_logical": cpu_count.logical,
+        "cpu_physical": cpu_count.physical,
+        "cpu_percent": cpu_usage.percent,
+        "mem_total_bytes": mem.total,
+        "mem_used_percent": mem.used_percent,
+        "load_1m": load.load1,
+        "load_5m": load.load5,
+        "load_15m": load.load15,
+        "uptime_seconds": uptime.uptime,
+        "disks": disk_report
+    },
+    packages: {
+        "total": len(packages),
+        "status": packages_note,
+        "key": key_packages,
+        "sample": package_sample,
+        "sample_note": "sample 为前 20 个包；需要全量时增大脚本内 sample_limit"
+    },
+    processes: {
+        "userspace": len(userspace),
+        "kernel_threads": kernel_threads,
+        "filter_note": "exe 为空判为内核线程（root 下可靠；非 root 会混入少量不可读进程）",
+        "top_by_cpu": top_cpu,
+        "top_by_memory": top_mem
+    },
+    process_files: {
+        "note": "CPU Top 进程的二进制路径与软件包归属；owner_found=false 表示不属于任何包（自编译/手工放置，安全审计需关注）",
+        "entries": proc_files
+    },
+    listening_ports: {
+        "attributed": listeners,
+        "unattributed": listen_unattributed,
+        "note": "非 root 无法读取其他用户套接字的 /proc/<pid>/fd，如实计入 unattributed"
+    },
+    tcp_connections: {
+        "established": established,
+        "other_states": other_tcp,
+        "unattributed": conn_unattributed
+    }
+}

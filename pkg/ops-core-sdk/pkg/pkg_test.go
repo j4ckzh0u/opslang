@@ -2,6 +2,7 @@ package opspkg
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -313,6 +314,76 @@ func TestPackageInfoJSONFieldNames(t *testing.T) {
 	for _, key := range expectedKeys {
 		if _, ok := m[key]; !ok {
 			t.Errorf("JSON output missing key %q", key)
+		}
+	}
+}
+
+func TestParseDpkgSearchOwner(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"single owner", "systemd: /lib/systemd/systemd", "systemd"},
+		{"multiple owners (comma-separated, real dpkg format)", "libc6-dev, linux-libc-dev: /usr/include/x86_64-linux-gnu/gnu", "libc6-dev"},
+		{"with diversion", "diversion by iproute2 from: /sbin/route\niproute2: /sbin/route.real", "iproute2"},
+		{"not found message", "dpkg-query: no path found matching pattern /tmp/selfbuilt", ""},
+		{"empty", "", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := parseDpkgSearchOwner(tc.in); got != tc.want {
+				t.Errorf("parseDpkgSearchOwner(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestOwnerRejectsEmptyPath(t *testing.T) {
+	res, err := Owner("")
+	if err == nil {
+		t.Fatal("Owner(\"\") must fail")
+	}
+	if res.Error == "" {
+		t.Error("result should carry the error description")
+	}
+}
+
+func TestOwnerResultJSONContract(t *testing.T) {
+	res := OwnerResult{File: "/usr/bin/ls", Package: "coreutils", Found: true, Manager: "apt"}
+	b, err := json.Marshal(res)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{`"file"`, `"package"`, `"found"`, `"manager"`} {
+		if !strings.Contains(string(b), key) {
+			t.Errorf("JSON must contain %s, got %s", key, b)
+		}
+	}
+}
+
+func TestUsrmergeVariants(t *testing.T) {
+	cases := []struct {
+		in   string
+		want []string
+	}{
+		{"/usr/bin/ls", []string{"/usr/bin/ls", "/bin/ls"}},
+		{"/usr/sbin/ip", []string{"/usr/sbin/ip", "/sbin/ip"}},
+		{"/usr/lib/x86_64-linux-gnu/libc.so", []string{"/usr/lib/x86_64-linux-gnu/libc.so", "/lib/x86_64-linux-gnu/libc.so"}},
+		{"/bin/ls", []string{"/bin/ls"}},
+		{"/opt/kube/bin/kube-apiserver", []string{"/opt/kube/bin/kube-apiserver"}},
+	}
+	for _, tc := range cases {
+		got := usrmergeVariants(tc.in)
+		if len(got) != len(tc.want) {
+			t.Errorf("usrmergeVariants(%q) = %v, want %v", tc.in, got, tc.want)
+			continue
+		}
+		for i := range got {
+			if got[i] != tc.want[i] {
+				t.Errorf("usrmergeVariants(%q) = %v, want %v", tc.in, got, tc.want)
+				break
+			}
 		}
 	}
 }

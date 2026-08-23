@@ -797,6 +797,46 @@ hosts:
     group: root      # task "..." on "root" 路由到这台
 ```
 
+### 9.6 remote_fleet_audit.ops —— 舰队级主机巡检（复杂远程操作）
+
+一台主机六个维度的完整巡检，deploy 自动选择 AOT 模式（脚本含 fn/for/if 控制流）：
+
+```bash
+opsctl deploy examples/remote_fleet_audit.ops --inventory hosts.yaml --parallel 5
+```
+
+| 维度 | 数据来源（全部纯 Go，无 shell/Python） |
+|---|---|
+| CPU / 内存 / 磁盘 / 负载 | `sys.*` 直读 /proc 与 sysfs |
+| 软件包名称+版本 | `pkg.list()`（dpkg-query 字段定界解析） |
+| 用户态进程（排除内核线程） | `process.list()`，`exe==""` 判内核线程，CPU/内存 Top10 |
+| 端口监听 ↔ 进程 | `net.connections("inet")` 过滤 LISTEN + pid 归属 |
+| TCP 连接 ↔ 进程 | 同上过滤 ESTABLISHED，含对端地址 |
+| 进程文件路径 ↔ 软件包 | Top 进程的 `exe`/`exe_dir`/`cwd` + `pkg.owner(exe)` 反查归属包 |
+
+真机实测输出（host2，root，节选）：
+
+```text
+进程: 643 用户态 / 369 内核线程 (共 1012)
+监听端口: 81 个已归属；全部已归属
+TCP 连接: 226 条 ESTABLISHED 已归属, 28 条其他状态
+  LISTEN 0.0.0.0:8080 <- pid 1034270 docker-proxy
+  LISTEN 127.0.0.1:2379 <- pid 4016026 etcd
+   10.0.0.12:40988 -> 10.0.0.12:2379 ( kube-apiserver )
+```
+
+进程文件路径与归属包（host2 / host3 实测）——手工部署与包管理的二进制一眼可辨：
+
+```text
+/usr/bin/dockerd                    → docker-ce        (found=true)
+/usr/lib/systemd/systemd            → systemd          (found=true，usrmerge 回退命中)
+/opt/kube/bin/kube-apiserver        → 无归属（手工部署）
+/usr/local/bin/node                 → 无归属（手工安装的另一个 node）
+/usr/bin/node                       → nodejs           (found=true)
+```
+
+权限差异如实呈现：root 主机 81 个监听全部归属；非 root 主机无法读取他人 `/proc/<pid>/fd`，`pid=0` 的套接字计入 `unattributed` 计数并说明原因，绝不假装知道归属。
+
 ### 真实执行政策
 
 所有示例遵守同一铁律：**要么真实执行，要么显式 SKIP 并给出真实原因**。变更操作内置前提探测（平台/root/systemd 单元），探测本身也是真实系统调用（如向 `/run` 写探针文件验证 root 能力）。不存在打印假成功的路径；每个示例都被 `cmd/opsctl/examples_e2e_test.go` 在 CI 中真实执行。

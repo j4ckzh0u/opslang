@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -23,9 +24,13 @@ const perProcessTimeout = 500 * time.Millisecond
 
 // ProcessInfo holds information about a single process.
 type ProcessInfo struct {
-	PID           int32   `json:"pid"`
-	Name          string  `json:"name"`
-	Exe           string  `json:"exe"`
+	PID  int32  `json:"pid"`
+	Name string `json:"name"`
+	Exe  string `json:"exe"`
+	// ExeDir is the directory of the executable (path.Dir of Exe) — the
+	// "where does this process's binary live" answer, without another
+	// syscall.
+	ExeDir        string  `json:"exe_dir"`
 	Cwd           string  `json:"cwd"`
 	Status        string  `json:"status"`
 	CPUPercent    float64 `json:"cpu_percent"`
@@ -55,6 +60,9 @@ func getProcessInfo(p *process.Process) (ProcessInfo, error) {
 	}
 	if exe, err := p.Exe(); err == nil {
 		info.Exe = exe
+		if dir := filepath.Dir(exe); dir != "." {
+			info.ExeDir = dir
+		}
 	}
 	if cwd, err := p.Cwd(); err == nil {
 		info.Cwd = cwd

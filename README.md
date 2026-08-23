@@ -330,6 +330,8 @@ opsctl deploy examples/remote_ensure_fleet.ops --inventory hosts.yaml --parallel
 
 所有 ensure 操作返回 `changed` 与 `actions`（实际执行的动作列表）——审计这两个字段是判断"这次部署到底改了什么"的唯一可信来源。完整文档见 `docs/stdlib-reference.md` 第 20 节。
 
+舰队级主机巡检（CPU/内存/磁盘、软件包名+版本、用户态进程 Top、端口监听↔进程、TCP 连接↔进程、进程二进制路径↔软件包归属）见 `examples/remote_fleet_audit.ops` —— 六个维度全部纯 Go 采集（`net.connections` 直读内核 socket 表并归属 pid，等价 `ss -tlnp` 但不调用它），已在 3 台真实 Ubuntu 主机验证。
+
 ### 真实执行政策（Real Execution Policy）
 
 本项目对示例与文档执行一条铁律：**要么真实执行，要么显式说明为何未执行，绝不伪造成功**。

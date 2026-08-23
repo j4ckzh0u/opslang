@@ -729,6 +729,26 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return structToMap(r)
 	}
 
+	interp.builtins["net.connections"] = func(args ...interface{}) (interface{}, error) {
+		kind := ""
+		if len(args) > 0 {
+			k, ok := args[0].(string)
+			if !ok {
+				return nil, fmt.Errorf("net.connections(): kind must be string")
+			}
+			kind = k
+		}
+		r, err := sdknet.Connections(kind)
+		if err != nil {
+			return nil, err
+		}
+		converted, err := structToMap(r)
+		if err != nil {
+			return nil, err
+		}
+		return converted, nil
+	}
+
 	interp.builtins["net.interfaces"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdknet.Interfaces()
 		if err != nil {
@@ -2694,6 +2714,21 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, fmt.Errorf("pkg.ensure(): argument must be string")
 		}
 		r, err := opspkg.Ensure(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	interp.builtins["pkg.owner"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 {
+			return nil, fmt.Errorf("pkg.owner() requires 1 argument (path)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("pkg.owner(): argument must be string")
+		}
+		r, err := opspkg.Owner(path)
 		if err != nil {
 			return nil, err
 		}

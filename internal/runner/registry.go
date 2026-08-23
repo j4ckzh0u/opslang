@@ -524,6 +524,26 @@ func (r *Registry) registerNetOps() {
 		}
 		return opsnet.DNSLookup(host)
 	})
+	r.Register("net.connections", func(args map[string]interface{}) (interface{}, error) {
+		kind, _ := argString(args, "kind")
+		conns, err := opsnet.Connections(kind)
+		if err != nil {
+			return nil, fmt.Errorf("net.connections: %w", err)
+		}
+		out := make([]map[string]interface{}, 0, len(conns))
+		for _, c := range conns {
+			b, merr := json.Marshal(c)
+			if merr != nil {
+				return nil, merr
+			}
+			var m map[string]interface{}
+			if uerr := json.Unmarshal(b, &m); uerr != nil {
+				return nil, uerr
+			}
+			out = append(out, m)
+		}
+		return out, nil
+	})
 	r.Register("net.interfaces", func(_ map[string]interface{}) (interface{}, error) {
 		return opsnet.Interfaces()
 	})
@@ -716,6 +736,13 @@ func (r *Registry) registerPkgOps() {
 			return nil, fmt.Errorf("pkg.ensure: %w", err)
 		}
 		return opspkg.Ensure(name)
+	})
+	r.Register("pkg.owner", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("pkg.owner: %w", err)
+		}
+		return opspkg.Owner(path)
 	})
 	r.Register("pkg.remove", func(args map[string]interface{}) (interface{}, error) {
 		name, err := argString(args, "name")

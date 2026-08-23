@@ -899,6 +899,45 @@ let r2 = file.ensure("/srv/app/conf.d", "directory", "0750")
 > 依赖：Go 标准库（纯 Go）
 > 不依赖 shell。
 
+### 4.0 net.connections(kind)
+
+枚举内核 socket 表并归属到进程 —— 纯 Go 实现（gopsutil 直读 `/proc/net/tcp(6)` + `/proc/<pid>/fd`），等价于 `ss -tuanp` / `netstat -tuanp` 但**不调用它们**。端口监听↔进程、TCP 连接↔进程两类巡检都基于此操作。
+
+**参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `kind` | `string` | 否 | 过滤器：`"inet"`（默认，IPv4+IPv6 的 TCP+UDP）、`"tcp"`、`"tcp4"`、`"tcp6"`、`"udp"`、`"inet6"` 等 |
+
+**返回类型**：`[]ConnectionInfo`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `fd` | `int` | 套接字描述符 |
+| `protocol` | `string` | `"tcp"` 或 `"udp"` |
+| `local_addr` | `string` | 本端 `ip:port`，IPv6 加方括号（如 `[::1]:22`） |
+| `remote_addr` | `string` | 对端地址（监听套接字为空） |
+| `status` | `string` | `LISTEN` / `ESTABLISHED` / `TIME_WAIT` ... |
+| `pid` | `int` | 归属进程 PID |
+| `process_name` | `string` | 归属进程名（归属失败为空） |
+| `uid` | `int` | 套接字属主 UID |
+
+**权限语义（重要）**：socket 表人人可读，但归属到进程需要 root —— 非 root 时其他用户的套接字 `pid=0`、`process_name=""`，**如实返回而不是隐藏**，调用方可统计 unattributed 数量。
+
+**示例**：
+
+```ops
+let conns = net.connections("inet")
+let listeners = []
+for c in conns {
+    if c.status == "LISTEN" && c.pid > 0 {
+        listeners = listeners + { "listen": c.local_addr, "pid": c.pid, "process": c.process_name }
+    }
+}
+```
+
+---
+
 ### 4.1 net.http_get(url)
 
 发起 HTTP GET 请求。
@@ -1602,6 +1641,39 @@ if r.changed {
 } else {
     log("htop 已存在，零动作")   // 第二次运行必然走这里
 }
+```
+
+---
+
+### 7.6 pkg.owner(path)
+
+反查"这个文件由哪个软件包安装"（`dpkg -S` / `rpm -qf` 的结构化版本）。典型场景：进程巡检发现一个吃 CPU 的进程，`pkg.owner(process.exe)` 直接回答"这个二进制是谁装的"。
+
+**参数**：`path`（string，必填）—— 文件绝对路径。
+
+**返回类型**：`OwnerResult`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `file` | `string` | 查询路径（原样回显） |
+| `package` | `string` | 归属包名；无归属时为空 |
+| `found` | `bool` | `true`=归属于某包；`false`=不属于任何包 |
+| `manager` | `string` | 使用的包管理器（apt/yum/dnf） |
+| `output` | `string` | 原始查询输出（命中变体路径可见） |
+
+**语义要点**：
+
+- **无归属不是错误**：自编译二进制、`/usr/local/bin` 下手工放置的工具、容器内解包的文件 —— `found=false` 且不返回 error。这恰是安全审计的关键信号（不在包数据库管控内的可执行文件）
+- **usrmerge 兼容**：dpkg 数据库按登记路径精确匹配，Ubuntu 22.04 等 usrmerge 系统上 `/usr/bin/ls` 登记为 `/bin/ls` —— 查询 miss 时自动回退 `/usr/bin→/bin`、`/usr/sbin→/sbin`、`/usr/lib→/lib` 变体重查
+- **diversion 处理**：`dpkg -S` 的 diversion 提示行会被解析器跳过
+
+**平台**：Linux（apt/yum/dnf）。macOS 无包管理器时报错。只读操作。
+
+**真实输出**（Ubuntu 22.04 实测）：
+
+```json
+{ "file": "/usr/bin/dockerd", "package": "docker-ce", "found": true, "manager": "apt" }
+{ "file": "/opt/kube/bin/kube-apiserver", "package": "", "found": false, "manager": "apt" }
 ```
 
 ---

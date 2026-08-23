@@ -30,15 +30,33 @@ func NewCache(dir string) (*Cache, error) {
 	return &Cache{dir: dir}, nil
 }
 
-// codegenVersion salts the cache key: bump it whenever code generation
-// semantics change, so stale binaries produced by an older compiler are
-// never reused for identical sources.
+// codegenVersion is the fallback salt for the cache key when the running
+// opsctl binary cannot be hashed (e.g. `go run` temp binaries).
 const codegenVersion = "v4"
 
-// Key computes a cache key from codegen version, source content, and target
-// architecture.
+// compilerSalt identifies the exact compiler that will produce a cached
+// binary: a content hash of the running opsctl executable. Any change to
+// code generation ships in a new opsctl, which changes the hash, which
+// invalidates every cache entry — a stale binary produced by an older
+// compiler can never be reused for identical sources. The old failure mode
+// was a manually bumped version constant that nobody remembered to bump.
+func compilerSalt() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return codegenVersion
+	}
+	data, err := os.ReadFile(exe)
+	if err != nil {
+		return codegenVersion
+	}
+	sum := sha256.Sum256(data)
+	return fmt.Sprintf("exe-%x", sum[:8])
+}
+
+// Key computes a cache key from the compiler salt, source content, and
+// target architecture.
 func (c *Cache) Key(source string, targetArch string) string {
-	h := sha256.Sum256([]byte(codegenVersion + "|" + source + "|" + targetArch))
+	h := sha256.Sum256([]byte(compilerSalt() + "|" + source + "|" + targetArch))
 	return fmt.Sprintf("%x", h[:16]) // 32 hex chars
 }
 

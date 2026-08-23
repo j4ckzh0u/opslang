@@ -45,11 +45,12 @@ var sdkMapping = map[string]sdkFunc{
 	"file.template": {pkg: "file", goName: "Template", args: true, params: []string{"s", "d"}},
 
 	// net
-	"net.http_get":   {pkg: "net", goName: "HTTPGet", args: true, params: []string{"s"}},
-	"net.http_post":  {pkg: "net", goName: "HTTPPost", args: true, params: []string{"s", "s"}},
-	"net.tcp_check":  {pkg: "net", goName: "TCPConnect", args: true, params: []string{"s", "i"}},
-	"net.dns_lookup": {pkg: "net", goName: "DNSLookup", args: true, params: []string{"s"}},
-	"net.interfaces": {pkg: "net", goName: "Interfaces"},
+	"net.http_get":    {pkg: "net", goName: "HTTPGet", args: true, params: []string{"s"}},
+	"net.http_post":   {pkg: "net", goName: "HTTPPost", args: true, params: []string{"s", "s"}},
+	"net.tcp_check":   {pkg: "net", goName: "TCPConnect", args: true, params: []string{"s", "i"}},
+	"net.dns_lookup":  {pkg: "net", goName: "DNSLookup", args: true, params: []string{"s"}},
+	"net.interfaces":  {pkg: "net", goName: "Interfaces"},
+	"net.connections": {pkg: "net", goName: "Connections", args: true, params: []string{"s"}},
 
 	// process
 	"process.list":         {pkg: "process", goName: "List"},
@@ -75,6 +76,7 @@ var sdkMapping = map[string]sdkFunc{
 	// pkg
 	"pkg.install": {pkg: "pkg", goName: "Install", args: true, params: []string{"s"}},
 	"pkg.ensure":  {pkg: "pkg", goName: "Ensure", args: true, params: []string{"s"}},
+	"pkg.owner":   {pkg: "pkg", goName: "Owner", args: true, params: []string{"s"}},
 	"pkg.remove":  {pkg: "pkg", goName: "Remove", args: true, params: []string{"s"}},
 	"pkg.info":    {pkg: "pkg", goName: "Info", args: true, params: []string{"s"}},
 	"pkg.list":    {pkg: "pkg", goName: "List"},
@@ -2213,6 +2215,11 @@ func formatValue(v interface{}) string {
 	case int64:
 		return fmt.Sprintf("%d", val)
 	case float64:
+		// Integral floats render without scientific notation (see the
+		// interpreter's formatValue for rationale).
+		if val == float64(int64(val)) {
+			return fmt.Sprintf("%d", int64(val))
+		}
 		return fmt.Sprintf("%g", val)
 	case string:
 		return val
@@ -2361,6 +2368,41 @@ func opsBool(v interface{}) bool {
 		return b
 	}
 	return false
+}
+
+// opsAdd mirrors the interpreter's "+": list+list concatenates, list+item
+// appends, item+list prepends, strings concatenate with formatting, and
+// numbers keep the int64/float64 promotion rules of the other operators.
+func opsAdd(l, r interface{}) interface{} {
+	if ll, ok := l.([]interface{}); ok {
+		if rl, ok := r.([]interface{}); ok {
+			out := make([]interface{}, 0, len(ll)+len(rl))
+			out = append(out, ll...)
+			out = append(out, rl...)
+			return out
+		}
+		out := make([]interface{}, 0, len(ll)+1)
+		out = append(out, ll...)
+		out = append(out, r)
+		return out
+	}
+	if rl, ok := r.([]interface{}); ok {
+		out := make([]interface{}, 0, 1+len(rl))
+		out = append(out, l)
+		out = append(out, rl...)
+		return out
+	}
+	if ls, ok := l.(string); ok {
+		return ls + formatValue(r)
+	}
+	if _, ok := r.(string); ok {
+		return formatValue(l) + formatValue(r)
+	}
+	lf, rf := toFloat(l), toFloat(r)
+	if lf == float64(int64(lf)) && rf == float64(int64(rf)) {
+		return int64(lf) + int64(rf)
+	}
+	return lf + rf
 }
 `)
 	// Only emit cron-dependent helper when cron is actually used,
@@ -2709,7 +2751,11 @@ func (g *CodeGenerator) genForIn(b *strings.Builder, s *ast.ForInStatement, inde
 
 	// Emit a type-switch runtime dispatch over list/dict/string.
 	b.WriteString(fmt.Sprintf("%sfor _, _item := range func() []interface{} {\n", prefix))
-	b.WriteString(fmt.Sprintf("%s\t_v := %s\n", prefix, iterExpr))
+	// opsNormalize first: SDK ops return typed slices ([]ProcessInfo,
+	// []sys.DiskPartition) that the type switch below — and every other
+	// dynamic operation — cannot see through. Normalizing here gives
+	// for-in the same semantics as len() and indexing.
+	b.WriteString(fmt.Sprintf("%s\t_v := interface{}(opsNormalize(%s))\n", prefix, iterExpr))
 	b.WriteString(fmt.Sprintf("%s\tswitch _c := _v.(type) {\n", prefix))
 	b.WriteString(fmt.Sprintf("%s\tcase []interface{}:\n", prefix))
 	b.WriteString(fmt.Sprintf("%s\t\treturn _c\n", prefix))
@@ -2989,7 +3035,7 @@ func (g *CodeGenerator) genBinary(e *ast.BinaryExpression) (string, error) {
 
 	switch e.Op {
 	case "+":
-		return fmt.Sprintf("func() interface{} { var l, r interface{} = %s, %s; if ls, ok := l.(string); ok { return ls + formatValue(r) }; if _, ok := r.(string); ok { return formatValue(l) + formatValue(r) }; return toFloat(l) + toFloat(r) }()", left, right), nil
+		return fmt.Sprintf("func() interface{} { return opsAdd(%s, %s) }()", left, right), nil
 	case "-":
 		return fmt.Sprintf("func() interface{} { l, r := toFloat(%s), toFloat(%s); if l == float64(int64(l)) && r == float64(int64(r)) { return int64(l) - int64(r) }; return l - r }()", left, right), nil
 	case "*":
