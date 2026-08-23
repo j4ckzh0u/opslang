@@ -46,7 +46,7 @@ build-all: ## Build for all platforms
 		arch=$${platform#*/}; \
 		for cmd in $(CMDS); do \
 			echo "Building $$cmd-$$os-$$arch..."; \
-			@mkdir -p $(DIST_DIR); \
+			mkdir -p $(DIST_DIR); \
 			CGO_ENABLED=0 GOOS=$$os GOARCH=$$arch $(GOBUILD) -ldflags="$(LDFLAGS)" \
 				-o $(DIST_DIR)/$$cmd-$$os-$$arch ./cmd/$$cmd; \
 		done; \
