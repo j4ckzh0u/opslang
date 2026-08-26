@@ -3159,7 +3159,14 @@ func (g *CodeGenerator) genParallelFor(b *strings.Builder, s *ast.ParallelForSta
 	}
 
 	b.WriteString(fmt.Sprintf("%s{\n", prefix))
-	b.WriteString(fmt.Sprintf("%s\t_pList := %s\n", prefix, listExpr))
+	// The iterable usually arrives as an interface{} (a variable read),
+	// so Go cannot len/range/index it directly. Assert explicitly and
+	// mirror the interpreter's "requires a list" runtime error.
+	b.WriteString(fmt.Sprintf("%s\tvar _pListRaw interface{} = %s\n", prefix, listExpr))
+	b.WriteString(fmt.Sprintf("%s\t_pList, _pListOk := _pListRaw.([]interface{})\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\tif !_pListOk {\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\topsFatal(fmt.Errorf(\"parallel for requires a list, got %%T\", _pListRaw))\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t}\n", prefix))
 	b.WriteString(fmt.Sprintf("%s\t_pRes := make([]map[string]interface{}, len(_pList))\n", prefix))
 	b.WriteString(fmt.Sprintf("%s\tvar _pWg sync.WaitGroup\n", prefix))
 	b.WriteString(fmt.Sprintf("%s\tfor _pi := range _pList {\n", prefix))

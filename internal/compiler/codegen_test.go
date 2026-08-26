@@ -1319,7 +1319,8 @@ parallel for s in servers {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
 	for _, want := range []string{
-		"_pList :=",
+		"var _pListRaw interface{} = ",
+		"_pListRaw.([]interface{})",
 		"go func(_pi int) {",
 		"_pWg.Wait()",
 		`_pRes[_pm]["out"]`,
@@ -1327,5 +1328,26 @@ parallel for s in servers {
 		if !strings.Contains(code, want) {
 			t.Errorf("generated code missing %q:\n%s", want, code)
 		}
+	}
+}
+
+// TestGenerateParallelForVariableList pins the interface{}-assertion fix:
+// when the iterable is a plain variable the generated Go must assert
+// []interface{} before len/range, and mirror the interpreter's error for
+// non-list values.
+func TestGenerateParallelForVariableList(t *testing.T) {
+	source := `let hosts = ["a", "b"]
+parallel for h in hosts {
+	print(h)
+}`
+	code, err := GenerateCode(source, "test.ops")
+	if err != nil {
+		t.Fatalf("GenerateCode failed: %v", err)
+	}
+	if !strings.Contains(code, "_pListRaw.([]interface{})") {
+		t.Errorf("missing type assertion:\n%s", code)
+	}
+	if !strings.Contains(code, `opsFatal`) {
+		t.Errorf("non-list path must fail via opsFatal:\n%s", code)
 	}
 }

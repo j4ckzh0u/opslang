@@ -2,6 +2,7 @@ package htpasswd
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -33,6 +34,12 @@ func TestInfoMissingPath(t *testing.T) {
 }
 
 func TestSetAndRemove(t *testing.T) {
+	// The Set/Remove implementation shells out to the apache htpasswd
+	// binary. GitHub's fat runner image ships it, minimal hosts do not -
+	// skip honestly instead of failing on the missing tool.
+	if _, err := exec.LookPath("htpasswd"); err != nil {
+		t.Skip("requires the htpasswd binary (apache2-utils), not installed")
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".htpasswd")
 
