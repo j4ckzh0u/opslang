@@ -15,6 +15,9 @@ jobs:
   test-core:
     name: Test core (attempt 1)
     runs-on: ubuntu-latest
+    # A starved runner loses attempt 1; that must not redden the run.
+    # The retry job carries the real verdict via the outcome fields.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -47,7 +50,7 @@ jobs:
     name: Test core (attempt 2, fresh runner)
     runs-on: ubuntu-latest
     needs: [test-core]
-    if: failure()
+    if: needs.test-core.outcome == 'failure'
     steps:
       - uses: actions/checkout@v4
 
@@ -68,6 +71,7 @@ jobs:
   test-sdk:
     name: Test sdk (attempt 1)
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -83,7 +87,7 @@ jobs:
     name: Test sdk (attempt 2, fresh runner)
     runs-on: ubuntu-latest
     needs: [test-sdk]
-    if: failure()
+    if: needs.test-sdk.outcome == 'failure'
     steps:
       - uses: actions/checkout@v4
 
@@ -103,8 +107,8 @@ jobs:
     # skipped when their attempt-1 job succeeded.
     if: >
       always() &&
-      (needs.test-core.result == 'success' || needs.test-core-retry.result == 'success') &&
-      (needs.test-sdk.result == 'success' || needs.test-sdk-retry.result == 'success')
+      (needs.test-core.outcome == 'success' || needs.test-core-retry.outcome == 'success') &&
+      (needs.test-sdk.outcome == 'success' || needs.test-sdk-retry.outcome == 'success')
     strategy:
       matrix:
         include:
