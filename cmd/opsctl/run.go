@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/j4ckzh0u/opslang/internal/interpreter"
+	"github.com/j4ckzh0u/opslang/internal/modules"
 	"github.com/j4ckzh0u/opslang/internal/parser"
 	"github.com/spf13/cobra"
 )
@@ -48,6 +49,12 @@ func runRunCommand(scriptPath string) error {
 	prog, err := p.Parse()
 	if err != nil {
 		return fmt.Errorf("parse error: %w", err)
+	}
+
+	// Link file-module imports into one flat program.
+	prog, err = modules.Link(prog, scriptPath)
+	if err != nil {
+		return fmt.Errorf("module error: %w", err)
 	}
 
 	if runVerbose {

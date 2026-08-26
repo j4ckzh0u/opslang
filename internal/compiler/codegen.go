@@ -2051,6 +2051,14 @@ type CodeGenerator struct {
 	useOS     bool            // whether "os" is needed
 	useSync   bool            // whether "sync" is needed (for parallel blocks)
 	userFuncs []userFunc      // user-defined functions collected during generation
+	// userFuncsCode holds the generated Go for userFuncs. Pre-generated in
+	// Generate() BEFORE the import block is assembled, so SDK packages used
+	// only inside function bodies are collected into usedSDK.
+	userFuncsCode string
+	// globalLetNames lists sanitized top-level let names, hoisted to
+	// package-level vars so user functions can reference them (the
+	// assignment still happens in main, preserving sequential init order).
+	globalLetNames []string
 }
 
 type userFunc struct {
@@ -2073,7 +2081,7 @@ func (g *CodeGenerator) Generate(prog *ast.Program) (string, error) {
 	g.useOS = false
 	g.useSync = false
 
-	// First pass: collect user-defined functions
+	// First pass: collect user-defined functions and top-level lets
 	for _, stmt := range prog.Statements {
 		if fn, ok := stmt.(*ast.FnStatement); ok {
 			g.userFuncs = append(g.userFuncs, userFunc{
@@ -2081,19 +2089,46 @@ func (g *CodeGenerator) Generate(prog *ast.Program) (string, error) {
 				params: fn.Params,
 				body:   fn.Body,
 			})
+			continue
+		}
+		if let, ok := stmt.(*ast.LetStatement); ok {
+			g.globalLetNames = append(g.globalLetNames, sanitizeName(let.Name.Name))
 		}
 	}
 
-	// Second pass: generate main body into a temp buffer
+	// Pre-generate user functions so SDK usage inside function bodies is
+	// collected into usedSDK before the import block is assembled.
+	var funcsCode strings.Builder
+	for _, fn := range g.userFuncs {
+		if err := g.writeUserFunc(&funcsCode, fn); err != nil {
+			return "", err
+		}
+	}
+	g.userFuncsCode = funcsCode.String()
+
+	// Second pass: generate main body into a temp buffer. Top-level lets
+	// become assignments to their hoisted package-level declarations.
 	var mainBody strings.Builder
 	savedBuf := g.buf
 	savedIndent := g.indent
 	g.buf = mainBody
 	g.indent = 1
 
+	isTopLet := make(map[string]bool, len(g.globalLetNames))
+	for _, n := range g.globalLetNames {
+		isTopLet[n] = true
+	}
 	for _, stmt := range prog.Statements {
 		if _, ok := stmt.(*ast.FnStatement); ok {
-			continue // already collected
+			continue // already generated into funcsCode
+		}
+		if let, ok := stmt.(*ast.LetStatement); ok && isTopLet[sanitizeName(let.Name.Name)] {
+			expr, err := g.genExpr(let.Value)
+			if err != nil {
+				return "", err
+			}
+			fmt.Fprintf(&g.buf, "%s = %s\n", sanitizeName(let.Name.Name), expr)
+			continue
 		}
 		if err := g.genStatement(stmt); err != nil {
 			return "", err
@@ -2150,12 +2185,19 @@ func (g *CodeGenerator) assemble(mainCode string) (string, error) {
 	// Runtime helpers
 	g.writeHelpers(&b)
 
-	// User-defined functions
-	for _, fn := range g.userFuncs {
-		if err := g.writeUserFunc(&b, fn); err != nil {
-			return "", err
+	// Hoisted top-level lets: package-level storage that user functions
+	// can reference; main assigns them in original statement order.
+	if len(g.globalLetNames) > 0 {
+		b.WriteString("// Top-level lets hoisted to package scope so user functions can read them.\n")
+		b.WriteString("var (\n")
+		for _, n := range g.globalLetNames {
+			b.WriteString("\t" + n + " interface{}\n")
 		}
+		b.WriteString(")\n\n")
 	}
+
+	// User-defined functions (pre-generated; see Generate)
+	b.WriteString(g.userFuncsCode)
 
 	// Main function
 	b.WriteString("func main() {\n")

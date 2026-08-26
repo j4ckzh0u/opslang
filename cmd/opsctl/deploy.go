@@ -18,6 +18,7 @@ import (
 	"github.com/j4ckzh0u/opslang/internal/compiler"
 	opsexec "github.com/j4ckzh0u/opslang/internal/exec"
 	"github.com/j4ckzh0u/opslang/internal/inventory"
+	"github.com/j4ckzh0u/opslang/internal/modules"
 	"github.com/j4ckzh0u/opslang/internal/parser"
 	"github.com/j4ckzh0u/opslang/internal/runner"
 	"github.com/j4ckzh0u/opslang/internal/security"
@@ -118,6 +119,12 @@ func runDeployCommand(scriptPath string, autoApprove bool, autoSource security.A
 	prog, err := p.Parse()
 	if err != nil {
 		return fmt.Errorf("parse error: %w", err)
+	}
+
+	// Link file-module imports into one flat program.
+	prog, err = modules.Link(prog, scriptPath)
+	if err != nil {
+		return fmt.Errorf("module error: %w", err)
 	}
 
 	// Third-party Go imports are not implemented in any engine; fail now

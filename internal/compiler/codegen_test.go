@@ -13,8 +13,13 @@ func TestGenerateLetStatement(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
-	if !strings.Contains(code, "var x interface{} = int64(42)") {
-		t.Errorf("expected 'var x interface{} = int64(42)', got:\n%s", code)
+	// Top-level lets are hoisted to a package-level declaration and
+	// assigned in main, so user functions can reference them.
+	if !strings.Contains(code, "var (\n\tx interface{}\n)") {
+		t.Errorf("expected hoisted package-level 'x interface{}', got:\n%s", code)
+	}
+	if !strings.Contains(code, "x = int64(42)") {
+		t.Errorf("expected assignment 'x = int64(42)', got:\n%s", code)
 	}
 }
 
@@ -35,8 +40,8 @@ func TestGenerateBoolLiteral(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
-	if !strings.Contains(code, "var flag interface{} = true") {
-		t.Errorf("expected 'flag := true', got:\n%s", code)
+	if !strings.Contains(code, "\n\tflag interface{}\n") || !strings.Contains(code, "flag = true") {
+		t.Errorf("expected hoisted flag with assignment, got:\n%s", code)
 	}
 }
 
@@ -46,8 +51,8 @@ func TestGenerateNilLiteral(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
-	if !strings.Contains(code, "var x interface{} = nil") {
-		t.Errorf("expected 'x := nil', got:\n%s", code)
+	if !strings.Contains(code, "x = nil") {
+		t.Errorf("expected 'x = nil' assignment, got:\n%s", code)
 	}
 }
 
@@ -57,7 +62,7 @@ func TestGenerateBinaryExpression(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
-	if !strings.Contains(code, "var x interface{} =") {
+	if !strings.Contains(code, "x = ") {
 		t.Errorf("expected assignment, got:\n%s", code)
 	}
 }
@@ -714,7 +719,7 @@ let x = 1`
 		t.Fatalf("GenerateCode failed: %v", err)
 	}
 	// Import statement should not generate any code (no error, just skipped)
-	if !strings.Contains(code, "var x interface{} = int64(1)") {
+	if !strings.Contains(code, "x = int64(1)") {
 		t.Errorf("expected let statement after import, got:\n%s", code)
 	}
 }
@@ -1256,4 +1261,45 @@ let v = d.name`
 	if !strings.Contains(code, `opsToMapDeep(d)["name"]`) {
 		t.Errorf("expected member expression lookup, got:\n%s", code)
 	}
+}
+
+// TestGenerateUserFuncUsesSDKAndGlobals pins two related fixes: SDK calls
+// inside user functions must register the package import, and user
+// functions must be able to reference top-level lets (hoisted to
+// package-level vars, assigned from main in source order). Before this,
+// any script wrapping sys.* calls in a function failed AOT compilation
+// with "undefined: sys".
+func TestGenerateUserFuncUsesSDKAndGlobals(t *testing.T) {
+	source := `let threshold = 80.0
+fn disk_full(mount) {
+	let u = sys.disk.usage(mount)
+	return u.used_percent > threshold
+}
+if disk_full("/") {
+	alert("full")
+}`
+	code, err := GenerateCode(source, "test.ops")
+	if err != nil {
+		t.Fatalf("GenerateCode failed: %v", err)
+	}
+	if !strings.Contains(code, `"github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sys"`) {
+		t.Errorf("SDK sys package missing from imports; fn-body usage was not collected:\n%s", firstLines(code, 20))
+	}
+	if !strings.Contains(code, "threshold interface{}") {
+		t.Errorf("top-level let not hoisted to package var:\n%s", code)
+	}
+	if !strings.Contains(code, `func disk_full(`) {
+		t.Errorf("user function missing:\n%s", code)
+	}
+	if !strings.Contains(code, "threshold = float64(80)") {
+		t.Errorf("global assignment missing from main:\n%s", firstLines(code, 5))
+	}
+}
+
+func firstLines(s string, n int) string {
+	lines := strings.SplitN(s, "\n", n+1)
+	if len(lines) > n {
+		lines = lines[:n]
+	}
+	return strings.Join(lines, "\n")
 }

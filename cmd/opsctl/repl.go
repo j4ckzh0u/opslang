@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/j4ckzh0u/opslang/internal/interpreter"
+	"github.com/j4ckzh0u/opslang/internal/modules"
 	"github.com/j4ckzh0u/opslang/internal/parser"
 	"github.com/spf13/cobra"
 )
@@ -121,6 +122,13 @@ func executeREPLInput(interp *interpreter.Interpreter, reader *lineReader, sourc
 	prog, err := p.Parse()
 	if err != nil {
 		reader.emit("  parse error: %v\n", err)
+		return
+	}
+
+	// File-module imports resolve against the working directory.
+	prog, err = modules.Link(prog, "")
+	if err != nil {
+		reader.emit("  module error: %v\n", err)
 		return
 	}
 
