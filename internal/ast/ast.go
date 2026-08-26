@@ -190,6 +190,22 @@ func (s *ParallelStatement) String() string {
 	return "parallel { ... }"
 }
 
+// ParallelForStatement represents: parallel for <Var> in <List> { body }
+// Each element runs concurrently in an isolated environment; results
+// merge in source order after all iterations finish.
+type ParallelForStatement struct {
+	Position Position
+	Var      *Identifier
+	List     Expression
+	Body     *BlockStatement
+}
+
+func (s *ParallelForStatement) Pos() Position  { return s.Position }
+func (s *ParallelForStatement) statementNode() {}
+func (s *ParallelForStatement) String() string {
+	return fmt.Sprintf("parallel for %s in %s { ... }", s.Var, s.List)
+}
+
 // ImportStatement represents: import "<Path>"
 type ImportStatement struct {
 	Position Position

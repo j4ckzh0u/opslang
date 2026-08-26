@@ -440,3 +440,19 @@ func TestGenerate_MetaBuiltinsRefused(t *testing.T) {
 		}
 	}
 }
+
+// TestGenerate_ParallelForRefused pins the honest-refusal contract for
+// the fan-out loop in runner mode.
+func TestGenerate_ParallelForRefused(t *testing.T) {
+	src := `task "check" on "host1" {
+	parallel for h in ["a", "b"] {
+		let r = ping(h)
+		report { r: r }
+	}
+}`
+	task := findTask(t, mustParse(t, src))
+	gen := &InstructionGenerator{}
+	if _, err := gen.Generate(task, false); err == nil {
+		t.Error("parallel for should be refused in runner mode, got success")
+	}
+}

@@ -1303,3 +1303,29 @@ func firstLines(s string, n int) string {
 	}
 	return strings.Join(lines, "\n")
 }
+
+// TestGenerateParallelFor pins the fan-out form's generated shape:
+// range over the list, one goroutine per element writing isolated
+// results, ordered merge after Wait.
+func TestGenerateParallelFor(t *testing.T) {
+	source := `let servers = ["a", "b"]
+let out = ""
+parallel for s in servers {
+	out = "checked " + s
+	print(out)
+}`
+	code, err := GenerateCode(source, "test.ops")
+	if err != nil {
+		t.Fatalf("GenerateCode failed: %v", err)
+	}
+	for _, want := range []string{
+		"_pList :=",
+		"go func(_pi int) {",
+		"_pWg.Wait()",
+		`_pRes[_pm]["out"]`,
+	} {
+		if !strings.Contains(code, want) {
+			t.Errorf("generated code missing %q:\n%s", want, code)
+		}
+	}
+}

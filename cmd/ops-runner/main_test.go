@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/j4ckzh0u/opslang/internal/ast"
-	"github.com/j4ckzh0u/opslang/internal/security"
 	"github.com/j4ckzh0u/opslang/internal/runner"
+	"github.com/j4ckzh0u/opslang/internal/security"
 )
 
 func testKeyPairE2E(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {

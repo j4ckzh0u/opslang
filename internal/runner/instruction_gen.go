@@ -165,6 +165,8 @@ func (g *InstructionGenerator) genStatement(stmt ast.Statement) error {
 		return unsupportedErr("ensure statement")
 	case *ast.ParallelStatement:
 		return unsupportedErr("parallel block")
+	case *ast.ParallelForStatement:
+		return unsupportedErr("parallel for loop")
 	default:
 		return fmt.Errorf("unsupported statement type in runner mode: %T", stmt)
 	}

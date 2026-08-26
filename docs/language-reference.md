@@ -781,6 +781,27 @@ report {
 - 块内的 `let` 声明按**源码顺序**确定性合并回外层作用域，因此执行结束后外层可以访问这些变量
 - 任一语句出错则整个 parallel 块报错
 
+### parallel for 扇出循环
+
+对列表的每个元素**并发**执行同一组语句——批量检查、批量探测的标准写法：
+
+```ops
+let servers = ["web-01", "web-02", "db-01"]
+parallel for s in servers {
+    print("checking " + s + " ...")
+}
+```
+
+**语义：**
+
+- 每个元素一个 goroutine，循环变量在迭代内可见
+- 迭代环境相互隔离：`let` 与标识符赋值按**源码顺序**确定性合并（最后一次迭代的值胜出），与顺序执行的 for-in 结果一致
+- 循环变量在语句结束后不泄漏到外层
+- 列表为空时整体跳过；非列表是显式错误
+- **禁止在 body 内对循环外声明的字典/列表做索引赋值**（如 `results[k] = v`）——那会跨 goroutine 写共享对象，属于数据竞争。解释器与 AOT 都会明确报错拒绝
+
+runner 模式部署时 `parallel` 块与 `parallel for` 都会明确拒绝（线性指令 VM 无并发能力）；需要并发的脚本请用 `--mode auto` 或 `--mode aot`。
+
 ---
 
 ## 12. 导入
@@ -795,6 +816,37 @@ print("CPU: " + str(cpu.percent) + "%")
 ```
 
 **第三方 Go 库导入未实现：** `import "go <包路径>"` 在 `opsctl run` 与 `opsctl deploy/build` 中都会报错拒绝（见 Roadmap）。
+
+### 用户模块：import "./path/to/file.ops"
+
+以 `.ops` 结尾的导入路径是**文件模块**——把可复用的 `fn` 和 `let` 声明抽到独立文件，供多个脚本引用：
+
+```ops
+// lib/checks.ops —— 可复用的检查函数库
+let warn_threshold = 80.0
+
+fn disk_full(mount) {
+    let u = sys.disk.usage(mount)
+    return u.used_percent > warn_threshold
+}
+```
+
+```ops
+// main.ops —— 入口脚本
+import "./lib/checks.ops"
+
+if disk_full("/") {
+    alert("根分区超过 " + str(warn_threshold) + "%")
+}
+```
+
+**模块规则（刻意严格，保证团队库行为可预测）：**
+
+- 模块顶层只允许 `fn`、`let` 和进一步的 `import`；`task`/`ensure` 等属于入口脚本，出现在模块里会报错并指出文件与行号
+- 导入的声明在 import 语句的位置拼接入主程序；相对路径相对于**当前文件**解析
+- 跨文件重名是错误，不会静默覆盖
+- 循环导入报错并列出完整导入链；同一模块被多次导入只合并一次
+- 解释器、runner 指令生成与 AOT 编译消费同一个链接后的程序，三引擎结果一致
 
 ---
 

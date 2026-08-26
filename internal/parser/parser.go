@@ -777,11 +777,18 @@ func (p *Parser) parseLogStatement() (*ast.LogStatement, error) {
 
 // --- Parallel ---------------------------------------------------------------
 
-func (p *Parser) parseParallelStatement() (*ast.ParallelStatement, error) {
+func (p *Parser) parseParallelStatement() (ast.Statement, error) {
 	pos := p.current().Pos
 	p.advance() // consume 'parallel'
-	p.skipNewlines()
 
+	// Fan-out form: parallel for <var> in <list> { body }
+	if p.current().Type == token.FOR {
+		p.advance() // consume 'for'
+		return p.parseParallelForRest(pos)
+	}
+
+	// Block form: parallel { ... }
+	p.skipNewlines()
 	body, err := p.parseBlockStatement()
 	if err != nil {
 		return nil, err
@@ -789,6 +796,38 @@ func (p *Parser) parseParallelStatement() (*ast.ParallelStatement, error) {
 
 	return &ast.ParallelStatement{
 		Position: astPos(pos),
+		Body:     body,
+	}, nil
+}
+
+// parseParallelForRest parses "<var> in <list> { body }" after the
+// 'parallel for' keywords were consumed.
+func (p *Parser) parseParallelForRest(pos token.Position) (ast.Statement, error) {
+	varTok := p.current()
+	if varTok.Type != token.IDENT {
+		return nil, fmt.Errorf("parallel for expects a variable name, got %s", varTok.Type)
+	}
+	p.advance()
+
+	if _, err := p.expect(token.IN); err != nil {
+		return nil, fmt.Errorf("parallel for expects 'in' after the loop variable: %w", err)
+	}
+
+	listExpr, err := p.parseExpression()
+	if err != nil {
+		return nil, fmt.Errorf("parallel for list expression: %w", err)
+	}
+	p.skipNewlines()
+
+	body, err := p.parseBlockStatement()
+	if err != nil {
+		return nil, err
+	}
+
+	return &ast.ParallelForStatement{
+		Position: astPos(pos),
+		Var:      &ast.Identifier{Position: astPos(varTok.Pos), Name: varTok.Literal},
+		List:     listExpr,
 		Body:     body,
 	}, nil
 }

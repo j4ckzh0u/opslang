@@ -356,6 +356,8 @@ func (interp *Interpreter) execStatement(stmt ast.Statement, env *Environment) (
 		return interp.execLog(s, env)
 	case *ast.ParallelStatement:
 		return interp.execParallel(s, env)
+	case *ast.ParallelForStatement:
+		return interp.execParallelFor(s, env)
 	case *ast.BlockRescueStatement:
 		return interp.execBlockRescue(s, env)
 	case *ast.BlockStatement:
@@ -817,6 +819,9 @@ func (interp *Interpreter) execBlock(block *ast.BlockStatement, env *Environment
 func (interp *Interpreter) execParallel(s *ast.ParallelStatement, env *Environment) (interface{}, error) {
 	if s.Body == nil || len(s.Body.Statements) == 0 {
 		return nil, nil
+	}
+	if err := rejectSharedMutation(s.Body.Statements); err != nil {
+		return nil, err
 	}
 
 	type outcome struct {
@@ -1512,4 +1517,109 @@ func typeName(val interface{}) string {
 	default:
 		return fmt.Sprintf("%T", val)
 	}
+}
+
+// execParallelFor runs `parallel for x in list { body }`: one goroutine
+// per element, each in an isolated barrier env with the loop variable
+// bound. After all goroutines finish, per-iteration assignments merge in
+// SOURCE order (deterministic regardless of goroutine scheduling), and a
+// later iteration's value wins - matching for-in + sequential semantics.
+func (interp *Interpreter) execParallelFor(s *ast.ParallelForStatement, env *Environment) (interface{}, error) {
+	if s.Body == nil || len(s.Body.Statements) == 0 {
+		return nil, nil
+	}
+	if err := rejectSharedMutation(s.Body.Statements); err != nil {
+		return nil, err
+	}
+
+	iterVal, err := interp.evalExpression(s.List, env)
+	if err != nil {
+		return nil, err
+	}
+	items, ok := iterVal.([]interface{})
+	if !ok {
+		return nil, &RuntimeError{
+			Pos: s.Pos(),
+			Msg: fmt.Sprintf("parallel for requires a list, got %T", iterVal),
+		}
+	}
+	if len(items) == 0 {
+		return nil, nil
+	}
+
+	type outcome struct {
+		err error
+		env *Environment
+	}
+	outcomes := make([]outcome, len(items))
+	var wg sync.WaitGroup
+
+	for i, item := range items {
+		wg.Add(1)
+		go func(idx int, val interface{}) {
+			defer wg.Done()
+			childEnv := newEnv(env)
+			childEnv.barrier = true
+			childEnv.set(s.Var.Name, val)
+			// Body statements run sequentially inside the iteration's
+			// goroutine, sharing its isolated env.
+			for _, st := range s.Body.Statements {
+				if _, err := interp.execStatement(st, childEnv); err != nil {
+					outcomes[idx] = outcome{err: err, env: childEnv}
+					return
+				}
+			}
+			outcomes[idx] = outcome{env: childEnv}
+		}(i, item)
+	}
+	wg.Wait()
+
+	for _, o := range outcomes {
+		if o.err != nil {
+			if _, ok := o.err.(*returnSignal); ok {
+				continue // return inside parallel is meaningless; ignore
+			}
+			return nil, o.err
+		}
+	}
+	for _, o := range outcomes {
+		if o.env == nil {
+			continue
+		}
+		for name, val := range o.env.vars {
+			if name == s.Var.Name {
+				continue // loop variable is iteration-local
+			}
+			env.set(name, val)
+		}
+	}
+	return nil, nil
+}
+
+// rejectSharedMutation refuses assignment statements inside parallel
+// bodies. A barrier env isolates variable rebinding, but index/member
+// assignments (results[k] = v) mutate shared objects across goroutines -
+// a data race that crashes with "concurrent map writes". The AOT codegen
+// already rejects these statement kinds; refusing them here keeps both
+// engines honest and identical instead of racing.
+func rejectSharedMutation(stmts []ast.Statement) error {
+	for _, st := range stmts {
+		a, ok := st.(*ast.AssignStatement)
+		if !ok {
+			continue
+		}
+		// Plain identifier rebinding is safe: the barrier env captures it
+		// per iteration. Index/member targets write through to objects
+		// shared across goroutines - that is the race.
+		switch a.Target.(type) {
+		case *ast.Identifier:
+			continue
+		default:
+			return &RuntimeError{
+				Pos: a.Pos(),
+				Msg: "index or member assignment inside parallel body would mutate shared state across goroutines; collect results into a local with let instead",
+			}
+		}
+	}
+	return nil
 }

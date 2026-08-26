@@ -2867,6 +2867,9 @@ func (g *CodeGenerator) genStatementTo(b *strings.Builder, stmt ast.Statement, i
 	case *ast.ParallelStatement:
 		return g.genParallel(b, s, indent)
 
+	case *ast.ParallelForStatement:
+		return g.genParallelFor(b, s, indent)
+
 	default:
 		return fmt.Errorf("unsupported statement type: %T", stmt)
 	}
@@ -3119,6 +3122,99 @@ func (g *CodeGenerator) genParallel(b *strings.Builder, s *ast.ParallelStatement
 	b.WriteString(fmt.Sprintf("%s\t_pWg.Wait()\n", prefix))
 	for _, line := range mergeLines {
 		b.WriteString(line)
+	}
+	b.WriteString(fmt.Sprintf("%s}\n", prefix))
+	return nil
+}
+
+// genParallelFor implements `parallel for <var> in <list> { body }`:
+// one goroutine per element with the same isolated-result + ordered-merge
+// contract as the interpreter (assignments land in _pRes[idx], merged in
+// source order after Wait).
+func (g *CodeGenerator) genParallelFor(b *strings.Builder, s *ast.ParallelForStatement, indent int) error {
+	prefix := strings.Repeat("\t", indent)
+
+	// Same isolation rules as the interpreter's rejectSharedMutation:
+	// plain identifier rebinding is captured per iteration; index/member
+	// targets write through shared objects and are refused.
+	for _, stmt := range s.Body.Statements {
+		if a, ok := stmt.(*ast.AssignStatement); ok {
+			if _, ident := a.Target.(*ast.Identifier); !ident {
+				return fmt.Errorf("index or member assignment inside parallel for would mutate shared state across goroutines")
+			}
+			continue
+		}
+		switch stmt.(type) {
+		case *ast.LetStatement, *ast.ExpressionStatement, *ast.ReportStatement, *ast.LogStatement:
+		default:
+			return fmt.Errorf("parallel for bodies support let, calls, report and log statements; %T would need shared-variable mutation", stmt)
+		}
+	}
+
+	varName := sanitizeName(s.Var.Name)
+	listExpr, err := g.genExpr(s.List)
+	if err != nil {
+		return err
+	}
+
+	b.WriteString(fmt.Sprintf("%s{\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t_pList := %s\n", prefix, listExpr))
+	b.WriteString(fmt.Sprintf("%s\t_pRes := make([]map[string]interface{}, len(_pList))\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\tvar _pWg sync.WaitGroup\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\tfor _pi := range _pList {\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\t_pWg.Add(1)\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\tgo func(_pi int) {\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\t\tdefer _pWg.Done()\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t\t\t%s := _pList[_pi]\n", prefix, varName))
+	b.WriteString(fmt.Sprintf("%s\t\t\t_pRes[_pi] = map[string]interface{}{}\n", prefix))
+
+	collectName := func(stmt ast.Statement) (string, bool) {
+		switch st := stmt.(type) {
+		case *ast.LetStatement:
+			return st.Name.Name, true
+		case *ast.AssignStatement:
+			if id, ident := st.Target.(*ast.Identifier); ident {
+				return id.Name, true
+			}
+		}
+		return "", false
+	}
+
+	for _, stmt := range s.Body.Statements {
+		if name, ok := collectName(stmt); ok {
+			var value ast.Expression
+			switch st := stmt.(type) {
+			case *ast.LetStatement:
+				value = st.Value
+			case *ast.AssignStatement:
+				value = st.Value
+			}
+			expr, err := g.genExpr(value)
+			if err != nil {
+				return err
+			}
+			b.WriteString(fmt.Sprintf("%s\t\t\t_pRes[_pi][%q] = %s\n", prefix, name, expr))
+			continue
+		}
+		if err := g.genStatementTo(b, stmt, indent+3); err != nil {
+			return err
+		}
+	}
+
+	b.WriteString(fmt.Sprintf("%s\t\t}(_pi)\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t}\n", prefix))
+	b.WriteString(fmt.Sprintf("%s\t_pWg.Wait()\n", prefix))
+
+	// Deterministic merge: last iteration wins, matching sequential for-in.
+	for _, stmt := range s.Body.Statements {
+		if name, ok := collectName(stmt); ok {
+			sanitized := sanitizeName(name)
+			b.WriteString(fmt.Sprintf("%sfor _pm := range _pRes {\n", prefix))
+			b.WriteString(fmt.Sprintf("%s\tif v, ok := _pRes[_pm][%q]; ok {\n", prefix, name))
+			b.WriteString(fmt.Sprintf("%s\t\t%s = v\n", prefix, sanitized))
+			b.WriteString(fmt.Sprintf("%s\t}\n", prefix))
+			b.WriteString(fmt.Sprintf("%s}\n", prefix))
+		}
 	}
 	b.WriteString(fmt.Sprintf("%s}\n", prefix))
 	return nil
