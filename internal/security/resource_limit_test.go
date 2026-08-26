@@ -2,6 +2,7 @@ package security
 
 import (
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -88,5 +89,27 @@ func TestApplyMultipleTimes(t *testing.T) {
 		}
 		_ = err
 		applied.Cleanup()
+	}
+}
+
+func TestSystemdRunPrefix(t *testing.T) {
+	limit := ResourceLimit{CPUPercent: 80, MemoryMB: 1024}
+	got := limit.SystemdRunPrefix()
+	want := "systemd-run --scope --quiet -p CPUQuota=80% -p MemoryMax=1024M -- "
+	if got != want {
+		t.Errorf("SystemdRunPrefix() = %q, want %q", got, want)
+	}
+
+	// Zero fields are omitted; the prefix still terminates with "--".
+	empty := ResourceLimit{}.SystemdRunPrefix()
+	if empty != "systemd-run --scope --quiet -- " {
+		t.Errorf("zero-limit prefix = %q", empty)
+	}
+
+	// A command appended after the prefix must land after the "--"
+	// separator so systemd does not parse it as its own flags.
+	full := limit.SystemdRunPrefix() + "/tmp/runner --dry-run"
+	if !strings.HasSuffix(full, "-- /tmp/runner --dry-run") {
+		t.Errorf("prefixed command = %q", full)
 	}
 }

@@ -2,7 +2,7 @@
 // JSON instruction packages and outputs structured JSON results.
 package runner
 
-import "github.com/opslang/opslang/internal/ast"
+import "github.com/j4ckzh0u/opslang/internal/ast"
 
 // InstructionPackage represents the JSON input — a set of instructions
 // to execute sequentially with variable assignment support.
@@ -17,6 +17,12 @@ type InstructionPackage struct {
 	// declaration (legacy packages): the runner then skips this
 	// second-line check and relies on controller-side enforcement.
 	Privilege string `json:"privilege,omitempty"`
+	// Signature is the hex-encoded Ed25519 signature over the canonical
+	// JSON of the package with this field cleared. It is set by
+	// SignPackage on the controller and checked by ops-runner when a
+	// trusted public key is provided (--pubkey). Empty means unsigned,
+	// which runners only accept when they were not asked to enforce.
+	Signature string `json:"signature,omitempty"`
 }
 
 // PrivilegeLevel returns the package's declared privilege as a typed

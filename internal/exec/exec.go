@@ -18,10 +18,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/opslang/opslang/internal/arch"
-	"github.com/opslang/opslang/internal/inventory"
-	"github.com/opslang/opslang/internal/runner"
-	"github.com/opslang/opslang/internal/sshx"
+	"github.com/j4ckzh0u/opslang/internal/arch"
+	"github.com/j4ckzh0u/opslang/internal/inventory"
+	"github.com/j4ckzh0u/opslang/internal/runner"
+	"github.com/j4ckzh0u/opslang/internal/security"
+	"github.com/j4ckzh0u/opslang/internal/sshx"
 )
 
 // Target represents a remote host to execute instructions on.
@@ -89,7 +90,28 @@ type Executor struct {
 	// Lab environments only.
 	InsecureSkipHostKeyVerify bool
 
+	// ArchCache caches remote architecture detections across hosts and,
+	// when backed by a disk file, across runs. Nil means a default
+	// disk-backed cache is created in Execute.
+	ArchCache *arch.Cache
+	// ResourceLimit, when non-nil, wraps the remote runner invocation in
+	// a systemd scope where systemd-run exists; hosts without it run the
+	// runner unbounded and record a warning instead of failing.
+	ResourceLimit *security.ResourceLimit
+
+	// RunnerVerifyKeyPath is the REMOTE filesystem path of the trusted
+	// Ed25519 public key. When set, the runner is invoked with --pubkey
+	// and refuses unsigned or tampered instruction packages. The key file
+	// must already exist on the target host.
+	RunnerVerifyKeyPath string
+
 	TaskID string
+
+	// ArchCacheLoadErr records why the disk-backed architecture cache
+	// could not be loaded when Execute initialized it. It is surfaced to
+	// the caller instead of swallowed: deploys still proceed, operators
+	// still learn detection will re-run.
+	ArchCacheLoadErr error
 
 	runnerCache   *runnerCache
 	buildMu       sync.Mutex // serializes runner/app binary builds
@@ -117,6 +139,11 @@ func (e *Executor) Execute(ctx context.Context) *Summary {
 
 	if e.runnerCache == nil {
 		e.runnerCache = newRunnerCache(e.ProjectRoot)
+	}
+	if e.ArchCache == nil {
+		c, loadErr := defaultArchCache()
+		e.ArchCache = c
+		e.ArchCacheLoadErr = loadErr
 	}
 	if e.buildInFlight == nil {
 		e.buildInFlight = make(map[string]*sync.Once)
@@ -241,9 +268,11 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	}
 	defer client.Close()
 
-	// Detect architecture.
+	// Detect architecture. Results are cached per host:port in process
+	// and on disk (~/.opsctl/arch-cache.json), so repeat deploys skip the
+	// `uname -m` round-trip entirely.
 	adapter := &sshExecutorAdapter{client: client}
-	goarch, err := arch.Detect(ctx, adapter)
+	goarch, err := e.detectArch(ctx, adapter, fmt.Sprintf("%s:%d", target.Host, target.Port))
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Sprintf("failed to detect architecture: %v", err)
@@ -279,7 +308,10 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	// much bandwidth per host per run. Binaries are stored under
 	// <cache>/<name>-<sha256[:16]> and reused when the remote checksum
 	// already matches, so repeat runs transfer only a checksum query.
-	remoteRunner, err := ensureRemoteBinary(ctx, client, runnerPath,
+	// Staging uploads retry on transient SFTP/network failures. This is
+	// safe to retry: the upload writes a content-addressed path, so a
+	// partially failed attempt is simply overwritten by the next one.
+	remoteRunner, err := stageWithRetry(ctx, client, runnerPath,
 		fmt.Sprintf("ops-runner-%s-linux-%s", runnerVersionSalt, goarch))
 	if err != nil {
 		result.Status = "failed"
@@ -290,9 +322,11 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 
 	remoteApp := ""
 	if localAppBinary != "" {
-		appSum, err := fileSHA256(localAppBinary)
-		if err == nil {
-			remoteApp, err = ensureRemoteBinary(ctx, client, localAppBinary, "ops-app-"+appSum[:16])
+		appSum, sumErr := fileSHA256(localAppBinary)
+		if sumErr == nil {
+			remoteApp, err = stageWithRetry(ctx, client, localAppBinary, "ops-app-"+appSum[:16])
+		} else {
+			err = fmt.Errorf("failed to hash script binary: %w", sumErr)
 		}
 		if err != nil {
 			result.Status = "failed"
@@ -317,6 +351,31 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	if e.DryRun {
 		runnerCmd += " --dry-run"
 	}
+	// Signature enforcement: the key file lives on the target host and is
+	// distributed out of band. Passing the flag makes the runner fail
+	// closed on unsigned/tampered packages.
+	if e.RunnerVerifyKeyPath != "" {
+		runnerCmd += " --pubkey " + e.RunnerVerifyKeyPath
+	}
+
+	// Apply resource limits when requested. Hosts without systemd-run
+	// still run the task (failing them would make limits unusable on
+	// mixed fleets) but the result carries a warning so operators know
+	// the runner executed unbounded there.
+	if e.ResourceLimit != nil {
+		wrapped, limited, limitErr := wrapWithResourceLimit(ctx, client, e.ResourceLimit, runnerCmd)
+		if limitErr != nil {
+			result.Status = "failed"
+			result.Error = fmt.Sprintf("failed to apply resource limits: %v", limitErr)
+			result.FinishedAt = time.Now().UTC()
+			return result
+		}
+		runnerCmd = wrapped
+		if !limited {
+			result.Warnings = append(result.Warnings,
+				"resource limits not applied: systemd-run not available on this host")
+		}
+	}
 
 	// Execute runner with instruction JSON piped to stdin.
 	// Cached binaries stay on the host deliberately (they are content
@@ -340,7 +399,10 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 		result.ExitCode = execResult.ExitCode
 		result.Data = output.Data
 		result.Errors = output.Errors
-		result.Warnings = output.Warnings
+		// Merge rather than overwrite: pre-execution warnings (e.g.
+		// resource limits unavailable) must survive alongside runner
+		// warnings.
+		result.Warnings = append(result.Warnings, output.Warnings...)
 		switch output.Status {
 		case "ok":
 			result.Status = "success"
@@ -753,6 +815,92 @@ func findProjectRoot() (string, error) {
 	}
 
 	return "", fmt.Errorf("could not find project root (no go.mod found)")
+}
+
+// ============================================================
+// Arch cache, staging retry, resource limits
+// ============================================================
+
+// defaultArchCache builds the run's architecture cache. It prefers the
+// disk-backed location under ~/.opsctl so later deploys skip detection
+// too; a load failure is returned to the caller rather than swallowed —
+// the in-memory fallback keeps the current deploy working either way.
+func defaultArchCache() (*arch.Cache, error) {
+	path, err := arch.DefaultCachePath()
+	if err != nil {
+		// No usable home directory: memory-only cache still covers
+		// this run.
+		return arch.NewCache("", arch.DefaultTTL), nil
+	}
+	c := arch.NewCache(path, arch.DefaultTTL)
+	if loadErr := c.Load(); loadErr != nil {
+		return c, loadErr
+	}
+	return c, nil
+}
+
+// NewDefaultArchCache exposes the disk-backed architecture cache to CLI
+// callers so several Executor instances in one command share it instead of
+// re-reading the cache file per task step.
+func NewDefaultArchCache() (*arch.Cache, error) {
+	return defaultArchCache()
+}
+
+// detectArch consults the executor's architecture cache, falling back to
+// an uncached probe when no cache is installed (Execute installs a default
+// one; direct executeOnHost callers in tests may not).
+func (e *Executor) detectArch(ctx context.Context, adapter arch.SSHExecutor, targetID string) (string, error) {
+	if e.ArchCache != nil {
+		return e.ArchCache.Detect(ctx, adapter, targetID)
+	}
+	return arch.Detect(ctx, adapter)
+}
+
+// stagingRetryConfig bounds retries for remote binary uploads: three
+// attempts with a short fixed backoff. Uploads are idempotent (they write
+// content-addressed paths), so retrying cannot corrupt anything.
+func stagingRetryConfig() security.RetryConfig {
+	return security.RetryConfig{MaxAttempts: 3, Backoff: 2 * time.Second}
+}
+
+// stageWithRetry uploads a binary to the remote content-addressed cache,
+// retrying transient SFTP/network failures. ctx cancellation aborts the
+// retry loop immediately instead of sleeping through it.
+func stageWithRetry(ctx context.Context, client *sshx.Client, localPath, name string) (string, error) {
+	var remotePath string
+	err := security.WithRetryCtx(ctx, stagingRetryConfig(), func() error {
+		var attemptErr error
+		remotePath, attemptErr = ensureRemoteBinary(ctx, client, localPath, name)
+		return attemptErr
+	})
+	if err != nil {
+		return "", err
+	}
+	return remotePath, nil
+}
+
+// wrapWithResourceLimit prefixes cmd with a systemd-run scope when the
+// host provides systemd-run. limited reports whether wrapping actually
+// happened; an unreachable probe is an error, not a silent skip — the
+// operator explicitly asked for limits, so failing to enforce them must
+// be visible.
+func wrapWithResourceLimit(ctx context.Context, client *sshx.Client, limit *security.ResourceLimit, cmd string) (string, bool, error) {
+	var probe *sshx.ExecResult
+	err := security.WithRetryCtx(ctx, security.RetryConfig{MaxAttempts: 2, Backoff: time.Second}, func() error {
+		res, probeErr := client.Exec(ctx, "command -v systemd-run")
+		if probeErr != nil {
+			return probeErr
+		}
+		probe = res
+		return nil
+	})
+	if err != nil {
+		return "", false, fmt.Errorf("failed to probe systemd-run availability: %w", err)
+	}
+	if probe.ExitCode != 0 || strings.TrimSpace(probe.Stdout) == "" {
+		return cmd, false, nil
+	}
+	return limit.SystemdRunPrefix() + cmd, true, nil
 }
 
 // ============================================================

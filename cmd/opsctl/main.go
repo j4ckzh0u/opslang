@@ -21,6 +21,7 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 	rootCmd.AddCommand(replCmd)
 	rootCmd.AddCommand(deployCmd)
+	rootCmd.AddCommand(keygenCmd)
 }
 
 func main() {

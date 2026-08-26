@@ -10,11 +10,11 @@ import (
 	"syscall"
 	"time"
 
-	opsexec "github.com/opslang/opslang/internal/exec"
-	"github.com/opslang/opslang/internal/inventory"
-	"github.com/opslang/opslang/internal/opsspec"
-	"github.com/opslang/opslang/internal/runner"
-	"github.com/opslang/opslang/internal/security"
+	opsexec "github.com/j4ckzh0u/opslang/internal/exec"
+	"github.com/j4ckzh0u/opslang/internal/inventory"
+	"github.com/j4ckzh0u/opslang/internal/opsspec"
+	"github.com/j4ckzh0u/opslang/internal/runner"
+	"github.com/j4ckzh0u/opslang/internal/security"
 	"github.com/spf13/cobra"
 )
 
@@ -31,6 +31,10 @@ var (
 	execOutputFile      string
 	execInsecureHostKey bool
 	execAutoApprove     bool
+	execLimitCPU        int
+	execLimitMemMB      int64
+	execSignKey         string
+	execVerifyKey       string
 )
 
 var execCmd = &cobra.Command{
@@ -64,6 +68,10 @@ func init() {
 	execCmd.Flags().BoolVar(&execInsecureHostKey, "insecure-host-key", false, "Skip SSH host key verification (lab use only)")
 	execCmd.Flags().StringVarP(&execOutputFile, "output", "o", "", "Output file path (default: stdout)")
 	execCmd.Flags().BoolVar(&execAutoApprove, "auto-approve", false, "Pre-approve gated executions (privileged packages on production targets); non-interactive runs are refused without it")
+	execCmd.Flags().IntVar(&execLimitCPU, "limit-cpu", 0, "Cap remote runner CPU usage (percent, requires systemd-run on targets; 0 = off)")
+	execCmd.Flags().Int64Var(&execLimitMemMB, "limit-mem", 0, "Cap remote runner memory (MB, requires systemd-run on targets; 0 = off)")
+	execCmd.Flags().StringVar(&execSignKey, "sign-key", "", "Ed25519 private key (from opsctl keygen) used to sign the instruction package")
+	execCmd.Flags().StringVar(&execVerifyKey, "verify-key", "", "REMOTE path of the trusted public key; runners refuse unsigned/tampered packages")
 }
 
 // runExecCommand is the main execution logic for the exec subcommand.
@@ -80,6 +88,18 @@ func runExecCommand(autoApprove bool, autoSource security.ApprovalSource) error 
 	pkg, err := opsexec.LoadInstructions(execInstructions)
 	if err != nil {
 		return fmt.Errorf("failed to load instructions: %w", err)
+	}
+
+	// Sign the package before any host is contacted; a bad key path fails
+	// the run here rather than mid-flight.
+	if execSignKey != "" {
+		key, err := security.LoadPrivateKey(execSignKey)
+		if err != nil {
+			return fmt.Errorf("failed to load signing key: %w", err)
+		}
+		if err := runner.SignPackage(pkg, key); err != nil {
+			return fmt.Errorf("failed to sign instruction package: %w", err)
+		}
 	}
 
 	// Build target list from --hosts and/or --inventory.
@@ -136,6 +156,9 @@ func runExecCommand(autoApprove bool, autoSource security.ApprovalSource) error 
 		RunnerPath:                execRunnerPath,
 		InsecureSkipHostKeyVerify: execInsecureHostKey,
 		TaskID:                    taskID,
+		ArchCache:                 archCacheForRun(),
+		ResourceLimit:             resourceLimitFromFlags(execLimitCPU, execLimitMemMB),
+		RunnerVerifyKeyPath:       execVerifyKey,
 	}
 
 	summary := executor.Execute(ctx)

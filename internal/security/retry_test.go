@@ -1,7 +1,9 @@
 package security
 
 import (
+	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -235,5 +237,80 @@ func TestWithRetryBackoff(t *testing.T) {
 	minExpected := 2 * config.Backoff
 	if elapsed < minExpected {
 		t.Errorf("Elapsed time %v < expected minimum %v", elapsed, minExpected)
+	}
+}
+
+func TestWithRetryCtxSuccessFirstAttempt(t *testing.T) {
+	ctx := context.Background()
+	calls := 0
+	err := WithRetryCtx(ctx, RetryConfig{MaxAttempts: 3, Backoff: time.Millisecond}, func() error {
+		calls++
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("calls = %d, want 1", calls)
+	}
+}
+
+func TestWithRetryCtxRetriesThenSucceeds(t *testing.T) {
+	ctx := context.Background()
+	calls := 0
+	err := WithRetryCtx(ctx, RetryConfig{MaxAttempts: 3, Backoff: time.Millisecond}, func() error {
+		calls++
+		if calls < 3 {
+			return errors.New("transient")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if calls != 3 {
+		t.Fatalf("calls = %d, want 3", calls)
+	}
+}
+
+func TestWithRetryCtxCancelAbortsSleep(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	calls := 0
+	start := time.Now()
+	err := WithRetryCtx(ctx, RetryConfig{MaxAttempts: 5, Backoff: 10 * time.Second}, func() error {
+		calls++
+		cancel() // cancel during the first backoff sleep
+		return errors.New("boom")
+	})
+	elapsed := time.Since(start)
+
+	if err == nil {
+		t.Fatal("expected cancellation error")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("error should wrap context.Canceled, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "boom") {
+		t.Fatalf("error should keep the last work failure for diagnosis, got: %v", err)
+	}
+	// The 10s backoff must not be slept through.
+	if elapsed > time.Second {
+		t.Fatalf("cancellation took %v; backoff was not aborted", elapsed)
+	}
+}
+
+func TestWithRetryCtxCancelledBeforeStart(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	calls := 0
+	err := WithRetryCtx(ctx, RetryConfig{MaxAttempts: 3}, func() error {
+		calls++
+		return nil
+	})
+	if err == nil {
+		t.Fatal("expected pre-cancelled context to abort before first call")
+	}
+	if calls != 0 {
+		t.Fatalf("fn ran %d times on cancelled ctx, want 0", calls)
 	}
 }

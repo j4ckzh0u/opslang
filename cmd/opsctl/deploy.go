@@ -3,6 +3,7 @@ package main
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,13 +14,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/opslang/opslang/internal/ast"
-	"github.com/opslang/opslang/internal/compiler"
-	opsexec "github.com/opslang/opslang/internal/exec"
-	"github.com/opslang/opslang/internal/inventory"
-	"github.com/opslang/opslang/internal/parser"
-	"github.com/opslang/opslang/internal/runner"
-	"github.com/opslang/opslang/internal/security"
+	"github.com/j4ckzh0u/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/compiler"
+	opsexec "github.com/j4ckzh0u/opslang/internal/exec"
+	"github.com/j4ckzh0u/opslang/internal/inventory"
+	"github.com/j4ckzh0u/opslang/internal/parser"
+	"github.com/j4ckzh0u/opslang/internal/runner"
+	"github.com/j4ckzh0u/opslang/internal/security"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +36,15 @@ var (
 	deployOutput          string
 	deployInsecureHostKey bool
 	deployAutoApprove     bool
+	deployLimitCPU        int
+	deployLimitMemMB      int64
+	deploySignKey         string
+	deployVerifyKey       string
 )
+
+// deploySignKeyBytes holds the Ed25519 private key loaded once per deploy
+// run; nil means packages are sent unsigned.
+var deploySignKeyBytes []byte
 
 // Injection points so tests can drive the approval gate without a TTY.
 var (
@@ -80,6 +89,10 @@ func init() {
 	deployCmd.Flags().StringVarP(&deployOutput, "output", "o", "", "Output file path (default: stdout)")
 	deployCmd.Flags().BoolVar(&deployInsecureHostKey, "insecure-host-key", false, "Skip SSH host key verification (TOFU still applies by default; lab use only)")
 	deployCmd.Flags().BoolVar(&deployAutoApprove, "auto-approve", false, "Pre-approve gated deploys (admin/root scripts on production targets); non-interactive runs are refused without it")
+	deployCmd.Flags().IntVar(&deployLimitCPU, "limit-cpu", 0, "Cap remote runner CPU usage (percent, requires systemd-run on targets; 0 = off)")
+	deployCmd.Flags().Int64Var(&deployLimitMemMB, "limit-mem", 0, "Cap remote runner memory (MB, requires systemd-run on targets; 0 = off)")
+	deployCmd.Flags().StringVar(&deploySignKey, "sign-key", "", "Ed25519 private key (from opsctl keygen) used to sign instruction packages")
+	deployCmd.Flags().StringVar(&deployVerifyKey, "verify-key", "", "REMOTE path of the trusted public key; runners refuse unsigned/tampered packages")
 }
 
 // deployStep is one instruction package to run on one subset of targets.
@@ -129,6 +142,16 @@ func runDeployCommand(scriptPath string, autoApprove bool, autoSource security.A
 
 	mode := resolveDeployMode(deployMode, prog)
 	fmt.Fprintf(os.Stderr, "Deploy mode: %s\n", mode)
+
+	// Load the signing key before any host is contacted: a bad key path
+	// must fail the deploy here, not mid-flight after some hosts ran.
+	if deploySignKey != "" {
+		key, err := security.LoadPrivateKey(deploySignKey)
+		if err != nil {
+			return fmt.Errorf("failed to load signing key: %w", err)
+		}
+		deploySignKeyBytes = key
+	}
 
 	targets := buildDeployTargets()
 	if len(targets) == 0 {
@@ -300,6 +323,16 @@ func (a *deployAggregate) add(summary *opsexec.Summary) {
 	}
 }
 
+// signPkg signs an instruction package when --sign-key was provided; it is
+// a no-op otherwise. Called after DryRun is applied so the dry-run bit is
+// covered by the signature.
+func signPkg(pkg *runner.InstructionPackage) error {
+	if deploySignKeyBytes == nil {
+		return nil
+	}
+	return runner.SignPackage(pkg, ed25519.PrivateKey(deploySignKeyBytes))
+}
+
 func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program, targets []opsexec.Target, taskID string, scriptPriv ast.PrivilegeLevel) (*deployAggregate, error) {
 	steps, err := buildDeploySteps(prog, targets, taskID, scriptPriv)
 	if err != nil {
@@ -307,12 +340,20 @@ func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program,
 	}
 
 	agg := &deployAggregate{TaskID: taskID, Targets: targetNames(targets)}
+	// One architecture cache per deploy run: task steps share detections
+	// instead of re-reading the disk file per executor.
+	archCache := archCacheForRun()
+	limit := resourceLimitFromFlags(deployLimitCPU, deployLimitMemMB)
 	for _, step := range steps {
 		fmt.Fprintf(os.Stderr, "Step %q: %d instruction(s) on %d host(s)\n",
 			step.name, len(step.pkg.Instructions), len(step.targets))
 
 		if deployDryRun {
 			step.pkg.DryRun = true
+		}
+
+		if err := signPkg(step.pkg); err != nil {
+			return nil, fmt.Errorf("failed to sign package for step %q: %w", step.name, err)
 		}
 
 		executor := &opsexec.Executor{
@@ -325,6 +366,9 @@ func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program,
 			DryRun:                    deployDryRun,
 			TaskID:                    taskID + "-" + step.name,
 			InsecureSkipHostKeyVerify: deployInsecureHostKey,
+			ArchCache:                 archCache,
+			ResourceLimit:             limit,
+			RunnerVerifyKeyPath:       deployVerifyKey,
 		}
 
 		summary := executor.Execute(ctx)
@@ -533,6 +577,10 @@ func deployAOTMode(ctx context.Context, scriptPath string, prog *ast.Program, ta
 		},
 	}
 
+	if err := signPkg(pkg); err != nil {
+		return nil, fmt.Errorf("failed to sign AOT instruction package: %w", err)
+	}
+
 	executor := &opsexec.Executor{
 		Targets:                   targets,
 		Instructions:              pkg,
@@ -544,6 +592,9 @@ func deployAOTMode(ctx context.Context, scriptPath string, prog *ast.Program, ta
 		TaskID:                    taskID,
 		AppBinary:                 appBinary,
 		InsecureSkipHostKeyVerify: deployInsecureHostKey,
+		ArchCache:                 archCacheForRun(),
+		ResourceLimit:             resourceLimitFromFlags(deployLimitCPU, deployLimitMemMB),
+		RunnerVerifyKeyPath:       deployVerifyKey,
 	}
 
 	summary := executor.Execute(ctx)

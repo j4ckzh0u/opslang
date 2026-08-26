@@ -2,17 +2,16 @@ package security
 
 import (
 	"fmt"
-	"os/exec"
-	"runtime"
+	"strings"
 )
 
-// ResourceLimit defines resource constraints
+// ResourceLimit defines resource constraints for spawned processes.
 type ResourceLimit struct {
 	CPUPercent int   `json:"cpu_percent"`
 	MemoryMB   int64 `json:"memory_mb"`
 }
 
-// AppliedLimit represents an applied resource limit with a cleanup function
+// AppliedLimit represents an applied resource limit with a cleanup function.
 type AppliedLimit struct {
 	// Cleanup releases the resource limit
 	Cleanup func()
@@ -20,41 +19,44 @@ type AppliedLimit struct {
 	Method string
 }
 
-// Apply applies resource limits to the current process
+// Apply attempts to constrain the CURRENT process.
+//
+// Honest limitation: a running process cannot move itself into a systemd
+// scope after startup, so Apply never actually constrains anything. It
+// returns a no-op AppliedLimit plus an explanatory error directing callers
+// to enforce limits at spawn time via ResourceLimit.SystemdRunPrefix (the
+// remote executor does exactly that for ops-runner).
+//
+// The signature and "always non-nil AppliedLimit" contract are kept for
+// backward compatibility with existing callers and tests.
 func Apply(limit ResourceLimit) (*AppliedLimit, error) {
-	if runtime.GOOS != "linux" {
-		// On non-Linux systems (macOS for dev), return a no-op with warning
-		return &AppliedLimit{
-			Cleanup: func() {},
-			Method:  "none",
-		}, fmt.Errorf("resource limits not supported on %s", runtime.GOOS)
-	}
-
-	// Try systemd-run first
-	if _, err := exec.LookPath("systemd-run"); err == nil {
-		return applySystemd(limit)
-	}
-
-	// Fallback: return no-op with warning
 	return &AppliedLimit{
 		Cleanup: func() {},
 		Method:  "none",
-	}, fmt.Errorf("no suitable resource limit mechanism available (systemd-run not found)")
+	}, fmt.Errorf("cannot constrain the current process after startup; enforce limits at spawn time with SystemdRunPrefix")
 }
 
-// applySystemd applies resource limits using systemd-run --scope
-func applySystemd(limit ResourceLimit) (*AppliedLimit, error) {
-	// In a real implementation, we would wrap the current process in a systemd scope
-	// For now, we return a marker that systemd would be used
-	return &AppliedLimit{
-		Cleanup: func() {
-			// Cleanup would stop the systemd scope
-		},
-		Method: "systemd",
-	}, nil
+// SystemdRunPrefix returns a command prefix that runs the following
+// command inside a transient systemd scope enforcing these limits, e.g.
+//
+//	systemd-run --scope --quiet -p CPUQuota=80% -p MemoryMax=1024M -- <cmd>
+//
+// Zero-valued fields are omitted. The caller must verify systemd-run
+// exists on the target host first (the remote executor probes with
+// `command -v systemd-run` and warns when absent).
+func (r ResourceLimit) SystemdRunPrefix() string {
+	parts := []string{"systemd-run", "--scope", "--quiet"}
+	if r.CPUPercent > 0 {
+		parts = append(parts, "-p", fmt.Sprintf("CPUQuota=%d%%", r.CPUPercent))
+	}
+	if r.MemoryMB > 0 {
+		parts = append(parts, "-p", fmt.Sprintf("MemoryMax=%dM", r.MemoryMB))
+	}
+	parts = append(parts, "--")
+	return strings.Join(parts, " ") + " "
 }
 
-// DefaultResourceLimit returns sensible default resource limits
+// DefaultResourceLimit returns sensible default resource limits.
 func DefaultResourceLimit() ResourceLimit {
 	return ResourceLimit{
 		CPUPercent: 80,   // 80% CPU
@@ -62,7 +64,7 @@ func DefaultResourceLimit() ResourceLimit {
 	}
 }
 
-// String returns a human-readable representation of the resource limit
+// String returns a human-readable representation of the resource limit.
 func (r ResourceLimit) String() string {
 	return fmt.Sprintf("CPU: %d%%, Memory: %dMB", r.CPUPercent, r.MemoryMB)
 }
