@@ -1,0 +1,19 @@
+// parallel for 扇出：对列表元素并发执行同一组操作
+// 用法: opsctl run examples/parallel_fanout_example.ops
+
+let targets = ["web-01", "web-02", "db-01", "cache-01", "mq-01"]
+
+print("并发检查 " + str(len(targets)) + " 个目标 ...")
+
+parallel for s in targets {
+    // 每个元素的 body 在独立环境并发执行
+    let label = upper(trim(s))
+    print("  -> checking " + label)
+}
+
+report {
+    fanout: len(targets),
+    mode: "parallel-for"
+}
+
+log("扇出完成")
