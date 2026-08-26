@@ -195,7 +195,14 @@ print("根分区使用率: " + str(disk.used_percent) + "%")
 
 ### 2.6 sys.disk.partitions()
 
-获取磁盘分区列表。
+获取**承载数据的真实挂载点**列表，自动屏蔽机器差异。
+
+**过滤规则**（黑名单优先）：
+
+1. 排除内核伪文件系统：`proc`、`sysfs`、`devtmpfs`、`tmpfs`、`overlay`、`squashfs`（snap 循环挂载）、`efivarfs`、`cgroup*`、`autofs` 等
+2. 保留三类真实数据挂载：本地块设备（`/dev/sd*`、`/dev/nvme*`、`/dev/vd*`、LVM、mdraid 等）、网络存储（nfs/cifs/ceph/glusterfs）、ZFS 数据集
+
+每台服务器的挂载环境差异很大（容器 overlay、snap、/boot/efi……），本函数只返回运维需要关注的数据挂载；需要完整原始挂载表时使用 `sys.list_mounts()`。
 
 **参数**：无
 
@@ -207,6 +214,10 @@ print("根分区使用率: " + str(disk.used_percent) + "%")
 | `mountpoint` | `string` | 挂载点 |
 | `fstype` | `string` | 文件系统类型 |
 | `opts` | `string` | 挂载选项 |
+| `total_bytes` | `int` | 总容量（字节）；单个挂载点探测失败时为 0，不影响整体调用 |
+| `used_bytes` | `int` | 已用容量 |
+| `free_bytes` | `int` | 可用容量 |
+| `used_percent` | `float` | 使用率百分比 |
 
 **示例**：
 

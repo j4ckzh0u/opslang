@@ -88,12 +88,19 @@ type CPUCount struct {
 	Physical int `json:"physical"`
 }
 
-// DiskPartition represents a disk partition.
+// DiskPartition represents a real data-bearing mount with capacity info.
+// Pseudo filesystems (tmpfs, overlay, squashfs, proc, ...) are filtered
+// out by GetDiskPartitions; size fields stay zero when the mount could
+// not be stat'ed (e.g. a stale NFS export).
 type DiskPartition struct {
-	Device     string `json:"device"`
-	Mountpoint string `json:"mountpoint"`
-	Fstype     string `json:"fstype"`
-	Opts       string `json:"opts"`
+	Device      string  `json:"device"`
+	Mountpoint  string  `json:"mountpoint"`
+	Fstype      string  `json:"fstype"`
+	Opts        string  `json:"opts"`
+	TotalBytes  uint64  `json:"total_bytes,omitempty"`
+	UsedBytes   uint64  `json:"used_bytes,omitempty"`
+	FreeBytes   uint64  `json:"free_bytes,omitempty"`
+	UsedPercent float64 `json:"used_percent,omitempty"`
 }
 
 // HostInfoResult represents detailed host/OS information.
@@ -359,24 +366,8 @@ func GetCPUInfo() ([]CPUInfo, error) {
 	return result, nil
 }
 
-// GetDiskPartitions returns information about disk partitions.
-// Includes only real filesystems (not pseudo/unmounted).
-func GetDiskPartitions() ([]DiskPartition, error) {
-	parts, err := disk.Partitions(false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get disk partitions: %w", err)
-	}
-	result := make([]DiskPartition, 0, len(parts))
-	for _, p := range parts {
-		result = append(result, DiskPartition{
-			Device:     p.Device,
-			Mountpoint: p.Mountpoint,
-			Fstype:     p.Fstype,
-			Opts:       strings.Join(p.Opts, ","),
-		})
-	}
-	return result, nil
-}
+// GetDiskPartitions has moved to disk.go with semantic filtering; see
+// IsRealDataMount for the inclusion rules.
 
 // GetHostInfo returns detailed host/OS information.
 func GetHostInfo() (HostInfoResult, error) {
