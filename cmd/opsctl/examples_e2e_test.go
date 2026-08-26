@@ -8,6 +8,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -52,6 +53,18 @@ func TestExamplesAllRun(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			if name == "archive_and_download.ops" && os.Getenv("OPSLANG_RUN_NETWORK_EXAMPLES") != "1" {
 				t.Skip("requires external network; set OPSLANG_RUN_NETWORK_EXAMPLES=1 to enable")
+			}
+			// Examples that shell out to optional tools cannot run on
+			// hosts without them (e.g. minimal CI images). Probe and
+			// skip - same honest contract as the network gate above.
+			toolReqs := map[string]string{
+				"pip_management.ops":  "pip3",
+				"snap_management.ops": "snap",
+			}
+			if tool, needs := toolReqs[name]; needs {
+				if _, err := exec.LookPath(tool); err != nil {
+					t.Skipf("requires %s, not installed on this host", tool)
+				}
 			}
 			path := filepath.Join(examplesDir, name)
 			source, err := os.ReadFile(path)

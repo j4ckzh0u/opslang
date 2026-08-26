@@ -50,7 +50,7 @@ block {
 }
 rescue {
     print("\nDocker 不可用或权限不足")
-    print("错误信息: " + error)
+    print("错误信息: " + _error)
     print("\n提示：Docker 管理功能需要：")
     print("  1. 安装 Docker")
     print("  2. 当前用户在 docker 用户组中，或使用 root 权限")
