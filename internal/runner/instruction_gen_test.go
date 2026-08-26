@@ -423,3 +423,20 @@ func TestGenerate_DataBuiltinsRefused(t *testing.T) {
 		}
 	}
 }
+
+// TestGenerate_MetaBuiltinsRefused pins the same honest-refusal contract
+// for introspection builtins: doc/ops read the controller-side opsspec
+// table, which a remote linear runner VM does not carry.
+func TestGenerate_MetaBuiltinsRefused(t *testing.T) {
+	for _, fn := range []string{"doc", "ops"} {
+		src := fmt.Sprintf(`task "check" on "host1" {
+			let names = %s("sys.")
+			report { n: names }
+		}`, fn)
+		task := findTask(t, mustParse(t, src))
+		gen := &InstructionGenerator{}
+		if _, err := gen.Generate(task, false); err == nil {
+			t.Errorf("%s(): expected generation to refuse the meta builtin, got success", fn)
+		}
+	}
+}

@@ -267,6 +267,7 @@ func (interp *Interpreter) registerDefaults() {
 	}
 
 	registerDataBuiltins(interp)
+	registerMetaBuiltins(interp)
 }
 
 // RegisterBuiltin adds a single built-in function by name.
