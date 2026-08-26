@@ -3,7 +3,7 @@
 > **本文档由 `make docs` 从 internal/opsspec/spec.go 自动生成，请勿手改。**
 > 参数名即调用时的位置参数顺序；`可变` 表示该操作会改变系统状态，需要 admin 及以上权限。
 
-共 1148 个原子操作，209 个包。
+共 1149 个原子操作，209 个包。
 
 ## 目录
 
@@ -63,7 +63,7 @@
 - [memcached](#memcached)（6 个）
 - [selinux](#selinux)（2 个）
 - [ssh](#ssh)（3 个）
-- [sys](#sys)（31 个）
+- [sys](#sys)（32 个）
 - [svn](#svn)（7 个）
 - [sysctl](#sysctl)（3 个）
 - [time](#time)（6 个）
@@ -899,6 +899,7 @@
 | `sys.timezone_set` | `timezone` | ✓ | 全部引擎 |
 | `sys.unmount` | `mountpoint` | ✓ | 全部引擎 |
 | `sys.uptime` | - |  | 全部引擎 |
+| `sys.virt` | - |  | 全部引擎 |
 | `sys.users` | - |  | 全部引擎 |
 | `sys.uuid` | - |  | 全部引擎 |
 | `sys.random_password` | `length`, `use_special`, `use_numbers`, `use_uppercase` |  | 全部引擎 |

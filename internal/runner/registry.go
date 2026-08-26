@@ -326,6 +326,9 @@ func (r *Registry) registerSysOps() {
 	r.Register("sys.net.primary_ip", func(_ map[string]interface{}) (interface{}, error) {
 		return sys.GetPrimaryIP()
 	})
+	r.Register("sys.virt", func(_ map[string]interface{}) (interface{}, error) {
+		return sys.GetVirtInfo()
+	})
 	r.Register("sys.users", func(_ map[string]interface{}) (interface{}, error) {
 		return sys.Users()
 	})

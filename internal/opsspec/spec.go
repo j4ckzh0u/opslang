@@ -556,6 +556,7 @@ var Funcs = []Func{
 	{Name: "sys.timezone_set", Args: []string{"timezone"}, Mutating: true},
 	{Name: "sys.unmount", Args: []string{"mountpoint"}, Mutating: true},
 	{Name: "sys.uptime"},
+	{Name: "sys.virt"},
 	{Name: "sys.users"},
 
 	// ── svn ───────────────────────────────────────────────────────────────

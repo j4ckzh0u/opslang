@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/shirou/gopsutil/v4/disk"
+	"github.com/shirou/gopsutil/v4/host"
 )
 
 // pseudoFSTypes lists kernel pseudo-filesystems and volatile mounts that
@@ -80,4 +81,40 @@ func GetDiskPartitions() ([]DiskPartition, error) {
 		result = append(result, entry)
 	}
 	return result, nil
+}
+
+// VirtInfo answers "what kind of machine am I on": container, VM, or
+// bare metal. Placement decisions (agent install, backup strategy,
+// resource sizing) all start from this question.
+type VirtInfo struct {
+	// System is the hypervisor/container runtime identifier as reported
+	// by the OS (e.g. "docker", "kvm", "vmware", "xen"); empty means the
+	// probe found no virtualization layer (bare metal).
+	System string `json:"system"`
+	// Role distinguishes "guest" (virtualized) from "host".
+	Role string `json:"role"`
+	// IsContainer collapses the container-runtime list into the one bit
+	// scripts actually branch on.
+	IsContainer bool `json:"is_container"`
+}
+
+var containerSystems = map[string]bool{
+	"docker": true, "podman": true, "container": true, "lxc": true,
+	"lxc-libvirt": true, "systemd-nspawn": true, "rkt": true,
+}
+
+// GetVirtInfo classifies the execution environment. The raw probe can
+// legitimately fail on exotic platforms without making the machine
+// class unknown-in-a-useful-way, so failures surface as an explicit
+// error rather than a guessed default.
+func GetVirtInfo() (VirtInfo, error) {
+	system, role, err := host.Virtualization()
+	if err != nil {
+		return VirtInfo{}, fmt.Errorf("failed to detect virtualization: %w", err)
+	}
+	return VirtInfo{
+		System:      system,
+		Role:        role,
+		IsContainer: containerSystems[strings.ToLower(system)],
+	}, nil
 }

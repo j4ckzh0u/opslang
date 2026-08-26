@@ -27,6 +27,7 @@ var sdkMapping = map[string]sdkFunc{
 	"sys.net.interfaces":     {pkg: "sys", goName: "GetNetInterfaces"},
 	"sys.net.all_interfaces": {pkg: "sys", goName: "GetAllNetInterfaces"},
 	"sys.net.primary_ip":     {pkg: "sys", goName: "GetPrimaryIP"},
+	"sys.virt":               {pkg: "sys", goName: "GetVirtInfo"},
 	"sys.users":              {pkg: "sys", goName: "Users"},
 	"sys.uptime":             {pkg: "sys", goName: "Uptime"},
 

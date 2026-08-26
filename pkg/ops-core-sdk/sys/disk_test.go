@@ -86,3 +86,27 @@ func TestGetDiskPartitionsFiltered(t *testing.T) {
 		t.Skip("current machine exposes no / mount through the filter (container?)")
 	}
 }
+
+// TestGetVirtInfo runs the real probe and asserts the classification
+// invariants: role is one of the known values, and IsContainer agrees
+// with System for every container runtime.
+func TestGetVirtInfo(t *testing.T) {
+	info, err := GetVirtInfo()
+	if err != nil {
+		// Some platforms (BSD jails, exotic CI) cannot probe; an explicit
+		// error is the honest contract - just verify it is populated.
+		if info.System != "" {
+			t.Errorf("error return must not carry partial data: %+v", info)
+		}
+		t.Skipf("virtualization probe unsupported here: %v", err)
+	}
+	switch info.Role {
+	case "guest", "host", "":
+		// known values; empty only when no virtualization layer exists
+	default:
+		t.Errorf("unexpected role %q", info.Role)
+	}
+	if info.IsContainer != containerSystems[strings.ToLower(info.System)] {
+		t.Errorf("IsContainer inconsistent with system %q", info.System)
+	}
+}

@@ -368,6 +368,14 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return structToMap(r)
 	}
 
+	interp.builtins["sys.virt"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksys.GetVirtInfo()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
 	// ── file.* ─────────────────────────────────────────────────────────
 	interp.builtins["file.read"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 {

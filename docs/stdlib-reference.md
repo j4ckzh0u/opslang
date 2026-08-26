@@ -327,6 +327,35 @@ print("内核: " + info.kernel_version + " (" + info.kernel_arch + ")")
 
 ---
 
+### 2.10a sys.virt()
+
+识别当前执行环境类型：容器、虚拟机还是物理机。安装 agent、选择备份策略、资源评估等决策的第一问。
+
+**参数**：无
+
+**返回类型**：`VirtInfo`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `system` | `string` | 虚拟化层标识（`docker`/`kvm`/`vmware`/`xen`…）；空字符串表示未探测到（物理机） |
+| `role` | `string` | `guest`（被虚拟化）/ `host`；探测不到时为空 |
+| `is_container` | `bool` | 是否容器运行时（docker/podman/lxc/systemd-nspawn 等的归一判断，脚本直接分支用） |
+
+探测在部分平台上不支持（如 macOS），此时**显式报错**而不是猜测默认值。
+
+**示例**：
+
+```ops
+let v = sys.virt()
+if v.is_container {
+    log("跳过：容器环境不安装监控 agent")
+} else {
+    print("裸机/VM，system = " + str(v.system))
+}
+```
+
+---
+
 ### 2.11 sys.users()
 
 获取当前登录用户列表。
