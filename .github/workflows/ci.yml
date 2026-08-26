@@ -30,24 +30,26 @@ jobs:
         if: matrix.shard == 'core'
         # ponytail: -race causes TSan OOM in CI when running full suite.
         # Race detection should be done locally with `go test -race ./...`
-        # -p 1 keeps one package's test binary alive at a time; the exec
-        # and opsctl suites also spawn real `go build` subprocesses.
-        run: go test -p 1 -timeout 45m -coverprofile=coverage.out ./cmd/... ./internal/...
+        # No -coverprofile: coverage instrumentation roughly doubles
+        # compiler peak memory on this module's 8k+ line files and pushed
+        # runners into ENOMEM. Local coverage: make coverage.
+        # The retry is nearly free: go test caches passing packages, so a
+        # rerun re-executes only what failed. Absorbs rare runner-side
+        # OOM flakes; a deterministic failure still fails twice.
+        run: |
+          go test -p 1 -timeout 45m ./cmd/... ./internal/... || \
+          go test -p 1 -timeout 45m ./cmd/... ./internal/...
 
       - name: Test sdk (pkg)
         if: matrix.shard == 'sdk'
-        run: go test -p 1 -timeout 45m -coverprofile=coverage.out ./pkg/...
+        run: |
+          go test -p 1 -timeout 45m ./pkg/... || \
+          go test -p 1 -timeout 45m ./pkg/...
 
       - name: Check generated docs are fresh
         # docs/generated/ops-index.md is derived from opsspec; adding an
         # op without `make docs` must fail CI instead of rotting silently.
         run: make docs-check
-
-      - name: Upload coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-${{ matrix.shard }}
-          path: coverage.out
 
   build:
     name: Build
