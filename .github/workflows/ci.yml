@@ -8,8 +8,16 @@ on:
 
 jobs:
   test:
-    name: Test
+    name: Test (${{ matrix.shard }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Two shards on separate runners: the full suite on one machine
+        # sits right at the runner's memory ceiling and OOM-flakes
+        # ("runtime: cannot allocate memory" in internal/security).
+        # Halving the per-machine package set makes each peak safe.
+        shard: [core, sdk]
     steps:
       - uses: actions/checkout@v4
 
@@ -18,19 +26,27 @@ jobs:
         with:
           go-version: '1.26'
 
-      - name: Test
+      - name: Test core (cmd + internal)
+        if: matrix.shard == 'core'
         # ponytail: -race causes TSan OOM in CI when running full suite.
         # Race detection should be done locally with `go test -race ./...`
-        # -p 1 runs one package's test binary at a time: this module links
-        # the full 1100-op SDK registry into several binaries at once, and
-        # even -p 2 OOM-killed the runner ("runtime: cannot allocate
-        # memory"). Serial is slower but deterministic.
-        run: go test -p 1 -timeout 45m -coverprofile=coverage.out ./...
+        # -p 1 keeps one package's test binary alive at a time; the exec
+        # and opsctl suites also spawn real `go build` subprocesses.
+        run: go test -p 1 -timeout 45m -coverprofile=coverage.out ./cmd/... ./internal/...
+
+      - name: Test sdk (pkg)
+        if: matrix.shard == 'sdk'
+        run: go test -p 1 -timeout 45m -coverprofile=coverage.out ./pkg/...
+
+      - name: Check generated docs are fresh
+        # docs/generated/ops-index.md is derived from opsspec; adding an
+        # op without `make docs` must fail CI instead of rotting silently.
+        run: make docs-check
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
+          name: coverage-${{ matrix.shard }}
           path: coverage.out
 
   build:

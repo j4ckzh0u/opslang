@@ -82,6 +82,13 @@ scale-test: ## Run 10k-host distribute/collect simulation (full tier)
 vet: ## Run go vet
 	$(GOVET) ./...
 
+docs: ## Regenerate docs/generated/ops-index.md from opsspec
+	$(GO) run ./tools/docgen
+
+docs-check: ## Fail if generated docs are stale (used by CI)
+	$(GO) run ./tools/docgen /tmp/ops-index-check.md
+	diff -u docs/generated/ops-index.md /tmp/ops-index-check.md
+
 fmt: ## Check formatting
 	@test -z "$$($(GOFMT) -l .)" || { echo "Unformatted files:"; $(GOFMT) -l .; exit 1; }
 
