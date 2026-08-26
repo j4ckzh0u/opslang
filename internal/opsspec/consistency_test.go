@@ -3,10 +3,10 @@ package opsspec_test
 import (
 	"testing"
 
-	"github.com/opslang/opslang/internal/compiler"
-	"github.com/opslang/opslang/internal/interpreter"
-	"github.com/opslang/opslang/internal/opsspec"
-	"github.com/opslang/opslang/internal/runner"
+	"github.com/j4ckzh0u/opslang/internal/compiler"
+	"github.com/j4ckzh0u/opslang/internal/interpreter"
+	"github.com/j4ckzh0u/opslang/internal/opsspec"
+	"github.com/j4ckzh0u/opslang/internal/runner"
 )
 
 // The three execution engines (interpreter, runner registry, AOT codegen)

@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/opslang/opslang/internal/parser"
+	"github.com/j4ckzh0u/opslang/internal/parser"
 )
 
 // Compiler encapsulates the AOT compilation pipeline.

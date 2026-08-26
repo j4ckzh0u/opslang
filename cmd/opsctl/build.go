@@ -4,7 +4,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/opslang/opslang/internal/compiler"
+	"github.com/j4ckzh0u/opslang/internal/compiler"
 	"github.com/spf13/cobra"
 )
 

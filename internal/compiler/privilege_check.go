@@ -3,8 +3,8 @@ package compiler
 import (
 	"fmt"
 
-	"github.com/opslang/opslang/internal/ast"
-	"github.com/opslang/opslang/internal/security"
+	"github.com/j4ckzh0u/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/security"
 )
 
 // CheckPrivileges is the AOT compile-time half of privilege enforcement:

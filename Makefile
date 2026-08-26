@@ -1,7 +1,7 @@
 # OpsLang Makefile
 # Usage: make <target>
 
-MODULE   := github.com/opslang/opslang
+MODULE   := github.com/j4ckzh0u/opslang
 LDFLAGS  := -s -w
 
 GO       := go

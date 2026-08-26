@@ -3,7 +3,7 @@ package opsspec_test
 import (
 	"testing"
 
-	"github.com/opslang/opslang/internal/opsspec"
+	"github.com/j4ckzh0u/opslang/internal/opsspec"
 )
 
 // The mutating flag is the metadata every engine's privilege enforcement

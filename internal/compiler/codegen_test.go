@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opslang/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/ast"
 )
 
 func TestGenerateLetStatement(t *testing.T) {

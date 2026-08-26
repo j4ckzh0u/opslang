@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opslang/opslang/internal/ast"
-	"github.com/opslang/opslang/internal/opsspec"
+	"github.com/j4ckzh0u/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/opsspec"
 )
 
 // EnvAutoApprove is the environment variable that pre-approves gated runs

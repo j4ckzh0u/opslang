@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/opslang/opslang/pkg/ops-core-sdk/file"
+	"github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/file"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )

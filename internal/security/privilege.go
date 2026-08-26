@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/opslang/opslang/internal/ast"
-	"github.com/opslang/opslang/internal/opsspec"
+	"github.com/j4ckzh0u/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/opsspec"
 )
 
 // OperationType represents the type of operation being performed.

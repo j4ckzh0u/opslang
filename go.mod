@@ -1,4 +1,4 @@
-module github.com/opslang/opslang
+module github.com/j4ckzh0u/opslang
 
 go 1.26
 

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opslang/opslang/internal/parser"
+	"github.com/j4ckzh0u/opslang/internal/parser"
 )
 
 // Privilege auto-enforcement: a script declaring read_only must not be able

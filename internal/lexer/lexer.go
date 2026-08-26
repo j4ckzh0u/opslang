@@ -6,7 +6,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/opslang/opslang/internal/lexer/token"
+	"github.com/j4ckzh0u/opslang/internal/lexer/token"
 )
 
 // Lexer performs lexical analysis on OpsLang source code.

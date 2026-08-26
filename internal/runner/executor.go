@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/opslang/opslang/internal/ast"
-	"github.com/opslang/opslang/internal/security"
+	"github.com/j4ckzh0u/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/security"
 )
 
 // varPrefix marks an argument value as a variable reference. Only strings

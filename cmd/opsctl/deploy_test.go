@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opslang/opslang/internal/ast"
-	opsexec "github.com/opslang/opslang/internal/exec"
-	"github.com/opslang/opslang/internal/parser"
-	"github.com/opslang/opslang/internal/security"
+	"github.com/j4ckzh0u/opslang/internal/ast"
+	opsexec "github.com/j4ckzh0u/opslang/internal/exec"
+	"github.com/j4ckzh0u/opslang/internal/parser"
+	"github.com/j4ckzh0u/opslang/internal/security"
 )
 
 func parseProgram(t *testing.T, source string) *ast.Program {

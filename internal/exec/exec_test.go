@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opslang/opslang/internal/inventory"
-	"github.com/opslang/opslang/internal/runner"
-	"github.com/opslang/opslang/internal/sshx"
+	"github.com/j4ckzh0u/opslang/internal/inventory"
+	"github.com/j4ckzh0u/opslang/internal/runner"
+	"github.com/j4ckzh0u/opslang/internal/sshx"
 	"golang.org/x/crypto/ssh"
 )
 

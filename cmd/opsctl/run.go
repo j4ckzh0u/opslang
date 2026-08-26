@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/opslang/opslang/internal/interpreter"
-	"github.com/opslang/opslang/internal/parser"
+	"github.com/j4ckzh0u/opslang/internal/interpreter"
+	"github.com/j4ckzh0u/opslang/internal/parser"
 	"github.com/spf13/cobra"
 )
 

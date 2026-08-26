@@ -3,8 +3,8 @@ package compiler
 import (
 	"testing"
 
-	"github.com/opslang/opslang/internal/ast"
-	"github.com/opslang/opslang/internal/parser"
+	"github.com/j4ckzh0u/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/parser"
 )
 
 func parseOrDie(t *testing.T, source string) *ast.Program {

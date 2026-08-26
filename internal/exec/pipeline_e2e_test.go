@@ -26,9 +26,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opslang/opslang/internal/compiler"
-	"github.com/opslang/opslang/internal/runner"
-	"github.com/opslang/opslang/internal/sshx"
+	"github.com/j4ckzh0u/opslang/internal/compiler"
+	"github.com/j4ckzh0u/opslang/internal/runner"
+	"github.com/j4ckzh0u/opslang/internal/sshx"
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
 )
@@ -201,7 +201,7 @@ func (s *pipelineServer) handleSession(channel ssh.Channel, requests <-chan *ssh
 func buildHostRunner(t *testing.T) string {
 	t.Helper()
 	bin := filepath.Join(t.TempDir(), "ops-runner-host")
-	cmd := exec.Command("go", "build", "-o", bin, "github.com/opslang/opslang/cmd/ops-runner")
+	cmd := exec.Command("go", "build", "-o", bin, "github.com/j4ckzh0u/opslang/cmd/ops-runner")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("build host runner: %v\n%s", err, out)
 	}

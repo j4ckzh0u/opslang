@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/opslang/opslang/internal/ast"
-	"github.com/opslang/opslang/internal/lexer"
-	"github.com/opslang/opslang/internal/lexer/token"
+	"github.com/j4ckzh0u/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/lexer"
+	"github.com/j4ckzh0u/opslang/internal/lexer/token"
 )
 
 // ---------------------------------------------------------------------------

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opslang/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/ast"
 )
 
 // Runner-side privilege enforcement: the instruction generator refuses to

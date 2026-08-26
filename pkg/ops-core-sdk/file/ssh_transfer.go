@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/opslang/opslang/internal/sshx"
+	"github.com/j4ckzh0u/opslang/internal/sshx"
 )
 
 // formatEndpoint renders a remote endpoint as ssh://user@host:port/remote/path.

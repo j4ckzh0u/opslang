@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/opslang/opslang/internal/lexer/token"
+	"github.com/j4ckzh0u/opslang/internal/lexer/token"
 )
 
 // helper to tokenize and assert success.

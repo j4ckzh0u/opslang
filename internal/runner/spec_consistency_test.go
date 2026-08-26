@@ -3,7 +3,7 @@ package runner
 import (
 	"testing"
 
-	"github.com/opslang/opslang/internal/opsspec"
+	"github.com/j4ckzh0u/opslang/internal/opsspec"
 )
 
 // The runner is the remote half of every deploy. If the canonical opsspec

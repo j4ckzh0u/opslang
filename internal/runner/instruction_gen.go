@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/opslang/opslang/internal/ast"
-	"github.com/opslang/opslang/internal/opsspec"
-	"github.com/opslang/opslang/internal/security"
+	"github.com/j4ckzh0u/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/opsspec"
+	"github.com/j4ckzh0u/opslang/internal/security"
 )
 
 // InstructionGenerator converts AST statements into instruction packages
