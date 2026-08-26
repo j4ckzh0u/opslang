@@ -26,19 +26,22 @@ jobs:
         with:
           go-version: '1.26'
 
-      - name: Test core (cmd + internal)
+      - name: Test core (security first, then the rest)
         if: matrix.shard == 'core'
         # ponytail: -race causes TSan OOM in CI when running full suite.
         # Race detection should be done locally with `go test -race ./...`
+        #
+        # internal/security kept dying with ENOMEM at 0.01s whenever it
+        # was scheduled late in a long go test session - the package
+        # itself passes under a 20MiB GOMEMLIMIT locally, so the cause is
+        # runner-side memory state, not the tests. Run it FIRST while the
+        # machine is fresh, then everything else with security excluded.
         # No -coverprofile: coverage instrumentation roughly doubles
-        # compiler peak memory on this module's 8k+ line files and pushed
-        # runners into ENOMEM. Local coverage: make coverage.
-        # The retry is nearly free: go test caches passing packages, so a
-        # rerun re-executes only what failed. Absorbs rare runner-side
-        # OOM flakes; a deterministic failure still fails twice.
+        # compiler peak memory on this module's 8k+ line files.
         run: |
-          go test -p 1 -timeout 45m ./cmd/... ./internal/... || \
-          go test -p 1 -timeout 45m ./cmd/... ./internal/...
+          set -o pipefail
+          go test -timeout 10m ./internal/security/ && \
+          go list ./cmd/... ./internal/... | grep -v 'internal/security$' | xargs go test -p 1 -timeout 45m
 
       - name: Test sdk (pkg)
         if: matrix.shard == 'sdk'
