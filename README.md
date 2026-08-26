@@ -420,7 +420,7 @@ type MemoryInfo struct {
 | Phase 2 | 语言前端与解释器（Lexer/Parser/Interpreter） | ✅ 已完成 |
 | Phase 3 | AOT 编译管线 | ✅ 已完成 |
 | Phase 4 | 远程编排与声明式特性（deploy/task/ensure/parallel） | ✅ 已完成 |
-| Phase 5 | 安全与生产化（权限分级、审计日志、SSH TOFU 校验、资源限制） | ✅ 已完成 |
+| Phase 5 | 安全与生产化（权限分级、审计日志、SSH TOFU 校验、指令包 Ed25519 签名验签、资源限制） | ✅ 已完成 |
 
 ## Roadmap
 
@@ -428,8 +428,9 @@ type MemoryInfo struct {
 
 - `for ... in ...` 遍历循环语法（当前只支持 C 风格 for 循环）
 - `import "go <包路径>"` 引用第三方 Go 库（当前会报错拒绝）
-- 文件传输的压缩、断点续传、内容哈希去重分发
+- 文件传输的压缩、断点续传（内容哈希去重已实现：远端二进制与文件按 SHA-256 跳过重传）
 - 分层中继（relay）大规模文件分发/收集架构（原 internal/relay 已删除）
+- SSH 连接在多次 deploy 之间的跨进程复用（单次部署内并发正确；架构检测结果已通过 `~/.opsctl/arch-cache.json` 跨部署缓存）
 
 ## 项目结构
 

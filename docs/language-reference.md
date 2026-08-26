@@ -567,6 +567,59 @@ metric("request_count", 1024)
 - 第二个参数：指标值（数值类型）
 - 第三个参数（可选）：标签字典（dict）
 
+### 数据操作内置函数
+
+以下 12 个纯函数用于字符串、列表、字典的日常变换。它们是**语言级函数**而非原子操作：解释器与 AOT 编译产物行为完全一致；runner 模式部署会明确拒绝（线性指令 VM 无表达式求值器），需要它们的脚本请用 `--mode aot`。
+
+#### split / join
+
+```ops
+split("10.0.0.1", ".")     // ["10", "0", "0", "1"]
+join(["a", "b"], "-")      // "a-b"（元素自动 str 化）
+```
+
+#### replace / upper / lower / trim
+
+```ops
+replace("/etc/nginx/nginx.conf", "/", "_")  // "_etc_nginx_nginx.conf"
+upper("web-01")            // "WEB-01"
+lower("WEB-01")            // "web-01"
+trim("  prod \n")          // "prod"
+```
+
+#### contains / index_of
+
+`contains` 与 `index_of` 对字符串和列表多态；`contains` 还支持字典键检查。
+
+```ops
+contains("nginx.conf", "conf")   // true（子串）
+contains([1, 2, 3], 2)           // true（深相等逐项比较）
+contains({"env": "prod"}, "env") // true（键存在）
+index_of("hello world", "world") // 6；找不到返回 -1
+index_of(["a", "b"], "b")        // 1
+```
+
+#### sort / reverse
+
+两者都返回**新列表**，绝不修改入参。`sort` 要求全部数值或全部字符串；混合类型是显式错误，不会给出静默顺序。
+
+```ops
+sort([3, 1, 2])              // [1, 2, 3]（原列表不变）
+sort(["nginx", "apache"])    // ["apache", "nginx"]
+reverse([1, 2, 3])           // [3, 2, 1]
+sort([1, "a"])               // 运行时错误：混合列表不可排序
+```
+
+#### keys / values
+
+字典无序，两者都按**排序后的键**输出且相互对应，解释器与 AOT 结果一致。
+
+```ops
+let d = {"z": 26, "a": 1}
+keys(d)     // ["a", "z"]
+values(d)   // [1, 26]
+```
+
 ---
 
 ## 9. 结构化输出

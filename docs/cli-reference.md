@@ -12,9 +12,10 @@
 4. [opsctl deploy](#opsctl-deploy)
 5. [opsctl exec](#opsctl-exec)
 6. [opsctl repl](#opsctl-repl)
-7. [退出码](#退出码)
-8. [环境变量](#环境变量)
-9. [附录：配置文件格式](#附录配置文件格式)
+7. [opsctl keygen](#opsctl-keygen)
+8. [退出码](#退出码)
+9. [环境变量](#环境变量)
+10. [附录：配置文件格式](#附录配置文件格式)
 
 ---
 
@@ -213,6 +214,28 @@ opsctl deploy [flags] <script.ops>
 | `--output` | `-o` | string | stdout | 结果输出文件路径 |
 | `--insecure-host-key` | - | bool | `false` | 跳过 SSH 主机密钥校验（默认启用 TOFU 校验；仅限实验室环境） |
 | `--auto-approve` | - | bool | `false` | 预先批准被审批流拦截的部署（admin/root 脚本 + 生产目标）；非交互环境缺省拒绝 |
+| `--limit-cpu` | - | int | `0`（关闭） | 限制远端 runner 的 CPU 占用（百分比）。要求目标机有 systemd-run；没有的主机照常执行但结果中带 warning |
+| `--limit-mem` | - | int | `0`（关闭） | 限制远端 runner 内存（MB），约束同上 |
+| `--sign-key` | - | string | - | Ed25519 私钥路径（由 `opsctl keygen` 生成）；设置后每个指令包在控制器侧签名 |
+| `--verify-key` | - | string | - | 目标机上**受信任公钥的远程路径**；设置后 ops-runner 以 `--pubkey` 启动，拒绝未签名/被篡改的指令包 |
+
+### 指令包签名
+
+端到端流程：
+
+```bash
+# 1. 控制器生成密钥对
+opsctl keygen --out opslang-signing   # 写出 opslang-signing.key / opslang-signing.pub
+
+# 2. 把公钥分发到目标机的固定路径（scp/配置管理均可）
+scp opslang-signing.pub root@web1:/etc/opslang/runner.pub
+
+# 3. 签名部署 + 远端强制验签
+opsctl deploy app.ops --targets root@web1 \
+    --sign-key opslang-signing.key --verify-key /etc/opslang/runner.pub
+```
+
+签名覆盖整个指令包（操作序列、privilege 声明、dry-run 标志、task id）。被篡改或未签名的包在目标机上会以结构化 `failed` 结果拒绝执行，不会运行任何一条指令。
 
 ### 执行模式
 
@@ -339,6 +362,10 @@ opsctl exec [flags]
 | `--insecure-host-key` | - | bool | `false` | 跳过 SSH 主机密钥校验（默认启用 TOFU 校验；仅限实验室环境） |
 | `--output` | `-o` | string | stdout | 结果输出文件路径 |
 | `--auto-approve` | - | bool | `false` | 预先批准被审批流拦截的执行（privileged 指令包 + 生产目标）；非交互环境缺省拒绝 |
+| `--limit-cpu` | - | int | `0`（关闭） | 限制远端 runner 的 CPU 占用（百分比），约束同 deploy |
+| `--limit-mem` | - | int64 | `0`（关闭） | 限制远端 runner 内存（MB），约束同 deploy |
+| `--sign-key` | - | string | - | Ed25519 私钥路径；设置后对指令包签名 |
+| `--verify-key` | - | string | - | 目标机上受信任公钥的远程路径；设置后 runner 拒绝未签名/被篡改的包 |
 
 ### 输出
 
@@ -465,6 +492,33 @@ ops> if true {
 
 - REPL 使用解释执行模式，适合调试，不适合性能敏感场景。
 - 每次输入完整语句或表达式后即时执行并返回结果。
+
+---
+
+## opsctl keygen
+
+生成 Ed25519 指令包签名密钥对。私钥留在控制器用于 `--sign-key` 签名；公钥分发到目标机后由 ops-runner `--pubkey` 强制验签。
+
+### 用法
+
+```bash
+opsctl keygen [flags]
+```
+
+### 参数
+
+| 参数 | 短选项 | 类型 | 默认值 | 说明 |
+|------|--------|------|--------|------|
+| `--out` | `-o` | string | `opslang-signing` | 输出前缀；写出 `<prefix>.key`（0600）与 `<prefix>.pub`（0644） |
+| `--force` | - | bool | `false` | 覆盖已存在的密钥文件 |
+
+### 示例
+
+```bash
+$ opsctl keygen --out prod-signing
+Private key written to prod-signing.key (mode 0600)
+Public key written to  prod-signing.pub (mode 0644)
+```
 
 ---
 
