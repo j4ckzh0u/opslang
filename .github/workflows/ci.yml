@@ -21,10 +21,11 @@ jobs:
       - name: Test
         # ponytail: -race causes TSan OOM in CI when running full suite.
         # Race detection should be done locally with `go test -race ./...`
-        # -p 2 caps concurrent package test binaries: default parallelism
-        # OOM-killed the runner ("runtime: cannot allocate memory") while
-        # linking this module's large packages.
-        run: go test -p 2 -timeout 30m -coverprofile=coverage.out ./...
+        # -p 1 runs one package's test binary at a time: this module links
+        # the full 1100-op SDK registry into several binaries at once, and
+        # even -p 2 OOM-killed the runner ("runtime: cannot allocate
+        # memory"). Serial is slower but deterministic.
+        run: go test -p 1 -timeout 45m -coverprofile=coverage.out ./...
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
