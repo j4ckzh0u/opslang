@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/j4ckzh0u/opslang/internal/modules"
 	"github.com/j4ckzh0u/opslang/internal/parser"
 )
 
@@ -57,6 +58,12 @@ func (c *Compiler) Compile(sourcePath string, targetArch string, outputPath stri
 	prog, err := p.Parse()
 	if err != nil {
 		return fmt.Errorf("parse error: %w", err)
+	}
+
+	// Link file-module imports so generated code is self-contained.
+	prog, err = modules.Link(prog, sourcePath)
+	if err != nil {
+		return fmt.Errorf("module error: %w", err)
 	}
 
 	// Generate Go code
@@ -132,6 +139,11 @@ func GenerateCode(source string, filename string) (string, error) {
 	prog, err := p.Parse()
 	if err != nil {
 		return "", fmt.Errorf("parse error: %w", err)
+	}
+
+	prog, err = modules.Link(prog, filename)
+	if err != nil {
+		return "", fmt.Errorf("module error: %w", err)
 	}
 
 	gen := &CodeGenerator{}
