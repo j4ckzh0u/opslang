@@ -44,6 +44,15 @@ func TestList(t *testing.T) {
 
 func TestInstallIdempotent(t *testing.T) {
 	skipIfNoPipx(t)
+
+	// A pipx installation with broken venvs (missing interpreters) makes
+	// `pipx list` itself fail; Install() then cannot see what is already
+	// present and every install reports Changed=true. That is an
+	// environment problem, not an SDK bug - skip instead of flaking.
+	if _, err := List(); err != nil {
+		t.Skipf("pipx environment unhealthy (list failed): %v", err)
+	}
+
 	name := "cowsay"
 
 	// Cleanup first

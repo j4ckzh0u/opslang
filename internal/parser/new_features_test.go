@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"github.com/opslang/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/ast"
 )
 
 func TestForInStatement(t *testing.T) {
@@ -57,9 +57,9 @@ func TestForInDoesNotMatchCStyle(t *testing.T) {
 
 func TestBlockRescueStatement(t *testing.T) {
 	tests := []struct {
-		name     string
-		src      string
-		hasBody  bool
+		name      string
+		src       string
+		hasBody   bool
 		hasRescue bool
 		hasAlways bool
 	}{
