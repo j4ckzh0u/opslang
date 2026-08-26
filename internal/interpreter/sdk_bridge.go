@@ -352,6 +352,22 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		return structToMap(r)
 	}
 
+	interp.builtins["sys.net.all_interfaces"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksys.GetAllNetInterfaces()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	interp.builtins["sys.net.primary_ip"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdksys.GetPrimaryIP()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+
 	// ── file.* ─────────────────────────────────────────────────────────
 	interp.builtins["file.read"] = func(args ...interface{}) (interface{}, error) {
 		if len(args) < 1 {

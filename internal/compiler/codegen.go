@@ -15,18 +15,20 @@ import (
 // resolved through sdkAliases.
 var sdkMapping = map[string]sdkFunc{
 	// sys
-	"sys.cpu.usage":       {pkg: "sys", goName: "GetCPUUsage"},
-	"sys.cpu.count":       {pkg: "sys", goName: "GetCPUCount"},
-	"sys.cpu.info":        {pkg: "sys", goName: "GetCPUInfo"},
-	"sys.memory.info":     {pkg: "sys", goName: "GetMemoryInfo"},
-	"sys.disk.usage":      {pkg: "sys", goName: "GetDiskUsage", args: true, params: []string{"s"}},
-	"sys.disk.partitions": {pkg: "sys", goName: "GetDiskPartitions"},
-	"sys.os":              {pkg: "sys", goName: "GetHostInfo"},
-	"sys.hostname":        {pkg: "sys", goName: "Hostname"},
-	"sys.load":            {pkg: "sys", goName: "GetLoadAvg"},
-	"sys.net.interfaces":  {pkg: "sys", goName: "GetNetInterfaces"},
-	"sys.users":           {pkg: "sys", goName: "Users"},
-	"sys.uptime":          {pkg: "sys", goName: "Uptime"},
+	"sys.cpu.usage":          {pkg: "sys", goName: "GetCPUUsage"},
+	"sys.cpu.count":          {pkg: "sys", goName: "GetCPUCount"},
+	"sys.cpu.info":           {pkg: "sys", goName: "GetCPUInfo"},
+	"sys.memory.info":        {pkg: "sys", goName: "GetMemoryInfo"},
+	"sys.disk.usage":         {pkg: "sys", goName: "GetDiskUsage", args: true, params: []string{"s"}},
+	"sys.disk.partitions":    {pkg: "sys", goName: "GetDiskPartitions"},
+	"sys.os":                 {pkg: "sys", goName: "GetHostInfo"},
+	"sys.hostname":           {pkg: "sys", goName: "Hostname"},
+	"sys.load":               {pkg: "sys", goName: "GetLoadAvg"},
+	"sys.net.interfaces":     {pkg: "sys", goName: "GetNetInterfaces"},
+	"sys.net.all_interfaces": {pkg: "sys", goName: "GetAllNetInterfaces"},
+	"sys.net.primary_ip":     {pkg: "sys", goName: "GetPrimaryIP"},
+	"sys.users":              {pkg: "sys", goName: "Users"},
+	"sys.uptime":             {pkg: "sys", goName: "Uptime"},
 
 	// file
 	"file.read":     {pkg: "file", goName: "Read", args: true, params: []string{"s"}},

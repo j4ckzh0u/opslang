@@ -355,7 +355,16 @@ for let i = 0; i < len(users); i = i + 1 {
 
 ### 2.12 sys.net.interfaces()
 
-获取网络接口列表（与 `net.interfaces()` 等价，返回相同结构）。
+获取**业务网卡**列表（与 `net.interfaces()` 等价，返回相同结构）。
+
+**过滤规则**：只返回满足全部条件的接口——状态为 up、至少有一个地址、且不是虚拟设备。自动排除的虚拟设备包括：
+
+- 回环（`lo`/`lo0`）
+- 容器/虚拟化：`docker0`、`veth*`、Docker 网桥 `br-<十六进制id>`、`cni*`、`cali*`、`flannel*`、`virbr*`、`ovs*`
+- 隧道：`tun*`、`utun*`、`tap*`、`wg*`、`awdl*`、`llw*`
+- 其他内核虚拟设备：`vxlan*`、`bridge*`、`ifb*`
+
+注意区分：路由器的真实 LAN 网桥（`br0`、`br-lan`）**不会**被过滤。需要完整原始接口表时使用 `sys.net.all_interfaces()`。
 
 **参数**：无
 
@@ -376,6 +385,43 @@ let ifaces = sys.net.interfaces()
 for let i = 0; i < len(ifaces); i = i + 1 {
     print(ifaces[i].name + ": " + ifaces[i].hardware_addr)
 }
+```
+
+---
+
+### 2.13 sys.net.all_interfaces()
+
+返回**全量**网络接口（含回环与虚拟设备），是 `sys.net.interfaces()` 语义化过滤的逃生门，字段结构完全相同。
+
+**参数**：无　　**返回类型**：`[]NetInterface`
+
+---
+
+### 2.14 sys.net.primary_ip()
+
+返回本机对外宣告的 IP：第一个持有**全局可路由 IPv4** 的业务网卡。这是"应用该绑定哪个地址""防火墙该放行哪个 IP"的标准答案。
+
+选择规则：
+
+1. 遍历业务网卡（同 `sys.net.interfaces()` 过滤规则）
+2. 取第一个非回环、非链路本地（169.254.\*）的 IPv4
+3. 找不到全局地址时回退到第一个非回环 IPv4（容器内返回内网地址而不是报错）
+4. 完全没有可用 IPv4 时报错
+
+**参数**：无
+
+**返回类型**：`PrimaryIPResult`
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `interface` | `string` | 网卡名 |
+| `address` | `string` | 选中的 IPv4 地址 |
+
+**示例**：
+
+```ops
+let ip = sys.net.primary_ip()
+print("对外IP: " + ip.address + " (网卡 " + ip.interface + ")")
 ```
 
 ---
@@ -1109,7 +1155,7 @@ for let i = 0; i < len(ifaces); i = i + 1 {
 
 ### 5.1 process.list()
 
-获取所有进程列表。
+获取所有用户态进程列表。自动过滤内核线程（Linux 上的 `[kthreadd]`、`[kworker/*]` 等方括号命名进程）——它们每台机器数量不同且不承载运维信号。
 
 **参数**：无
 

@@ -39,6 +39,15 @@ type ProcessInfo struct {
 	Username      string  `json:"username"`
 }
 
+// IsKernelThread reports whether a process name belongs to a kernel
+// thread. Linux exposes them with bracketed comm names ("[kthreadd]",
+// "[kworker/u8:2]"); they exist on every machine in different counts and
+// carry no operator signal, so List() filters them out. Pure function so
+// the rule stays unit-testable without a real machine.
+func IsKernelThread(name string) bool {
+	return strings.HasPrefix(name, "[") && strings.HasSuffix(name, "]")
+}
+
 // ExecResult holds the result of executing an external command.
 type ExecResult struct {
 	Command  string   `json:"command"`
@@ -127,6 +136,9 @@ func List() ([]ProcessInfo, error) {
 	result := make([]ProcessInfo, 0, len(procs))
 	for i := range procs {
 		if collectable[i] {
+			if IsKernelThread(infos[i].Name) {
+				continue
+			}
 			result = append(result, infos[i])
 		}
 	}

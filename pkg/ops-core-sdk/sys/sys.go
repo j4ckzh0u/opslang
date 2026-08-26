@@ -125,6 +125,159 @@ type NetInterface struct {
 	Addresses    []string `json:"addresses"`
 }
 
+// PrimaryIPResult answers "which IP does this machine advertise": the
+// first business interface holding a globally routable IPv4 address.
+type PrimaryIPResult struct {
+	Interface string `json:"interface"`
+	Address   string `json:"address"`
+}
+
+// virtualIFPrefixes lists interface-name prefixes created by hypervisors,
+// container runtimes and tunnel drivers (Linux and macOS). Docker-style
+// bridges are matched on the "br-" prefix only, so a router's real LAN
+// bridge "br0"/"br-lan" stays visible.
+var virtualIFPrefixes = []string{
+	"docker", "veth", "virbr", "cni", "cali", "flannel",
+	"vxlan", "tun", "utun", "tap", "wg", "ovs", "ifb", "zt",
+	"awdl", "llw", "bridge",
+}
+
+func isVirtualIFName(name string) bool {
+	lower := strings.ToLower(name)
+	if strings.HasPrefix(lower, "lo") {
+		return true
+	}
+	// Docker names its bridges "br-" + long hex id; a router's real LAN
+	// bridge ("br-lan", "br0") must survive this filter.
+	if rest, ok := strings.CutPrefix(lower, "br-"); ok {
+		return len(rest) >= 8 && isAllHex(rest)
+	}
+	for _, prefix := range virtualIFPrefixes {
+		if strings.HasPrefix(lower, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func isAllHex(s string) bool {
+	for _, r := range s {
+		if !((r >= '0' && r <= '9') || (r >= 'a' && r <= 'f')) {
+			return false
+		}
+	}
+	return s != ""
+}
+
+// IsBusinessInterface reports whether an interface carries operator-facing
+// connectivity: up, with at least one address, and not a loopback or
+// virtual device (containers, tunnels, bridges). Pure function so the
+// rules stay unit-testable without a real machine.
+func IsBusinessInterface(name string, up bool, addressCount int) bool {
+	return up && !isVirtualIFName(name) && addressCount > 0
+}
+
+// filterBusinessInterfaces keeps only business interfaces from an
+// already-populated list.
+func filterBusinessInterfaces(ifaces []NetInterface) []NetInterface {
+	result := make([]NetInterface, 0, len(ifaces))
+	for _, iface := range ifaces {
+		if IsBusinessInterface(iface.Name, iface.Up, len(iface.Addresses)) {
+			result = append(result, iface)
+		}
+	}
+	return result
+}
+
+// listNetInterfaces returns every interface including loopback and
+// virtual devices.
+func listNetInterfaces() ([]NetInterface, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list net interfaces: %w", err)
+	}
+	result := make([]NetInterface, 0, len(ifaces))
+	for _, iface := range ifaces {
+		info := NetInterface{
+			Name: iface.Name,
+			MTU:  iface.MTU,
+			Up:   iface.Flags&net.FlagUp != 0,
+		}
+		if iface.HardwareAddr != nil {
+			info.HardwareAddr = iface.HardwareAddr.String()
+		}
+		addrs, err := iface.Addrs()
+		if err == nil {
+			info.Addresses = make([]string, 0, len(addrs))
+			for _, addr := range addrs {
+				info.Addresses = append(info.Addresses, addr.String())
+			}
+		} else {
+			info.Addresses = []string{}
+		}
+		result = append(result, info)
+	}
+	return result, nil
+}
+
+// GetNetInterfaces returns only business-facing network interfaces:
+// up, holding at least one address, excluding loopback and virtual
+// devices (docker/veth/cni/calio bridges, tunnels). Servers differ
+// wildly in how much virtual plumbing they expose; scripts asking for
+// "the machine's NICs" should not need to know. Use
+// GetAllNetInterfaces() for the raw table.
+func GetNetInterfaces() ([]NetInterface, error) {
+	all, err := listNetInterfaces()
+	if err != nil {
+		return nil, err
+	}
+	return filterBusinessInterfaces(all), nil
+}
+
+// GetAllNetInterfaces returns every interface including loopback and
+// virtual plumbing - the escape hatch matching sys.list_mounts().
+func GetAllNetInterfaces() ([]NetInterface, error) {
+	return listNetInterfaces()
+}
+
+// GetPrimaryIP returns the interface and IPv4 address this machine
+// advertises: the first business interface with a globally routable
+// IPv4 (loopback and link-local 169.254.* excluded). Falls back to the
+// first non-loopback IPv4 of any business interface when no global one
+// exists, so containers still get their internal address instead of an
+// error.
+func GetPrimaryIP() (PrimaryIPResult, error) {
+	business, err := GetNetInterfaces()
+	if err != nil {
+		return PrimaryIPResult{}, err
+	}
+	fallback := PrimaryIPResult{}
+	for _, iface := range business {
+		for _, addr := range iface.Addresses {
+			ipStr := addr
+			if idx := strings.Index(addr, "/"); idx >= 0 {
+				ipStr = addr[:idx]
+			}
+			ip := net.ParseIP(ipStr)
+			if ip == nil || ip.To4() == nil {
+				continue
+			}
+			candidate := PrimaryIPResult{Interface: iface.Name, Address: ipStr}
+			if ip.IsLoopback() || ip.IsLinkLocalUnicast() {
+				if fallback.Address == "" {
+					fallback = candidate
+				}
+				continue
+			}
+			return candidate, nil
+		}
+	}
+	if fallback.Address != "" {
+		return fallback, nil
+	}
+	return PrimaryIPResult{}, fmt.Errorf("no IPv4-capable business interface found")
+}
+
 // sampleInterval is the delay between the two CPU samples taken by
 // GetCPUUsage. 500ms gives a meaningful "current utilization" window
 // (about 50 scheduler ticks on a typical 100Hz kernel) without making
@@ -303,36 +456,8 @@ func Uptime() (UptimeInfo, error) {
 	}, nil
 }
 
-// GetNetInterfaces returns information about network interfaces.
-// Uses standard library net.Interfaces() directly to avoid circular dependency.
-func GetNetInterfaces() ([]NetInterface, error) {
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list net interfaces: %w", err)
-	}
-	result := make([]NetInterface, 0, len(ifaces))
-	for _, iface := range ifaces {
-		info := NetInterface{
-			Name: iface.Name,
-			MTU:  iface.MTU,
-			Up:   iface.Flags&net.FlagUp != 0,
-		}
-		if iface.HardwareAddr != nil {
-			info.HardwareAddr = iface.HardwareAddr.String()
-		}
-		addrs, err := iface.Addrs()
-		if err == nil {
-			info.Addresses = make([]string, 0, len(addrs))
-			for _, addr := range addrs {
-				info.Addresses = append(info.Addresses, addr.String())
-			}
-		} else {
-			info.Addresses = []string{}
-		}
-		result = append(result, info)
-	}
-	return result, nil
-}
+// GetNetInterfaces has moved to the semantic-filter variants above;
+// see GetNetInterfaces (filtered) and GetAllNetInterfaces (raw).
 
 // GetCPUCount returns logical and physical CPU counts.
 func GetCPUCount() (CPUCount, error) {

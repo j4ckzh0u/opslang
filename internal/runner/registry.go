@@ -320,6 +320,12 @@ func (r *Registry) registerSysOps() {
 	r.Register("sys.net.interfaces", func(_ map[string]interface{}) (interface{}, error) {
 		return sys.GetNetInterfaces()
 	})
+	r.Register("sys.net.all_interfaces", func(_ map[string]interface{}) (interface{}, error) {
+		return sys.GetAllNetInterfaces()
+	})
+	r.Register("sys.net.primary_ip", func(_ map[string]interface{}) (interface{}, error) {
+		return sys.GetPrimaryIP()
+	})
 	r.Register("sys.users", func(_ map[string]interface{}) (interface{}, error) {
 		return sys.Users()
 	})

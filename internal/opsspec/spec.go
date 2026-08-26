@@ -548,6 +548,8 @@ var Funcs = []Func{
 	{Name: "sys.memory.info"},
 	{Name: "sys.mount", Args: []string{"device", "mountpoint", "fs_type", "opts"}, Mutating: true},
 	{Name: "sys.net.interfaces"},
+	{Name: "sys.net.all_interfaces"},
+	{Name: "sys.net.primary_ip"},
 	{Name: "sys.os"},
 	{Name: "sys.reboot", Mutating: true},
 	{Name: "sys.timezone_get"},
