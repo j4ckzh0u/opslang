@@ -11,13 +11,19 @@ jobs:
   # on a bare-metal 32GB host), but GitHub-hosted runners intermittently
   # hand out memory-starved VMs where any test binary can die with ENOMEM
   # at startup. A retry INSIDE the job cannot help - the machine stays
-  # starved. These attempt-2 jobs rerun a failed shard on a FRESH runner.
+  # starved. Attempt-2 jobs rerun a failed shard on a FRESH runner.
+  #
+  # Verdict plumbing: needs.*.outcome is UNRELIABLE through
+  # continue-on-error (observed masked), so each shard reports an explicit
+  # `passed` output computed from its test step's outcome. attempt-2 jobs
+  # carry no masking: if they fail too, the run goes red for real.
   test-core:
     name: Test core (attempt 1)
     runs-on: ubuntu-latest
-    # A starved runner loses attempt 1; that must not redden the run.
-    # The retry job carries the real verdict via the outcome fields.
+    # A starved runner losing attempt 1 must not redden the run.
     continue-on-error: true
+    outputs:
+      passed: ${{ steps.verdict.outputs.passed }}
     steps:
       - uses: actions/checkout@v4
 
@@ -26,31 +32,33 @@ jobs:
         with:
           go-version: '1.26'
 
-      - name: Test core (security first, then the rest)
-        # ponytail: -race causes TSan OOM in CI when running full suite.
-        # Race detection should be done locally with `go test -race ./...`
-        #
-        # No -coverprofile: coverage instrumentation roughly doubles
-        # compiler peak memory on this module's 8k+ line files.
-        # GOTRACEBACK=all: the rare internal/security failure dumps only
-        # two goroutines by default, which is not enough to diagnose it.
+      - name: Test core (security first, then docs freshness)
+        id: tests
+        # Capture the loss without aborting before the verdict step.
+        continue-on-error: true
+        # ponytail: -race causes TSan OOM in CI when running full suite;
+        # do it locally. No -coverprofile: coverage instrumentation
+        # roughly doubles compiler peak memory on this module's 8k+ line
+        # files. GOTRACEBACK=all keeps full goroutine dumps for the rare
+        # internal/security failure.
         env:
           GOTRACEBACK: all
         run: |
           set -o pipefail
           go test -timeout 10m ./internal/security/ && \
-          go list ./cmd/... ./internal/... | grep -v 'internal/security$' | xargs go test -p 1 -timeout 45m
+          go list ./cmd/... ./internal/... | grep -v 'internal/security$' | xargs go test -p 1 -timeout 45m && \
+          make docs-check
 
-      - name: Check generated docs are fresh
-        # docs/generated/ops-index.md is derived from opsspec; adding an
-        # op without `make docs` must fail CI instead of rotting silently.
-        run: make docs-check
+      - name: Record verdict
+        id: verdict
+        if: always()
+        run: echo "passed=${{ steps.tests.outcome == 'success' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
 
   test-core-retry:
     name: Test core (attempt 2, fresh runner)
     runs-on: ubuntu-latest
     needs: [test-core]
-    if: needs.test-core.outcome == 'failure'
+    if: needs.test-core.outputs.passed != 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -59,19 +67,21 @@ jobs:
         with:
           go-version: '1.26'
 
-      - name: Test core (security first, then the rest)
+      - name: Test core (security first, then docs freshness)
+        env:
+          GOTRACEBACK: all
         run: |
           set -o pipefail
           go test -timeout 10m ./internal/security/ && \
-          go list ./cmd/... ./internal/... | grep -v 'internal/security$' | xargs go test -p 1 -timeout 45m
-
-      - name: Check generated docs are fresh
-        run: make docs-check
+          go list ./cmd/... ./internal/... | grep -v 'internal/security$' | xargs go test -p 1 -timeout 45m && \
+          make docs-check
 
   test-sdk:
     name: Test sdk (attempt 1)
     runs-on: ubuntu-latest
     continue-on-error: true
+    outputs:
+      passed: ${{ steps.verdict.outputs.passed }}
     steps:
       - uses: actions/checkout@v4
 
@@ -81,13 +91,20 @@ jobs:
           go-version: '1.26'
 
       - name: Test sdk (pkg)
+        id: tests
+        continue-on-error: true
         run: go test -p 1 -timeout 45m ./pkg/...
+
+      - name: Record verdict
+        id: verdict
+        if: always()
+        run: echo "passed=${{ steps.tests.outcome == 'success' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
 
   test-sdk-retry:
     name: Test sdk (attempt 2, fresh runner)
     runs-on: ubuntu-latest
     needs: [test-sdk]
-    if: needs.test-sdk.outcome == 'failure'
+    if: needs.test-sdk.outputs.passed != 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -103,13 +120,13 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     needs: [test-core, test-core-retry, test-sdk, test-sdk-retry]
-    # Pass if each shard passed on EITHER attempt; the retry jobs are
-    # skipped when their attempt-1 job succeeded.
+    # Pass only when each chain truly succeeded: either attempt 1 passed,
+    # or attempt 2 ran and passed. A double failure blocks here AND leaves
+    # the red attempt-2 job visible on the run.
     if: >
       always() &&
-      (needs.test-core.outcome == 'success' || needs.test-core-retry.outcome == 'success') &&
-      (needs.test-sdk.outcome == 'success' || needs.test-sdk-retry.outcome == 'success')
-    strategy:
+      (needs.test-core.outputs.passed == 'true' || needs.test-core-retry.conclusion == 'success') &&
+      (needs.test-sdk.outputs.passed == 'true' || needs.test-sdk-retry.conclusion == 'success')
       matrix:
         include:
           - goos: linux
