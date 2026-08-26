@@ -1,5 +1,9 @@
 coverage.out
-ops-runner
+# Binary names are anchored to the repo root: a bare "opsctl"/"ops-runner"
+# pattern matches the cmd/opsctl and cmd/ops-runner DIRECTORIES too, which
+# silently swallowed every new source file added there (lineeditor.go was
+# lost this way, breaking CI builds).
+/ops-runner
 /output
 .opslang-build/
 *.swp
@@ -15,4 +19,4 @@ tests/
 bin/
 dist/
 coverage.out
-opsctl
+/opsctl

@@ -103,14 +103,24 @@ func List() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	return parseListOutput(out), nil
+}
 
+// parseListOutput extracts package names from `pipx list --short` output.
+// Older pipx prints one name per line; pipx >= 1.x appends the version
+// ("cowsay 6.0"). Matching whole lines against a name never terminates on
+// the newer format, so keep the first whitespace-separated field only.
+func parseListOutput(out string) []string {
 	var packages []string
 	for _, line := range strings.Split(out, "\n") {
 		line = strings.TrimSpace(line)
-		if line != "" {
-			// pipx list --short returns package names, one per line
-			packages = append(packages, line)
+		if line == "" {
+			continue
 		}
+		if idx := strings.IndexAny(line, " \t"); idx >= 0 {
+			line = line[:idx]
+		}
+		packages = append(packages, line)
 	}
-	return packages, nil
+	return packages
 }

@@ -10,7 +10,11 @@ import (
 )
 
 func TestJobListContextParsesJSONAndPassesNamespace(t *testing.T) {
-	cleanup := installFakeNomad(t, "#!/bin/sh\nprintf '%s\\n' \"$*\" > \"$NOMAD_ARGS_FILE\"\nprintf '[{\\\"id\\\":\\\"job-1\\\",\\\"name\\\":\\\"api\\\",\\\"status\\\":\\\"running\\\"}]'\n")
+	// The JSON is emitted via a quoted heredoc, not printf escapes:
+	// BSD and GNU printf disagree on handling \" inside the format
+	// string, which made this fixture emit literal backslashes on Linux
+	// CI while passing on macOS.
+	cleanup := installFakeNomad(t, "#!/bin/sh\nprintf '%s\\n' \"$*\" > \"$NOMAD_ARGS_FILE\"\ncat <<'JSON'\n[{\"id\":\"job-1\",\"name\":\"api\",\"status\":\"running\"}]\nJSON\n")
 	defer cleanup()
 
 	jobs, err := JobListContext(context.Background(), "prod")
