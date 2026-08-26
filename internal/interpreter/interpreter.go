@@ -938,13 +938,27 @@ func (interp *Interpreter) evalList(e *ast.ListLiteral, env *Environment) (inter
 func (interp *Interpreter) evalDict(e *ast.DictLiteral, env *Environment) (interface{}, error) {
 	dict := make(map[string]interface{})
 	for i, key := range e.Keys {
-		k, err := interp.evalExpression(key, env)
-		if err != nil {
-			return nil, err
-		}
-		keyStr, ok := k.(string)
-		if !ok {
-			keyStr = formatValue(k)
+		// Dict literal keys are lexically fixed (identifier names or string
+		// literals), not arbitrary expressions. Routing identifiers through
+		// the general expression evaluator would try to resolve them as
+		// variable lookups and reject literal "a" / "b" style keys like
+		// { a: 1, b: 2 } with "undefined variable: a".
+		var keyStr string
+		switch k := key.(type) {
+		case *ast.Identifier:
+			keyStr = k.Name
+		case *ast.StringLiteral:
+			keyStr = k.Value
+		default:
+			ks, err := interp.evalExpression(key, env)
+			if err != nil {
+				return nil, err
+			}
+			if s, ok := ks.(string); ok {
+				keyStr = s
+			} else {
+				keyStr = formatValue(ks)
+			}
 		}
 		val, err := interp.evalExpression(e.Values[i], env)
 		if err != nil {
