@@ -1,11 +1,12 @@
 package runner
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/opslang/opslang/internal/ast"
-	"github.com/opslang/opslang/internal/parser"
+	"github.com/j4ckzh0u/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/parser"
 )
 
 // ============================================================
@@ -401,5 +402,24 @@ func TestGenerateAndRun_VariableFlow(t *testing.T) {
 	// json.encode returns a map with the encoded string under a field.
 	if encoded == nil {
 		t.Fatal("encoded is nil: variable reference not resolved")
+	}
+}
+
+// TestGenerate_DataBuiltinsRefused pins the honest-refusal contract: the
+// linear runner VM has no expression evaluator, so language-level data
+// builtins (split/join/sort/...) must fail generation with a clear error,
+// never a silent mistranslation. Scripts using them deploy in AOT mode.
+func TestGenerate_DataBuiltinsRefused(t *testing.T) {
+	for _, fn := range []string{"split", "join", "replace", "upper", "lower",
+		"trim", "contains", "index_of", "sort", "reverse", "keys", "values"} {
+		src := fmt.Sprintf(`task "check" on "host1" {
+			let parts = %s("a,b", ",")
+			report { p: parts }
+		}`, fn)
+		task := findTask(t, mustParse(t, src))
+		gen := &InstructionGenerator{}
+		if _, err := gen.Generate(task, false); err == nil {
+			t.Errorf("%s(): expected generation to refuse the builtin, got success", fn)
+		}
 	}
 }

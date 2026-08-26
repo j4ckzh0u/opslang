@@ -7,7 +7,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/opslang/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/ast"
 )
 
 // sdkMapping maps OpsLang dotted function names to Go SDK calls. Names
@@ -1856,189 +1856,189 @@ var pkgImportAlias = map[string]string{
 
 // pkgImportPath maps our short package key to the full import path.
 var pkgImportPath = map[string]string{
-	"sys":                 "github.com/opslang/opslang/pkg/ops-core-sdk/sys",
-	"file":                "github.com/opslang/opslang/pkg/ops-core-sdk/file",
-	"net":                 "github.com/opslang/opslang/pkg/ops-core-sdk/net",
-	"process":             "github.com/opslang/opslang/pkg/ops-core-sdk/process",
-	"service":             "github.com/opslang/opslang/pkg/ops-core-sdk/service",
-	"pkg":                 "github.com/opslang/opslang/pkg/ops-core-sdk/pkg",
-	"time":                "github.com/opslang/opslang/pkg/ops-core-sdk/time",
-	"json":                "github.com/opslang/opslang/pkg/ops-core-sdk/json",
-	"yaml":                "github.com/opslang/opslang/pkg/ops-core-sdk/yaml",
-	"git":                 "github.com/opslang/opslang/pkg/ops-core-sdk/git",
-	"user":                "github.com/opslang/opslang/pkg/ops-core-sdk/user",
-	"group":               "github.com/opslang/opslang/pkg/ops-core-sdk/group",
-	"cron":                "github.com/opslang/opslang/pkg/ops-core-sdk/cron",
-	"sysctl":              "github.com/opslang/opslang/pkg/ops-core-sdk/sysctl",
-	"archive":             "github.com/opslang/opslang/pkg/ops-core-sdk/archive",
-	"disk":                "github.com/opslang/opslang/pkg/ops-core-sdk/disk",
-	"kernel":              "github.com/opslang/opslang/pkg/ops-core-sdk/kernel",
-	"ssh":                 "github.com/opslang/opslang/pkg/ops-core-sdk/ssh",
-	"iptables":            "github.com/opslang/opslang/pkg/ops-core-sdk/iptables",
-	"npm":                 "github.com/opslang/opslang/pkg/ops-core-sdk/npm",
-	"mysql":               "github.com/opslang/opslang/pkg/ops-core-sdk/mysql",
-	"nginx":               "github.com/opslang/opslang/pkg/ops-core-sdk/nginx",
-	"modprobe":            "github.com/opslang/opslang/pkg/ops-core-sdk/modprobe",
-	"alternatives":        "github.com/opslang/opslang/pkg/ops-core-sdk/alternatives",
-	"blockdev":            "github.com/opslang/opslang/pkg/ops-core-sdk/blockdev",
-	"at":                  "github.com/opslang/opslang/pkg/ops-core-sdk/at",
-	"postgresql":          "github.com/opslang/opslang/pkg/ops-core-sdk/postgresql",
-	"apache2":             "github.com/opslang/opslang/pkg/ops-core-sdk/apache2",
-	"filesystem":          "github.com/opslang/opslang/pkg/ops-core-sdk/filesystem",
-	"parted":              "github.com/opslang/opslang/pkg/ops-core-sdk/parted",
-	"acl":                 "github.com/opslang/opslang/pkg/ops-core-sdk/acl",
-	"wait_for":            "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for",
-	"lvol":                "github.com/opslang/opslang/pkg/ops-core-sdk/lvol",
-	"synchronize":         "github.com/opslang/opslang/pkg/ops-core-sdk/synchronize",
-	"fetch":               "github.com/opslang/opslang/pkg/ops-core-sdk/fetch",
-	"seboolean":           "github.com/opslang/opslang/pkg/ops-core-sdk/seboolean",
-	"uri":                 "github.com/opslang/opslang/pkg/ops-core-sdk/uri",
-	"lineinfile":          "github.com/opslang/opslang/pkg/ops-core-sdk/lineinfile",
-	"replace":             "github.com/opslang/opslang/pkg/ops-core-sdk/replace",
-	"xml":                 "github.com/opslang/opslang/pkg/ops-core-sdk/xml",
-	"systemd":             "github.com/opslang/opslang/pkg/ops-core-sdk/systemd",
-	"patch":               "github.com/opslang/opslang/pkg/ops-core-sdk/patch",
-	"xattr":               "github.com/opslang/opslang/pkg/ops-core-sdk/xattr",
-	"firewalld_zone":      "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_zone",
-	"get_url":             "github.com/opslang/opslang/pkg/ops-core-sdk/get_url",
-	"seport":              "github.com/opslang/opslang/pkg/ops-core-sdk/seport",
-	"sefcontext":          "github.com/opslang/opslang/pkg/ops-core-sdk/sefcontext",
-	"lvg":                 "github.com/opslang/opslang/pkg/ops-core-sdk/lvg",
-	"snap":                "github.com/opslang/opslang/pkg/ops-core-sdk/snap",
-	"flatpak":             "github.com/opslang/opslang/pkg/ops-core-sdk/flatpak",
-	"zfs":                 "github.com/opslang/opslang/pkg/ops-core-sdk/zfs",
-	"nmcli":               "github.com/opslang/opslang/pkg/ops-core-sdk/nmcli",
-	"crypttab":            "github.com/opslang/opslang/pkg/ops-core-sdk/crypttab",
-	"sysfs":               "github.com/opslang/opslang/pkg/ops-core-sdk/sysfs",
-	"pamd":                "github.com/opslang/opslang/pkg/ops-core-sdk/pamd",
-	"getent":              "github.com/opslang/opslang/pkg/ops-core-sdk/getent",
-	"haproxy":             "github.com/opslang/opslang/pkg/ops-core-sdk/haproxy",
-	"openssl_cert":        "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_cert",
-	"redis":               "github.com/opslang/opslang/pkg/ops-core-sdk/redis",
-	"gem":                 "github.com/opslang/opslang/pkg/ops-core-sdk/gem",
-	"rabbitmq":            "github.com/opslang/opslang/pkg/ops-core-sdk/rabbitmq",
-	"consul":              "github.com/opslang/opslang/pkg/ops-core-sdk/consul",
-	"memcached":           "github.com/opslang/opslang/pkg/ops-core-sdk/memcached",
-	"composer":            "github.com/opslang/opslang/pkg/ops-core-sdk/composer",
-	"cargo":               "github.com/opslang/opslang/pkg/ops-core-sdk/cargo",
-	"rpmkey":              "github.com/opslang/opslang/pkg/ops-core-sdk/rpmkey",
-	"aptkey":              "github.com/opslang/opslang/pkg/ops-core-sdk/aptkey",
-	"dmidecode":           "github.com/opslang/opslang/pkg/ops-core-sdk/dmidecode",
-	"tuned":               "github.com/opslang/opslang/pkg/ops-core-sdk/tuned",
-	"supervisor":          "github.com/opslang/opslang/pkg/ops-core-sdk/supervisor",
-	"smartctl":            "github.com/opslang/opslang/pkg/ops-core-sdk/smartctl",
-	"virsh":               "github.com/opslang/opslang/pkg/ops-core-sdk/virsh",
-	"ethtool":             "github.com/opslang/opslang/pkg/ops-core-sdk/ethtool",
-	"systemd_analyze":     "github.com/opslang/opslang/pkg/ops-core-sdk/systemd_analyze",
-	"nvme":                "github.com/opslang/opslang/pkg/ops-core-sdk/nvme",
-	"lshw":                "github.com/opslang/opslang/pkg/ops-core-sdk/lshw",
-	"ipaddr":              "github.com/opslang/opslang/pkg/ops-core-sdk/ipaddr",
-	"udevadm":             "github.com/opslang/opslang/pkg/ops-core-sdk/udevadm",
-	"modinfo":             "github.com/opslang/opslang/pkg/ops-core-sdk/modinfo",
-	"dconf":               "github.com/opslang/opslang/pkg/ops-core-sdk/dconf",
-	"locale_gen":          "github.com/opslang/opslang/pkg/ops-core-sdk/locale_gen",
-	"pam_limits":          "github.com/opslang/opslang/pkg/ops-core-sdk/pam_limits",
-	"motd":                "github.com/opslang/opslang/pkg/ops-core-sdk/motd",
-	"issue":               "github.com/opslang/opslang/pkg/ops-core-sdk/issue",
-	"authorized_key":      "github.com/opslang/opslang/pkg/ops-core-sdk/authorized_key",
-	"blockinfile":         "github.com/opslang/opslang/pkg/ops-core-sdk/blockinfile",
-	"debconf":             "github.com/opslang/opslang/pkg/ops-core-sdk/debconf",
-	"reboot":              "github.com/opslang/opslang/pkg/ops-core-sdk/reboot",
-	"swap":                "github.com/opslang/opslang/pkg/ops-core-sdk/swap",
-	"raw":                 "github.com/opslang/opslang/pkg/ops-core-sdk/raw",
-	"expect":              "github.com/opslang/opslang/pkg/ops-core-sdk/expect",
-	"slurp":               "github.com/opslang/opslang/pkg/ops-core-sdk/slurp",
-	"wait_for_connection": "github.com/opslang/opslang/pkg/ops-core-sdk/wait_for_connection",
-	"firewalld_rich_rule": "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_rich_rule",
-	"firewalld_ipset":     "github.com/opslang/opslang/pkg/ops-core-sdk/firewalld_ipset",
-	"pause":               "github.com/opslang/opslang/pkg/ops-core-sdk/pause",
-	"meta":                "github.com/opslang/opslang/pkg/ops-core-sdk/meta",
-	"uri_ext":             "github.com/opslang/opslang/pkg/ops-core-sdk/uri_ext",
-	"hwclock":             "github.com/opslang/opslang/pkg/ops-core-sdk/hwclock",
-	"mdadm":               "github.com/opslang/opslang/pkg/ops-core-sdk/mdadm",
-	"open_iscsi":          "github.com/opslang/opslang/pkg/ops-core-sdk/open_iscsi",
-	"rfkill":              "github.com/opslang/opslang/pkg/ops-core-sdk/rfkill",
-	"multipath":           "github.com/opslang/opslang/pkg/ops-core-sdk/multipath",
-	"dmsetup":             "github.com/opslang/opslang/pkg/ops-core-sdk/dmsetup",
-	"lvm_enhanced":        "github.com/opslang/opslang/pkg/ops-core-sdk/lvm_enhanced",
-	"puppet":              "github.com/opslang/opslang/pkg/ops-core-sdk/puppet",
-	"yarn":                "github.com/opslang/opslang/pkg/ops-core-sdk/yarn",
-	"htpasswd":            "github.com/opslang/opslang/pkg/ops-core-sdk/htpasswd",
-	"sudoers":             "github.com/opslang/opslang/pkg/ops-core-sdk/sudoers",
-	"monit":               "github.com/opslang/opslang/pkg/ops-core-sdk/monit",
-	"apt":                 "github.com/opslang/opslang/pkg/ops-core-sdk/apt",
-	"apt_repo":            "github.com/opslang/opslang/pkg/ops-core-sdk/apt_repo",
-	"apk":                 "github.com/opslang/opslang/pkg/ops-core-sdk/apk",
-	"sysvinit":            "github.com/opslang/opslang/pkg/ops-core-sdk/sysvinit",
-	"dpkg_selections":     "github.com/opslang/opslang/pkg/ops-core-sdk/dpkg_selections",
-	"homebrew":            "github.com/opslang/opslang/pkg/ops-core-sdk/homebrew",
-	"dnf":                 "github.com/opslang/opslang/pkg/ops-core-sdk/dnf",
-	"kubernetes":          "github.com/opslang/opslang/pkg/ops-core-sdk/kubernetes",
-	"svn":                 "github.com/opslang/opslang/pkg/ops-core-sdk/svn",
-	"zypper":              "github.com/opslang/opslang/pkg/ops-core-sdk/zypper",
-	"pacman":              "github.com/opslang/opslang/pkg/ops-core-sdk/pacman",
-	"portage":             "github.com/opslang/opslang/pkg/ops-core-sdk/portage",
-	"pkgng":               "github.com/opslang/opslang/pkg/ops-core-sdk/pkgng",
-	"podman":              "github.com/opslang/opslang/pkg/ops-core-sdk/podman",
-	"nftables":            "github.com/opslang/opslang/pkg/ops-core-sdk/nftables",
-	"mongodb":             "github.com/opslang/opslang/pkg/ops-core-sdk/mongodb",
-	"tomcat":              "github.com/opslang/opslang/pkg/ops-core-sdk/tomcat",
-	"java_cert":           "github.com/opslang/opslang/pkg/ops-core-sdk/java_cert",
-	"maven_artifact":      "github.com/opslang/opslang/pkg/ops-core-sdk/maven_artifact",
-	"docker_image":        "github.com/opslang/opslang/pkg/ops-core-sdk/docker_image",
-	"docker_container":    "github.com/opslang/opslang/pkg/ops-core-sdk/docker_container",
-	"ping":                "github.com/opslang/opslang/pkg/ops-core-sdk/ping",
-	"find":                "github.com/opslang/opslang/pkg/ops-core-sdk/find",
-	"tempfile":            "github.com/opslang/opslang/pkg/ops-core-sdk/tempfile",
-	"fail":                "github.com/opslang/opslang/pkg/ops-core-sdk/fail",
-	"assert":              "github.com/opslang/opslang/pkg/ops-core-sdk/assert",
-	"debug":               "github.com/opslang/opslang/pkg/ops-core-sdk/debug",
-	"set_fact":            "github.com/opslang/opslang/pkg/ops-core-sdk/set_fact",
-	"unarchive":           "github.com/opslang/opslang/pkg/ops-core-sdk/unarchive",
-	"package_facts":       "github.com/opslang/opslang/pkg/ops-core-sdk/package_facts",
-	"service_facts":       "github.com/opslang/opslang/pkg/ops-core-sdk/service_facts",
-	"command":             "github.com/opslang/opslang/pkg/ops-core-sdk/command",
-	"script":              "github.com/opslang/opslang/pkg/ops-core-sdk/script",
-	"copy":                "github.com/opslang/opslang/pkg/ops-core-sdk/copy",
-	"cronvar":             "github.com/opslang/opslang/pkg/ops-core-sdk/cronvar",
-	"stat":                "github.com/opslang/opslang/pkg/ops-core-sdk/stat",
-	"add_host":            "github.com/opslang/opslang/pkg/ops-core-sdk/add_host",
-	"set_stats":           "github.com/opslang/opslang/pkg/ops-core-sdk/set_stats",
-	"include_vars":        "github.com/opslang/opslang/pkg/ops-core-sdk/include_vars",
-	"async_status":        "github.com/opslang/opslang/pkg/ops-core-sdk/async_status",
-	"package":             "github.com/opslang/opslang/pkg/ops-core-sdk/package",
-	"type_debug":          "github.com/opslang/opslang/pkg/ops-core-sdk/type_debug",
-	"group_by":            "github.com/opslang/opslang/pkg/ops-core-sdk/group_by",
-	"normalize":           "github.com/opslang/opslang/pkg/ops-core-sdk/normalize",
-	"validate_certs":      "github.com/opslang/opslang/pkg/ops-core-sdk/validate_certs",
-	"mail":                "github.com/opslang/opslang/pkg/ops-core-sdk/mail",
-	"webhook":             "github.com/opslang/opslang/pkg/ops-core-sdk/webhook",
-	"openssl_privatekey":  "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_privatekey",
-	"ip_route":            "github.com/opslang/opslang/pkg/ops-core-sdk/ip_route",
-	"ip_link":             "github.com/opslang/opslang/pkg/ops-core-sdk/ip_link",
-	"ip_netns":            "github.com/opslang/opslang/pkg/ops-core-sdk/ip_netns",
-	"ip_neighbor":         "github.com/opslang/opslang/pkg/ops-core-sdk/ip_neighbor",
-	"openssl_csr":         "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_csr",
-	"openssl_publickey":   "github.com/opslang/opslang/pkg/ops-core-sdk/openssl_publickey",
-	"etcd":                "github.com/opslang/opslang/pkg/ops-core-sdk/etcd",
-	"zookeeper":           "github.com/opslang/opslang/pkg/ops-core-sdk/zookeeper",
-	"vault":               "github.com/opslang/opslang/pkg/ops-core-sdk/vault",
-	"git_config":          "github.com/opslang/opslang/pkg/ops-core-sdk/git_config",
-	"sshd_config":         "github.com/opslang/opslang/pkg/ops-core-sdk/sshd_config",
-	"docker_network":      "github.com/opslang/opslang/pkg/ops-core-sdk/docker_network",
-	"docker_volume":       "github.com/opslang/opslang/pkg/ops-core-sdk/docker_volume",
-	"journald":            "github.com/opslang/opslang/pkg/ops-core-sdk/journald",
-	"nfs_exports":         "github.com/opslang/opslang/pkg/ops-core-sdk/nfs_exports",
-	"postfix":             "github.com/opslang/opslang/pkg/ops-core-sdk/postfix",
-	"dnsmasq":             "github.com/opslang/opslang/pkg/ops-core-sdk/dnsmasq",
-	"apache2_module":      "github.com/opslang/opslang/pkg/ops-core-sdk/apache2_module",
-	"pipx":                "github.com/opslang/opslang/pkg/ops-core-sdk/pipx",
-	"ssh_config":          "github.com/opslang/opslang/pkg/ops-core-sdk/ssh_config",
-	"openvpn":             "github.com/opslang/opslang/pkg/ops-core-sdk/openvpn",
-	"btrfs":               "github.com/opslang/opslang/pkg/ops-core-sdk/btrfs",
-	"certbot":             "github.com/opslang/opslang/pkg/ops-core-sdk/certbot",
-	"gluster":             "github.com/opslang/opslang/pkg/ops-core-sdk/gluster",
-	"nomad":               "github.com/opslang/opslang/pkg/ops-core-sdk/nomad",
+	"sys":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sys",
+	"file":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/file",
+	"net":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/net",
+	"process":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/process",
+	"service":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/service",
+	"pkg":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/pkg",
+	"time":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/time",
+	"json":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/json",
+	"yaml":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/yaml",
+	"git":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/git",
+	"user":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/user",
+	"group":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/group",
+	"cron":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/cron",
+	"sysctl":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sysctl",
+	"archive":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/archive",
+	"disk":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/disk",
+	"kernel":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/kernel",
+	"ssh":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ssh",
+	"iptables":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/iptables",
+	"npm":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/npm",
+	"mysql":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/mysql",
+	"nginx":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/nginx",
+	"modprobe":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/modprobe",
+	"alternatives":        "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/alternatives",
+	"blockdev":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/blockdev",
+	"at":                  "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/at",
+	"postgresql":          "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/postgresql",
+	"apache2":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/apache2",
+	"filesystem":          "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/filesystem",
+	"parted":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/parted",
+	"acl":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/acl",
+	"wait_for":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/wait_for",
+	"lvol":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/lvol",
+	"synchronize":         "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/synchronize",
+	"fetch":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/fetch",
+	"seboolean":           "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/seboolean",
+	"uri":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/uri",
+	"lineinfile":          "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/lineinfile",
+	"replace":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/replace",
+	"xml":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/xml",
+	"systemd":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/systemd",
+	"patch":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/patch",
+	"xattr":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/xattr",
+	"firewalld_zone":      "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/firewalld_zone",
+	"get_url":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/get_url",
+	"seport":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/seport",
+	"sefcontext":          "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sefcontext",
+	"lvg":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/lvg",
+	"snap":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/snap",
+	"flatpak":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/flatpak",
+	"zfs":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/zfs",
+	"nmcli":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/nmcli",
+	"crypttab":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/crypttab",
+	"sysfs":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sysfs",
+	"pamd":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/pamd",
+	"getent":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/getent",
+	"haproxy":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/haproxy",
+	"openssl_cert":        "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/openssl_cert",
+	"redis":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/redis",
+	"gem":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/gem",
+	"rabbitmq":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/rabbitmq",
+	"consul":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/consul",
+	"memcached":           "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/memcached",
+	"composer":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/composer",
+	"cargo":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/cargo",
+	"rpmkey":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/rpmkey",
+	"aptkey":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/aptkey",
+	"dmidecode":           "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/dmidecode",
+	"tuned":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/tuned",
+	"supervisor":          "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/supervisor",
+	"smartctl":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/smartctl",
+	"virsh":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/virsh",
+	"ethtool":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ethtool",
+	"systemd_analyze":     "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/systemd_analyze",
+	"nvme":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/nvme",
+	"lshw":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/lshw",
+	"ipaddr":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ipaddr",
+	"udevadm":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/udevadm",
+	"modinfo":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/modinfo",
+	"dconf":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/dconf",
+	"locale_gen":          "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/locale_gen",
+	"pam_limits":          "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/pam_limits",
+	"motd":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/motd",
+	"issue":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/issue",
+	"authorized_key":      "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/authorized_key",
+	"blockinfile":         "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/blockinfile",
+	"debconf":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/debconf",
+	"reboot":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/reboot",
+	"swap":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/swap",
+	"raw":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/raw",
+	"expect":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/expect",
+	"slurp":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/slurp",
+	"wait_for_connection": "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/wait_for_connection",
+	"firewalld_rich_rule": "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/firewalld_rich_rule",
+	"firewalld_ipset":     "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/firewalld_ipset",
+	"pause":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/pause",
+	"meta":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/meta",
+	"uri_ext":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/uri_ext",
+	"hwclock":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/hwclock",
+	"mdadm":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/mdadm",
+	"open_iscsi":          "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/open_iscsi",
+	"rfkill":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/rfkill",
+	"multipath":           "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/multipath",
+	"dmsetup":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/dmsetup",
+	"lvm_enhanced":        "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/lvm_enhanced",
+	"puppet":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/puppet",
+	"yarn":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/yarn",
+	"htpasswd":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/htpasswd",
+	"sudoers":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sudoers",
+	"monit":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/monit",
+	"apt":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/apt",
+	"apt_repo":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/apt_repo",
+	"apk":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/apk",
+	"sysvinit":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sysvinit",
+	"dpkg_selections":     "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/dpkg_selections",
+	"homebrew":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/homebrew",
+	"dnf":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/dnf",
+	"kubernetes":          "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/kubernetes",
+	"svn":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/svn",
+	"zypper":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/zypper",
+	"pacman":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/pacman",
+	"portage":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/portage",
+	"pkgng":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/pkgng",
+	"podman":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/podman",
+	"nftables":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/nftables",
+	"mongodb":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/mongodb",
+	"tomcat":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/tomcat",
+	"java_cert":           "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/java_cert",
+	"maven_artifact":      "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/maven_artifact",
+	"docker_image":        "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/docker_image",
+	"docker_container":    "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/docker_container",
+	"ping":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ping",
+	"find":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/find",
+	"tempfile":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/tempfile",
+	"fail":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/fail",
+	"assert":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/assert",
+	"debug":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/debug",
+	"set_fact":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/set_fact",
+	"unarchive":           "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/unarchive",
+	"package_facts":       "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/package_facts",
+	"service_facts":       "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/service_facts",
+	"command":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/command",
+	"script":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/script",
+	"copy":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/copy",
+	"cronvar":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/cronvar",
+	"stat":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/stat",
+	"add_host":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/add_host",
+	"set_stats":           "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/set_stats",
+	"include_vars":        "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/include_vars",
+	"async_status":        "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/async_status",
+	"package":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/package",
+	"type_debug":          "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/type_debug",
+	"group_by":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/group_by",
+	"normalize":           "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/normalize",
+	"validate_certs":      "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/validate_certs",
+	"mail":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/mail",
+	"webhook":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/webhook",
+	"openssl_privatekey":  "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/openssl_privatekey",
+	"ip_route":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ip_route",
+	"ip_link":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ip_link",
+	"ip_netns":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ip_netns",
+	"ip_neighbor":         "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ip_neighbor",
+	"openssl_csr":         "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/openssl_csr",
+	"openssl_publickey":   "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/openssl_publickey",
+	"etcd":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/etcd",
+	"zookeeper":           "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/zookeeper",
+	"vault":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/vault",
+	"git_config":          "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/git_config",
+	"sshd_config":         "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sshd_config",
+	"docker_network":      "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/docker_network",
+	"docker_volume":       "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/docker_volume",
+	"journald":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/journald",
+	"nfs_exports":         "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/nfs_exports",
+	"postfix":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/postfix",
+	"dnsmasq":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/dnsmasq",
+	"apache2_module":      "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/apache2_module",
+	"pipx":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/pipx",
+	"ssh_config":          "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ssh_config",
+	"openvpn":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/openvpn",
+	"btrfs":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/btrfs",
+	"certbot":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/certbot",
+	"gluster":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/gluster",
+	"nomad":               "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/nomad",
 }
 
 // CodeGenerator translates an AST Program into Go source code.
@@ -2491,6 +2491,180 @@ func typeName(v interface{}) string {
 	default:
 		return fmt.Sprintf("%T", v)
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Data builtins: split/join/replace/upper/lower/trim/contains/index_of/
+// sort/reverse/keys/values. Semantics mirror internal/interpreter's
+// builtins_data.go exactly — including sorted keys() and the explicit
+// mixed-type sort error — so interpreter and AOT runs never diverge.
+// ---------------------------------------------------------------------------
+
+func opsRequireString(v interface{}, fnName, what string) string {
+	s, ok := v.(string)
+	if !ok {
+		opsFatal(fmt.Errorf("%s() requires %s to be a string, got %s", fnName, what, typeName(v)))
+	}
+	return s
+}
+
+func opsSplit(s, sep interface{}) interface{} {
+	parts := strings.Split(opsRequireString(s, "split", "s"), opsRequireString(sep, "split", "sep"))
+	out := make([]interface{}, len(parts))
+	for i, p := range parts {
+		out[i] = p
+	}
+	return out
+}
+
+func opsJoin(items, sep interface{}) interface{} {
+	list, ok := items.([]interface{})
+	if !ok {
+		opsFatal(fmt.Errorf("join() requires a list, got %s", typeName(items)))
+	}
+	delim := opsRequireString(sep, "join", "sep")
+	parts := make([]string, len(list))
+	for i, item := range list {
+		parts[i] = formatValue(item)
+	}
+	return strings.Join(parts, delim)
+}
+
+func opsReplace(s, oldS, newS interface{}) interface{} {
+	return strings.ReplaceAll(
+		opsRequireString(s, "replace", "s"),
+		opsRequireString(oldS, "replace", "old"),
+		opsRequireString(newS, "replace", "new"))
+}
+
+func opsUpper(s interface{}) interface{} { return strings.ToUpper(opsRequireString(s, "upper", "value")) }
+func opsLower(s interface{}) interface{} { return strings.ToLower(opsRequireString(s, "lower", "value")) }
+func opsTrim(s interface{}) interface{}  { return strings.TrimSpace(opsRequireString(s, "trim", "value")) }
+
+func opsContains(container, needle interface{}) interface{} {
+	switch c := container.(type) {
+	case string:
+		return strings.Contains(c, opsRequireString(needle, "contains", "value"))
+	case []interface{}:
+		for _, item := range c {
+			if opsEqual(item, needle) {
+				return true
+			}
+		}
+		return false
+	case map[string]interface{}:
+		_, exists := c[opsRequireString(needle, "contains", "key")]
+		return exists
+	default:
+		opsFatal(fmt.Errorf("contains() requires a string, list or dict, got %s", typeName(container)))
+		return false
+	}
+}
+
+func opsIndexOf(container, needle interface{}) interface{} {
+	switch c := container.(type) {
+	case string:
+		return int64(strings.Index(c, opsRequireString(needle, "index_of", "value")))
+	case []interface{}:
+		for i, item := range c {
+			if opsEqual(item, needle) {
+				return int64(i)
+			}
+		}
+		return int64(-1)
+	default:
+		opsFatal(fmt.Errorf("index_of() requires a string or list, got %s", typeName(container)))
+		return int64(-1)
+	}
+}
+
+func opsAsList(v interface{}, fnName string) []interface{} {
+	list, ok := v.([]interface{})
+	if !ok {
+		opsFatal(fmt.Errorf("%s() requires a list, got %s", fnName, typeName(v)))
+	}
+	return list
+}
+
+func opsNumOf(v interface{}) float64 {
+	switch n := v.(type) {
+	case int64:
+		return float64(n)
+	case float64:
+		return n
+	default:
+		return 0 // unreachable behind the all-numeric gate in opsSort
+	}
+}
+
+func opsSort(items interface{}) interface{} {
+	in := opsAsList(items, "sort")
+	out := make([]interface{}, len(in))
+	copy(out, in)
+	allNum, allStr := true, true
+	for _, v := range out {
+		switch v.(type) {
+		case int64, float64:
+			allStr = false
+		case string:
+			allNum = false
+		default:
+			allNum, allStr = false, false
+		}
+	}
+	switch {
+	case allNum:
+		sort.SliceStable(out, func(i, j int) bool { return opsNumOf(out[i]) < opsNumOf(out[j]) })
+	case allStr:
+		sort.SliceStable(out, func(i, j int) bool { return out[i].(string) < out[j].(string) })
+	default:
+		opsFatal(fmt.Errorf("sort() requires all numbers or all strings; mixed list cannot be ordered"))
+	}
+	return out
+}
+
+func opsReverse(items interface{}) interface{} {
+	in := opsAsList(items, "reverse")
+	out := make([]interface{}, len(in))
+	for i, v := range in {
+		out[len(in)-1-i] = v
+	}
+	return out
+}
+
+func opsSortedKeys(dict map[string]interface{}) []string {
+	keys := make([]string, 0, len(dict))
+	for k := range dict {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func opsKeys(dict interface{}) interface{} {
+	m, ok := dict.(map[string]interface{})
+	if !ok {
+		opsFatal(fmt.Errorf("keys() requires a dict, got %s", typeName(dict)))
+	}
+	sorted := opsSortedKeys(m)
+	out := make([]interface{}, len(sorted))
+	for i, k := range sorted {
+		out[i] = k
+	}
+	return out
+}
+
+func opsValues(dict interface{}) interface{} {
+	m, ok := dict.(map[string]interface{})
+	if !ok {
+		opsFatal(fmt.Errorf("values() requires a dict, got %s", typeName(dict)))
+	}
+	sorted := opsSortedKeys(m)
+	out := make([]interface{}, len(sorted))
+	for i, k := range sorted {
+		out[i] = m[k]
+	}
+	return out
 }
 
 `)
@@ -3133,6 +3307,16 @@ func (g *CodeGenerator) genCall(e *ast.CallExpression) (string, error) {
 			return "", err
 		}
 		return fmt.Sprintf("typeName(%s)", arg), nil
+
+	case "split", "join", "replace", "upper", "lower", "trim",
+		"contains", "index_of", "sort", "reverse", "keys", "values":
+		// Data builtins map 1:1 onto opsXxx runtime helpers; the helpers
+		// enforce arity/type errors at runtime, mirroring the interpreter.
+		args, err := g.genArgs(e.Args)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("ops%s(%s)", builtinHelperName(fnName), strings.Join(args, ", ")), nil
 	}
 
 	// Check user-defined functions
@@ -3182,6 +3366,16 @@ func (g *CodeGenerator) genCall(e *ast.CallExpression) (string, error) {
 	}
 
 	return "", fmt.Errorf("unknown function %q (not a builtin, user function, or SDK call)", fnName)
+}
+
+// builtinHelperName maps a data-builtin DSL name to its opsXxx runtime
+// helper suffix. index_of is the only non-CamelCase name.
+func builtinHelperName(fnName string) string {
+	if fnName == "index_of" {
+		return "IndexOf"
+	}
+	// All remaining names are single words; capitalize the first letter.
+	return strings.ToUpper(fnName[:1]) + fnName[1:]
 }
 
 func (g *CodeGenerator) genList(e *ast.ListLiteral) (string, error) {

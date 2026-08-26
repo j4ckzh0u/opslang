@@ -1,0 +1,78 @@
+// data_builtins.ops - Demonstrate the general-purpose data builtins
+// Demonstrates: split, join, replace, upper, lower, trim, contains,
+// index_of, sort, reverse, keys, values
+//
+// These are pure language functions: they work in `opsctl run` (interpreter)
+// and in AOT-compiled binaries with identical results. In runner-mode
+// deploys they are rejected by design - use `--mode aot` for scripts that
+// need them remotely.
+//
+// Usage: opsctl run examples/data_builtins.ops
+
+print("=== Data Builtins Demo ===")
+
+// --- Strings ---
+let ip = "10.0.0.1"
+let octets = split(ip, ".")
+print("IP " + ip + " has " + str(len(octets)) + " octets, first is " + octets[0])
+
+let slug = join(octets, "_")
+print("Slugified: " + slug)
+
+let normalized = upper(trim("  Web-01 \n"))
+print("Normalized host: " + normalized)
+
+let safe = replace("/etc/nginx/nginx.conf", "/", "_")
+print("Path as filename: " + lower(safe))
+
+// --- Lists ---
+let hosts = ["web-03", "web-01", "db-01", "cache-01"]
+let sorted_hosts = sort(hosts)
+let reversed_hosts = reverse(sorted_hosts)
+
+print("Sorted hosts:")
+for let i = 0; i < len(sorted_hosts); i = i + 1 {
+    print("  " + sorted_hosts[i])
+}
+print("First after reverse (was last): " + reversed_hosts[0])
+
+if contains(hosts, "db-01") {
+    print("db-01 is at index " + str(index_of(hosts, "db-01")))
+}
+
+// --- Dicts ---
+let server = {
+    "role": "gateway",
+    "env": "production",
+    "zone": "cn-north-1"
+}
+
+let field_names = keys(server)
+let field_values = values(server)
+
+print("Server fields (sorted by key):")
+for let i = 0; i < len(field_names); i = i + 1 {
+    print("  " + field_names[i] + " = " + field_values[i])
+}
+
+if contains(server, "env") {
+    print("env is declared")
+}
+
+// --- Idempotent-by-design: inputs are never mutated ---
+let original = [3, 1, 2]
+let ordered = sort(original)
+if original[0] == 3 && ordered[0] == 1 {
+    print("sort/reverse return new lists; inputs stay untouched")
+}
+
+report {
+    ip_octets: len(octets),
+    slug: slug,
+    sorted_first: sorted_hosts[0],
+    db_index: index_of(hosts, "db-01"),
+    field_count: len(field_names),
+    input_untouched: original[0] == 3
+}
+
+log("Data builtins demo completed")

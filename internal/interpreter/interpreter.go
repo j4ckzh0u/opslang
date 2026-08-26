@@ -8,8 +8,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/opslang/opslang/internal/ast"
-	"github.com/opslang/opslang/internal/security"
+	"github.com/j4ckzh0u/opslang/internal/ast"
+	"github.com/j4ckzh0u/opslang/internal/security"
 )
 
 // ---------------------------------------------------------------------------
@@ -265,6 +265,8 @@ func (interp *Interpreter) registerDefaults() {
 		})
 		return nil, nil
 	}
+
+	registerDataBuiltins(interp)
 }
 
 // RegisterBuiltin adds a single built-in function by name.

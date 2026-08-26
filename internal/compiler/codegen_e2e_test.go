@@ -271,3 +271,97 @@ report { count: count, first: first }
 		t.Error("indexing a typed SDK slice returned empty")
 	}
 }
+
+func TestAOTDataBuiltins(t *testing.T) {
+	data := runAndReportJSON(t, `
+let parts = split("10.0.0.1", ".")
+let joined = join(parts, "_")
+let upper = upper("web-01")
+let lower = lower("WEB-01")
+let trimmed = trim("  prod  ")
+let replaced = replace("a:b:c", ":", "-")
+let nums = sort([3, 1, 2])
+let strs = sort(["nginx", "apache", "etcd"])
+let rev = reverse([1, 2, 3])
+let d = {"z": 26, "a": 1}
+let ks = keys(d)
+let vs = values(d)
+report {
+	joined: joined,
+	parts_count: len(parts),
+	first_part: parts[0],
+	upper: upper,
+	lower: lower,
+	trimmed: trimmed,
+	replaced: replaced,
+	nums: nums,
+	strs: strs,
+	rev: rev,
+	keys: ks,
+	values: vs
+}
+`)
+	checks := []struct {
+		key  string
+		want interface{}
+	}{
+		{"joined", "10_0_0_1"},
+		{"parts_count", float64(4)},
+		{"first_part", "10"},
+		{"upper", "WEB-01"},
+		{"lower", "web-01"},
+		{"trimmed", "prod"},
+		{"replaced", "a-b-c"},
+	}
+	for _, c := range checks {
+		if data[c.key] != c.want {
+			t.Errorf("%s = %v (%T), want %v", c.key, data[c.key], data[c.key], c.want)
+		}
+	}
+	assertList(t, data["nums"], []interface{}{float64(1), float64(2), float64(3)}, "sort numbers")
+	assertList(t, data["strs"], []interface{}{"apache", "etcd", "nginx"}, "sort strings")
+	assertList(t, data["rev"], []interface{}{float64(3), float64(2), float64(1)}, "reverse")
+	assertList(t, data["keys"], []interface{}{"a", "z"}, "keys sorted")
+	assertList(t, data["values"], []interface{}{float64(1), float64(26)}, "values follow sorted keys")
+}
+
+// assertList compares a decoded JSON list element by element so failures
+// name the exact position.
+func assertList(t *testing.T, got interface{}, want []interface{}, label string) {
+	t.Helper()
+	list, ok := got.([]interface{})
+	if !ok {
+		t.Fatalf("%s: expected list, got %T (%v)", label, got, got)
+	}
+	if len(list) != len(want) {
+		t.Fatalf("%s: got %v, want %v", label, list, want)
+	}
+	for i := range want {
+		if list[i] != want[i] {
+			t.Fatalf("%s: index %d = %v, want %v", label, i, list[i], want[i])
+		}
+	}
+}
+
+func TestAOTContainsAndIndexOf(t *testing.T) {
+	data := runAndReportJSON(t, `
+let hosts = ["web-01", "db-01", "cache-01"]
+report {
+	has_db: contains(hosts, "db-01"),
+	has_bastion: contains(hosts, "bastion"),
+	in_string: contains("nginx.conf", "conf"),
+	db_pos: index_of(hosts, "db-01"),
+	missing_pos: index_of(hosts, "bastion"),
+	key_check: contains({"env": "prod"}, "env")
+}
+`)
+	checks := map[string]interface{}{
+		"has_db": true, "has_bastion": false, "in_string": true,
+		"db_pos": float64(1), "missing_pos": float64(-1), "key_check": true,
+	}
+	for k, w := range checks {
+		if data[k] != w {
+			t.Errorf("%s = %v (%T), want %v", k, data[k], data[k], w)
+		}
+	}
+}
