@@ -59,7 +59,7 @@ jobs:
 
       - name: Record verdict
         id: verdict
-        if: always
+        if: always()
         run: echo "passed=${{ steps.tests.outcome == 'success' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
 
   test-core-retry:
@@ -90,7 +90,7 @@ jobs:
 
       - name: Record verdict
         id: verdict
-        if: always
+        if: always()
         run: echo "passed=${{ steps.tests.outcome == 'success' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
 
   test-sdk:
@@ -116,7 +116,7 @@ jobs:
 
       - name: Record verdict
         id: verdict
-        if: always
+        if: always()
         run: echo "passed=${{ steps.tests.outcome == 'success' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
 
   test-sdk-retry:
@@ -142,7 +142,7 @@ jobs:
 
       - name: Record verdict
         id: verdict
-        if: always
+        if: always()
         run: echo "passed=${{ steps.tests.outcome == 'success' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
 
   build:
