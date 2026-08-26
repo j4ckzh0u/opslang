@@ -59,6 +59,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-core]
     if: needs.test-core.outputs.passed != 'true'
+    outputs:
+      passed: ${{ steps.verdict.outputs.passed }}
     steps:
       - uses: actions/checkout@v4
 
@@ -68,6 +70,7 @@ jobs:
           go-version: '1.26'
 
       - name: Test core (security first, then docs freshness)
+        id: tests
         env:
           GOTRACEBACK: all
         run: |
@@ -75,6 +78,11 @@ jobs:
           go test -timeout 10m ./internal/security/ && \
           go list ./cmd/... ./internal/... | grep -v 'internal/security$' | xargs go test -p 1 -timeout 45m && \
           make docs-check
+
+      - name: Record verdict
+        id: verdict
+        if: always()
+        run: echo "passed=${{ steps.tests.outcome == 'success' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
 
   test-sdk:
     name: Test sdk (attempt 1)
@@ -105,6 +113,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-sdk]
     if: needs.test-sdk.outputs.passed != 'true'
+    outputs:
+      passed: ${{ steps.verdict.outputs.passed }}
     steps:
       - uses: actions/checkout@v4
 
@@ -114,7 +124,13 @@ jobs:
           go-version: '1.26'
 
       - name: Test sdk (pkg)
+        id: tests
         run: go test -p 1 -timeout 45m ./pkg/...
+
+      - name: Record verdict
+        id: verdict
+        if: always()
+        run: echo "passed=${{ steps.tests.outcome == 'success' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
 
   build:
     name: Build
@@ -125,8 +141,9 @@ jobs:
     # the red attempt-2 job visible on the run.
     if: >
       always() &&
-      (needs.test-core.outputs.passed == 'true' || needs.test-core-retry.conclusion == 'success') &&
-      (needs.test-sdk.outputs.passed == 'true' || needs.test-sdk-retry.conclusion == 'success')
+      (needs.test-core.outputs.passed == 'true' || needs.test-core-retry.outputs.passed == 'true') &&
+      (needs.test-sdk.outputs.passed == 'true' || needs.test-sdk-retry.outputs.passed == 'true')
+    strategy:
       matrix:
         include:
           - goos: linux
