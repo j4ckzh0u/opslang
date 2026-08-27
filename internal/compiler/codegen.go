@@ -51,7 +51,7 @@ var sdkMapping = map[string]sdkFunc{
 	// net
 	"net.http_get":    {pkg: "net", goName: "HTTPGet", args: true, params: []string{"s"}},
 	"net.http_post":   {pkg: "net", goName: "HTTPPost", args: true, params: []string{"s", "s"}},
-	"net.capture":     {pkg: "capture", goName: "Capture", args: true, params: []string{"s", "i", "i", "s"}},
+	"net.capture":     {pkg: "capture", goName: "Run", args: true, params: []string{"s", "i", "i", "s"}},
 	"net.tcp_check":   {pkg: "net", goName: "TCPConnect", args: true, params: []string{"s", "i"}},
 	"net.dns_lookup":  {pkg: "net", goName: "DNSLookup", args: true, params: []string{"s"}},
 	"net.interfaces":  {pkg: "net", goName: "Interfaces"},
@@ -1677,6 +1677,7 @@ func convertArg(expr, conv string) string {
 var pkgImportAlias = map[string]string{
 	"sys":                 "sys",
 	"file":                "file",
+	"capture":             "opscapture",
 	"net":                 "opsnet",
 	"process":             "process",
 	"service":             "service",
@@ -2165,7 +2166,7 @@ func (g *CodeGenerator) assemble(mainCode string) (string, error) {
 	b.WriteString("\t\"sync\"\n")
 
 	// SDK imports
-	sdkOrder := []string{"sys", "file", "net", "process", "service", "pkg", "time", "json", "yaml", "git", "user", "group", "cron", "sysctl"}
+	sdkOrder := []string{"capture", "sys", "file", "net", "process", "service", "pkg", "time", "json", "yaml", "git", "user", "group", "cron", "sysctl"}
 	for _, pkg := range sdkOrder {
 		if g.usedSDK[pkg] {
 			alias := pkgImportAlias[pkg]

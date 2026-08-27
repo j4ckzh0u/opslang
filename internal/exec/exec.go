@@ -23,6 +23,7 @@ import (
 	"github.com/j4ckzh0u/opslang/internal/runner"
 	"github.com/j4ckzh0u/opslang/internal/security"
 	"github.com/j4ckzh0u/opslang/internal/sshx"
+	opscapture "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/capture"
 )
 
 // Target represents a remote host to execute instructions on.
@@ -182,6 +183,22 @@ func (e *Executor) Execute(ctx context.Context) *Summary {
 			defer func() { <-sem }()
 
 			result := e.executeOnHost(ctx, t)
+
+			// net.capture "local:" payloads ride in the result; write them
+			// onto this (controller) machine and strip the transport keys.
+			saved, warns := opscapture.SaveEmbedded(result.Data)
+			for _, w := range warns {
+				result.Warnings = append(result.Warnings,
+					fmt.Sprintf("pcap local transfer: %s", w))
+			}
+			if len(saved) > 0 {
+				result.Data["pcap_saved_local"] = saved
+				// The operator asked for the file on this workstation; surface
+				// the materialized local path where pcap_path is read naturally.
+				if len(saved) == 1 {
+					opslangSetPcapPath(result.Data, saved[0])
+				}
+			}
 
 			mu.Lock()
 			summary.Results[t.Name] = result
@@ -997,4 +1014,23 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// opslangSetPcapPath rewrites pcap_path to the materialized local file on
+// any capture result map that carried a local: transfer (they had their
+// __pcap_* keys stripped by SaveEmbedded).
+func opslangSetPcapPath(node interface{}, localPath string) {
+	switch v := node.(type) {
+	case map[string]interface{}:
+		if _, had := v["pcap_path"]; had {
+			v["pcap_path"] = localPath
+		}
+		for _, child := range v {
+			opslangSetPcapPath(child, localPath)
+		}
+	case []interface{}:
+		for _, child := range v {
+			opslangSetPcapPath(child, localPath)
+		}
+	}
 }

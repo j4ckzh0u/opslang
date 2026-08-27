@@ -84,7 +84,11 @@ func (c *Compiler) Compile(sourcePath string, targetArch string, outputPath stri
 	if err := os.MkdirAll(buildDir, 0755); err != nil {
 		return fmt.Errorf("failed to create build directory: %w", err)
 	}
-	defer os.RemoveAll(buildDir)
+	defer func() {
+		if os.Getenv("OPSLANG_KEEP_BUILD") == "" {
+			os.RemoveAll(buildDir)
+		}
+	}()
 
 	// Write generated Go source
 	mainFile := filepath.Join(buildDir, "main.go")

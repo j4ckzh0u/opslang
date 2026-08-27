@@ -54,11 +54,13 @@ type Result struct {
 	DurationMs    int64          `json:"duration_ms"`
 	Captured      int            `json:"captured"`
 	Matched       int            `json:"matched"`
-	KernelDrops   uint32         `json:"kernel_drops,omitempty"`
+	KernelDrops   uint32         `json:"kernel_drops"`
 	ProtoCounts   map[string]int `json:"proto_counts"`
 	TCPEvents     TCPEventCounts `json:"tcp_events"`
-	Conversations []string       `json:"conversations,omitempty"`
-	PcapPath      string         `json:"pcap_path,omitempty"`
+	Conversations []string       `json:"conversations"`
+	PcapPath      string         `json:"pcap_path"`
+	PCapB64       string         `json:"__pcap_b64,omitempty"`
+	PCapLocalPath string         `json:"__pcap_local_path,omitempty"`
 	Packets       []Packet       `json:"packets"`
 }
 
@@ -68,6 +70,8 @@ func Capture(Options) (*Result, error) { return nil, errUnsupported }
 
 // Run mirrors the Linux signature so generated code compiles everywhere;
 // execution returns errUnsupported.
-func Run(string, int, int, string) (Result, error) {
+func Run(iface string, seconds int, maxPackets int, pcapPath string) (Result, error) {
+	local, _ := SplitPcapTarget(pcapPath)
+	_ = local
 	return Result{}, errUnsupported
 }

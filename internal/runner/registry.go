@@ -3,6 +3,7 @@ package runner
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 
 	"github.com/j4ckzh0u/opslang/internal/ast"
@@ -521,16 +522,44 @@ func (r *Registry) registerNetOps() {
 		seconds := getIntArg(args, "seconds", 5)
 		maxPkts := getIntArg(args, "max_packets", 200)
 		pcapPath := getStringArg(args, "pcap_path", "")
-		res, err := opscapture.Capture(opscapture.Options{
+
+		// Runner executes on the TARGET host. A "local:" pcap path asks for
+		// the file on the operator workstation, so we stage to a temp file
+		// here, embed the bytes into the result, and let the controller
+		// materialize userTarget. The temp file is removed afterwards.
+		local, userTarget := opscapture.SplitPcapTarget(pcapPath)
+		fsPath := userTarget
+		if local {
+			f, terr := os.CreateTemp("", "ops-cap-*.pcap")
+			if terr != nil {
+				return nil, fmt.Errorf("net.capture local temp: %w", terr)
+			}
+			fsPath = f.Name()
+			f.Close()
+		}
+		opts := opscapture.Options{
 			Iface:    iface,
 			Seconds:  seconds,
 			MaxPkts:  maxPkts,
-			PcapPath: pcapPath,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("net.capture: %w", err)
+			PcapPath: fsPath,
 		}
-		return res, nil
+		res, cerr := opscapture.Capture(opts)
+		if cerr != nil {
+			if local {
+				os.Remove(fsPath)
+			}
+			return nil, fmt.Errorf("net.capture: %w", cerr)
+		}
+		if local {
+			if lerr := opscapture.MaterializeLocal(res, fsPath, userTarget); lerr != nil {
+				return nil, fmt.Errorf("net.capture local transfer: %w", lerr)
+			}
+		}
+		out, merr := opscapture.MarshalStable(*res)
+		if merr != nil {
+			return nil, fmt.Errorf("net.capture: encode result: %w", merr)
+		}
+		return out, nil
 	})
 	r.Register("net.tcp_check", func(args map[string]interface{}) (interface{}, error) {
 		host, err := argString(args, "host")

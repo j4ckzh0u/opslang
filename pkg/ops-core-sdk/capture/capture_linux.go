@@ -15,6 +15,7 @@ package capture
 import (
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -66,14 +67,19 @@ type Result struct {
 	Iface         string         `json:"iface"`
 	StartedAt     int64          `json:"started_at_unix"`
 	DurationMs    int64          `json:"duration_ms"`
-	Captured      int            `json:"captured"`               // frames read
-	Matched       int            `json:"matched"`                // frames passing host/port filter
-	KernelDrops   uint32         `json:"kernel_drops,omitempty"` // NIC->kernel ring drops during window
+	Captured      int            `json:"captured"`     // frames read
+	Matched       int            `json:"matched"`      // frames passing host/port filter
+	KernelDrops   uint32         `json:"kernel_drops"` // NIC->kernel ring drops during window
 	ProtoCounts   map[string]int `json:"proto_counts"`
 	TCPEvents     TCPEventCounts `json:"tcp_events"`
-	Conversations []string       `json:"conversations,omitempty"` // top flows by packet count
-	PcapPath      string         `json:"pcap_path,omitempty"`
-	Packets       []Packet       `json:"packets"`
+	Conversations []string       `json:"conversations"` // top flows by packet count
+	PcapPath      string         `json:"pcap_path"`
+	// PCapB64/PCapLocalPath appear only for "local:" targets under remote
+	// execution: the payload rides inside the result and the controller
+	// writes it to the operator-side path (see embed.go).
+	PCapB64       string   `json:"__pcap_b64,omitempty"`
+	PCapLocalPath string   `json:"__pcap_local_path,omitempty"`
+	Packets       []Packet `json:"packets"`
 }
 
 // TCPEventCounts distills exactly the anomalies the runbook looks for.
@@ -212,16 +218,40 @@ func Capture(opts Options) (*Result, error) {
 }
 
 // Run is the positional-argument shape the AOT code generator emits calls
-// for. It wraps the Options-based Capture.
+// for. It wraps the Options-based Capture and owns "local:" handling for
+// the AOT context: a compiled binary executes on the CAPTURING host, so a
+// local: target stages here, embeds into the result, and cleans up - the
+// controller materializes it afterwards.
 func Run(iface string, seconds int, maxPackets int, pcapPath string) (Result, error) {
+	local, userTarget := SplitPcapTarget(pcapPath)
+	// On the capturing host we must never try to materialize the caller's
+	// workstation path; stage to a temp file, embed the bytes, and let the
+	// controller write userTarget. The temp file is removed afterwards.
+	fsPath := userTarget
+	if local {
+		f, err := os.CreateTemp("", "ops-cap-*.pcap")
+		if err != nil {
+			return Result{}, fmt.Errorf("net.capture local temp: %w", err)
+		}
+		fsPath = f.Name()
+		f.Close()
+	}
 	r, err := Capture(Options{
 		Iface:    iface,
 		Seconds:  seconds,
 		MaxPkts:  maxPackets,
-		PcapPath: pcapPath,
+		PcapPath: fsPath,
 	})
 	if err != nil {
+		if local {
+			os.Remove(fsPath)
+		}
 		return Result{}, err
+	}
+	if local {
+		if lerr := MaterializeLocal(r, fsPath, userTarget); lerr != nil {
+			return Result{}, lerr
+		}
 	}
 	return *r, nil
 }

@@ -4,6 +4,7 @@ package interpreter
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/j4ckzh0u/opslang/internal/opsspec"
@@ -752,6 +753,10 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			}
 			pcapPath = v
 		}
+		// The interpreter executes in-process on the machine running opsctl:
+		// a "local:" pcap path is simply an ordinary local file here. Remote
+		// contexts (runner) get the embed-and-transfer semantics instead.
+		pcapPath = strings.TrimPrefix(pcapPath, sdkcapture.PcapLocalPrefix)
 		r, err := sdkcapture.Capture(sdkcapture.Options{
 			Iface:    iface,
 			Seconds:  seconds,
