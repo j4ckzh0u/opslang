@@ -1351,3 +1351,21 @@ parallel for h in hosts {
 		t.Errorf("non-list path must fail via opsFatal:\n%s", code)
 	}
 }
+
+// TestGenerateDictLiteralIdentifierKey pins the codegen side of the dict
+// literal key fix: identifier keys must emit as quoted strings, not bare
+// variable references (which fail the generated Go build).
+func TestGenerateDictLiteralIdentifierKey(t *testing.T) {
+	source := `let x = { a: 1, b: "two" }
+report { a: x.a, b: x.b }`
+	code, err := GenerateCode(source, "test.ops")
+	if err != nil {
+		t.Fatalf("GenerateCode failed: %v", err)
+	}
+	if !strings.Contains(code, `"a":`) {
+		t.Errorf("identifier key must become quoted string, missing \\\"a\\\":\\n%s", code)
+	}
+	if !strings.Contains(code, `"b":`) {
+		t.Errorf("string key missing:\n%s", code)
+	}
+}

@@ -4,6 +4,7 @@ package compiler
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode"
 
@@ -3543,15 +3544,28 @@ func (g *CodeGenerator) genDict(e *ast.DictLiteral) (string, error) {
 	}
 	var pairs []string
 	for i := range e.Keys {
-		key, err := g.genExpr(e.Keys[i])
-		if err != nil {
-			return "", err
+		// Keys are lexically fixed (identifier names or string literals),
+		// mirroring the interpreter's evalDict fix: generating an
+		// identifier through genExpr would emit a bare variable reference
+		// and fail to compile with "undefined: <key>".
+		var key string
+		switch k := e.Keys[i].(type) {
+		case *ast.Identifier:
+			key = strconv.Quote(k.Name)
+		case *ast.StringLiteral:
+			key = strconv.Quote(k.Value)
+		default:
+			gen, err := g.genExpr(e.Keys[i])
+			if err != nil {
+				return "", err
+			}
+			key = fmt.Sprintf("fmt.Sprintf(\"%%v\", %s)", gen)
 		}
 		val, err := g.genExpr(e.Values[i])
 		if err != nil {
 			return "", err
 		}
-		pairs = append(pairs, fmt.Sprintf("fmt.Sprintf(\"%%v\", %s): %s", key, val))
+		pairs = append(pairs, key+": "+val)
 	}
 	return fmt.Sprintf("map[string]interface{}{%s}", strings.Join(pairs, ", ")), nil
 }
