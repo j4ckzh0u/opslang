@@ -51,6 +51,7 @@ var sdkMapping = map[string]sdkFunc{
 	// net
 	"net.http_get":    {pkg: "net", goName: "HTTPGet", args: true, params: []string{"s"}},
 	"net.http_post":   {pkg: "net", goName: "HTTPPost", args: true, params: []string{"s", "s"}},
+	"net.capture":     {pkg: "capture", goName: "Capture", args: true, params: []string{"s", "i", "i", "s"}},
 	"net.tcp_check":   {pkg: "net", goName: "TCPConnect", args: true, params: []string{"s", "i"}},
 	"net.dns_lookup":  {pkg: "net", goName: "DNSLookup", args: true, params: []string{"s"}},
 	"net.interfaces":  {pkg: "net", goName: "Interfaces"},
@@ -1862,6 +1863,7 @@ var pkgImportAlias = map[string]string{
 var pkgImportPath = map[string]string{
 	"sys":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sys",
 	"file":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/file",
+	"capture":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/capture",
 	"net":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/net",
 	"process":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/process",
 	"service":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/service",

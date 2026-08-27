@@ -3,7 +3,7 @@
 > **本文档由 `make docs` 从 internal/opsspec/spec.go 自动生成，请勿手改。**
 > 参数名即调用时的位置参数顺序；`可变` 表示该操作会改变系统状态，需要 admin 及以上权限。
 
-共 1149 个原子操作，209 个包。
+共 1150 个原子操作，209 个包。
 
 ## 目录
 
@@ -39,7 +39,7 @@
 - [locale](#locale)（3 个）
 - [logrotate](#logrotate)（4 个）
 - [lvg](#lvg)（8 个）
-- [net](#net)（9 个）
+- [net](#net)（10 个）
 - [ntp](#ntp)（2 个）
 - [pkg](#pkg)（6 个）
 - [pip](#pip)（6 个）
@@ -586,6 +586,7 @@
 | `net.http_get` | `url` |  | 全部引擎 |
 | `net.http_post` | `url`, `body` | ✓ | 全部引擎 |
 | `net.interfaces` | - |  | 全部引擎 |
+| `net.capture` | `iface`, `seconds`, `max_packets`, `pcap_path` |  | 全部引擎 |
 | `net.tcp_check` | `host`, `port` |  | 全部引擎 |
 | `net.wait_for` | `host`, `port`, `timeout` |  | 全部引擎 |
 | `net.wait_for_connection` | `host`, `port`, `timeout` |  | 全部引擎 |

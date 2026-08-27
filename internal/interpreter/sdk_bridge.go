@@ -23,6 +23,7 @@ import (
 	sdkauthorized_key "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/authorized_key"
 	sdkblockdev "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/blockdev"
 	sdkblockinfile "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/blockinfile"
+	sdkcapture "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/capture"
 	sdkbtrfs "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/btrfs"
 	sdkcargo "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/cargo"
 	sdkcertbot "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/certbot"
@@ -717,6 +718,50 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return structToMap(r)
+	}
+
+	interp.builtins["net.capture"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) < 1 || len(args) > 4 {
+			return nil, fmt.Errorf("net.capture() requires 1..4 arguments (iface, seconds, max_packets, pcap_path)")
+		}
+		iface, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("net.capture(): iface must be string")
+		}
+		seconds := 5
+		maxPkts := 200
+		pcapPath := ""
+		if len(args) >= 2 {
+			if v, ok := args[1].(int64); ok {
+				seconds = int(v)
+			} else {
+				return nil, fmt.Errorf("net.capture(): seconds must be int")
+			}
+		}
+		if len(args) >= 3 {
+			if v, ok := args[2].(int64); ok {
+				maxPkts = int(v)
+			} else {
+				return nil, fmt.Errorf("net.capture(): max_packets must be int")
+			}
+		}
+		if len(args) >= 4 {
+			v, ok := args[3].(string)
+			if !ok {
+				return nil, fmt.Errorf("net.capture(): pcap_path must be string")
+			}
+			pcapPath = v
+		}
+		r, err := sdkcapture.Capture(sdkcapture.Options{
+			Iface:    iface,
+			Seconds:  seconds,
+			MaxPkts:  maxPkts,
+			PcapPath: pcapPath,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(*r)
 	}
 
 	interp.builtins["net.tcp_check"] = func(args ...interface{}) (interface{}, error) {

@@ -318,6 +318,7 @@ var Funcs = []Func{
 	// submissions) and is the writing counterpart to the read-only GET.
 	{Name: "net.http_post", Args: []string{"url", "body"}, Mutating: true},
 	{Name: "net.interfaces"},
+	{Name: "net.capture", Args: []string{"iface", "seconds", "max_packets", "pcap_path"}},
 	{Name: "net.tcp_check", Args: []string{"host", "port"}},
 	{Name: "net.wait_for", Args: []string{"host", "port", "timeout"}},
 	{Name: "net.wait_for_connection", Args: []string{"host", "port", "timeout"}},

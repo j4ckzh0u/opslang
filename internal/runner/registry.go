@@ -115,6 +115,7 @@ import (
 	sdkmount "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/mount"
 	sdkmultipath "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/multipath"
 	sdkmysql "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/mysql"
+	opscapture "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/capture"
 	opsnet "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/net"
 	sdknfsexports "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/nfs_exports"
 	sdknftables "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/nftables"
@@ -514,6 +515,22 @@ func (r *Registry) registerNetOps() {
 			return nil, fmt.Errorf("net.http_post: %w", err)
 		}
 		return opsnet.HTTPPost(url, body)
+	})
+	r.Register("net.capture", func(args map[string]interface{}) (interface{}, error) {
+		iface := getStringArg(args, "iface", "")
+		seconds := getIntArg(args, "seconds", 5)
+		maxPkts := getIntArg(args, "max_packets", 200)
+		pcapPath := getStringArg(args, "pcap_path", "")
+		res, err := opscapture.Capture(opscapture.Options{
+			Iface:    iface,
+			Seconds:  seconds,
+			MaxPkts:  maxPkts,
+			PcapPath: pcapPath,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("net.capture: %w", err)
+		}
+		return res, nil
 	})
 	r.Register("net.tcp_check", func(args map[string]interface{}) (interface{}, error) {
 		host, err := argString(args, "host")
@@ -8018,6 +8035,21 @@ func getStringArg(args map[string]interface{}, key string, defaultVal string) st
 	if v, ok := args[key]; ok {
 		if s, ok := v.(string); ok {
 			return s
+		}
+	}
+	return defaultVal
+}
+
+// getIntArg returns the int value of an optional arg, or defaultVal.
+func getIntArg(args map[string]interface{}, key string, defaultVal int) int {
+	if v, ok := args[key]; ok {
+		switch n := v.(type) {
+		case int:
+			return n
+		case int64:
+			return int(n)
+		case float64:
+			return int(n)
 		}
 	}
 	return defaultVal
