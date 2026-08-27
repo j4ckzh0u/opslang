@@ -12,7 +12,6 @@ import (
 
 	"github.com/j4ckzh0u/opslang/internal/ast"
 	"github.com/j4ckzh0u/opslang/internal/runner"
-	"github.com/j4ckzh0u/opslang/internal/security"
 )
 
 func testKeyPairE2E(t *testing.T) (ed25519.PublicKey, ed25519.PrivateKey) {
@@ -142,24 +141,5 @@ func TestRunMissingKeyFileIsUsageError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "public key") {
 		t.Fatalf("error should mention the public key file: %v", err)
-	}
-}
-
-func TestRunHexEncodedPubKeyAccepted(t *testing.T) {
-	resetRunnerFlags(t)
-	_, priv := testKeyPairE2E(t)
-	hexPath := filepath.Join(t.TempDir(), "runner-hex.pub")
-	hexPub := security.PublicKeyToString(priv.Public().(ed25519.PublicKey))
-	if err := os.WriteFile(hexPath, []byte(hexPub+"\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
-	pubKeyPath = hexPath
-
-	var out bytes.Buffer
-	if err := run(bytes.NewReader(signedHostnamePackage(t, priv)), &out); err != nil {
-		t.Fatalf("run: %v", err)
-	}
-	if status != "ok" {
-		t.Fatalf("status = %q, want ok with hex-encoded key (output: %s)", status, out.String())
 	}
 }

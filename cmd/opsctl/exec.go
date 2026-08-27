@@ -12,9 +12,7 @@ import (
 
 	opsexec "github.com/j4ckzh0u/opslang/internal/exec"
 	"github.com/j4ckzh0u/opslang/internal/inventory"
-	"github.com/j4ckzh0u/opslang/internal/opsspec"
 	"github.com/j4ckzh0u/opslang/internal/runner"
-	"github.com/j4ckzh0u/opslang/internal/security"
 	"github.com/spf13/cobra"
 )
 
@@ -50,7 +48,7 @@ use and cached in ~/.cache/opslang/runners/ for subsequent executions.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Resolve --auto-approve (flag over env) here: reading the flag set
 		// from helpers would create an init cycle via execCmd.
-		auto, src := security.ResolveAutoApprove(cmd.Flags().Changed("auto-approve"), execAutoApprove)
+		auto, src := resolveAutoApprove(cmd.Flags().Changed("auto-approve"), execAutoApprove)
 		return runExecCommand(auto, src)
 	},
 }
@@ -75,7 +73,7 @@ func init() {
 }
 
 // runExecCommand is the main execution logic for the exec subcommand.
-func runExecCommand(autoApprove bool, autoSource security.ApprovalSource) error {
+func runExecCommand(autoApprove bool, autoSource approvalSource) error {
 	// Validate required flags.
 	if execInstructions == "" {
 		return fmt.Errorf("--instructions flag is required")
@@ -93,7 +91,7 @@ func runExecCommand(autoApprove bool, autoSource security.ApprovalSource) error 
 	// Sign the package before any host is contacted; a bad key path fails
 	// the run here rather than mid-flight.
 	if execSignKey != "" {
-		key, err := security.LoadPrivateKey(execSignKey)
+		key, err := loadSignKey(execSignKey)
 		if err != nil {
 			return fmt.Errorf("failed to load signing key: %w", err)
 		}
@@ -114,22 +112,19 @@ func runExecCommand(autoApprove bool, autoSource security.ApprovalSource) error 
 	// Approval gate: privileged packages aimed at production targets need
 	// explicit approval before any host is contacted.
 	taskID := fmt.Sprintf("exec-%d", time.Now().UnixNano())
-	approvalRec, err := enforceExecApproval(execInstructions, pkg, targets, autoApprove, autoSource)
+	approvalRec, err := enforceExecApprovalGate(execInstructions, pkg, targets, autoApprove, autoSource)
 	if err != nil {
-		entry := security.NewAuditEntry(
-			taskID,
-			execInstructions,
-			pkg.Privilege,
-			targetAddressList(targets),
-			execUser,
-			"instruction-exec",
-			execDryRun,
-		)
-		entry.SetError(err)
-		entry.Approval = approvalRec
-		if lerr := security.NewAuditLogger("").Log(entry); lerr != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to write audit log: %v\n", lerr)
-		}
+		writeAudit(auditFacts{
+			taskID:    taskID,
+			script:    execInstructions,
+			privilege: pkg.Privilege,
+			targets:   targetAddressList(targets),
+			user:      execUser,
+			mode:      "instruction-exec",
+			dryRun:    execDryRun,
+			runErr:    err,
+			approval:  approvalRec,
+		})
 		return err
 	}
 
@@ -164,24 +159,18 @@ func runExecCommand(autoApprove bool, autoSource security.ApprovalSource) error 
 	summary := executor.Execute(ctx)
 
 	// Audit every remote execution: operator, targets, outcome.
-	auditEntry := security.NewAuditEntry(
-		summary.TaskID,
-		execInstructions,
-		"system",
-		append([]string(nil), execHosts...),
-		execUser,
-		"instruction-exec",
-		execDryRun,
-	)
-	auditEntry.Approval = approvalRec
-	if summary.Status == "success" {
-		auditEntry.SetStatus("success", summary.FinishedAt.Sub(summary.StartedAt).Milliseconds())
-	} else {
-		auditEntry.SetError(fmt.Errorf("execution status: %s", summary.Status))
-	}
-	if err := security.NewAuditLogger("").Log(auditEntry); err != nil {
-		fmt.Fprintf(os.Stderr, "Warning: failed to write audit log: %v\n", err)
-	}
+	writeAudit(auditFacts{
+		taskID:     summary.TaskID,
+		script:     execInstructions,
+		privilege:  "system",
+		targets:    append([]string(nil), execHosts...),
+		user:       execUser,
+		mode:       "instruction-exec",
+		dryRun:     execDryRun,
+		status:     summary.Status,
+		durationMs: summary.FinishedAt.Sub(summary.StartedAt).Milliseconds(),
+		approval:   approvalRec,
+	})
 
 	// Marshal result to JSON.
 	result, err := json.MarshalIndent(summary, "", "  ")
@@ -224,37 +213,4 @@ func buildExecTargets() ([]opsexec.Target, error) {
 		targets = append(targets, opsexec.TargetsFromInventory(inv)...)
 	}
 	return targets, nil
-}
-
-// enforceExecApproval applies the approval gate to a raw instruction-package
-// execution. The package's declared privilege drives the decision (empty —
-// legacy packages — never gates, matching the runner's treatment); the
-// mutating operations come straight from the instructions.
-func enforceExecApproval(instrPath string, pkg *runner.InstructionPackage, targets []opsexec.Target, autoApprove bool, autoSource security.ApprovalSource) (*security.ApprovalRecord, error) {
-	var mutatingOps []string
-	for _, in := range pkg.Instructions {
-		if mutating, known := opsspec.Mutating(in.Op); known && mutating {
-			mutatingOps = append(mutatingOps, in.Op)
-		}
-	}
-	gate := &security.ApprovalGate{
-		Decision: security.EvaluateApproval(
-			pkg.PrivilegeLevel(),
-			mutatingOps,
-			targetTags(targets),
-		),
-		ScriptName:  instrPath,
-		AutoApprove: autoApprove,
-		AutoSource:  autoSource,
-		Interactive: deployStdinIsInteractive(),
-		Confirm:     deployConfirmFn,
-	}
-	rec, err := gate.Check()
-	if err != nil {
-		return rec, fmt.Errorf("execution blocked: %w", err)
-	}
-	if rec != nil {
-		fmt.Fprintf(os.Stderr, "Approved via %s by %s\n", rec.Source, rec.User)
-	}
-	return rec, nil
 }

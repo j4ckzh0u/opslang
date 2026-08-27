@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/j4ckzh0u/opslang/internal/runner"
-	"github.com/j4ckzh0u/opslang/internal/security"
 )
 
 var (
@@ -133,7 +132,7 @@ func loadTrustedPublicKey() (ed25519.PublicKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read public key %s: %w", pubKeyPath, err)
 	}
-	if pub, herr := security.StringToPublicKey(strings.TrimSpace(string(keyData))); herr == nil {
+	if pub, herr := parseHexPublicKey(strings.TrimSpace(string(keyData))); herr == nil {
 		return pub, nil
 	}
 	if len(keyData) != ed25519.PublicKeySize {

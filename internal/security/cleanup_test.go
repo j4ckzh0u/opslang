@@ -1,3 +1,5 @@
+//go:build opssec
+
 package security
 
 import (

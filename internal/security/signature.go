@@ -1,3 +1,5 @@
+//go:build opssec
+
 // Package security implements permission checks, audit logging, resource limits, and signature verification.
 package security
 

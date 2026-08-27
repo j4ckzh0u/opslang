@@ -1,3 +1,5 @@
+//go:build opssec
+
 // keygen generates an Ed25519 signing key pair for instruction packages.
 // The private key stays on the controller (--sign-key); the public key is
 // distributed to target hosts and enforced by ops-runner --pubkey.
@@ -32,6 +34,7 @@ Existing files are never overwritten unless --force is given.`,
 }
 
 func init() {
+	rootCmd.AddCommand(keygenCmd)
 	keygenCmd.Flags().StringVarP(&keygenOut, "out", "o", "opslang-signing", "Output prefix; writes <prefix>.key and <prefix>.pub")
 	keygenCmd.Flags().BoolVar(&keygenForce, "force", false, "Overwrite existing key files")
 }

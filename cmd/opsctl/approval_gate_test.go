@@ -1,3 +1,5 @@
+//go:build opssec
+
 package main
 
 import (
@@ -200,7 +202,7 @@ let r = file.write("/tmp/approval-check", "data")
 	forceNonInteractive(t)
 	t.Setenv("OPSLANG_AUDIT_DIR", t.TempDir())
 
-	err := runDeployCommand(scriptPath, true, security.ApprovalAutoFlag)
+	err := runDeployCommand(scriptPath, true, approvalSource(security.ApprovalAutoFlag))
 	if err == nil {
 		t.Fatal("mocked SSH fails, so the deploy must still report an error")
 	}
@@ -223,7 +225,7 @@ report { cpu: cpu }
 	t.Setenv("OPSLANG_AUDIT_DIR", t.TempDir())
 	prog := parseProgram(t, mustRead(t, scriptPath))
 
-	rec, err := enforceDeployApproval(scriptPath, prog, buildDeployTargets(), false, "")
+	rec, err := enforceDeployApprovalGate(scriptPath, prog, buildDeployTargets(), false, "")
 	if err != nil {
 		t.Fatalf("read_only script must not be gated: %v", err)
 	}
@@ -241,7 +243,7 @@ let r = file.write("/tmp/approval-check", "data")
 	defer restore()
 
 	prog := parseProgram(t, mustRead(t, scriptPath))
-	rec, err := enforceDeployApproval(scriptPath, prog, buildDeployTargets(), false, "")
+	rec, err := enforceDeployApprovalGate(scriptPath, prog, buildDeployTargets(), false, "")
 	if err != nil {
 		t.Fatalf("non-prod targets must not be gated: %v", err)
 	}
@@ -270,7 +272,7 @@ let r = file.write("/tmp/approval-check", "data")
 		shown = summary
 		return true
 	}
-	rec, err := enforceDeployApproval(scriptPath, prog, targets, false, "")
+	rec, err := enforceDeployApprovalGate(scriptPath, prog, targets, false, "")
 	if err != nil {
 		t.Fatalf("approved interactively, must proceed: %v", err)
 	}
@@ -284,7 +286,7 @@ let r = file.write("/tmp/approval-check", "data")
 	}
 
 	deployConfirmFn = func(string) bool { return false }
-	rec, err = enforceDeployApproval(scriptPath, prog, targets, false, "")
+	rec, err = enforceDeployApprovalGate(scriptPath, prog, targets, false, "")
 	if err == nil {
 		t.Fatal("interactive denial must abort")
 	}
@@ -384,7 +386,7 @@ func TestExecApproval_LegacyPackageNotGated(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build targets: %v", err)
 	}
-	rec, err := enforceExecApproval(instr, pkg, targets, false, "")
+	rec, err := enforceExecApprovalGate(instr, pkg, targets, false, "")
 	if err != nil {
 		t.Fatalf("legacy package must not be gated: %v", err)
 	}
@@ -409,11 +411,11 @@ func TestExecApproval_AutoApprove(t *testing.T) {
 	if err != nil {
 		t.Fatalf("build targets: %v", err)
 	}
-	rec, err := enforceExecApproval(instr, pkg, targets, true, security.ApprovalAutoEnv)
+	rec, err := enforceExecApprovalGate(instr, pkg, targets, true, approvalSource(security.ApprovalAutoEnv))
 	if err != nil {
 		t.Fatalf("auto-approved exec must proceed: %v", err)
 	}
-	if rec == nil || rec.Decision != "approved" || rec.Source != string(security.ApprovalAutoEnv) {
+	if rec == nil || rec.Decision != "approved" || rec.Source != string(approvalSource(security.ApprovalAutoEnv)) {
 		t.Errorf("record = %+v", rec)
 	}
 	if len(rec.MutatingOps) != 1 || rec.MutatingOps[0] != "file.write" {
