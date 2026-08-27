@@ -153,6 +153,9 @@ func Capture(opts Options) (*Result, error) {
 			if err == unix.EAGAIN || err == unix.EWOULDBLOCK {
 				continue // read tick timeout
 			}
+			if err == unix.EINTR {
+				continue // signal interrupted the read: keep capturing
+			}
 			return nil, fmt.Errorf("net.capture: recvfrom: %w", err)
 		}
 		if n <= 0 {
