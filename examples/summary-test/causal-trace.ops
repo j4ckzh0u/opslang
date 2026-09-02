@@ -1,0 +1,7 @@
+// WITR Phase 1 compatibility test: process-name lookup and parent ancestry.
+let traces = causal.find("java")
+report {
+    query: "java",
+    match_count: len(traces),
+    traces: traces
+}

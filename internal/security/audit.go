@@ -1,5 +1,3 @@
-//go:build opssec
-
 // Package security implements permission checks and audit logging.
 package security
 

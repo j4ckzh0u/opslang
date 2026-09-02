@@ -1,12 +1,12 @@
 # OpsLang
 
-面向运维领域的领域特定语言（DSL），用简洁脚本完成复杂运维操作，彻底摆脱 Shell 字符串处理和 Python 环境依赖。
+面向运维领域的领域特定语言（DSL），用简洁脚本完成复杂运维操作。控制器和目标机只需 OpsLang/ops-runner 二进制，不需要 Python 或 Shell 脚本运行时。
 
 ## 核心价值
 
 - **结构化返回**：标准库函数全部返回带 JSON 标签的结构体，告别字符串解析
 - **双执行引擎**：Runner 模式（JSON 指令包经 SSH 下发，零编译延迟，仅支持线性脚本）+ AOT 模式（按目标机架构编译静态二进制，支持包括 `ensure`/`parallel` 在内的全部语言）
-- **零依赖远程执行**：通过 SSH 下发预编译 Runner 或 AOT 二进制，目标机无需安装任何运行时
+- **零语言运行时远程执行**：通过 SSH 下发预编译 Runner 或 AOT 二进制，目标机无需安装 Python、Shell 或 OpsLang 运行时；具体模块仍可能要求 Linux 内核能力、系统服务或外部系统组件
 - **异构架构支持**：纯 Go 实现，`CGO_ENABLED=0` 交叉编译覆盖 amd64/arm64
 - **声明式幂等**：内置 `ensure` 语法（check → apply → verify → notify），支持 dry-run 与状态收敛
 - **Ansible 核心模块对齐**：`pkg.ensure` / `service.ensure` / `user.ensure` / `group.ensure` / `file.ensure` 幂等收敛家族 —— 声明期望状态，重复执行零变更，`changed`/`actions` 如实报告每一次真实动作

@@ -20,12 +20,12 @@
 
 ## 1. 概述
 
-OpsLang 标准库（`ops-core-sdk`）提供一组面向运维场景的原子操作函数。所有函数均为纯 Go 实现，不依赖 shell，支持 `CGO_ENABLED=0` 交叉编译。
+OpsLang 标准库（`ops-core-sdk`）提供一组面向运维场景的原子操作函数。核心信息与文件操作均由纯 Go 实现，不需要 Python 或 Shell 脚本运行时；包管理、服务管理和 `command` 等系统集成模块会按平台直接调用目标机已有组件。所有模块支持 `CGO_ENABLED=0` 交叉编译。
 
 ### 核心设计原则
 
 - **结构化返回**：每个函数返回结构体（非原始字符串），所有字段均带 JSON 标签，可直接序列化为 JSON
-- **纯 Go 实现**：不依赖 shell 命令执行，信息获取直接读取 `/proc`、`/sys` 或使用 Go 标准库
+- **优先纯 Go**：信息获取直接读取 `/proc`、`/sys` 或使用 Go 标准库；需要系统集成时通过参数化进程调用，不拼接不可信 shell 字符串
 - **统一错误处理**：函数签名统一为 `(T, error)` 模式，错误包含明确的错误码和消息
 - **异构架构**：所有包支持 `linux/amd64` 和 `linux/arm64` 交叉编译
 
@@ -452,6 +452,18 @@ for let i = 0; i < len(ifaces); i = i + 1 {
 let ip = sys.net.primary_ip()
 print("对外IP: " + ip.address + " (网卡 " + ip.interface + ")")
 ```
+
+---
+
+### 2.15 sys.net.rate(seconds)
+
+在指定窗口内采集发送/接收字节数并计算平均比特率。函数会进行两次内核计数器采样，返回总量及逐接口明细；计数器重置的接口会被忽略，避免产生负速率。
+
+**参数**：`seconds`（`int`，1–3600）
+
+**返回类型**：`NetRate`，包含 `bytes_sent`、`bytes_recv`、`bits_per_second`、`window_seconds` 和 `interfaces`。
+
+这是窗口平均值，不是持久化的滚动指标。例如 `sys.net.rate(3)` 表示 3 秒实测平均，五分钟测量应传入 `300`。
 
 ---
 
@@ -1212,6 +1224,56 @@ for let i = 0; i < len(procs); i = i + 1 {
     }
 }
 ```
+
+---
+
+### 5.1.1 process.java_apps()
+
+扫描 Linux `/proc` 中正在运行的 Java 进程，解析命令行中的 `.jar`/classpath 条目并提取库名称、版本和路径。进程所属 cgroup 若包含 Docker、containerd 或 CRI-O ID，则同时返回 `container_runtime` 和 `container_id`。
+
+**参数**：无　　**返回类型**：`[]JavaApp`
+
+`JavaApp` 字段包括 `pid`、`user`、`command`、`executable`、`libraries`；`libraries` 每项包含 `name`、`version`、`path`。宿主机只有在与容器共享 PID namespace 时才能看到容器内 Java 进程；否则应在容器内执行脚本。
+
+---
+
+### 5.1.2 causal.trace_pid(pid)
+
+追踪指定 Linux PID 的父进程链，返回从目标进程到根进程的节点和 `parent` 边。节点包含 PID、PPID、名称、可执行文件、命令行、UID，以及可识别时的 Docker/containerd/CRI-O cgroup 信息。单个进程因权限或退出而不可读时，已采集链会保留在结果中，并在 `warnings` 中说明。
+
+**参数**：`pid`（`int`，正整数）　　**返回类型**：`CausalTrace`
+
+---
+
+### 5.1.3 causal.find(name)
+
+按大小写不敏感的名称包含匹配查找进程，并为每个匹配项返回一条 `CausalTrace`。结果按 PID 排序；Linux 之外返回空列表，便于跨平台脚本保留同一数据契约。
+
+**参数**：`name`（`string`）　　**返回类型**：`[]CausalTrace`
+
+---
+
+### 5.1.4 causal.trace_port(port)
+
+查找占用指定 TCP/UDP 端口的进程，并为每个 socket 返回进程 ancestry。结果包含本地/远端地址、协议、PID 和嵌套的 `CausalTrace`；无权限归属的内核 socket 会被跳过，不会伪造进程信息。
+
+**参数**：`port`（`int`，1–65535）　　**返回类型**：`[]PortConnection`
+
+---
+
+### 5.1.5 causal.trace_file(path)
+
+扫描 `/proc/<pid>/fd`，查找解析到指定路径的打开文件描述符，并返回持有者进程的 ancestry。单个进程的 fd 目录不可读时按 best-effort 处理。
+
+**参数**：`path`（`string`）　　**返回类型**：`[]FileTrace`
+
+---
+
+### 5.1.6 causal.trace_container(id)
+
+按 Docker/containerd/CRI-O cgroup ID 查找进程并返回各自 ancestry。此 API 只依赖内核 cgroup 信息，不要求目标机安装 Docker CLI 或访问容器运行时 socket。
+
+**参数**：`id`（`string`，6–64 位十六进制）　　**返回类型**：`[]CausalTrace`
 
 ---
 

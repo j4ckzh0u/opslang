@@ -565,24 +565,7 @@ func deployAOTMode(ctx context.Context, scriptPath string, prog *ast.Program, ta
 	// The runner executes the uploaded binary; the executor rewrites the
 	// placeholder to the per-host remote path after upload. The binary's
 	// parsed report is assigned to "app" so it lands in the deploy output.
-	// The package carries the script privilege: binary.exec counts as a
-	// mutating op, so a read_only script cannot be deployed as an opaque
-	// binary the runner has no way to verify — read_only scripts deploy
-	// in runner mode instead (the compiler already rejected mutating
-	// calls inside them, so their instruction packages are read-only too).
-	pkg := &runner.InstructionPackage{
-		Version:   "1.0",
-		TaskID:    taskID,
-		DryRun:    deployDryRun,
-		Privilege: string(scriptPriv),
-		Instructions: []runner.Instruction{
-			{
-				Op:     "binary.exec",
-				Args:   map[string]interface{}{"path": opsexec.AppBinaryPlaceholder},
-				Assign: "app",
-			},
-		},
-	}
+	pkg := newAOTInstructionPackage(taskID, deployDryRun, scriptPriv)
 
 	if err := signPkg(pkg); err != nil {
 		return nil, fmt.Errorf("failed to sign AOT instruction package: %w", err)
@@ -609,6 +592,26 @@ func deployAOTMode(ctx context.Context, scriptPath string, prog *ast.Program, ta
 	agg := &deployAggregate{TaskID: taskID, Targets: targetNames(targets)}
 	agg.add(summary)
 	return agg, nil
+}
+
+// newAOTInstructionPackage wraps a statically checked compiled program in a
+// transport package. The wrapper itself launches a binary, so it carries
+// admin transport privilege. The original script privilege is checked before
+// compilation by compiler.CheckPrivileges and by the deploy approval gate.
+func newAOTInstructionPackage(taskID string, dryRun bool, _ ast.PrivilegeLevel) *runner.InstructionPackage {
+	return &runner.InstructionPackage{
+		Version:   "1.0",
+		TaskID:    taskID,
+		DryRun:    dryRun,
+		Privilege: string(ast.PrivilegeAdmin),
+		Instructions: []runner.Instruction{
+			{
+				Op:     "binary.exec",
+				Args:   map[string]interface{}{"path": opsexec.AppBinaryPlaceholder},
+				Assign: "app",
+			},
+		},
+	}
 }
 
 func targetAddressList(targets []opsexec.Target) []string {

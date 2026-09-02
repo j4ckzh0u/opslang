@@ -1,0 +1,11 @@
+// WITR Phase 2 compatibility test for PID, port, file, and container lookups.
+let by_name = causal.find("java")
+let by_port = causal.trace_port(22)
+let by_file = causal.trace_file("/etc/hosts")
+let by_container = causal.trace_container("abcdef123456")
+report {
+    process_name_query: by_name,
+    port_query: by_port,
+    file_query: by_file,
+    container_query: by_container
+}

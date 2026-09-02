@@ -1,5 +1,3 @@
-//go:build opssec
-
 // keygen generates an Ed25519 signing key pair for instruction packages.
 // The private key stays on the controller (--sign-key); the public key is
 // distributed to target hosts and enforced by ops-runner --pubkey.

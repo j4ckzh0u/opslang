@@ -1,5 +1,3 @@
-//go:build opssec
-
 // Approval flow: privileged deploys (privilege admin or root) that target
 // production hosts require explicit human approval before any host is
 // contacted. The decision logic is pure and testable; the interactive half

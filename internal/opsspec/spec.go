@@ -318,6 +318,7 @@ var Funcs = []Func{
 	// submissions) and is the writing counterpart to the read-only GET.
 	{Name: "net.http_post", Args: []string{"url", "body"}, Mutating: true},
 	{Name: "net.interfaces"},
+	{Name: "sys.net.rate", Args: []string{"seconds"}},
 	{Name: "net.capture", Args: []string{"iface", "seconds", "max_packets", "pcap_path"}},
 	{Name: "net.tcp_check", Args: []string{"host", "port"}},
 	{Name: "net.wait_for", Args: []string{"host", "port", "timeout"}},
@@ -347,6 +348,14 @@ var Funcs = []Func{
 	{Name: "process.find_by_port", Args: []string{"port"}},
 	{Name: "process.kill", Args: []string{"pid", "signal"}, Mutating: true},
 	{Name: "process.list"},
+	{Name: "process.java_apps"},
+
+	// ── causal ────────────────────────────────────────────────────────
+	{Name: "causal.find", Args: []string{"name"}},
+	{Name: "causal.trace_pid", Args: []string{"pid"}},
+	{Name: "causal.trace_port", Args: []string{"port"}},
+	{Name: "causal.trace_file", Args: []string{"path"}},
+	{Name: "causal.trace_container", Args: []string{"id"}},
 
 	// ── resolv ────────────────────────────────────────────────────────
 	{Name: "resolv.get"},

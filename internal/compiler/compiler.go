@@ -80,8 +80,11 @@ func (c *Compiler) Compile(sourcePath string, targetArch string, outputPath stri
 		return fmt.Errorf("failed to find project root: %w", err)
 	}
 
-	buildDir := filepath.Join(projectRoot, ".opslang-build")
-	if err := os.MkdirAll(buildDir, 0755); err != nil {
+	// Every compile gets its own directory. A fixed project-level path lets
+	// concurrent deploys overwrite main.go/output and produce nondeterministic
+	// binaries or missing-import errors.
+	buildDir, err := os.MkdirTemp(projectRoot, ".opslang-build-")
+	if err != nil {
 		return fmt.Errorf("failed to create build directory: %w", err)
 	}
 	defer func() {
@@ -103,7 +106,7 @@ func (c *Compiler) Compile(sourcePath string, targetArch string, outputPath stri
 	cmd := exec.Command("go", "build",
 		"-ldflags", "-s -w",
 		"-o", buildOutput,
-		"./.opslang-build/",
+		"./"+filepath.Base(buildDir)+"/",
 	)
 	cmd.Dir = projectRoot
 	cmd.Env = append(os.Environ(),

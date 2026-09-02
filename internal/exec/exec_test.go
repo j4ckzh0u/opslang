@@ -837,6 +837,9 @@ type mockSSHServer struct {
 
 func newMockSSHServer(t *testing.T, password string) *mockSSHServer {
 	t.Helper()
+	// Each in-process server gets a fresh key and may reuse a local port across
+	// tests; isolate its TOFU file so a prior test is never mistaken for a MITM.
+	t.Setenv("OPSLANG_KNOWN_HOSTS", filepath.Join(t.TempDir(), "known_hosts"))
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -1177,6 +1180,7 @@ type errorMockSSHServer struct {
 
 func newErrorMockSSHServer(t *testing.T, password string) *errorMockSSHServer {
 	t.Helper()
+	t.Setenv("OPSLANG_KNOWN_HOSTS", filepath.Join(t.TempDir(), "known_hosts"))
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {

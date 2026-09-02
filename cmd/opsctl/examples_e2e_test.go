@@ -54,6 +54,9 @@ func TestExamplesAllRun(t *testing.T) {
 			if name == "archive_and_download.ops" && os.Getenv("OPSLANG_RUN_NETWORK_EXAMPLES") != "1" {
 				t.Skip("requires external network; set OPSLANG_RUN_NETWORK_EXAMPLES=1 to enable")
 			}
+			if name == "apache2_management.ops" && runtime.GOOS != "linux" {
+				t.Skip("Apache2 control commands are Linux-specific and may block on non-Linux hosts")
+			}
 			// Examples that shell out to optional tools cannot run on
 			// hosts without them (e.g. minimal CI images). Probe and
 			// skip - same honest contract as the network gate above.
@@ -108,7 +111,9 @@ func TestExamplesAllRun(t *testing.T) {
 
 			// Per-example timeout prevents a single hanging example
 			// (network call, port wait, blocked stdin) from killing
-			// the entire suite.
+			// the entire suite. System-information examples can be
+			// expensive under `go test ./...` package parallelism, so
+			// keep a bounded but realistic window.
 			done := make(chan error, 1)
 			go func() {
 				_, err := interp.Execute(prog)
@@ -119,8 +124,8 @@ func TestExamplesAllRun(t *testing.T) {
 				if err != nil {
 					t.Fatalf("execution error: %v", err)
 				}
-			case <-time.After(10 * time.Second):
-				t.Fatalf("example timed out after 10s (likely hanging on network/port wait)")
+			case <-time.After(30 * time.Second):
+				t.Fatalf("example timed out after 30s (likely hanging on network/port wait)")
 			}
 		})
 		ran++

@@ -27,6 +27,7 @@ import (
 	sdkbtrfs "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/btrfs"
 	sdkcapture "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/capture"
 	sdkcargo "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/cargo"
+	sdkcausal "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/causal"
 	sdkcertbot "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/certbot"
 	sdkcloudinit "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/cloud_init"
 	sdkcommand "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/command"
@@ -364,6 +365,24 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 
 	interp.builtins["sys.net.primary_ip"] = func(args ...interface{}) (interface{}, error) {
 		r, err := sdksys.GetPrimaryIP()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["sys.net.rate"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) != 1 {
+			return nil, fmt.Errorf("sys.net.rate() requires 1 argument (seconds)")
+		}
+		secondsValue, err := toInt(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("sys.net.rate(): seconds must be a number")
+		}
+		seconds, ok := secondsValue.(int64)
+		if !ok {
+			return nil, fmt.Errorf("sys.net.rate(): seconds must be a number")
+		}
+		r, err := sdksys.GetNetRate(int(seconds))
 		if err != nil {
 			return nil, err
 		}
@@ -838,6 +857,91 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, err
 		}
 		return structToMap(r)
+	}
+	interp.builtins["process.java_apps"] = func(args ...interface{}) (interface{}, error) {
+		r, err := sdkprocess.JavaApps()
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(r)
+	}
+	interp.builtins["causal.find"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) != 1 {
+			return nil, fmt.Errorf("causal.find() requires 1 argument (name)")
+		}
+		name, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("causal.find(): name must be a string")
+		}
+		traces, err := sdkcausal.Find(name)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(traces)
+	}
+	interp.builtins["causal.trace_pid"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) != 1 {
+			return nil, fmt.Errorf("causal.trace_pid() requires 1 argument (pid)")
+		}
+		pidValue, err := toInt(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("causal.trace_pid(): pid must be a number")
+		}
+		pid, ok := pidValue.(int64)
+		if !ok {
+			return nil, fmt.Errorf("causal.trace_pid(): pid must be a number")
+		}
+		trace, err := sdkcausal.TracePID(int(pid))
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(trace)
+	}
+	interp.builtins["causal.trace_port"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) != 1 {
+			return nil, fmt.Errorf("causal.trace_port() requires 1 argument (port)")
+		}
+		portValue, err := toInt(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("causal.trace_port(): port must be a number")
+		}
+		port, ok := portValue.(int64)
+		if !ok {
+			return nil, fmt.Errorf("causal.trace_port(): port must be a number")
+		}
+		traces, err := sdkcausal.TracePort(int(port))
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(traces)
+	}
+	interp.builtins["causal.trace_file"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) != 1 {
+			return nil, fmt.Errorf("causal.trace_file() requires 1 argument (path)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("causal.trace_file(): path must be a string")
+		}
+		traces, err := sdkcausal.TraceFile(path)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(traces)
+	}
+	interp.builtins["causal.trace_container"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) != 1 {
+			return nil, fmt.Errorf("causal.trace_container() requires 1 argument (id)")
+		}
+		id, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("causal.trace_container(): id must be a string")
+		}
+		traces, err := sdkcausal.TraceContainer(id)
+		if err != nil {
+			return nil, err
+		}
+		return structToMap(traces)
 	}
 
 	interp.builtins["process.find_by_name"] = func(args ...interface{}) (interface{}, error) {

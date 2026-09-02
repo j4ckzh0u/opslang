@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -132,6 +133,47 @@ print(x)`
 	}
 	if len(output) == 0 {
 		t.Error("compiled binary produced no output")
+	}
+}
+
+func TestCompileConcurrentUsesIsolatedBuildDirectories(t *testing.T) {
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go compiler not available")
+	}
+	_, testFile, _, _ := runtime.Caller(0)
+	projectRoot := filepath.Dir(filepath.Dir(filepath.Dir(testFile)))
+	scriptPath := filepath.Join(projectRoot, "examples", "_compiler_concurrent_test.ops")
+	if err := os.WriteFile(scriptPath, []byte("report { value: 42 }\n"), 0644); err != nil {
+		t.Fatalf("write concurrent source: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Remove(scriptPath) })
+
+	c, err := NewCompiler()
+	if err != nil {
+		t.Fatalf("NewCompiler: %v", err)
+	}
+	tmp := t.TempDir()
+	outputs := []string{filepath.Join(tmp, "one"), filepath.Join(tmp, "two")}
+	errs := make(chan error, len(outputs))
+	var wg sync.WaitGroup
+	for _, output := range outputs {
+		wg.Add(1)
+		go func(output string) {
+			defer wg.Done()
+			errs <- c.Compile(scriptPath, "", output)
+		}(output)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("concurrent compile failed: %v", err)
+		}
+	}
+	for _, output := range outputs {
+		if info, err := os.Stat(output); err != nil || info.Size() == 0 {
+			t.Fatalf("compiled output %s invalid: info=%v err=%v", output, info, err)
+		}
 	}
 }
 

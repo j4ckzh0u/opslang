@@ -1,0 +1,27 @@
+// Linux 运维摘要测试：磁盘、CPU、网络、软件包和 Java 进程。
+// 网络速率使用 3 秒实测窗口；如需五分钟平均值，将 3 改为 300。
+
+let disk = sys.disk.usage("/")
+let cpu = sys.cpu.usage()
+let load = sys.load()
+let net_rate = sys.net.rate(3)
+let package_facts = package_facts.collect([])
+let java_apps = process.java_apps()
+
+report {
+    disk_path: disk.path,
+    disk_used_percent: disk.used_percent,
+    disk_over_80: disk.used_percent > 80,
+    cpu_percent: cpu.percent,
+    cpu_over_60: cpu.percent > 60,
+    load_1m: load.load1,
+    load_5m: load.load5,
+    load_15m: load.load15,
+    network_rate: net_rate,
+    network_sample_window_seconds: net_rate.window_seconds,
+    installed_packages: package_facts,
+    java_running: len(java_apps) > 0,
+    java_app_count: len(java_apps),
+    java_apps: java_apps,
+    java_container_note: "Docker/containerd metadata is reported when the host can see the process cgroup; isolated PID namespaces require running this script inside the container."
+}

@@ -344,6 +344,25 @@ func TestExecutorErrorDoesNotStopExecution(t *testing.T) {
 	}
 }
 
+func TestBinaryExecRequiresTransportPrivilege(t *testing.T) {
+	r := &Registry{ops: make(map[string]OperationFunc)}
+	r.Register("binary.exec", func(args map[string]interface{}) (interface{}, error) {
+		return "ok", nil
+	})
+
+	var pkg InstructionPackage
+	if err := json.Unmarshal([]byte(`{"version":"1.0","privilege":"admin","instructions":[{"op":"binary.exec","assign":"app","args":{"path":"/tmp/app"}}]}`), &pkg); err != nil {
+		t.Fatalf("unmarshal package: %v", err)
+	}
+	output := Run(&pkg, r)
+	if output.Status != "ok" {
+		t.Fatalf("internal binary.exec status = %q, want ok; errors=%v", output.Status, output.Errors)
+	}
+	if output.Data["app"] != "ok" {
+		t.Fatalf("internal binary.exec result = %v, want ok", output.Data["app"])
+	}
+}
+
 type testError struct {
 	msg string
 }

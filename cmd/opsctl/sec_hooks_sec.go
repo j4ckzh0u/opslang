@@ -1,10 +1,8 @@
-//go:build opssec
-
 package main
 
-// opssec build: the full security feature set (approval gate, audit log,
-// Ed25519 signing) backed by internal/security. Behavior matches the
-// pre-split implementation; only plumbing moved here.
+// The full security feature set (approval gate, audit log, Ed25519 signing)
+// is enabled in the default build and backed by internal/security. The
+// historical opssec build tag remains source-compatible.
 
 import (
 	"fmt"

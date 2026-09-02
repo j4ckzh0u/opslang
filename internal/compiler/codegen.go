@@ -28,6 +28,7 @@ var sdkMapping = map[string]sdkFunc{
 	"sys.net.interfaces":     {pkg: "sys", goName: "GetNetInterfaces"},
 	"sys.net.all_interfaces": {pkg: "sys", goName: "GetAllNetInterfaces"},
 	"sys.net.primary_ip":     {pkg: "sys", goName: "GetPrimaryIP"},
+	"sys.net.rate":           {pkg: "sys", goName: "GetNetRate", args: true, params: []string{"i"}},
 	"sys.virt":               {pkg: "sys", goName: "GetVirtInfo"},
 	"sys.users":              {pkg: "sys", goName: "Users"},
 	"sys.uptime":             {pkg: "sys", goName: "Uptime"},
@@ -58,11 +59,17 @@ var sdkMapping = map[string]sdkFunc{
 	"net.connections": {pkg: "net", goName: "Connections", args: true, params: []string{"s"}},
 
 	// process
-	"process.list":         {pkg: "process", goName: "List"},
-	"process.find_by_name": {pkg: "process", goName: "FindByName", args: true, params: []string{"s"}},
-	"process.find_by_port": {pkg: "process", goName: "FindByPort", args: true, params: []string{"i"}},
-	"process.kill":         {pkg: "process", goName: "Kill", args: true, params: []string{"i", "s"}},
-	"process.exec":         {pkg: "process", goName: "Exec", args: true, params: []string{"s", "l"}},
+	"process.list":           {pkg: "process", goName: "List"},
+	"process.java_apps":      {pkg: "process", goName: "JavaApps"},
+	"causal.find":            {pkg: "causal", goName: "Find", args: true, params: []string{"s"}},
+	"causal.trace_pid":       {pkg: "causal", goName: "TracePID", args: true, params: []string{"i"}},
+	"causal.trace_port":      {pkg: "causal", goName: "TracePort", args: true, params: []string{"i"}},
+	"causal.trace_file":      {pkg: "causal", goName: "TraceFile", args: true, params: []string{"s"}},
+	"causal.trace_container": {pkg: "causal", goName: "TraceContainer", args: true, params: []string{"s"}},
+	"process.find_by_name":   {pkg: "process", goName: "FindByName", args: true, params: []string{"s"}},
+	"process.find_by_port":   {pkg: "process", goName: "FindByPort", args: true, params: []string{"i"}},
+	"process.kill":           {pkg: "process", goName: "Kill", args: true, params: []string{"i", "s"}},
+	"process.exec":           {pkg: "process", goName: "Exec", args: true, params: []string{"s", "l"}},
 
 	// service
 	"service.status":         {pkg: "service", goName: "Status", args: true, params: []string{"s"}},
@@ -1309,7 +1316,7 @@ var sdkMapping = map[string]sdkFunc{
 	"unarchive.unarchive": {pkg: "unarchive", goName: "Unarchive", args: true, params: []string{"s", "s", "s", "s", "s", "s"}},
 
 	// ── package_facts ────────────────────────────────────────────────────
-	"package_facts.collect": {pkg: "package_facts", goName: "Collect", args: true, params: []string{"l"}},
+	"package_facts.collect": {pkg: "package_facts", goName: "Collect", args: true, params: []string{"l"}, noErr: true},
 
 	// ── service_facts ────────────────────────────────────────────────────
 	"service_facts.collect": {pkg: "service_facts", goName: "Collect"},
@@ -1680,6 +1687,7 @@ var pkgImportAlias = map[string]string{
 	"capture":             "opscapture",
 	"net":                 "opsnet",
 	"process":             "process",
+	"causal":              "opscausal",
 	"service":             "service",
 	"pkg":                 "opspkg",
 	"time":                "opstime",
@@ -1867,6 +1875,7 @@ var pkgImportPath = map[string]string{
 	"capture":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/capture",
 	"net":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/net",
 	"process":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/process",
+	"causal":              "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/causal",
 	"service":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/service",
 	"pkg":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/pkg",
 	"time":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/time",
@@ -2166,7 +2175,7 @@ func (g *CodeGenerator) assemble(mainCode string) (string, error) {
 	b.WriteString("\t\"sync\"\n")
 
 	// SDK imports
-	sdkOrder := []string{"capture", "sys", "file", "net", "process", "service", "pkg", "time", "json", "yaml", "git", "user", "group", "cron", "sysctl"}
+	sdkOrder := []string{"capture", "sys", "file", "net", "process", "causal", "service", "pkg", "package_facts", "time", "json", "yaml", "git", "user", "group", "cron", "sysctl"}
 	for _, pkg := range sdkOrder {
 		if g.usedSDK[pkg] {
 			alias := pkgImportAlias[pkg]

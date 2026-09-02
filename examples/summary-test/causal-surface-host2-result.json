@@ -1,0 +1,72 @@
+{
+  "finished_at": "2026-09-01T16:23:51Z",
+  "results": {
+    "host2": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "container_query": [],
+        "file_query": [],
+        "port_query": [],
+        "process_name_query": [
+          {
+            "collected_at": "2026-09-01T16:23:51.217180039Z",
+            "edges": [
+              {
+                "from_pid": 2672678,
+                "relation": "parent",
+                "to_pid": 2672655
+              },
+              {
+                "from_pid": 2672655,
+                "relation": "parent",
+                "to_pid": 1
+              }
+            ],
+            "nodes": [
+              {
+                "command": "java -jar /app.jar",
+                "container_id": "redacted-container-id",
+                "container_runtime": "docker",
+                "name": "java",
+                "pid": 2672678,
+                "ppid": 2672655,
+                "start_time_ticks": 1408330822,
+                "user": "0"
+              },
+              {
+                "command": "/opt/kube/bin/containerd-bin/containerd-shim-runc-v2 -namespace moby -id redacted-container-id -address /run/containerd/containerd.sock",
+                "name": "containerd-shim",
+                "pid": 2672655,
+                "ppid": 1,
+                "start_time_ticks": 1408330818,
+                "user": "0"
+              },
+              {
+                "command": "/lib/systemd/systemd --system --deserialize 117 splash",
+                "name": "systemd",
+                "pid": 1,
+                "ppid": 0,
+                "start_time_ticks": 20,
+                "user": "0"
+              }
+            ],
+            "target": {
+              "kind": "pid",
+              "value": "2672678"
+            }
+          }
+        ]
+      },
+      "started_at": "2026-09-01T16:22:34.594318Z",
+      "finished_at": "2026-09-01T16:23:51.436783Z"
+    }
+  },
+  "script": "examples/summary-test/causal-surface.ops",
+  "started_at": "2026-09-01T16:22:34Z",
+  "status": "success",
+  "targets": [
+    "host2"
+  ],
+  "task_id": "examples_summary-test_causal-surface-1788279754591824000"
+}

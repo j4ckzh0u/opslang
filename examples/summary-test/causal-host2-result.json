@@ -1,0 +1,25 @@
+{
+  "finished_at": "2026-09-01T15:36:02Z",
+  "results": {
+    "host2": {
+      "status": "success",
+      "exit_code": 0,
+      "data": {
+        "app": {
+          "match_count": 0,
+          "query": "java",
+          "traces": []
+        }
+      },
+      "started_at": "2026-09-01T15:34:38.413459Z",
+      "finished_at": "2026-09-01T15:36:02.191559Z"
+    }
+  },
+  "script": "examples/summary-test/causal-trace.ops",
+  "started_at": "2026-09-01T15:34:38Z",
+  "status": "success",
+  "targets": [
+    "host2"
+  ],
+  "task_id": "examples_summary-test_causal-trace-1788276878412980000"
+}

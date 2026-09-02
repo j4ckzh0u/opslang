@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 )
 
@@ -208,5 +209,102 @@ func TestWritePcapRoundtrip(t *testing.T) {
 func TestCaptureInvalidIface(t *testing.T) {
 	if _, err := Capture(Options{Iface: "does-not-exist-xyz"}); err == nil {
 		t.Fatal("bad iface must error")
+	}
+}
+
+func TestMaybeNoteConversationAndTop(t *testing.T) {
+	r := &Result{}
+	mk := func(sip string, sport int, dip string, dport int) *Packet {
+		return &Packet{Proto: "TCP", SrcIP: sip, SrcPort: sport, DstIP: dip, DstPort: dport}
+	}
+	// flow A (client 10.0.0.1:4000 -> server 10.0.0.9:443) 3 packets.
+	// 4000 < 443 is false -> else branch -> key "10.0.0.9:443<10.0.0.1:4000".
+	for i := 0; i < 3; i++ {
+		maybeNoteConversation(r, mk("10.0.0.1", 4000, "10.0.0.9", 443))
+	}
+	// reverse-direction packet with swapped ports is a DISTINCT key under this
+	// (non-canonicalizing) keying scheme.
+	maybeNoteConversation(r, mk("10.0.0.9", 443, "10.0.0.1", 4000))
+	// a UDP flow, 1 packet (53 < 5353 -> A>B branch)
+	maybeNoteConversation(r, &Packet{Proto: "UDP", SrcIP: "1.1.1.1", SrcPort: 53, DstIP: "2.2.2.2", DstPort: 5353})
+	// non-TCP/UDP or port 0 must not count
+	maybeNoteConversation(r, &Packet{Proto: "ICMP", SrcIP: "7.7.7.7", SrcPort: 0})
+	maybeNoteConversation(r, &Packet{Proto: "TCP", SrcIP: "3.3.3.3", SrcPort: 0, DstIP: "4.4.4.4", DstPort: 80})
+
+	topConversations(r)
+	want := []string{
+		"10.0.0.9:443<10.0.0.1:4000 TCP x3",
+		"1.1.1.1:53>2.2.2.2:5353 UDP x1",
+		"10.0.0.9:443>10.0.0.1:4000 TCP x1",
+	}
+	if len(r.Conversations) != len(want) {
+		t.Fatalf("want %d conversations, got %v", len(want), r.Conversations)
+	}
+	for i := range want {
+		if r.Conversations[i] != want[i] {
+			t.Fatalf("conv[%d]=%q want %q", i, r.Conversations[i], want[i])
+		}
+	}
+	// liveConversations cleared (no cross-call bleed)
+	if r.liveConversations != nil {
+		t.Fatal("liveConversations must reset after topConversations")
+	}
+}
+
+func TestCollectTCPEventsFlags(t *testing.T) {
+	// [S.] -> SynAck (not pure Syn)
+	r := &Result{}
+	collectTCPEvents(r, &Packet{Proto: "TCP", Flags: "[S.]", Win: 65000})
+	if r.TCPEvents.SynAck != 1 || r.TCPEvents.Syn != 0 {
+		t.Fatalf("synack miscount: %+v", r.TCPEvents)
+	}
+	// [S] pure -> Syn
+	collectTCPEvents(r, &Packet{Proto: "TCP", Flags: "[S]", Win: 65000})
+	if r.TCPEvents.Syn != 1 {
+		t.Fatalf("syn miscount: %+v", r.TCPEvents)
+	}
+	// [R] + [F]
+	collectTCPEvents(r, &Packet{Proto: "TCP", Flags: "[R]"})
+	collectTCPEvents(r, &Packet{Proto: "TCP", Flags: "[F.]"})
+	if r.TCPEvents.Rst != 1 || r.TCPEvents.Fin != 1 {
+		t.Fatalf("rst/fin miscount: %+v", r.TCPEvents)
+	}
+	// zero-window: win=0 with ACK, no S/R/F
+	collectTCPEvents(r, &Packet{Proto: "TCP", Flags: "[.]", Win: 0})
+	if r.TCPEvents.ZeroWindow != 1 {
+		t.Fatalf("zero-window miscount: %+v", r.TCPEvents)
+	}
+	// SYN with win 0 must NOT count as zero-window
+	collectTCPEvents(r, &Packet{Proto: "TCP", Flags: "[S]", Win: 0})
+	if r.TCPEvents.ZeroWindow != 1 {
+		t.Fatalf("SYN must not be zero-window: %+v", r.TCPEvents)
+	}
+}
+
+func TestConversationsConcurrencySafe(t *testing.T) {
+	// After the refactor, conversation state lives on each Result, so many
+	// goroutines counting into separate Results must not interfere. This
+	// would race (or fail under -race) on the old package-global map.
+	const n = 200
+	var wg sync.WaitGroup
+	ok := make(chan string, n)
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			r := &Result{}
+			maybeNoteConversation(r, &Packet{Proto: "TCP", SrcIP: "10.0.0.1", SrcPort: 1000 + i, DstIP: "10.0.0.9", DstPort: 443})
+			topConversations(r)
+			ok <- r.Conversations[0]
+		}(i)
+	}
+	wg.Wait()
+	close(ok)
+	count := 0
+	for range ok {
+		count++
+	}
+	if count != n {
+		t.Fatalf("lost results: %d != %d", count, n)
 	}
 }

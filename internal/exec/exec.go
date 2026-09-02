@@ -364,16 +364,17 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	}
 
 	// Build runner command with optional flags.
-	runnerCmd := remoteRunner
+	runnerArgs := []string{remoteRunner}
 	if e.DryRun {
-		runnerCmd += " --dry-run"
+		runnerArgs = append(runnerArgs, "--dry-run")
 	}
 	// Signature enforcement: the key file lives on the target host and is
 	// distributed out of band. Passing the flag makes the runner fail
 	// closed on unsigned/tampered packages.
 	if e.RunnerVerifyKeyPath != "" {
-		runnerCmd += " --pubkey " + e.RunnerVerifyKeyPath
+		runnerArgs = append(runnerArgs, "--pubkey", e.RunnerVerifyKeyPath)
 	}
+	runnerCmd := sshx.JoinCommand(runnerArgs...)
 
 	// Apply resource limits when requested. Hosts without systemd-run
 	// still run the task (failing them would make limits unusable on
@@ -904,7 +905,7 @@ func stageWithRetry(ctx context.Context, client *sshx.Client, localPath, name st
 func wrapWithResourceLimit(ctx context.Context, client *sshx.Client, limit *security.ResourceLimit, cmd string) (string, bool, error) {
 	var probe *sshx.ExecResult
 	err := security.WithRetryCtx(ctx, security.RetryConfig{MaxAttempts: 2, Backoff: time.Second}, func() error {
-		res, probeErr := client.Exec(ctx, "command -v systemd-run")
+		res, probeErr := client.Exec(ctx, sshx.JoinCommand("command", "-v", "systemd-run"))
 		if probeErr != nil {
 			return probeErr
 		}
@@ -956,13 +957,13 @@ func ensureRemoteBinary(ctx context.Context, client *sshx.Client, localPath, nam
 		}
 	}
 
-	if _, err := client.Exec(ctx, "mkdir -p "+remoteCacheDir()); err != nil {
+	if _, err := client.Exec(ctx, sshx.JoinCommand("mkdir", "-p", remoteCacheDir())); err != nil {
 		return "", fmt.Errorf("create remote cache dir: %w", err)
 	}
 	if err := client.Upload(ctx, localPath, remotePath); err != nil {
 		return "", fmt.Errorf("upload: %w", err)
 	}
-	if _, err := client.Exec(ctx, "chmod 0755 "+remotePath); err != nil {
+	if _, err := client.Exec(ctx, sshx.JoinCommand("chmod", "0755", remotePath)); err != nil {
 		return "", fmt.Errorf("chmod: %w", err)
 	}
 
@@ -977,7 +978,7 @@ func ensureRemoteBinary(ctx context.Context, client *sshx.Client, localPath, nam
 // ok=false when the utility or the file is unavailable - callers then
 // (re)upload, which is always safe.
 func remoteSHA256(ctx context.Context, client *sshx.Client, path string) (string, bool) {
-	res, err := client.Exec(ctx, "sha256sum "+path)
+	res, err := client.Exec(ctx, sshx.JoinCommand("sha256sum", path))
 	if err != nil || res.ExitCode != 0 {
 		return "", false
 	}

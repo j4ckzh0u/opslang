@@ -102,6 +102,14 @@ func TestConfig_Validate(t *testing.T) {
 	}
 }
 
+func TestJoinCommandQuotesArguments(t *testing.T) {
+	got := JoinCommand("/tmp/opslang runner", "--pubkey", "/tmp/key;touch /tmp/pwned")
+	want := "'/tmp/opslang runner' --pubkey '/tmp/key;touch /tmp/pwned'"
+	if got != want {
+		t.Fatalf("JoinCommand() = %q, want %q", got, want)
+	}
+}
+
 func TestConfig_SetDefaults(t *testing.T) {
 	cfg := &Config{
 		Host:     "example.com",

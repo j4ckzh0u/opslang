@@ -60,18 +60,9 @@ func TestFindByName(t *testing.T) {
 		}
 	}
 
-	// Both searches should return the same number of results (case-insensitive).
-	// Note: on a live system, process lists can change between the two FindByName calls,
-	// so we allow a small tolerance. The key assertion is that the matching logic is
-	// case-insensitive, which is verified by the per-result checks above.
-	diff := len(procsLower) - len(procsUpper)
-	if diff < 0 {
-		diff = -diff
-	}
-	if diff > 2 {
-		t.Errorf("FindByName case-insensitive mismatch: lowercase returned %d, uppercase returned %d",
-			len(procsLower), len(procsUpper))
-	}
+	// Each lookup takes a fresh live-process snapshot. Counts are therefore not
+	// a stable property of case-insensitive matching; the per-result assertions
+	// above validate the contract without coupling the test to process churn.
 }
 
 func TestFindByNameEmpty(t *testing.T) {

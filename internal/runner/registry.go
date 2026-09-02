@@ -27,6 +27,7 @@ import (
 	sdkbtrfs "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/btrfs"
 	opscapture "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/capture"
 	sdkcargo "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/cargo"
+	sdkcausal "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/causal"
 	sdkcertbot "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/certbot"
 	sdkcloudinit "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/cloud_init"
 	sdkcommand "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/command"
@@ -274,6 +275,7 @@ func (r *Registry) registerAll() {
 	r.registerFileOps()
 	r.registerNetOps()
 	r.registerProcessOps()
+	r.registerCausalOps()
 	r.registerServiceOps()
 	r.registerPkgOps()
 	r.registerTimeOps()
@@ -327,6 +329,13 @@ func (r *Registry) registerSysOps() {
 	})
 	r.Register("sys.net.primary_ip", func(_ map[string]interface{}) (interface{}, error) {
 		return sys.GetPrimaryIP()
+	})
+	r.Register("sys.net.rate", func(args map[string]interface{}) (interface{}, error) {
+		seconds, err := argInt(args, "seconds")
+		if err != nil {
+			return nil, fmt.Errorf("sys.net.rate: %w", err)
+		}
+		return sys.GetNetRate(seconds)
 	})
 	r.Register("sys.virt", func(_ map[string]interface{}) (interface{}, error) {
 		return sys.GetVirtInfo()
@@ -552,6 +561,7 @@ func (r *Registry) registerNetOps() {
 		}
 		if local {
 			if lerr := opscapture.MaterializeLocal(res, fsPath, userTarget); lerr != nil {
+				os.Remove(fsPath)
 				return nil, fmt.Errorf("net.capture local transfer: %w", lerr)
 			}
 		}
@@ -627,6 +637,9 @@ func (r *Registry) registerProcessOps() {
 	r.Register("process.list", func(_ map[string]interface{}) (interface{}, error) {
 		return process.List()
 	})
+	r.Register("process.java_apps", func(_ map[string]interface{}) (interface{}, error) {
+		return process.JavaApps()
+	})
 	r.Register("process.find_by_name", func(args map[string]interface{}) (interface{}, error) {
 		name, err := argString(args, "name")
 		if err != nil {
@@ -663,6 +676,44 @@ func (r *Registry) registerProcessOps() {
 			}
 		}
 		return process.Exec(command, procArgs)
+	})
+}
+
+func (r *Registry) registerCausalOps() {
+	r.Register("causal.find", func(args map[string]interface{}) (interface{}, error) {
+		name, err := argString(args, "name")
+		if err != nil {
+			return nil, fmt.Errorf("causal.find: %w", err)
+		}
+		return sdkcausal.Find(name)
+	})
+	r.Register("causal.trace_pid", func(args map[string]interface{}) (interface{}, error) {
+		pid, err := argInt(args, "pid")
+		if err != nil {
+			return nil, fmt.Errorf("causal.trace_pid: %w", err)
+		}
+		return sdkcausal.TracePID(pid)
+	})
+	r.Register("causal.trace_port", func(args map[string]interface{}) (interface{}, error) {
+		port, err := argInt(args, "port")
+		if err != nil {
+			return nil, fmt.Errorf("causal.trace_port: %w", err)
+		}
+		return sdkcausal.TracePort(port)
+	})
+	r.Register("causal.trace_file", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("causal.trace_file: %w", err)
+		}
+		return sdkcausal.TraceFile(path)
+	})
+	r.Register("causal.trace_container", func(args map[string]interface{}) (interface{}, error) {
+		id, err := argString(args, "id")
+		if err != nil {
+			return nil, fmt.Errorf("causal.trace_container: %w", err)
+		}
+		return sdkcausal.TraceContainer(id)
 	})
 }
 

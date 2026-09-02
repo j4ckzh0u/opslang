@@ -11,6 +11,31 @@ import (
 	"github.com/j4ckzh0u/opslang/internal/security"
 )
 
+func TestAOTInstructionPackageUsesTransportPrivilege(t *testing.T) {
+	pkg := newAOTInstructionPackage("task-1", false, ast.PrivilegeReadOnly)
+	if pkg.Privilege != string(ast.PrivilegeAdmin) {
+		t.Fatalf("AOT transport package privilege = %q, want admin", pkg.Privilege)
+	}
+	if len(pkg.Instructions) != 1 || pkg.Instructions[0].Op != "binary.exec" {
+		t.Fatalf("unexpected AOT package: %+v", pkg.Instructions)
+	}
+}
+
+func TestDefaultBuildApprovalGateBlocksUnapprovedProductionAdmin(t *testing.T) {
+	prog := parseProgram(t, `privilege: admin
+file.write("/tmp/approval-check", "data")`)
+	targets := []opsexec.Target{{Name: "prod-01", Host: "10.0.0.1", Tags: map[string]string{"env": "prod"}}}
+	oldInteractive, oldConfirm := deployStdinIsInteractive, deployConfirmFn
+	deployStdinIsInteractive = func() bool { return false }
+	deployConfirmFn = func(string) bool { return false }
+	t.Cleanup(func() {
+		deployStdinIsInteractive, deployConfirmFn = oldInteractive, oldConfirm
+	})
+	if _, err := enforceDeployApprovalGate("test.ops", prog, targets, false, approveNonInteractive); err == nil {
+		t.Fatal("default build must block unapproved privileged production deploy")
+	}
+}
+
 func parseProgram(t *testing.T, source string) *ast.Program {
 	t.Helper()
 	p := parser.New(source, "test.ops")

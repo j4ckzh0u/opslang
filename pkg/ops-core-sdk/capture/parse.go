@@ -236,37 +236,43 @@ func collectTCPEvents(res *Result, p *Packet) {
 	}
 }
 
-type convCount struct {
-	key string
-	n   int
-}
-
-var convCounts map[string]int
-
+// maybeNoteConversation tallies one flow into the result's per-capture
+// scratch state (kept on Result, not a package global, so concurrent
+// captures in AOT parallel blocks cannot race on shared state).
 func maybeNoteConversation(res *Result, p *Packet) {
-	if convCounts == nil {
-		convCounts = map[string]int{}
-	}
 	if (p.Proto == "TCP" || p.Proto == "UDP") && p.SrcPort > 0 {
+		if res.liveConversations == nil {
+			res.liveConversations = map[string]int{}
+		}
 		var k string
 		if p.SrcPort < p.DstPort {
 			k = fmt.Sprintf("%s:%d>%s:%d %s", p.SrcIP, p.SrcPort, p.DstIP, p.DstPort, p.Proto)
 		} else {
 			k = fmt.Sprintf("%s:%d<%s:%d %s", p.DstIP, p.DstPort, p.SrcIP, p.SrcPort, p.Proto)
 		}
-		convCounts[k]++
+		res.liveConversations[k]++
 	}
 }
 
+// topConversations emits the top flows by packet count, desc, capped at 10.
 func topConversations(res *Result) {
-	if len(convCounts) == 0 {
+	if len(res.liveConversations) == 0 {
 		return
 	}
-	list := make([]convCount, 0, len(convCounts))
-	for k, v := range convCounts {
+	type convCount struct {
+		key string
+		n   int
+	}
+	list := make([]convCount, 0, len(res.liveConversations))
+	for k, v := range res.liveConversations {
 		list = append(list, convCount{k, v})
 	}
-	sort.Slice(list, func(i, j int) bool { return list[i].n > list[j].n })
+	sort.Slice(list, func(i, j int) bool {
+		if list[i].n != list[j].n {
+			return list[i].n > list[j].n
+		}
+		return list[i].key < list[j].key
+	})
 	for i, c := range list {
 		if i >= 10 {
 			break
@@ -274,7 +280,7 @@ func topConversations(res *Result) {
 		res.Conversations = append(res.Conversations,
 			fmt.Sprintf("%s x%d", c.key, c.n))
 	}
-	convCounts = nil // reset for next Capture call in same process
+	res.liveConversations = nil
 }
 
 // ---------------------------------------------------------------------------

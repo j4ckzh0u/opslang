@@ -1,0 +1,181 @@
+{
+  "cpu_over_60": false,
+  "cpu_percent": 37.67,
+  "disk_over_80": true,
+  "disk_path": "/",
+  "disk_used_percent": 91.61,
+  "installed_packages": {
+    "packages": null,
+    "error": "only supported on linux"
+  },
+  "java_app_count": 0,
+  "java_apps": [],
+  "java_container_note": "Docker/containerd metadata is reported when the host can see the process cgroup; isolated PID namespaces require running this script inside the container.",
+  "java_running": false,
+  "load_15m": 5.27978515625,
+  "load_1m": 3.32470703125,
+  "load_5m": 4.01318359375,
+  "network_rate": {
+    "bits_per_second": 195667.84848777446,
+    "bytes_recv": 53143,
+    "bytes_sent": 20442,
+    "interfaces": [
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "VHC128",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "XHC0",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "XHC1",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "XHC20",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "ap1",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "awdl0",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "bridge0",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 171363.92601473976,
+        "bytes_recv": 48637,
+        "bytes_sent": 15808,
+        "name": "en0",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "en1",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "en2",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "en3",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "en4",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 7386.903351213393,
+        "bytes_recv": 1325,
+        "bytes_sent": 1453,
+        "name": "en6",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "gif0",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "llw0",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 16917.01912182131,
+        "bytes_recv": 3181,
+        "bytes_sent": 3181,
+        "name": "lo0",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "stf0",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "utun0",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "utun1",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "utun2",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "utun3",
+        "window_seconds": 3
+      },
+      {
+        "bits_per_second": 0,
+        "bytes_recv": 0,
+        "bytes_sent": 0,
+        "name": "utun4",
+        "window_seconds": 3
+      }
+    ],
+    "window_seconds": 3
+  },
+  "network_sample_window_seconds": 3
+}
