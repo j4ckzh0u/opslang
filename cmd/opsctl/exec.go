@@ -140,6 +140,10 @@ func runExecCommand(autoApprove bool, autoSource approvalSource) error {
 	}()
 
 	// Create and run executor.
+	connectionPool, err := opsexec.NewConnectionPool(execParallel)
+	if err != nil {
+		return fmt.Errorf("failed to create SSH connection pool: %w", err)
+	}
 	executor := &opsexec.Executor{
 		Targets:                   targets,
 		Instructions:              pkg,
@@ -154,7 +158,13 @@ func runExecCommand(autoApprove bool, autoSource approvalSource) error {
 		ArchCache:                 archCacheForRun(),
 		ResourceLimit:             resourceLimitFromFlags(execLimitCPU, execLimitMemMB),
 		RunnerVerifyKeyPath:       execVerifyKey,
+		ConnectionPool:            connectionPool,
 	}
+	defer func() {
+		if err := executor.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close SSH connection pool: %v\n", err)
+		}
+	}()
 
 	summary := executor.Execute(ctx)
 

@@ -2,6 +2,7 @@ package getent
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 )
 
@@ -77,6 +78,9 @@ func TestLookupNonExistentUser(t *testing.T) {
 }
 
 func TestLookupService(t *testing.T) {
+	if _, err := os.Stat("/etc/services"); err != nil {
+		t.Skipf("/etc/services unavailable: %v", err)
+	}
 	res, err := LookupService("ssh")
 	if err != nil {
 		t.Fatal(err)
@@ -87,6 +91,9 @@ func TestLookupService(t *testing.T) {
 }
 
 func TestLookupProtocol(t *testing.T) {
+	if _, err := os.Stat("/etc/protocols"); err != nil {
+		t.Skipf("/etc/protocols unavailable: %v", err)
+	}
 	res, err := LookupProtocol("tcp")
 	if err != nil {
 		t.Fatal(err)

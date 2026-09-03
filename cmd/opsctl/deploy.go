@@ -351,6 +351,27 @@ func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program,
 	// instead of re-reading the disk file per executor.
 	archCache := archCacheForRun()
 	limit := resourceLimitFromFlags(deployLimitCPU, deployLimitMemMB)
+	connectionPool, err := opsexec.NewConnectionPool(deployParallel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SSH connection pool: %w", err)
+	}
+	executor := &opsexec.Executor{
+		User:                      deployUser,
+		KeyFile:                   deployKey,
+		Password:                  deployPassword,
+		Parallel:                  deployParallel,
+		DryRun:                    deployDryRun,
+		InsecureSkipHostKeyVerify: deployInsecureHostKey,
+		ArchCache:                 archCache,
+		ResourceLimit:             limit,
+		RunnerVerifyKeyPath:       deployVerifyKey,
+		ConnectionPool:            connectionPool,
+	}
+	defer func() {
+		if err := executor.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to close SSH connection pool: %v\n", err)
+		}
+	}()
 	for _, step := range steps {
 		fmt.Fprintf(os.Stderr, "Step %q: %d instruction(s) on %d host(s)\n",
 			step.name, len(step.pkg.Instructions), len(step.targets))
@@ -363,20 +384,9 @@ func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program,
 			return nil, fmt.Errorf("failed to sign package for step %q: %w", step.name, err)
 		}
 
-		executor := &opsexec.Executor{
-			Targets:                   step.targets,
-			Instructions:              step.pkg,
-			User:                      deployUser,
-			KeyFile:                   deployKey,
-			Password:                  deployPassword,
-			Parallel:                  deployParallel,
-			DryRun:                    deployDryRun,
-			TaskID:                    taskID + "-" + step.name,
-			InsecureSkipHostKeyVerify: deployInsecureHostKey,
-			ArchCache:                 archCache,
-			ResourceLimit:             limit,
-			RunnerVerifyKeyPath:       deployVerifyKey,
-		}
+		executor.Targets = step.targets
+		executor.Instructions = step.pkg
+		executor.TaskID = taskID + "-" + step.name
 
 		summary := executor.Execute(ctx)
 		agg.add(summary)
@@ -570,6 +580,10 @@ func deployAOTMode(ctx context.Context, scriptPath string, prog *ast.Program, ta
 	if err := signPkg(pkg); err != nil {
 		return nil, fmt.Errorf("failed to sign AOT instruction package: %w", err)
 	}
+	connectionPool, err := opsexec.NewConnectionPool(deployParallel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create SSH connection pool: %w", err)
+	}
 
 	executor := &opsexec.Executor{
 		Targets:                   targets,
@@ -585,9 +599,13 @@ func deployAOTMode(ctx context.Context, scriptPath string, prog *ast.Program, ta
 		ArchCache:                 archCacheForRun(),
 		ResourceLimit:             resourceLimitFromFlags(deployLimitCPU, deployLimitMemMB),
 		RunnerVerifyKeyPath:       deployVerifyKey,
+		ConnectionPool:            connectionPool,
 	}
 
 	summary := executor.Execute(ctx)
+	if err := executor.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close SSH connection pool: %w", err)
+	}
 
 	agg := &deployAggregate{TaskID: taskID, Targets: targetNames(targets)}
 	agg.add(summary)

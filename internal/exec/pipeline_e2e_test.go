@@ -36,9 +36,10 @@ import (
 // pipelineServer is an SSH server with password auth, an exec channel that
 // runs commands locally, and an SFTP subsystem rooted at "/".
 type pipelineServer struct {
-	listener net.Listener
-	mu       sync.Mutex
-	commands []string
+	listener    net.Listener
+	mu          sync.Mutex
+	commands    []string
+	connections int
 
 	// hostRunner is executed whenever the pipeline asks to run an uploaded
 	// ops-runner binary (which is built for the remote OS).
@@ -111,6 +112,12 @@ func (s *pipelineServer) recordedCommands() []string {
 	return append([]string(nil), s.commands...)
 }
 
+func (s *pipelineServer) connectionCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.connections
+}
+
 func (s *pipelineServer) serve(netConn net.Conn, cfg *ssh.ServerConfig) {
 	serverConn, chans, reqs, err := ssh.NewServerConn(netConn, cfg)
 	if err != nil {
@@ -118,6 +125,9 @@ func (s *pipelineServer) serve(netConn net.Conn, cfg *ssh.ServerConfig) {
 		return
 	}
 	defer serverConn.Close()
+	s.mu.Lock()
+	s.connections++
+	s.mu.Unlock()
 	go ssh.DiscardRequests(reqs)
 
 	for newChannel := range chans {
@@ -384,6 +394,15 @@ func TestRemoteBinaryCacheSkipsReupload(t *testing.T) {
 
 	server := newPipelineServer(t)
 	server.hostRunner = buildHostRunner(t)
+	connectionPool, err := NewConnectionPool(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := connectionPool.Close(); err != nil {
+			t.Errorf("close connection pool: %v", err)
+		}
+	}()
 
 	newExecutor := func() *Executor {
 		e := &Executor{
@@ -392,8 +411,9 @@ func TestRemoteBinaryCacheSkipsReupload(t *testing.T) {
 				TaskID:       "cache-test",
 				Instructions: []runner.Instruction{{Op: "sys.cpu.usage", Assign: "cpu"}},
 			},
-			Password:   "pipetest",
-			RunnerPath: server.hostRunner,
+			Password:       "pipetest",
+			RunnerPath:     server.hostRunner,
+			ConnectionPool: connectionPool,
 		}
 		e.buildInFlight = map[string]*sync.Once{}
 		e.buildResults = map[string]error{}
@@ -423,5 +443,8 @@ func TestRemoteBinaryCacheSkipsReupload(t *testing.T) {
 	}
 	if uploads != 1 {
 		t.Errorf("expected exactly 1 upload (first run), saw %d in %v - cache is not preventing re-uploads", uploads, cmds)
+	}
+	if got := server.connectionCount(); got != 1 {
+		t.Errorf("SSH connections = %d, want 1 reused connection", got)
 	}
 }

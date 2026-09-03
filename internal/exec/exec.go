@@ -105,6 +105,9 @@ type Executor struct {
 	// and refuses unsigned or tampered instruction packages. The key file
 	// must already exist on the target host.
 	RunnerVerifyKeyPath string
+	// ConnectionPool enables caller-controlled reuse across executions. Nil
+	// preserves the single-use connection lifecycle.
+	ConnectionPool *sshx.Pool
 
 	TaskID string
 
@@ -124,6 +127,24 @@ type Executor struct {
 // SSHClientFactory creates SSH clients. Can be overridden for testing.
 var SSHClientFactory = func(cfg *sshx.Config) (*sshx.Client, error) {
 	return sshx.NewClient(cfg)
+}
+
+// NewConnectionPool creates the pool used by CLI execution paths.
+func NewConnectionPool(maxConnections int) (*sshx.Pool, error) {
+	if maxConnections <= 0 {
+		maxConnections = 10
+	}
+	return sshx.NewPool(maxConnections, SSHClientFactory)
+}
+
+// Close releases an explicitly configured connection pool.
+func (e *Executor) Close() error {
+	pool := e.ConnectionPool
+	e.ConnectionPool = nil
+	if pool == nil {
+		return nil
+	}
+	return pool.Close()
 }
 
 // Execute runs instructions on all targets concurrently and returns a summary.
@@ -268,7 +289,14 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 		InsecureSkipHostKeyVerify: e.InsecureSkipHostKeyVerify,
 	}
 
-	client, err := SSHClientFactory(sshCfg)
+	pool := e.ConnectionPool
+	var client *sshx.Client
+	var err error
+	if pool == nil {
+		client, err = SSHClientFactory(sshCfg)
+	} else {
+		client, err = pool.Acquire(ctx, sshCfg)
+	}
 	if err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Sprintf("failed to create SSH client: %v", err)
@@ -280,10 +308,32 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	if err := client.Connect(ctx); err != nil {
 		result.Status = "failed"
 		result.Error = fmt.Sprintf("failed to connect: %v", err)
+		var closeErr error
+		if pool == nil {
+			closeErr = client.Close()
+		} else {
+			closeErr = pool.Discard(client)
+		}
+		if closeErr != nil {
+			result.Error += fmt.Sprintf("; failed to discard SSH client: %v", closeErr)
+		}
 		result.FinishedAt = time.Now().UTC()
 		return result
 	}
-	defer client.Close()
+	reusable := true
+	defer func() {
+		var releaseErr error
+		if pool == nil {
+			releaseErr = client.Close()
+		} else if !reusable {
+			releaseErr = pool.Discard(client)
+		} else {
+			releaseErr = pool.Release(client)
+		}
+		if releaseErr != nil {
+			result.Warnings = append(result.Warnings, fmt.Sprintf("failed to release SSH client: %v", releaseErr))
+		}
+	}()
 
 	// Detect architecture. Results are cached per host:port in process
 	// and on disk (~/.opsctl/arch-cache.json), so repeat deploys skip the
@@ -291,6 +341,7 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	adapter := &sshExecutorAdapter{client: client}
 	goarch, err := e.detectArch(ctx, adapter, fmt.Sprintf("%s:%d", target.Host, target.Port))
 	if err != nil {
+		reusable = false
 		result.Status = "failed"
 		result.Error = fmt.Sprintf("failed to detect architecture: %v", err)
 		result.FinishedAt = time.Now().UTC()
@@ -331,6 +382,7 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	remoteRunner, err := stageWithRetry(ctx, client, runnerPath,
 		fmt.Sprintf("ops-runner-%s-linux-%s", runnerVersionSalt, goarch))
 	if err != nil {
+		reusable = false
 		result.Status = "failed"
 		result.Error = fmt.Sprintf("failed to stage runner: %v", err)
 		result.FinishedAt = time.Now().UTC()
@@ -342,6 +394,9 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 		appSum, sumErr := fileSHA256(localAppBinary)
 		if sumErr == nil {
 			remoteApp, err = stageWithRetry(ctx, client, localAppBinary, "ops-app-"+appSum[:16])
+			if err != nil {
+				reusable = false
+			}
 		} else {
 			err = fmt.Errorf("failed to hash script binary: %w", sumErr)
 		}
@@ -383,6 +438,7 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	if e.ResourceLimit != nil {
 		wrapped, limited, limitErr := wrapWithResourceLimit(ctx, client, e.ResourceLimit, runnerCmd)
 		if limitErr != nil {
+			reusable = false
 			result.Status = "failed"
 			result.Error = fmt.Sprintf("failed to apply resource limits: %v", limitErr)
 			result.FinishedAt = time.Now().UTC()
@@ -401,6 +457,7 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	execResult, err := client.ExecWithStdin(ctx, runnerCmd, instrJSON)
 
 	if err != nil {
+		reusable = false
 		result.Status = "failed"
 		result.Error = fmt.Sprintf("failed to execute runner: %v", err)
 		result.FinishedAt = time.Now().UTC()

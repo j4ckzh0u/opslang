@@ -3,7 +3,7 @@
 > **本文档由 `make docs` 从 internal/opsspec/spec.go 自动生成，请勿手改。**
 > 参数名即调用时的位置参数顺序；`可变` 表示该操作会改变系统状态，需要 admin 及以上权限。
 
-共 1150 个原子操作，209 个包。
+共 1157 个原子操作，210 个包。
 
 ## 目录
 
@@ -40,10 +40,12 @@
 - [logrotate](#logrotate)（4 个）
 - [lvg](#lvg)（8 个）
 - [net](#net)（10 个）
+- [sys](#sys)（33 个）
 - [ntp](#ntp)（2 个）
 - [pkg](#pkg)（6 个）
 - [pip](#pip)（6 个）
-- [process](#process)（5 个）
+- [process](#process)（6 个）
+- [causal](#causal)（5 个）
 - [resolv](#resolv)（4 个）
 - [service](#service)（8 个）
 - [snap](#snap)（9 个）
@@ -63,7 +65,6 @@
 - [memcached](#memcached)（6 个）
 - [selinux](#selinux)（2 个）
 - [ssh](#ssh)（3 个）
-- [sys](#sys)（32 个）
 - [svn](#svn)（7 个）
 - [sysctl](#sysctl)（3 个）
 - [time](#time)（6 个）
@@ -591,6 +592,44 @@
 | `net.wait_for` | `host`, `port`, `timeout` |  | 全部引擎 |
 | `net.wait_for_connection` | `host`, `port`, `timeout` |  | 全部引擎 |
 
+## sys
+
+| 操作 | 参数（按位置顺序） | 可变 | 可用范围 |
+|---|---|---|---|
+| `sys.net.rate` | `seconds` |  | 全部引擎 |
+| `sys.cpu.count` | - |  | 全部引擎 |
+| `sys.cpu.info` | - |  | 全部引擎 |
+| `sys.cpu.usage` | - |  | 全部引擎 |
+| `sys.disk.partitions` | - |  | 全部引擎 |
+| `sys.disk.usage` | `path` |  | 全部引擎 |
+| `sys.ethtool` | `iface` |  | 全部引擎 |
+| `sys.hostname` | - |  | 全部引擎 |
+| `sys.hostname_set` | `name` | ✓ | 全部引擎 |
+| `sys.ip_route` | - |  | 全部引擎 |
+| `sys.list_mounts` | - |  | 全部引擎 |
+| `sys.load` | - |  | 全部引擎 |
+| `sys.lsusb` | - |  | 全部引擎 |
+| `sys.memory.info` | - |  | 全部引擎 |
+| `sys.mount` | `device`, `mountpoint`, `fs_type`, `opts` | ✓ | 全部引擎 |
+| `sys.net.interfaces` | - |  | 全部引擎 |
+| `sys.net.all_interfaces` | - |  | 全部引擎 |
+| `sys.net.primary_ip` | - |  | 全部引擎 |
+| `sys.os` | - |  | 全部引擎 |
+| `sys.reboot` | - | ✓ | 全部引擎 |
+| `sys.timezone_get` | - |  | 全部引擎 |
+| `sys.timezone_set` | `timezone` | ✓ | 全部引擎 |
+| `sys.unmount` | `mountpoint` | ✓ | 全部引擎 |
+| `sys.uptime` | - |  | 全部引擎 |
+| `sys.virt` | - |  | 全部引擎 |
+| `sys.users` | - |  | 全部引擎 |
+| `sys.uuid` | - |  | 全部引擎 |
+| `sys.random_password` | `length`, `use_special`, `use_numbers`, `use_uppercase` |  | 全部引擎 |
+| `sys.mac_address` | `interface` |  | 全部引擎 |
+| `sys.mac_addresses` | - |  | 全部引擎 |
+| `sys.dmidecode` | - |  | 全部引擎 |
+| `sys.lspci` | - |  | 全部引擎 |
+| `sys.lsblk` | - |  | 全部引擎 |
+
 ## ntp
 
 | 操作 | 参数（按位置顺序） | 可变 | 可用范围 |
@@ -629,6 +668,17 @@
 | `process.find_by_port` | `port` |  | 全部引擎 |
 | `process.kill` | `pid`, `signal` | ✓ | 全部引擎 |
 | `process.list` | - |  | 全部引擎 |
+| `process.java_apps` | - |  | 全部引擎 |
+
+## causal
+
+| 操作 | 参数（按位置顺序） | 可变 | 可用范围 |
+|---|---|---|---|
+| `causal.find` | `name` |  | 全部引擎 |
+| `causal.trace_pid` | `pid` |  | 全部引擎 |
+| `causal.trace_port` | `port` |  | 全部引擎 |
+| `causal.trace_file` | `path` |  | 全部引擎 |
+| `causal.trace_container` | `id` |  | 全部引擎 |
 
 ## resolv
 
@@ -872,43 +922,6 @@
 | `ssh.authorized_key_add` | `user`, `key`, `exclusive` | ✓ | 全部引擎 |
 | `ssh.authorized_key_list` | `user` |  | 全部引擎 |
 | `ssh.authorized_key_remove` | `user`, `key` | ✓ | 全部引擎 |
-
-## sys
-
-| 操作 | 参数（按位置顺序） | 可变 | 可用范围 |
-|---|---|---|---|
-| `sys.cpu.count` | - |  | 全部引擎 |
-| `sys.cpu.info` | - |  | 全部引擎 |
-| `sys.cpu.usage` | - |  | 全部引擎 |
-| `sys.disk.partitions` | - |  | 全部引擎 |
-| `sys.disk.usage` | `path` |  | 全部引擎 |
-| `sys.ethtool` | `iface` |  | 全部引擎 |
-| `sys.hostname` | - |  | 全部引擎 |
-| `sys.hostname_set` | `name` | ✓ | 全部引擎 |
-| `sys.ip_route` | - |  | 全部引擎 |
-| `sys.list_mounts` | - |  | 全部引擎 |
-| `sys.load` | - |  | 全部引擎 |
-| `sys.lsusb` | - |  | 全部引擎 |
-| `sys.memory.info` | - |  | 全部引擎 |
-| `sys.mount` | `device`, `mountpoint`, `fs_type`, `opts` | ✓ | 全部引擎 |
-| `sys.net.interfaces` | - |  | 全部引擎 |
-| `sys.net.all_interfaces` | - |  | 全部引擎 |
-| `sys.net.primary_ip` | - |  | 全部引擎 |
-| `sys.os` | - |  | 全部引擎 |
-| `sys.reboot` | - | ✓ | 全部引擎 |
-| `sys.timezone_get` | - |  | 全部引擎 |
-| `sys.timezone_set` | `timezone` | ✓ | 全部引擎 |
-| `sys.unmount` | `mountpoint` | ✓ | 全部引擎 |
-| `sys.uptime` | - |  | 全部引擎 |
-| `sys.virt` | - |  | 全部引擎 |
-| `sys.users` | - |  | 全部引擎 |
-| `sys.uuid` | - |  | 全部引擎 |
-| `sys.random_password` | `length`, `use_special`, `use_numbers`, `use_uppercase` |  | 全部引擎 |
-| `sys.mac_address` | `interface` |  | 全部引擎 |
-| `sys.mac_addresses` | - |  | 全部引擎 |
-| `sys.dmidecode` | - |  | 全部引擎 |
-| `sys.lspci` | - |  | 全部引擎 |
-| `sys.lsblk` | - |  | 全部引擎 |
 
 ## svn
 

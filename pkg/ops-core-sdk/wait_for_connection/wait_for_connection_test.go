@@ -1,6 +1,9 @@
 package wait_for_connection
 
-import "testing"
+import (
+	"net"
+	"testing"
+)
 
 func TestWaitEmptyHost(t *testing.T) {
 	r := Wait("", 22, 1, 1)
@@ -27,8 +30,15 @@ func TestCheckOnceInvalidHost(t *testing.T) {
 }
 
 func TestWaitTimeout(t *testing.T) {
-	// Very short timeout to test timeout behavior
-	r := Wait("192.0.2.1", 22, 2, 1) // 2 second timeout
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	listener.Close()
+
+	// Use a locally unused port so the timeout assertion is independent of routing.
+	r := Wait("127.0.0.1", port, 2, 1)
 	if r.Status != "failed" {
 		t.Error("expected failure due to timeout")
 	}

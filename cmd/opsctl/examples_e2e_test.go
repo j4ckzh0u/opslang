@@ -69,6 +69,11 @@ func TestExamplesAllRun(t *testing.T) {
 					t.Skipf("requires %s, not installed on this host", tool)
 				}
 			}
+			if name == "hosts_management.ops" {
+				if _, err := os.Stat("/etc/hosts"); err != nil {
+					t.Skipf("requires /etc/hosts: %v", err)
+				}
+			}
 			path := filepath.Join(examplesDir, name)
 			source, err := os.ReadFile(path)
 			if err != nil {

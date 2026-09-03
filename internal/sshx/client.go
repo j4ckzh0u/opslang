@@ -108,6 +108,9 @@ func buildSSHConfig(cfg *Config) (*ssh.ClientConfig, error) {
 func (c *Client) Connect(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.conn != nil {
+		return nil
+	}
 
 	addr := fmt.Sprintf("%s:%d", c.config.Host, c.config.Port)
 

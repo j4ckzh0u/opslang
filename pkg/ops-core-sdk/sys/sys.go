@@ -519,6 +519,11 @@ func GetHostInfo() (HostInfoResult, error) {
 func Users() ([]UserInfo, error) {
 	users, err := host.Users()
 	if err != nil {
+		// Minimal containers may omit utmp entirely; that represents no
+		// observable login sessions and should serialize as an empty list.
+		if errors.Is(err, os.ErrNotExist) {
+			return []UserInfo{}, nil
+		}
 		return nil, fmt.Errorf("failed to get user list: %w", err)
 	}
 	result := make([]UserInfo, 0, len(users))
