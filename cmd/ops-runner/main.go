@@ -10,6 +10,7 @@
 package main
 
 import (
+	"context"
 	"crypto/ed25519"
 	"encoding/json"
 	"flag"
@@ -31,6 +32,13 @@ var (
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "relay" {
+		if err := runRelay(context.Background(), os.Args[2:], os.Stdout); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(3)
+		}
+		return
+	}
 	flag.BoolVar(&dryRun, "dry-run", false, "Execute in dry-run mode (no actual changes)")
 	flag.BoolVar(&version, "version", false, "Print version and exit")
 	flag.StringVar(&pubKeyPath, "pubkey", "", "Ed25519 public key file; when set, unsigned or tampered packages are refused")

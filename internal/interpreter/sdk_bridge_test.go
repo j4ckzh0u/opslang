@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -513,6 +514,40 @@ func TestSDKBuiltinFileCollectTargetValidation(t *testing.T) {
 	_, err := fn("/src", []interface{}{"not-a-dict"})
 	if err == nil {
 		t.Error("expected error for non-dict target item")
+	}
+}
+
+func TestSDKBuiltinFileTransferResumeOptionValidation(t *testing.T) {
+	interp := New(nil)
+	RegisterSDKBuiltins(interp)
+	tests := []struct {
+		name      string
+		builtin   string
+		options   interface{}
+		wantError string
+	}{
+		{name: "distribute options type", builtin: "file.distribute", options: "bad", wantError: "options must be a dict"},
+		{name: "distribute resume type", builtin: "file.distribute", options: map[string]interface{}{"resume": "yes"}, wantError: "resume must be bool"},
+		{name: "distribute retention type", builtin: "file.distribute", options: map[string]interface{}{"part_retention": "hour"}, wantError: "part_retention must be a number"},
+		{name: "distribute negative retention", builtin: "file.distribute", options: map[string]interface{}{"part_retention": float64(-1)}, wantError: "part_retention must be a non-negative integer"},
+		{name: "distribute relay type", builtin: "file.distribute", options: map[string]interface{}{"relay": "yes"}, wantError: "relay must be bool"},
+		{name: "distribute relay threshold", builtin: "file.distribute", options: map[string]interface{}{"relay_threshold": float64(0)}, wantError: "relay_threshold must be a positive integer"},
+		{name: "distribute target tags type", builtin: "file.distribute", options: map[string]interface{}{}, wantError: "tags must be a dict"},
+		{name: "collect options type", builtin: "file.collect", options: "bad", wantError: "options must be a dict"},
+		{name: "collect resume type", builtin: "file.collect", options: map[string]interface{}{"resume": float64(1)}, wantError: "resume must be bool"},
+		{name: "collect fractional retention", builtin: "file.collect", options: map[string]interface{}{"part_retention": 1.5}, wantError: "part_retention must be a non-negative integer"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			targets := []interface{}{}
+			if test.name == "distribute target tags type" {
+				targets = []interface{}{map[string]interface{}{"host": "host1", "tags": "bad"}}
+			}
+			_, err := interp.builtins[test.builtin]("/source", targets, test.options)
+			if err == nil || !strings.Contains(err.Error(), test.wantError) {
+				t.Fatalf("error = %v, want substring %q", err, test.wantError)
+			}
+		})
 	}
 }
 

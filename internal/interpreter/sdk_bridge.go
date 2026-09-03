@@ -621,24 +621,78 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			if d, ok := m["dest"].(string); ok {
 				t.Dest = d
 			}
+			if relayGroup, ok := m["relay_group"].(string); ok {
+				t.RelayGroup = relayGroup
+			}
+			if tagsRaw, exists := m["tags"]; exists {
+				tags, err := stringMapOption("file.distribute", fmt.Sprintf("target %d tags", i), tagsRaw)
+				if err != nil {
+					return nil, err
+				}
+				t.Tags = tags
+			}
 			targets = append(targets, t)
 		}
 
 		opts := sdkfile.DistributeOptions{}
 		if len(args) >= 3 {
-			if optsMap, ok := args[2].(map[string]interface{}); ok {
-				if v, ok := optsMap["checksum"].(bool); ok {
-					opts.Checksum = v
+			optsMap, ok := args[2].(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("file.distribute(): options must be a dict")
+			}
+			if v, exists := optsMap["resume"]; exists {
+				resume, ok := v.(bool)
+				if !ok {
+					return nil, fmt.Errorf("file.distribute(): option resume must be bool")
 				}
-				if v, ok := optsMap["mode"].(string); ok {
-					opts.Mode = v
+				opts.Resume = resume
+			}
+			if v, exists := optsMap["part_retention"]; exists {
+				retention, err := durationMillisOption("file.distribute", "part_retention", v)
+				if err != nil {
+					return nil, err
 				}
-				if v, ok := optsMap["parallel"].(float64); ok {
-					opts.Parallel = int(v)
+				opts.PartRetention = retention
+			}
+			if v, exists := optsMap["relay"]; exists {
+				relay, ok := v.(bool)
+				if !ok {
+					return nil, fmt.Errorf("file.distribute(): option relay must be bool")
 				}
-				if v, ok := optsMap["retries"].(float64); ok {
-					opts.Retries = int(v)
+				opts.Relay = relay
+			}
+			if v, exists := optsMap["relay_group"]; exists {
+				relayGroup, ok := v.(string)
+				if !ok {
+					return nil, fmt.Errorf("file.distribute(): option relay_group must be string")
 				}
+				opts.RelayGroup = relayGroup
+			}
+			if v, exists := optsMap["relay_threshold"]; exists {
+				value, err := positiveIntegerOption("file.distribute", "relay_threshold", v)
+				if err != nil {
+					return nil, err
+				}
+				opts.RelayThreshold = value
+			}
+			if v, exists := optsMap["relay_max_targets"]; exists {
+				value, err := positiveIntegerOption("file.distribute", "relay_max_targets", v)
+				if err != nil {
+					return nil, err
+				}
+				opts.RelayMaxTargets = value
+			}
+			if v, ok := optsMap["checksum"].(bool); ok {
+				opts.Checksum = v
+			}
+			if v, ok := optsMap["mode"].(string); ok {
+				opts.Mode = v
+			}
+			if v, ok := optsMap["parallel"].(float64); ok {
+				opts.Parallel = int(v)
+			}
+			if v, ok := optsMap["retries"].(float64); ok {
+				opts.Retries = int(v)
 			}
 		}
 
@@ -685,16 +739,32 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 
 		opts := sdkfile.CollectOptions{}
 		if len(args) >= 3 {
-			if optsMap, ok := args[2].(map[string]interface{}); ok {
-				if v, ok := optsMap["dest_dir"].(string); ok {
-					opts.DestDir = v
+			optsMap, ok := args[2].(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("file.collect(): options must be a dict")
+			}
+			if v, exists := optsMap["resume"]; exists {
+				resume, ok := v.(bool)
+				if !ok {
+					return nil, fmt.Errorf("file.collect(): option resume must be bool")
 				}
-				if v, ok := optsMap["parallel"].(float64); ok {
-					opts.Parallel = int(v)
+				opts.Resume = resume
+			}
+			if v, exists := optsMap["part_retention"]; exists {
+				retention, err := durationMillisOption("file.collect", "part_retention", v)
+				if err != nil {
+					return nil, err
 				}
-				if v, ok := optsMap["retries"].(float64); ok {
-					opts.Retries = int(v)
-				}
+				opts.PartRetention = retention
+			}
+			if v, ok := optsMap["dest_dir"].(string); ok {
+				opts.DestDir = v
+			}
+			if v, ok := optsMap["parallel"].(float64); ok {
+				opts.Parallel = int(v)
+			}
+			if v, ok := optsMap["retries"].(float64); ok {
+				opts.Retries = int(v)
 			}
 		}
 
@@ -12819,6 +12889,43 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		}
 		return sdknomad.NodeDrain(getStringArgBridge(args, 0, ""), enable)
 	}
+}
+
+func durationMillisOption(functionName, optionName string, value interface{}) (time.Duration, error) {
+	milliseconds, ok := value.(float64)
+	if !ok {
+		return 0, fmt.Errorf("%s(): option %s must be a number of milliseconds", functionName, optionName)
+	}
+	maxMilliseconds := float64((int64(^uint64(0) >> 1)) / int64(time.Millisecond))
+	if milliseconds < 0 || milliseconds > maxMilliseconds || milliseconds != float64(int64(milliseconds)) {
+		return 0, fmt.Errorf("%s(): option %s must be a non-negative integer within duration range", functionName, optionName)
+	}
+	return time.Duration(milliseconds) * time.Millisecond, nil
+}
+
+func stringMapOption(functionName, optionName string, value interface{}) (map[string]string, error) {
+	raw, ok := value.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("%s(): %s must be a dict of strings", functionName, optionName)
+	}
+	result := make(map[string]string, len(raw))
+	for key, item := range raw {
+		text, ok := item.(string)
+		if !ok {
+			return nil, fmt.Errorf("%s(): %s value %q must be string", functionName, optionName, key)
+		}
+		result[key] = text
+	}
+	return result, nil
+}
+
+func positiveIntegerOption(functionName, optionName string, value interface{}) (int, error) {
+	number, ok := value.(float64)
+	maxInt := int(^uint(0) >> 1)
+	if !ok || number < 1 || number > float64(maxInt) || number != float64(int(number)) {
+		return 0, fmt.Errorf("%s(): option %s must be a positive integer", functionName, optionName)
+	}
+	return int(number), nil
 }
 func toStringMap(args []interface{}, idx int) map[string]string {
 	result := make(map[string]string)

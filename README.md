@@ -10,7 +10,8 @@
 - **异构架构支持**：纯 Go 实现，`CGO_ENABLED=0` 交叉编译覆盖 amd64/arm64
 - **声明式幂等**：内置 `ensure` 语法（check → apply → verify → notify），支持 dry-run 与状态收敛
 - **Ansible 核心模块对齐**：`pkg.ensure` / `service.ensure` / `user.ensure` / `group.ensure` / `file.ensure` 幂等收敛家族 —— 声明期望状态，重复执行零变更，`changed`/`actions` 如实报告每一次真实动作
-- **控制器侧文件分发/收集**：`file.distribute` / `file.collect` 经真实 SSH/SFTP 传输，支持传输后 SHA-256 校验与并发控制
+- **可恢复文件分发/收集**：`file.distribute` / `file.collect` 经真实 SSH/SFTP 传输，支持内容哈希跳过、部分文件续传、原子替换、SHA-256 校验与并发控制
+- **分层中继分发**：`file.distribute` 可按显式标签或 IP 前缀分组，通过短时令牌和 TLS 指纹固定的 HTTPS Range 服务扇出，失败目标自动回退直接 SFTP
 - **SSH 安全**：主机密钥 TOFU（首次信任）校验，密钥变更即拒绝，防中间人攻击
 
 ## 快速开始
@@ -419,7 +420,7 @@ type MemoryInfo struct {
 | Phase 1 | 远程执行通道（SSH + Runner） | 已完成 |
 | Phase 2 | 语言前端与解释器（Lexer/Parser/Interpreter） | 已完成 |
 | Phase 3 | AOT 编译管线 | 已完成 |
-| Phase 4 | 远程编排与声明式特性（deploy/task/ensure/parallel） | 部分完成：基础编排可用，分层中继与断点续传待实现 |
+| Phase 4 | 远程编排与声明式特性（deploy/task/ensure/parallel） | 部分完成：基础编排、断点续传和分层中继分发可用，传输压缩待实现 |
 | Phase 5 | 安全与生产化（权限分级、审计、签名、资源限制） | 部分完成：核心安全链路可用，资源限制回退与自动回滚接入待实现 |
 
 ## Roadmap
@@ -427,8 +428,8 @@ type MemoryInfo struct {
 以下能力**尚未实现**，文档中不再作为现有功能描述：
 
 - `import "go <包路径>"` 引用第三方 Go 库（当前会报错拒绝）
-- 文件传输的压缩、断点续传和传输前内容哈希去重（当前支持传输后 SHA-256 校验；Runner/AOT 二进制缓存可按内容哈希跳过重传）
-- 分层中继（relay）大规模文件分发/收集架构（原 internal/relay 已删除）
+- 文件传输压缩
+- 分层中继文件收集；当前中继扇出用于 `file.distribute`，`file.collect` 使用可恢复 SFTP
 - SSH 连接在多次 deploy 之间的跨进程复用（单次部署内并发正确；架构检测结果已通过 `~/.opsctl/arch-cache.json` 跨部署缓存）
 - 无 `systemd-run` 目标机上的资源限制回退，以及部署失败后的自动回滚接入
 

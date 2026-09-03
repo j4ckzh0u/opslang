@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -24,10 +25,12 @@ type CollectTarget struct {
 
 // CollectOptions controls the behaviour of a Collect call.
 type CollectOptions struct {
-	DestDir  string        `json:"dest_dir"` // local destination directory
-	Parallel int           `json:"parallel"`
-	Timeout  time.Duration `json:"timeout"`
-	Retries  int           `json:"retries"`
+	DestDir       string        `json:"dest_dir"` // local destination directory
+	Parallel      int           `json:"parallel"`
+	Timeout       time.Duration `json:"timeout"`
+	Retries       int           `json:"retries"`
+	Resume        bool          `json:"resume"`
+	PartRetention time.Duration `json:"part_retention,omitempty"`
 }
 
 // CollectResult is the aggregate outcome of a Collect call.
@@ -35,6 +38,7 @@ type CollectResult struct {
 	Total      int                 `json:"total"`
 	Succeeded  int                 `json:"succeeded"`
 	Failed     int                 `json:"failed"`
+	Skipped    int                 `json:"skipped"`
 	Results    []HostCollectResult `json:"results"`
 	DestDir    string              `json:"dest_dir"`
 	DurationMs int64               `json:"duration_ms"`
@@ -42,14 +46,18 @@ type CollectResult struct {
 
 // HostCollectResult captures the outcome for a single source host.
 type HostCollectResult struct {
-	Host       string `json:"host"`
-	Status     string `json:"status"` // success/failed/skipped
-	Source     string `json:"source"`
-	Dest       string `json:"dest"`
-	Checksum   string `json:"checksum"`
-	Size       int64  `json:"size"`
-	DurationMs int64  `json:"duration_ms"`
-	Error      string `json:"error,omitempty"`
+	Host             string   `json:"host"`
+	Status           string   `json:"status"` // success/failed/skipped
+	Source           string   `json:"source"`
+	Dest             string   `json:"dest"`
+	Checksum         string   `json:"checksum"`
+	Size             int64    `json:"size"`
+	TransferSource   string   `json:"transfer_source,omitempty"`
+	ResumedBytes     int64    `json:"resumed_bytes,omitempty"`
+	TransferredBytes int64    `json:"transferred_bytes,omitempty"`
+	Warnings         []string `json:"warnings,omitempty"`
+	DurationMs       int64    `json:"duration_ms"`
+	Error            string   `json:"error,omitempty"`
 }
 
 // CollectDownloadFunc is the function signature for downloading a file
@@ -64,6 +72,14 @@ var DefaultCollectDownloadFunc CollectDownloadFunc = func(_ context.Context, _, 
 	return fmt.Errorf("no collect download function configured; set file.DefaultCollectDownloadFunc")
 }
 
+// ResumeDownloadFunc performs a content-addressed, resumable download.
+type ResumeDownloadFunc func(ctx context.Context, src, dst string, retention time.Duration) (TransferOutcome, error)
+
+// DefaultResumeDownloadFunc is wired to the SSH/SFTP implementation by WireSSHTransfer.
+var DefaultResumeDownloadFunc ResumeDownloadFunc = func(_ context.Context, _, _ string, _ time.Duration) (TransferOutcome, error) {
+	return TransferOutcome{}, fmt.Errorf("no resume download function configured; set file.DefaultResumeDownloadFunc")
+}
+
 // Collect gathers files from multiple remote hosts.
 // Files are organized as {destDir}/{host}/{basename}.
 func Collect(source string, targets []CollectTarget, opts CollectOptions) (*CollectResult, error) {
@@ -74,6 +90,20 @@ func Collect(source string, targets []CollectTarget, opts CollectOptions) (*Coll
 // If dfn is nil, DefaultCollectDownloadFunc is used.
 func CollectWith(source string, targets []CollectTarget, opts CollectOptions, dfn CollectDownloadFunc) (*CollectResult, error) {
 	start := time.Now()
+	if opts.PartRetention < 0 {
+		return nil, fmt.Errorf("file.Collect: part_retention must not be negative")
+	}
+	if opts.Resume && dfn != nil {
+		return nil, fmt.Errorf("file.Collect: resume requires the configured resumable SSH transfer")
+	}
+	for index, target := range targets {
+		if strings.TrimSpace(target.Host) == "" {
+			return nil, fmt.Errorf("file.Collect: target %d host is empty", index)
+		}
+		if strings.TrimSpace(target.Source) == "" && strings.TrimSpace(source) == "" {
+			return nil, fmt.Errorf("file.Collect: target %d source is empty", index)
+		}
+	}
 
 	destDir := opts.DestDir
 	if destDir == "" {
@@ -159,6 +189,8 @@ func CollectWith(source string, targets []CollectTarget, opts CollectOptions, df
 
 			transferStart := time.Now()
 			var lastErr error
+			var totalTransferred int64
+			var transferWarnings []string
 
 			for attempt := 0; attempt < retries; attempt++ {
 				if attempt > 0 {
@@ -166,18 +198,43 @@ func CollectWith(source string, targets []CollectTarget, opts CollectOptions, df
 				}
 
 				ctx, cancel := context.WithTimeout(context.Background(), timeout)
-				err := downloadFn(ctx, remoteSource, localDest)
+				var outcome TransferOutcome
+				var err error
+				if opts.Resume {
+					outcome, err = DefaultResumeDownloadFunc(ctx, remoteSource, localDest, opts.PartRetention)
+					totalTransferred += outcome.TransferredBytes
+					transferWarnings = append(transferWarnings, outcome.Warnings...)
+					hr.Checksum = outcome.Checksum
+					hr.Size = outcome.Size
+					hr.TransferSource = outcome.TransferSource
+					hr.ResumedBytes = outcome.ResumedBytes
+					hr.TransferredBytes = totalTransferred
+					hr.Warnings = append([]string(nil), transferWarnings...)
+				} else {
+					err = downloadFn(ctx, remoteSource, localDest)
+				}
 				cancel()
 
 				if err == nil {
-					hr.Status = "success"
+					hr.Status = outcome.Status
+					if hr.Status == "" {
+						hr.Status = "success"
+					}
 					hr.Dest = localDest
+					if !opts.Resume {
+						hr.TransferSource = outcome.TransferSource
+						hr.ResumedBytes = outcome.ResumedBytes
+						hr.TransferredBytes = outcome.TransferredBytes
+						hr.Warnings = append([]string(nil), outcome.Warnings...)
+					}
 
 					// Get file size and checksum of downloaded file.
 					if info, statErr := os.Stat(localDest); statErr == nil {
 						hr.Size = info.Size()
 					}
-					if cs, csErr := computeFileChecksum(localDest); csErr == nil {
+					if outcome.Checksum != "" {
+						hr.Checksum = outcome.Checksum
+					} else if cs, csErr := computeFileChecksum(localDest); csErr == nil {
 						hr.Checksum = cs
 					}
 					hr.DurationMs = time.Since(transferStart).Milliseconds()
@@ -186,7 +243,7 @@ func CollectWith(source string, targets []CollectTarget, opts CollectOptions, df
 				lastErr = err
 			}
 
-			if hr.Status != "success" {
+			if hr.Status != "success" && hr.Status != "skipped" {
 				hr.Status = "failed"
 				hr.DurationMs = time.Since(transferStart).Milliseconds()
 				if lastErr != nil {
@@ -201,6 +258,8 @@ func CollectWith(source string, targets []CollectTarget, opts CollectOptions, df
 				result.Succeeded++
 			case "failed":
 				result.Failed++
+			case "skipped":
+				result.Skipped++
 			}
 			mu.Unlock()
 		}(target)

@@ -544,6 +544,20 @@ Public key written to  prod-signing.pub (mode 0644)
 | `2` | 全部指令失败（status "failed"） |
 | `3` | 协议/用法错误（输入损坏、不支持的版本） |
 
+### ops-runner 中继子命令
+
+文件中继由控制端自动调用，也可在受控测试中直接运行：
+
+```bash
+# 启动有界单文件 HTTPS 服务
+ops-runner relay serve --file /tmp/payload.bin --listen 0.0.0.0:0 --advertise-host 10.0.0.10 --ttl 5m --max-concurrent 32 --detach
+
+# 使用令牌、证书指纹和 SHA-256 拉取并原子提交
+ops-runner relay fetch --url https://10.0.0.10:8443/file --token '<TOKEN>' --fingerprint '<SHA256>' --sha256 '<FILE_SHA256>' --size 1048576 --dest /opt/app/payload.bin
+```
+
+服务仅接受固定 `/file` 路径上的 `GET` 和 `HEAD`，支持 Range 请求，并在 TTL 到期后退出。令牌属于短时敏感信息，运维日志应避免记录完整命令行。
+
 ---
 
 ## 环境变量
@@ -553,6 +567,7 @@ Public key written to  prod-signing.pub (mode 0644)
 | `OPSLANG_KNOWN_HOSTS` | SSH 主机密钥 TOFU 已知主机文件路径（默认 `~/.ssh/opslang_known_hosts`） |
 | `OPSLANG_SSH_PASSWORD` | `file.distribute` / `file.collect` 传输使用的 SSH 密码 |
 | `OPSLANG_SSH_KEY` | `file.distribute` / `file.collect` 传输使用的 SSH 私钥路径 |
+| `OPSLANG_REMOTE_RUNNER` | 远端 `ops-runner` 路径，中继命令默认使用 `ops-runner` |
 | `OPSLANG_CACHE_DIR` | Runner 编译缓存目录（默认 `~/.cache/opslang/runners/`） |
 | `OPSLANG_PROJECT_ROOT` | 覆盖项目根目录探测（开发调试用） |
 | `OPSCTL_AUTO_APPROVE` | 设为 `1` 时放行审批流拦截的运行（CI 用）；`--auto-approve` flag 优先 |

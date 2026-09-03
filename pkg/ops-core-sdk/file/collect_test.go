@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -253,5 +254,61 @@ func TestCollect_TargetOverridesSource(t *testing.T) {
 
 	if receivedSource != "ssh://root@host1:22/custom/path.log" {
 		t.Errorf("source = %q, want ssh://root@host1:22/custom/path.log", receivedSource)
+	}
+}
+
+func TestCollect_ResumableOutcome(t *testing.T) {
+	destDir := t.TempDir()
+	saved := DefaultResumeDownloadFunc
+	DefaultResumeDownloadFunc = func(_ context.Context, endpoint, dst string, retention time.Duration) (TransferOutcome, error) {
+		if !strings.Contains(endpoint, "host1") || !strings.HasPrefix(dst, destDir) {
+			return TransferOutcome{}, fmt.Errorf("unexpected resumable download arguments")
+		}
+		if retention != 2*time.Hour {
+			return TransferOutcome{}, fmt.Errorf("retention = %v", retention)
+		}
+		if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+			return TransferOutcome{}, err
+		}
+		if err := os.WriteFile(dst, []byte("data"), 0600); err != nil {
+			return TransferOutcome{}, err
+		}
+		return TransferOutcome{
+			Status:           "success",
+			Changed:          true,
+			Checksum:         strings.Repeat("b", 64),
+			Size:             4,
+			TransferSource:   "controller_sftp",
+			ResumedBytes:     2,
+			TransferredBytes: 2,
+		}, nil
+	}
+	defer func() { DefaultResumeDownloadFunc = saved }()
+
+	result, err := Collect("/var/log/app.log", []CollectTarget{{Host: "host1"}}, CollectOptions{
+		DestDir:       destDir,
+		Resume:        true,
+		Retries:       1,
+		PartRetention: 2 * time.Hour,
+	})
+	if err != nil {
+		t.Fatalf("Collect: %v", err)
+	}
+	if result.Succeeded != 1 || result.Failed != 0 || result.Skipped != 0 {
+		t.Fatalf("aggregate result = %+v", result)
+	}
+	host := result.Results[0]
+	if host.ResumedBytes != 2 || host.TransferredBytes != 2 || host.TransferSource != "controller_sftp" || host.Checksum == "" {
+		t.Fatalf("host result = %+v", host)
+	}
+}
+
+func TestCollect_RejectsInvalidResumeConfiguration(t *testing.T) {
+	if _, err := Collect("/tmp/source", nil, CollectOptions{PartRetention: -time.Second}); err == nil || !strings.Contains(err.Error(), "part_retention") {
+		t.Fatalf("negative retention error = %v", err)
+	}
+	_, err := CollectWith("/tmp/source", nil, CollectOptions{Resume: true}, func(context.Context, string, string) error { return nil })
+	if err == nil || !strings.Contains(err.Error(), "resume") {
+		t.Fatalf("custom resume download error = %v", err)
 	}
 }

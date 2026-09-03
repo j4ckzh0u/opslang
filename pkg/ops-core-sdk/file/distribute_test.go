@@ -284,3 +284,64 @@ func TestComputeFileChecksum(t *testing.T) {
 		t.Errorf("checksums differ for same file: %q vs %q", cs1, cs2)
 	}
 }
+
+func TestDistribute_ResumableOutcome(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "source.txt")
+	if err := os.WriteFile(src, []byte("resume data"), 0600); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	saved := DefaultResumeUploadFunc
+	DefaultResumeUploadFunc = func(_ context.Context, gotSource, endpoint string, retention time.Duration) (TransferOutcome, error) {
+		if gotSource != src || !strings.Contains(endpoint, "host1") {
+			return TransferOutcome{}, fmt.Errorf("unexpected resumable upload arguments")
+		}
+		if retention != time.Hour {
+			return TransferOutcome{}, fmt.Errorf("retention = %v", retention)
+		}
+		return TransferOutcome{
+			Status:           "skipped",
+			Checksum:         strings.Repeat("a", 64),
+			Size:             11,
+			TransferSource:   "controller_sftp",
+			ResumedBytes:     7,
+			TransferredBytes: 4,
+			Warnings:         []string{"reused partial file"},
+		}, nil
+	}
+	defer func() { DefaultResumeUploadFunc = saved }()
+
+	result, err := Distribute(src, []DistributeTarget{{Host: "host1", Dest: "/tmp/file"}}, DistributeOptions{
+		Resume:        true,
+		Retries:       1,
+		PartRetention: time.Hour,
+	})
+	if err != nil {
+		t.Fatalf("Distribute: %v", err)
+	}
+	if result.Skipped != 1 || result.Succeeded != 0 || result.Failed != 0 {
+		t.Fatalf("aggregate result = %+v", result)
+	}
+	host := result.Results[0]
+	if host.Changed || host.ResumedBytes != 7 || host.TransferredBytes != 4 || host.TransferSource != "controller_sftp" {
+		t.Fatalf("host result = %+v", host)
+	}
+	if len(host.Warnings) != 1 || host.Checksum == "" {
+		t.Fatalf("host observability fields = %+v", host)
+	}
+}
+
+func TestDistribute_RejectsInvalidResumeConfiguration(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "source.txt")
+	if err := os.WriteFile(src, []byte("data"), 0600); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	if _, err := Distribute(src, nil, DistributeOptions{PartRetention: -time.Second}); err == nil || !strings.Contains(err.Error(), "part_retention") {
+		t.Fatalf("negative retention error = %v", err)
+	}
+	_, err := DistributeWith(src, nil, DistributeOptions{Resume: true}, func(context.Context, string, string) error { return nil })
+	if err == nil || !strings.Contains(err.Error(), "resume") {
+		t.Fatalf("custom resume transfer error = %v", err)
+	}
+}

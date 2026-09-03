@@ -844,7 +844,7 @@ file.write("/etc/myapp/config.yaml", rendered.content)
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `source` | `string` | 是 | 本地源文件路径 |
-| `targets` | `list` | 是 | 目标列表，每项为 `{host, port, user, dest}` |
+| `targets` | `list` | 是 | 目标列表，每项为 `{host, port, user, dest, relay_group?, tags?}` |
 | `options` | `dict` | 是 | 选项字典（见下） |
 
 `targets[].dest` 远程目标路径**按字面使用**：结尾带 `/` 表示目录（保留源文件名），否则视为完整目标文件路径，不做目录猜测。
@@ -857,6 +857,16 @@ file.write("/etc/myapp/config.yaml", rendered.content)
 | `mode` | `string` | - | 传输后在远端 chmod 的八进制权限（如 `"0644"`） |
 | `parallel` | `int` | `5` | 最大并发传输数 |
 | `retries` | `int` | `3` | 每台主机的总尝试次数 |
+| `resume` | `bool` | `false` | 启用内容哈希跳过、部分文件续传与原子替换 |
+| `part_retention` | `int` | `86400000` | 部分文件元数据保留时间，单位毫秒 |
+| `relay` | `bool` | `false` | 启用确定性拓扑分组和 HTTPS 中继扇出 |
+| `relay_group` | `string` | - | 所有目标的中继组后备值 |
+| `relay_threshold` | `int` | `20` | 组内启用中继的最少目标数 |
+| `relay_max_targets` | `int` | `100` | 每个中继最多服务的下游目标数 |
+
+目标中继组按 `targets[].relay_group`、`targets[].tags.relay_group`、全局 `relay_group`、IPv4 `/24` 或 IPv6 `/64` 的优先级确定。无法解析为 IP 且没有显式组的目标直接使用 SFTP。`targets[].tags.relay = "true"` 可提高该目标的候选优先级。
+
+恢复文件使用最终路径旁的 `.opslang.part` 和 `.opslang.part.json`。只有源大小、SHA-256、确认偏移和确认块一致时才从 Range 偏移继续；完整校验后原子替换最终文件。
 
 **SSH 凭据**：从环境变量 `OPSLANG_SSH_PASSWORD`（密码认证）或 `OPSLANG_SSH_KEY`（私钥路径）读取。
 
@@ -868,7 +878,7 @@ file.write("/etc/myapp/config.yaml", rendered.content)
 | `succeeded` | `int` | 成功数 |
 | `failed` | `int` | 失败数 |
 | `skipped` | `int` | 跳过数 |
-| `results` | `[]HostDistributeResult` | 每台主机的结果（`host`, `status`, `changed`, `checksum`, `size` 等） |
+| `results` | `[]HostDistributeResult` | 每台主机的结果，包含 `transfer_source`、`resumed_bytes`、`transferred_bytes` 和 `warnings` |
 | `duration_ms` | `int64` | 总耗时（毫秒） |
 
 **示例**：
@@ -880,7 +890,15 @@ let result = file.distribute(
         {"host": "web1", "port": 22, "user": "root", "dest": "/opt/app/"},
         {"host": "web2", "port": 22, "user": "root", "dest": "/opt/app/"}
     ],
-    {"checksum": true, "mode": "0644", "parallel": 10, "retries": 3}
+    {
+        "checksum": true,
+        "mode": "0644",
+        "parallel": 10,
+        "retries": 3,
+        "resume": true,
+        "relay": true,
+        "relay_group": "prod-web"
+    }
 )
 if result.failed > 0 {
     alert("分发有失败主机: " + str(result.failed) + " 台")
@@ -908,6 +926,8 @@ if result.failed > 0 {
 | `dest_dir` | `string` | - | 本地目标目录 |
 | `parallel` | `int` | `5` | 最大并发数 |
 | `retries` | `int` | `3` | 每台主机的总尝试次数 |
+| `resume` | `bool` | `false` | 启用内容哈希跳过、部分文件续传与原子替换 |
+| `part_retention` | `int` | `86400000` | 部分文件元数据保留时间，单位毫秒 |
 
 **SSH 凭据**：同 `file.distribute`，读取 `OPSLANG_SSH_PASSWORD` / `OPSLANG_SSH_KEY`。
 
@@ -931,7 +951,7 @@ let result = file.collect(
         {"host": "web1", "port": 22, "user": "root"},
         {"host": "web2", "port": 22, "user": "root"}
     ],
-    {"dest_dir": "/tmp/collected", "parallel": 10}
+    {"dest_dir": "/tmp/collected", "parallel": 10, "resume": true}
 )
 report {
     succeeded: result.succeeded,
@@ -2588,10 +2608,9 @@ time.SleepResult    → { milliseconds }
 time.DiffResult     → { seconds, minutes, hours, human_readable }
 ```
 
-## 附录：Roadmap（未实现）
+## 附录：文件传输 Roadmap
 
-以下传输优化能力**尚未实现**，当前 `file.distribute` / `file.collect` 为直接 SSH/SFTP 传输：
+当前剩余的传输优化能力：
 
 - 传输压缩
-- 断点续传
-- 内容哈希去重分发（相同内容只传一次）
+- `file.collect` 的分层中继汇聚

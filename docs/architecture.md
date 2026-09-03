@@ -697,6 +697,14 @@ opsctl build --source script.ops --output binary --target-arch linux/arm64
 - `OPSLANG_SSH_PASSWORD` — 密码认证
 - `OPSLANG_SSH_KEY` — 私钥路径
 
+### 6.3 断点续传与分层中继
+
+`file.distribute` 和 `file.collect` 可通过 `resume=true` 启用部分文件续传。部分数据写入最终路径旁的 `.opslang.part`，元数据写入 `.opslang.part.json`。恢复前验证源大小、SHA-256、确认偏移和确认块；完整文件经过大小与哈希校验后原子替换最终路径。
+
+`file.distribute` 可通过 `relay=true` 启用分层中继。计划器依次使用目标显式 `relay_group`、`tags["relay_group"]`、全局组和 IP 前缀分组。默认组内至少 20 个目标启用中继，每个中继最多服务 100 个下游目标。
+
+控制端通过可恢复 SFTP 给候选中继上传种子，中继运行有界生命周期的单文件 HTTPS 服务。目标使用随机 Bearer token、TLS 叶证书 SHA-256 指纹和 Range 请求拉取，完成后校验 SHA-256 并原子替换。中继候选失败时按稳定顺序切换，未完成目标回退直接 SFTP。中继只接收短时会话参数，不接收其他目标的 SSH 凭据。
+
 ---
 
 ## 7. 扩展指南
@@ -949,8 +957,8 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...
 
 - **`import "go <包路径>"` 第三方 Go 库** — 所有引擎报错拒绝
 - **task `on` 动态选择器** — deploy 支持字面量精确主机、`user@host`、glob 和 inventory 组名
-- **分层中继（relay）架构** — 原 `internal/relay` 已删除
-- **文件传输压缩、断点续传、传输前内容哈希去重** — `file.distribute`/`file.collect` 当前使用直接 SFTP，并支持并发、重试及传输后 SHA-256 校验
+- **文件传输压缩** — 当前传输保持原始字节流
+- **分层中继收集** — `file.distribute` 已支持中继扇出，`file.collect` 当前使用可恢复 SFTP
 - **非 systemd 主机资源限制回退和部署自动回滚** — systemd 主机已通过 transient scope 强制 CPU/内存限制
 
 ## 附录

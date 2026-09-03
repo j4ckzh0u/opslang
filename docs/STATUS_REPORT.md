@@ -511,8 +511,9 @@
         <span class="card-stats">真实 SSH/SFTP · 含万级模拟测试</span>
       </div>
       <ul>
-        <li><code>file.distribute()</code>：多主机并行 SFTP 分发、失败重试、传输后 SHA-256 校验</li>
-        <li><code>file.collect()</code>：多主机并行收集，按主机归档</li>
+        <li><code>file.distribute()</code>：多主机并行 SFTP 分发、内容哈希跳过、部分文件续传、原子替换与传输后 SHA-256 校验</li>
+        <li><code>file.collect()</code>：多主机并行收集、按主机归档、内容哈希跳过与部分文件续传</li>
+        <li>分层中继分发：按显式组或 IP 前缀生成稳定拓扑，使用短时令牌、TLS 指纹固定和 HTTPS Range 扇出；候选失败后切换，未完成目标回退直接 SFTP</li>
         <li>通过 <code>WireSSHTransfer()</code> 注入真实 SSH 实现（opsctl 启动时调用）</li>
         <li>支持 <code>OPSLANG_SSH_PASSWORD_&lt;HOST&gt;</code> 环境变量设置主机密码</li>
       </ul>
@@ -525,11 +526,11 @@
     <ul class="limitations">
       <li><strong>第三方 Go 导入</strong>：文件模块 <code>import "./lib.ops"</code> 已实现；<code>import "go &lt;包路径&gt;"</code> 仍被显式拒绝。</li>
       <li><strong>资源限制平台依赖</strong>：CPU/内存限制要求远端提供 <code>systemd-run</code>；缺少该命令时任务继续执行并返回 warning。</li>
-      <li><strong>文件传输优化</strong>：压缩、断点续传、传输前内容去重和分层中继尚未实现。</li>
+      <li><strong>文件传输优化</strong>：传输压缩和分层中继收集仍在 Roadmap；分发中继与分发/收集断点续传已经实现。</li>
       <li><strong>自动回滚接入</strong>：回滚 helper 已有测试，部署执行链尚未调用。</li>
       <li><strong>CPU 使用率为采样值</strong>：<code>sys.cpu.usage()</code> 两次采样间隔 500ms，非实时值。</li>
       <li><strong>CI 未启用竞态检测</strong>：<code>-race</code> 在 CI 全量测试时 TSan OOM，已在 CI 配置中移除。本地应定期跑 <code>go test -race ./...</code>。</li>
-      <li><strong>大规模模拟测试的传输层为模拟</strong>：1 万主机分发/收集模拟测试已实现（<code>pkg/ops-core-sdk/file/scale_test.go</code>），在传输接缝注入虚拟 SFTP 层（真实字节流读写与 SHA-256、可配置延迟、0.1% 确定性故障注入），压测真实的调度/重试/校验/归档编排；断言成功率 &gt;99.9%、控制端带宽 ≤1.05×（主机数×文件大小）。CI 常驻 1 万档 + 1000 台门档（<code>go test -short</code> 可跳过万级档），<code>make scale-test</code> 跑满配，<code>OPS_SCALE_N</code>/<code>OPS_SCALE_FILE_KB</code>/<code>OPS_SCALE_FAIL_RATE</code>/<code>OPS_SCALE_LATENCY_MS</code> 可调。非真实 SSH 网络压测。</li>
+      <li><strong>大规模模拟测试的传输层为模拟</strong>：1 万主机分发/收集及中继分发模拟测试已实现（<code>pkg/ops-core-sdk/file/scale_test.go</code>、<code>relay_scale_test.go</code>）。测试注入 0.1% 确定性故障、哈希损坏、中继候选失效、恢复偏移异常和确认块损坏，验证结果守恒、成功率 &gt;99.9%、重试上界及中继流量上界。CI 使用 1000 台门档，<code>make scale-test</code> 跑 1 万档；真实协议另由受控 SSH/SFTP 与本地 HTTPS 端到端测试覆盖。</li>
       <li><strong>macOS 兼容性</strong>：<code>service</code>、<code>pkg</code> 包仅支持 Linux（systemd / apt / yum）。</li>
     </ul>
   </section>
@@ -587,7 +588,7 @@
       这是一个<strong>完整、可工作的 MVP</strong>。当前 2107 个测试函数通过，119 个示例脚本纳入仓库，双执行引擎（Runner + AOT）均可用，远程执行链路（SSH → 架构检测 → 缓存上传 → 执行 → 结果回收）已打通。
     </p>
     <p style="margin-top: 0.75rem;">
-      主要缺口：第三方 Go 导入、动态 task 目标、传输压缩/断点续传/分层中继、非 systemd 资源限制回退、部署自动回滚接入和 CI 竞态检测。文件模块已经实现。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制）；审批流已接入 deploy/exec；1 万主机文件分发/收集模拟测试覆盖调度、重试、校验和归档编排。
+      主要缺口：第三方 Go 导入、动态 task 目标、传输压缩、分层中继收集、非 systemd 资源限制回退、部署自动回滚接入和 CI 竞态检测。文件分发已支持断点续传与分层中继，文件收集已支持断点续传。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制）；审批流已接入 deploy/exec；1 万主机模拟覆盖调度、恢复、重试、校验、归档、中继故障与流量上界。
     </p>
   </div>
 
