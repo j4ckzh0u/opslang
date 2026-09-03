@@ -181,7 +181,7 @@ SHA256(script_content) + SDK_version + target_arch
 
 **优势**：
 - 完整语言特性（控制流、函数、闭包）
-- 可以使用第三方 Go 库（通过 `import go "..."`）
+- 支持 OpsLang 文件模块；第三方 Go 包导入仍在 Roadmap
 - 生成独立二进制，可脱离 OpsLang 运行
 
 **限制**：
@@ -249,8 +249,8 @@ func (e *Executor) ensureRemoteBinary(conn *sshx.Connection, localPath string) (
 ```go
 func TestRunnerAOTConsistency(t *testing.T) {
     scripts := []string{
-        "examples/cpu_check.ops",
-        "examples/disk_report.ops",
+        "examples/check_cpu.ops",
+        "examples/disk_check.ops",
         // ...
     }
 
@@ -291,15 +291,7 @@ privilege "read_only"
 
 ### 资源限制
 
-```go
-limits := &security.ResourceLimits{
-    MemoryMB: 1024,
-    CPUPercent: 100,
-}
-security.ApplyResourceLimits(limits)
-```
-
-通过 `setrlimit(2)` 限制内存使用。CPU 配额当前未强制执行（ulimit 无法设置 CPU quota，需要 systemd-run --scope，但那是外部编排器的职责）。
+`opsctl deploy` 和 `opsctl exec` 接受 `--limit-cpu`、`--limit-mem`。目标机提供 `systemd-run` 时，远程 Runner 通过 transient scope 的 `CPUQuota` 和 `MemoryMax` 强制限制；缺少该命令时任务继续执行，并在结构化结果中返回 warning。
 
 ### 审计日志
 
@@ -332,23 +324,18 @@ security.ApplyResourceLimits(limits)
 | 远程执行（缓存命中） | SSH 延迟 + 执行时间 |
 | 远程执行（首次上传） | + 1-3s（10MB 二进制） |
 
-远程文件分发（100 主机，1GB 文件）：
-
-| 模式 | 控制端带宽 | 耗时 |
-|------|-----------|------|
-| 直接分发 | 100GB | ~10min |
-| 压缩传输 | ~60GB | ~6min |
-| 校验和去重 | ~30GB（假设 50% 重复） | ~3min |
+文件分发包含 1 万主机模拟测试，覆盖真实字节流、SHA-256、并发调度、重试和归档；传输接缝使用虚拟 SFTP。仓库尚无可用于生产容量规划的真实 100/10000 主机网络性能数据。
 
 ## 已知限制
 
 诚实地说：
 
 1. **Runner 模式不支持控制流**：if/for/while 必须用 AOT
-2. **CPU 配额未强制执行**：只有内存限制生效
-3. **权限未自动执行**：`CheckPrivilege()` 存在但解释器不自动调用
-4. **CI 未跑 `-race`**：TSan 在全量测试时 OOM，本地已支持
-5. **无模块系统**：OpsLang 脚本间无法互相导入
+2. **资源限制依赖 systemd**：远端缺少 `systemd-run` 时返回 warning 并继续执行
+3. **文件传输优化待实现**：压缩、断点续传、传输前内容去重和分层中继仍在 Roadmap
+4. **自动回滚待接入**：安全包已有 helper，部署执行链尚未调用
+5. **CI 未跑 `-race`**：TSan 在全量测试时 OOM，本地已支持
+6. **第三方 Go 包导入未实现**：OpsLang 文件模块已经可用
 
 这些是有意识的简化，不是遗漏。代码中有 `ponytail:` 注释标明升级路径。
 

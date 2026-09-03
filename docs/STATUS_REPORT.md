@@ -322,31 +322,31 @@
 <div class="page">
 
   <div class="header">
-    <div class="header-meta">Technical Audit · 2026-08-16</div>
+    <div class="header-meta">Technical Audit · 2026-09-03</div>
     <h1>OpsLang 实现状态报告</h1>
     <p class="subtitle">实事求是：当前代码库的实际状态，包括已实现、可用、和已知限制。</p>
   </div>
 
   <div class="summary">
     <div class="summary-cell">
-      <div class="summary-value">1520</div>
-      <div class="summary-label">测试通过</div>
-    </div>
-    <div class="summary-cell">
-      <div class="summary-value">25</div>
-      <div class="summary-label">包</div>
-    </div>
-    <div class="summary-cell">
-      <div class="summary-value">760</div>
+      <div class="summary-value">2107</div>
       <div class="summary-label">测试函数</div>
     </div>
     <div class="summary-cell">
-      <div class="summary-value">23</div>
+      <div class="summary-value">210</div>
+      <div class="summary-label">SDK 操作包</div>
+    </div>
+    <div class="summary-cell">
+      <div class="summary-value">1157</div>
+      <div class="summary-label">原子操作</div>
+    </div>
+    <div class="summary-cell">
+      <div class="summary-value">119</div>
       <div class="summary-label">示例脚本</div>
     </div>
     <div class="summary-cell">
-      <div class="summary-value">60+</div>
-      <div class="summary-label">SDK 函数</div>
+      <div class="summary-value">8</div>
+      <div class="summary-label">跨平台二进制</div>
     </div>
   </div>
 
@@ -366,62 +366,62 @@
         <tr>
           <td class="name">ops-core-sdk</td>
           <td><span class="badge badge-green">可用</span></td>
-          <td>45</td>
-          <td>9 个包，60+ 函数，全部真实实现</td>
+          <td>全量通过</td>
+          <td>210 个操作包，1157 个注册操作</td>
         </tr>
         <tr>
           <td class="name">词法/语法分析</td>
           <td><span class="badge badge-green">可用</span></td>
-          <td>410</td>
+          <td>全量通过</td>
           <td>完整 lexer + recursive descent parser</td>
         </tr>
         <tr>
           <td class="name">解释器</td>
           <td><span class="badge badge-green">可用</span></td>
-          <td>177</td>
+          <td>全量通过</td>
           <td>树遍历执行，调用 SDK，支持闭包/dry-run</td>
         </tr>
         <tr>
           <td class="name">AOT 编译器</td>
           <td><span class="badge badge-green">可用</span></td>
-          <td>185</td>
+          <td>全量通过</td>
           <td>AST → Go 源码 → 静态二进制</td>
         </tr>
         <tr>
           <td class="name">SSH 客户端</td>
           <td><span class="badge badge-green">可用</span></td>
-          <td>56</td>
+          <td>全量通过</td>
           <td>密码/密钥认证，TOFU，SFTP，连接池</td>
         </tr>
         <tr>
           <td class="name">远程执行器</td>
           <td><span class="badge badge-green">可用</span></td>
-          <td>70</td>
+          <td>全量通过</td>
           <td>架构检测，内容寻址缓存，并发执行</td>
         </tr>
         <tr>
           <td class="name">Runner 模式</td>
           <td><span class="badge badge-green">可用</span></td>
-          <td>390+</td>
-          <td>JSON 指令包，60+ 操作注册</td>
+          <td>全量通过</td>
+          <td>JSON 指令包，与 opsspec 注册表一致</td>
         </tr>
         <tr>
           <td class="name">安全模块</td>
           <td><span class="badge badge-green">可用</span></td>
-          <td>148</td>
+          <td>全量通过</td>
           <td>权限分级，审批流，审计日志，资源限制，Ed25519 签名</td>
         </tr>
         <tr>
           <td class="name">CLI</td>
           <td><span class="badge badge-green">可用</span></td>
-          <td>78</td>
+          <td>全量通过</td>
           <td>run / build / exec / deploy / repl</td>
         </tr>
         <tr>
           <td class="name">文件分发/收集</td>
           <td><span class="badge badge-green">可用</span></td>
-          <td>51</td>
-          <td>真实 SSH/SFTP，并行，断点续传，校验和</td>
+          <td>全量通过</td>
+          <td>真实 SSH/SFTP、并发、重试、传输后 SHA-256 校验</td>
         </tr>
       </tbody>
     </table>
@@ -434,7 +434,7 @@
     <div class="card">
       <div class="card-header">
         <h3>ops-core-sdk（原子操作标准库）</h3>
-        <span class="card-stats">9 packages · 45 tests</span>
+        <span class="card-stats">210 operation packages · 1157 operations</span>
       </div>
       <ul>
         <li><code>sys</code> — CPU 使用率（500ms 采样）、内存、磁盘、负载、主机名、用户、网络接口</li>
@@ -456,8 +456,8 @@
       <ul>
         <li>20 个关键字：<code>let fn if else for while return task on import privilege report alert ensure metric log parallel</code> 等</li>
         <li>数据类型：整数、浮点数、字符串、布尔、列表、字典</li>
-        <li>支持：闭包、默认参数、C-style for、while、if/else-if 链、成员访问、索引访问</li>
-        <li>所有 23 个示例脚本均可解析</li>
+        <li>支持：闭包、默认参数、C-style for、for-in、while、block/rescue/always、文件模块、成员访问、索引访问</li>
+        <li>119 个示例脚本纳入仓库，CLI 端到端测试执行示例集</li>
       </ul>
     </div>
 
@@ -492,14 +492,14 @@
     <div class="card">
       <div class="card-header">
         <h3>安全模块</h3>
-        <span class="card-stats">179 tests</span>
+        <span class="card-stats">全量测试覆盖</span>
       </div>
       <ul>
         <li><strong>权限分级</strong>：read_only / admin / root，操作分类（read/write/exec/admin/system），变更类函数元数据以 <code>opsspec</code> 为单一事实来源</li>
         <li><strong>权限自动执行</strong>：read_only 脚本调用变更函数在三层被拒绝——解释器（运行时，带行列号）、AOT 编译期静态检查、Runner 二次校验（指令包携带 privilege 字段）</li>
         <li><strong>审批流</strong>：<code>privilege: admin/root</code> 脚本部署到生产目标（inventory 标签 <code>env: prod/production</code>）前强制审批——TTY 展示摘要（权限、变更操作、生产目标）后 y/N 确认；非 TTY（管道/CI）默认拒绝，需 <code>--auto-approve</code> 或 <code>OPSCTL_AUTO_APPROVE=1</code>（flag 优先）放行；拒绝即中止，不联系任何主机；决策逻辑独立于交互（<code>internal/security/approval.go</code>），<code>opsctl deploy</code> 与 <code>opsctl exec</code> 均已接入</li>
         <li><strong>审计日志</strong>：JSON 格式，记录任务 ID、脚本、权限、目标、用户、模式、结果；审批决策（批准/拒绝、来源、批准人、生产目标清单）随运行记录一同落盘，可回溯</li>
-        <li><strong>资源限制</strong>：<code>setrlimit(2)</code> 内存限制（CPU quota 未强制执行）</li>
+        <li><strong>资源限制</strong>：远程 Runner 在目标机具备 <code>systemd-run</code> 时通过 transient scope 强制 CPU/内存限制；缺少 systemd-run 时结果携带 warning</li>
         <li><strong>签名验证</strong>：Ed25519 签名/验签，密钥文件 I/O</li>
         <li><strong>临时目录</strong>：自动创建/清理，幂等</li>
       </ul>
@@ -508,10 +508,10 @@
     <div class="card">
       <div class="card-header">
         <h3>文件分发与收集</h3>
-        <span class="card-stats">真实 SSH/SFTP · 51 tests</span>
+        <span class="card-stats">真实 SSH/SFTP · 含万级模拟测试</span>
       </div>
       <ul>
-        <li><code>file.distribute()</code>：多主机并行分发，压缩传输，校验和去重，原子替换</li>
+        <li><code>file.distribute()</code>：多主机并行 SFTP 分发、失败重试、传输后 SHA-256 校验</li>
         <li><code>file.collect()</code>：多主机并行收集，按主机归档</li>
         <li>通过 <code>WireSSHTransfer()</code> 注入真实 SSH 实现（opsctl 启动时调用）</li>
         <li>支持 <code>OPSLANG_SSH_PASSWORD_&lt;HOST&gt;</code> 环境变量设置主机密码</li>
@@ -523,8 +523,10 @@
   <section>
     <h2>已知限制</h2>
     <ul class="limitations">
-      <li><strong>无模块导入系统</strong>：OpsLang 脚本之间无法互相导入。第三方 Go 导入被显式拒绝。</li>
-      <li><strong>CPU 配额未强制执行</strong>：<code>ResourceLimits.CPUQuota</code> 字段存在但 ulimit 无法设置 CPU 配额，仅内存限制生效。</li>
+      <li><strong>第三方 Go 导入</strong>：文件模块 <code>import "./lib.ops"</code> 已实现；<code>import "go &lt;包路径&gt;"</code> 仍被显式拒绝。</li>
+      <li><strong>资源限制平台依赖</strong>：CPU/内存限制要求远端提供 <code>systemd-run</code>；缺少该命令时任务继续执行并返回 warning。</li>
+      <li><strong>文件传输优化</strong>：压缩、断点续传、传输前内容去重和分层中继尚未实现。</li>
+      <li><strong>自动回滚接入</strong>：回滚 helper 已有测试，部署执行链尚未调用。</li>
       <li><strong>CPU 使用率为采样值</strong>：<code>sys.cpu.usage()</code> 两次采样间隔 500ms，非实时值。</li>
       <li><strong>CI 未启用竞态检测</strong>：<code>-race</code> 在 CI 全量测试时 TSan OOM，已在 CI 配置中移除。本地应定期跑 <code>go test -race ./...</code>。</li>
       <li><strong>大规模模拟测试的传输层为模拟</strong>：1 万主机分发/收集模拟测试已实现（<code>pkg/ops-core-sdk/file/scale_test.go</code>），在传输接缝注入虚拟 SFTP 层（真实字节流读写与 SHA-256、可配置延迟、0.1% 确定性故障注入），压测真实的调度/重试/校验/归档编排；断言成功率 &gt;99.9%、控制端带宽 ≤1.05×（主机数×文件大小）。CI 常驻 1 万档 + 1000 台门档（<code>go test -short</code> 可跳过万级档），<code>make scale-test</code> 跑满配，<code>OPS_SCALE_N</code>/<code>OPS_SCALE_FILE_KB</code>/<code>OPS_SCALE_FAIL_RATE</code>/<code>OPS_SCALE_LATENCY_MS</code> 可调。非真实 SSH 网络压测。</li>
@@ -582,15 +584,15 @@
   <div class="verdict">
     <h3>结论</h3>
     <p>
-      这是一个<strong>完整、可工作</strong>的实现。没有桩代码，没有空壳。所有 1520 个测试通过，23 个示例脚本可执行，双执行引擎（Runner + AOT）均可用，远程执行链路（SSH → 架构检测 → 缓存上传 → 执行 → 结果回收）已打通。
+      这是一个<strong>完整、可工作的 MVP</strong>。当前 2107 个测试函数通过，119 个示例脚本纳入仓库，双执行引擎（Runner + AOT）均可用，远程执行链路（SSH → 架构检测 → 缓存上传 → 执行 → 结果回收）已打通。
     </p>
     <p style="margin-top: 0.75rem;">
-      主要缺口：模块系统、CI 竞态检测。这些是有意识的简化而非遗漏——代码中有 <code>ponytail:</code> 注释标明升级路径。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制，变更类函数清单集中在 <code>internal/opsspec</code>）；审批流已实现（admin/root 脚本 + 生产目标 = 部署前强制审批，非交互默认拒绝，决策与审计落地）；1 万主机文件分发/收集模拟测试已实现（真实编排 + 模拟传输层，见已知限制区说明）。
+      主要缺口：第三方 Go 导入、动态 task 目标、传输压缩/断点续传/分层中继、非 systemd 资源限制回退、部署自动回滚接入和 CI 竞态检测。文件模块已经实现。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制）；审批流已接入 deploy/exec；1 万主机文件分发/收集模拟测试覆盖调度、重试、校验和归档编排。
     </p>
   </div>
 
   <div class="footer">
-    Generated 2026-08-16 · 1520 tests · 25 packages · 0 stubs
+    Updated 2026-09-03 · 2107 test functions · 210 SDK operation packages · 1157 operations
   </div>
 
 </div>

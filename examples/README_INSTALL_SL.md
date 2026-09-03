@@ -18,10 +18,10 @@
 go build -o opsctl ./cmd/opsctl
 
 # 在单台主机执行
-./opsctl deploy --hosts user@192.168.1.10 examples/install_sl.ops
+./opsctl deploy examples/install_sl.ops --targets user@192.168.1.10
 
 # 在多台主机执行
-./opsctl deploy --hosts user@host1,user@host2,user@host3 examples/install_sl.ops
+./opsctl deploy examples/install_sl.ops --targets user@host1,user@host2,user@host3
 
 # 从 inventory 文件读取主机列表
 ./opsctl deploy --inventory hosts.txt examples/install_sl.ops

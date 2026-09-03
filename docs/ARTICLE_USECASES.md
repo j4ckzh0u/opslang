@@ -216,20 +216,19 @@ done
 **OpsLang：**
 
 ```ops
-task "collect_logs" on ["host1", "host2", "host3"] {
-    file.collect(
-        source: "/var/log/nginx/access.log",
-        dest: "/data/logs/{host}/access_{date}.log",
-        compress: true,
-        resume: true
-    )
-}
+let targets = [
+    {"host": "host1", "source": "/var/log/nginx/access.log"},
+    {"host": "host2", "source": "/var/log/nginx/access.log"},
+    {"host": "host3", "source": "/var/log/nginx/access.log"}
+]
+let options = {"dest_dir": "/data/logs", "parallel": 3, "retries": 3}
+file.collect("/var/log/nginx/access.log", targets, options)
 ```
 
-- 并行收集
-- 自动压缩传输
-- 断点续传（`resume: true`）
-- `{host}` 和 `{date}` 自动替换，不会覆盖
+- 并行收集并按主机目录归档
+- 失败重试
+- 下载后记录文件大小与 SHA-256
+- 压缩和断点续传仍在 Roadmap
 
 ## 6. 进程管理
 
@@ -473,7 +472,7 @@ task "check_all" on ["host1", "host2", "host3"] parallel {
 | 磁盘报警 | 字符串比较，易错 | 数值比较，清晰 |
 | 文件部署 | 串行，无校验 | 并行，校验和，幂等 |
 | 服务检查 | 只查状态，不查响应 | 完整状态，自动重启 |
-| 日志收集 | 串行，无压缩 | 并行，压缩，断点续传 |
+| 日志收集 | 串行，无校验 | 并行、重试、按主机归档、下载后校验和 |
 | 进程管理 | 依赖 lsof，信号处理粗糙 | 直接读 /proc，信号封装 |
 | 包管理 | if-elif 判断包管理器 | 自动检测，幂等 |
 | 网络检查 | 三个工具，格式各异 | 统一接口，结构化 |

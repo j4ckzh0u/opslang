@@ -415,21 +415,22 @@ type MemoryInfo struct {
 
 | 阶段 | 内容 | 状态 |
 |------|------|------|
-| Phase 0 | 原子操作 SDK（ops-core-sdk） | ✅ 已完成 |
-| Phase 1 | 远程执行通道（SSH + Runner） | ✅ 已完成 |
-| Phase 2 | 语言前端与解释器（Lexer/Parser/Interpreter） | ✅ 已完成 |
-| Phase 3 | AOT 编译管线 | ✅ 已完成 |
-| Phase 4 | 远程编排与声明式特性（deploy/task/ensure/parallel） | ✅ 已完成 |
-| Phase 5 | 安全与生产化（权限分级、审计日志、SSH TOFU 校验、指令包 Ed25519 签名验签、资源限制） | ✅ 已完成 |
+| Phase 0 | 原子操作 SDK（ops-core-sdk） | 已完成 |
+| Phase 1 | 远程执行通道（SSH + Runner） | 已完成 |
+| Phase 2 | 语言前端与解释器（Lexer/Parser/Interpreter） | 已完成 |
+| Phase 3 | AOT 编译管线 | 已完成 |
+| Phase 4 | 远程编排与声明式特性（deploy/task/ensure/parallel） | 部分完成：基础编排可用，分层中继与断点续传待实现 |
+| Phase 5 | 安全与生产化（权限分级、审计、签名、资源限制） | 部分完成：核心安全链路可用，资源限制回退与自动回滚接入待实现 |
 
 ## Roadmap
 
 以下能力**尚未实现**，文档中不再作为现有功能描述：
 
 - `import "go <包路径>"` 引用第三方 Go 库（当前会报错拒绝）
-- 文件传输的压缩、断点续传（内容哈希去重已实现：远端二进制与文件按 SHA-256 跳过重传）
+- 文件传输的压缩、断点续传和传输前内容哈希去重（当前支持传输后 SHA-256 校验；Runner/AOT 二进制缓存可按内容哈希跳过重传）
 - 分层中继（relay）大规模文件分发/收集架构（原 internal/relay 已删除）
 - SSH 连接在多次 deploy 之间的跨进程复用（单次部署内并发正确；架构检测结果已通过 `~/.opsctl/arch-cache.json` 跨部署缓存）
+- 无 `systemd-run` 目标机上的资源限制回退，以及部署失败后的自动回滚接入
 
 > 注：`for ... in ...` 遍历循环与 `block/rescue` 错误处理**已实现**（见 docs/language-reference.md 第 6.3 节）。
 

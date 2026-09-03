@@ -947,10 +947,11 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...
 
 以下能力**尚未实现**，架构文档不以现有功能描述它们：
 
-- **`for ... in ...` 遍历循环语法** — 只支持 C 风格 for 循环
 - **`import "go <包路径>"` 第三方 Go 库** — 所有引擎报错拒绝
+- **task `on` 动态选择器** — deploy 支持字面量精确主机、`user@host`、glob 和 inventory 组名
 - **分层中继（relay）架构** — 原 `internal/relay` 已删除
-- **文件传输压缩、断点续传、内容哈希去重分发** — `file.distribute`/`file.collect` 为直接 SFTP 传输
+- **文件传输压缩、断点续传、传输前内容哈希去重** — `file.distribute`/`file.collect` 当前使用直接 SFTP，并支持并发、重试及传输后 SHA-256 校验
+- **非 systemd 主机资源限制回退和部署自动回滚** — systemd 主机已通过 transient scope 强制 CPU/内存限制
 
 ## 附录
 
@@ -962,7 +963,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...
 | `fn` | 函数定义 | `fn add(a, b) { return a + b }` |
 | `if` | 条件语句 | `if x > 0 { ... }` |
 | `else` | 条件分支 | `else { ... }` |
-| `for` | C 风格循环 | `for let i = 0; i < 10; i = i + 1 { ... }` |
+| `for` | C 风格循环或遍历循环 | `for item in items { ... }` |
 | `while` | 循环语句 | `while x > 0 { ... }` |
 | `return` | 返回语句 | `return result` |
 | `task` | 任务声明 | `task "name" on "web*" { ... }` |
