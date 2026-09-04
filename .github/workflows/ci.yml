@@ -16,21 +16,11 @@ jobs:
   # reproducible on both the bare-metal 32GB host and CI).
   #
   # Because the crash is a process-level abort (not a test-assertion failure),
-  # a fresh `go test` process has an independent chance of passing. We therefore
-  # retry each test command IN-JOB (scripts/retry.sh) AND keep a fresh-runner
-  # attempt-2 as a backstop. A genuine test-logic failure fails every attempt
-  # and turns the run red for real.
-  #
-  # Verdict plumbing: needs.*.outcome is UNRELIABLE through continue-on-error
-  # (observed masked), so each shard reports an explicit `passed` output
-  # computed from its test step's outcome. attempt-2 jobs carry no masking.
+  # each test command gets independent retries in the same job. A genuine
+  # test-logic failure exhausts the retries and turns the run red for real.
   test-core:
     name: Test core (attempt 1)
     runs-on: ubuntu-latest
-    # A starved runner losing attempt 1 must not redden the run.
-    continue-on-error: true
-    outputs:
-      passed: ${{ steps.verdict.outputs.passed }}
     steps:
       - uses: actions/checkout@v4
 
@@ -41,8 +31,6 @@ jobs:
 
       - name: Test core (security first, then docs freshness)
         id: tests
-        # Capture the loss without aborting before the verdict step.
-        continue-on-error: true
         # ponytail: -race causes TSan OOM in CI when running full suite;
         # do it locally. No -coverprofile: coverage instrumentation
         # roughly doubles compiler peak memory on this module's 8k+ line
@@ -57,49 +45,9 @@ jobs:
           RETRY_MAX=4 ./scripts/retry.sh sh -c 'go list ./cmd/... ./internal/... | grep -v "internal/security\$" | xargs go test -p 1 -timeout 45m' && \
           make docs-check
 
-      - name: Record verdict
-        id: verdict
-        if: always()
-        run: echo "passed=${{ steps.tests.outcome == 'success' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
-
-  test-core-retry:
-    name: Test core (attempt 2, fresh runner)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    needs: [test-core]
-    if: needs.test-core.outputs.passed != 'true'
-    outputs:
-      passed: ${{ steps.verdict.outputs.passed }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.26'
-
-      - name: Test core (security first, then docs freshness)
-        id: tests
-        env:
-          GOTRACEBACK: all
-        run: |
-          set -o pipefail
-          chmod +x scripts/retry.sh
-          RETRY_MAX=6 ./scripts/retry.sh go test -timeout 10m ./internal/security/ && \
-          RETRY_MAX=4 ./scripts/retry.sh sh -c 'go list ./cmd/... ./internal/... | grep -v "internal/security\$" | xargs go test -p 1 -timeout 45m' && \
-          make docs-check
-
-      - name: Record verdict
-        id: verdict
-        if: always()
-        run: echo "passed=${{ steps.tests.outcome == 'success' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
-
   test-sdk:
     name: Test sdk (attempt 1)
     runs-on: ubuntu-latest
-    continue-on-error: true
-    outputs:
-      passed: ${{ steps.verdict.outputs.passed }}
     steps:
       - uses: actions/checkout@v4
 
@@ -115,49 +63,10 @@ jobs:
           chmod +x scripts/retry.sh
           RETRY_MAX=4 ./scripts/retry.sh go test -p 1 -timeout 45m ./pkg/...
 
-      - name: Record verdict
-        id: verdict
-        if: always()
-        run: echo "passed=${{ steps.tests.outcome == 'success' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
-
-  test-sdk-retry:
-    name: Test sdk (attempt 2, fresh runner)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    needs: [test-sdk]
-    if: needs.test-sdk.outputs.passed != 'true'
-    outputs:
-      passed: ${{ steps.verdict.outputs.passed }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.26'
-
-      - name: Test sdk (pkg)
-        id: tests
-        run: |
-          chmod +x scripts/retry.sh
-          RETRY_MAX=4 ./scripts/retry.sh go test -p 1 -timeout 45m ./pkg/...
-
-      - name: Record verdict
-        id: verdict
-        if: always()
-        run: echo "passed=${{ steps.tests.outcome == 'success' && 'true' || 'false' }}" >> "$GITHUB_OUTPUT"
-
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [test-core, test-core-retry, test-sdk, test-sdk-retry]
-    # Pass only when each chain truly succeeded: either attempt 1 passed,
-    # or attempt 2 ran and passed. A double failure blocks here AND leaves
-    # the red attempt-2 job visible on the run.
-    if: >
-      always() &&
-      (needs.test-core.outputs.passed == 'true' || needs.test-core-retry.outputs.passed == 'true') &&
-      (needs.test-sdk.outputs.passed == 'true' || needs.test-sdk-retry.outputs.passed == 'true')
+    needs: [test-core, test-sdk]
     strategy:
       matrix:
         include:
