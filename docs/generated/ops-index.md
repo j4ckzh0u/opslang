@@ -3,7 +3,7 @@
 > **本文档由 `make docs` 从 internal/opsspec/spec.go 自动生成，请勿手改。**
 > 参数名即调用时的位置参数顺序；`可变` 表示该操作会改变系统状态，需要 admin 及以上权限。
 
-共 1157 个原子操作，210 个包。
+共 1158 个原子操作，211 个包。
 
 ## 目录
 
@@ -43,6 +43,7 @@
 - [sys](#sys)（33 个）
 - [ntp](#ntp)（2 个）
 - [pkg](#pkg)（6 个）
+- [software](#software)（1 个）
 - [pip](#pip)（6 个）
 - [process](#process)（6 个）
 - [causal](#causal)（5 个）
@@ -647,6 +648,12 @@
 | `pkg.list` | - |  | 全部引擎 |
 | `pkg.owner` | `path` |  | 全部引擎 |
 | `pkg.remove` | `name` | ✓ | 全部引擎 |
+
+## software
+
+| 操作 | 参数（按位置顺序） | 可变 | 可用范围 |
+|---|---|---|---|
+| `software.inventory` | - |  | 全部引擎 |
 
 ## pip
 

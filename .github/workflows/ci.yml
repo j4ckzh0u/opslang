@@ -38,7 +38,7 @@ jobs:
         # internal/security failure.
         env:
           GOTRACEBACK: all
-          GOMAXPROCS: 2
+          GOMAXPROCS: 1
         run: |
           set -o pipefail
           chmod +x scripts/retry.sh
