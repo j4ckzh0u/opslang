@@ -8,9 +8,6 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
-	"os/user"
-	"strconv"
-	"syscall"
 	"time"
 )
 
@@ -56,32 +53,20 @@ func Stat(path string, getChecksum bool, checksumAlgo string) StatResult {
 	}
 
 	result := StatResult{
-		Exists:  true,
-		Path:    path,
-		IsDir:   info.IsDir(),
-		IsLink:  info.Mode()&os.ModeSymlink != 0,
-		IsFIFO:  info.Mode()&os.ModeNamedPipe != 0,
-		IsBlock: info.Mode()&os.ModeDevice != 0,
-		IsChar:  info.Mode()&os.ModeCharDevice != 0,
+		Exists:   true,
+		Path:     path,
+		IsDir:    info.IsDir(),
+		IsLink:   info.Mode()&os.ModeSymlink != 0,
+		IsFIFO:   info.Mode()&os.ModeNamedPipe != 0,
+		IsBlock:  info.Mode()&os.ModeDevice != 0,
+		IsChar:   info.Mode()&os.ModeCharDevice != 0,
 		IsSocket: info.Mode()&os.ModeSocket != 0,
-		Mode:    info.Mode().String(),
-		Size:    info.Size(),
-		ModTime: info.ModTime().Format(time.RFC3339),
+		Mode:     info.Mode().String(),
+		Size:     info.Size(),
+		ModTime:  info.ModTime().Format(time.RFC3339),
 	}
 
-	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-		result.UID = int(stat.Uid)
-		result.GID = int(stat.Gid)
-		result.Inode = stat.Ino
-		result.Dev = uint64(stat.Dev)
-		result.NLink = uint64(stat.Nlink)
-		// Use info.ModTime() for access/change as portable fallback
-		result.AccessTime = info.ModTime().Format(time.RFC3339)
-		result.ChangeTime = info.ModTime().Format(time.RFC3339)
-		if u, err := user.LookupId(strconv.Itoa(result.UID)); err == nil {
-			result.Owner = u.Username
-		}
-	}
+	populatePlatformStat(&result, info)
 
 	if getChecksum && !info.IsDir() {
 		f, err := os.Open(path)

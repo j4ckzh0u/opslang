@@ -5,10 +5,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"sync"
-	"syscall"
 )
 
 // TempDir manages a temporary directory with automatic cleanup
@@ -73,24 +71,6 @@ var (
 	globalSigChan  = make(chan os.Signal, 1)
 	globalTempDirs sync.Map // path -> *TempDir
 )
-
-func ensureGlobalSignalHandler() {
-	globalSigOnce.Do(func() {
-		signal.Notify(globalSigChan, syscall.SIGINT, syscall.SIGTERM)
-		go func() {
-			<-globalSigChan
-			// Cleanup all registered temp dirs
-			globalTempDirs.Range(func(key, value any) bool {
-				if td, ok := value.(*TempDir); ok {
-					td.Cleanup()
-				}
-				return true
-			})
-			signal.Reset(syscall.SIGINT, syscall.SIGTERM)
-			syscall.Kill(os.Getpid(), syscall.SIGINT)
-		}()
-	})
-}
 
 // registerSignalHandler registers this TempDir with the package-level signal handler
 func (td *TempDir) registerSignalHandler() {

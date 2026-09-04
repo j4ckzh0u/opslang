@@ -1,3 +1,5 @@
+//go:build !windows
+
 // Package xattr provides extended file attribute operations.
 // Supports get, set, list, and remove of extended attributes on Linux/macOS.
 package xattr

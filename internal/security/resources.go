@@ -3,10 +3,8 @@ package security
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 // ResourceLimits defines CPU and memory limits for task execution.
@@ -38,29 +36,10 @@ func ApplyResourceLimits(limits *ResourceLimits) error {
 	if limits == nil {
 		return nil
 	}
-	return applyUlimitLimits(limits)
+	return applyPlatformResourceLimits(limits)
 }
 
 // applyUlimitLimits applies limits using ulimit (Unix only).
-func applyUlimitLimits(limits *ResourceLimits) error {
-	// Memory limit (RLIMIT_AS - address space)
-	if limits.MemoryMB > 0 {
-		memBytes := uint64(limits.MemoryMB) * 1024 * 1024
-		var rlimit syscall.Rlimit
-		rlimit.Cur = memBytes
-		rlimit.Max = memBytes
-		if err := syscall.Setrlimit(syscall.RLIMIT_AS, &rlimit); err != nil {
-			// Non-fatal: some systems don't allow setting rlimits
-			fmt.Fprintf(os.Stderr, "Warning: failed to set memory limit: %v\n", err)
-		}
-	}
-
-	// Note: CPU limit via ulimit is not straightforward
-	// CPU affinity can be set via taskset on Linux, but that's different from quota
-
-	return nil
-}
-
 // ParseResourceLimits parses resource limit strings.
 func ParseResourceLimits(cpu, memory string) (*ResourceLimits, error) {
 	limits := DefaultResourceLimits()

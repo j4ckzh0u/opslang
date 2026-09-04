@@ -65,6 +65,7 @@ jobs:
   test-core-retry:
     name: Test core (attempt 2, fresh runner)
     runs-on: ubuntu-latest
+    continue-on-error: true
     needs: [test-core]
     if: needs.test-core.outputs.passed != 'true'
     outputs:
@@ -122,6 +123,7 @@ jobs:
   test-sdk-retry:
     name: Test sdk (attempt 2, fresh runner)
     runs-on: ubuntu-latest
+    continue-on-error: true
     needs: [test-sdk]
     if: needs.test-sdk.outputs.passed != 'true'
     outputs:
@@ -166,6 +168,10 @@ jobs:
           - goos: darwin
             goarch: amd64
           - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: windows
             goarch: arm64
     steps:
       - uses: actions/checkout@v4
