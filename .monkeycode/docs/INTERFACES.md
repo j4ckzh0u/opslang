@@ -104,14 +104,17 @@ let result = file.collect(
     {
         "dest_dir": "/data/collected",
         "parallel": 10,
-        "resume": true,
-        "compress": true,
-        "part_retention": 86400000
+         "resume": true,
+         "compress": true,
+         "relay": true,
+         "relay_threshold": 20,
+         "relay_max_targets": 100,
+         "part_retention": 86400000
     }
 )
 ```
 
-收集文件按目标主机归档到 `dest_dir/<host>/<basename>`。`resume` 使用本地部分文件和元数据继续 SFTP 下载；`compress` 使用 gzip 传输、解压到临时文件并在原子提交前计算 SHA-256。最终结果包含大小、SHA-256、恢复字节和实际传输字节。
+收集文件按目标主机归档到 `dest_dir/<host>/<basename>`。`resume` 使用本地部分文件和元数据继续 SFTP 下载；`compress` 使用 gzip 传输、解压到临时文件并在原子提交前计算 SHA-256。`relay` 启用方案 2 时，每个源主机提供短时 HTTPS 文件服务，中继节点通过 `relay fetch` 拉取后由控制端从中继下载。最终结果包含大小、SHA-256、恢复字节和实际传输字节；中继候选失败后会切换候选，候选全部失败后回退控制端直连。
 
 ## SSH 配置
 

@@ -536,11 +536,15 @@ func TestSDKBuiltinFileTransferResumeOptionValidation(t *testing.T) {
 		{name: "collect options type", builtin: "file.collect", options: "bad", wantError: "options must be a dict"},
 		{name: "collect resume type", builtin: "file.collect", options: map[string]interface{}{"resume": float64(1)}, wantError: "resume must be bool"},
 		{name: "collect fractional retention", builtin: "file.collect", options: map[string]interface{}{"part_retention": 1.5}, wantError: "part_retention must be a non-negative integer"},
+		{name: "collect relay type", builtin: "file.collect", options: map[string]interface{}{"relay": "yes"}, wantError: "relay must be bool"},
+		{name: "collect relay group type", builtin: "file.collect", options: map[string]interface{}{"relay_group": float64(1)}, wantError: "relay_group must be string"},
+		{name: "collect relay threshold", builtin: "file.collect", options: map[string]interface{}{"relay_threshold": float64(0)}, wantError: "relay_threshold must be a positive integer"},
+		{name: "collect target tags type", builtin: "file.collect", options: map[string]interface{}{}, wantError: "tags must be a dict"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			targets := []interface{}{}
-			if test.name == "distribute target tags type" {
+			if test.name == "distribute target tags type" || test.name == "collect target tags type" {
 				targets = []interface{}{map[string]interface{}{"host": "host1", "tags": "bad"}}
 			}
 			_, err := interp.builtins[test.builtin]("/source", targets, test.options)

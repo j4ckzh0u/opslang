@@ -741,6 +741,16 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			if s, ok := m["source"].(string); ok {
 				t.Source = s
 			}
+			if group, ok := m["relay_group"].(string); ok {
+				t.RelayGroup = group
+			}
+			if tagsRaw, exists := m["tags"]; exists {
+				tags, err := stringMapOption("file.collect", fmt.Sprintf("target %d tags", i), tagsRaw)
+				if err != nil {
+					return nil, err
+				}
+				t.Tags = tags
+			}
 			targets = append(targets, t)
 		}
 
@@ -779,6 +789,34 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			}
 			if v, ok := optsMap["retries"].(float64); ok {
 				opts.Retries = int(v)
+			}
+			if v, exists := optsMap["relay"]; exists {
+				relay, ok := v.(bool)
+				if !ok {
+					return nil, fmt.Errorf("file.collect(): option relay must be bool")
+				}
+				opts.Relay = relay
+			}
+			if v, exists := optsMap["relay_group"]; exists {
+				relayGroup, ok := v.(string)
+				if !ok {
+					return nil, fmt.Errorf("file.collect(): option relay_group must be string")
+				}
+				opts.RelayGroup = relayGroup
+			}
+			if v, exists := optsMap["relay_threshold"]; exists {
+				value, err := positiveIntegerOption("file.collect", "relay_threshold", v)
+				if err != nil {
+					return nil, err
+				}
+				opts.RelayThreshold = value
+			}
+			if v, exists := optsMap["relay_max_targets"]; exists {
+				value, err := positiveIntegerOption("file.collect", "relay_max_targets", v)
+				if err != nil {
+					return nil, err
+				}
+				opts.RelayMaxTargets = value
 			}
 		}
 

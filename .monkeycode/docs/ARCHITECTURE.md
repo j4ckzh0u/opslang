@@ -125,6 +125,6 @@ sequenceDiagram
 
 ## 当前边界
 
-- 中继仅用于控制器侧 `file.distribute`，文件收集支持 SFTP 断点续传。
+- `file.collect` 显式启用中继时，源主机提供短时 HTTPS 文件服务，中继拉取每个源文件并暂存，控制端从中继恢复下载；中继候选耗尽后回退控制端 SFTP。压缩收集沿用直接 SFTP gzip 路径。
 - 中继 HTTPS 地址必须从目标可达；监听和广告地址由部署网络决定。
 - 原子操作索引由 `tools/docgen` 生成，实际操作全集以 `internal/opsspec/spec.go` 为准。

@@ -759,4 +759,5 @@ func WireSSHTransfer() {
 	DefaultVerifyFunc = SSHVerifyChecksum
 	DefaultChmodFunc = SSHChmod
 	DefaultRelayGroupFunc = SSHRelayGroup
+	DefaultCollectRelayGroupFunc = SSHCollectRelayGroup
 }

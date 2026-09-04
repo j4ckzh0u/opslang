@@ -17,21 +17,27 @@ import (
 
 // CollectTarget describes a single remote host to collect a file from.
 type CollectTarget struct {
-	Host   string `json:"host"`
-	Port   int    `json:"port"`
-	User   string `json:"user"`
-	Source string `json:"source"` // remote source path
+	Host       string            `json:"host"`
+	Port       int               `json:"port"`
+	User       string            `json:"user"`
+	Source     string            `json:"source"` // remote source path
+	RelayGroup string            `json:"relay_group,omitempty"`
+	Tags       map[string]string `json:"tags,omitempty"`
 }
 
 // CollectOptions controls the behaviour of a Collect call.
 type CollectOptions struct {
-	DestDir       string        `json:"dest_dir"` // local destination directory
-	Parallel      int           `json:"parallel"`
-	Timeout       time.Duration `json:"timeout"`
-	Retries       int           `json:"retries"`
-	Resume        bool          `json:"resume"`
-	PartRetention time.Duration `json:"part_retention,omitempty"`
-	Compress      bool          `json:"compress,omitempty"`
+	DestDir         string        `json:"dest_dir"` // local destination directory
+	Parallel        int           `json:"parallel"`
+	Timeout         time.Duration `json:"timeout"`
+	Retries         int           `json:"retries"`
+	Resume          bool          `json:"resume"`
+	PartRetention   time.Duration `json:"part_retention,omitempty"`
+	Compress        bool          `json:"compress,omitempty"`
+	Relay           bool          `json:"relay,omitempty"`
+	RelayGroup      string        `json:"relay_group,omitempty"`
+	RelayThreshold  int           `json:"relay_threshold,omitempty"`
+	RelayMaxTargets int           `json:"relay_max_targets,omitempty"`
 }
 
 // CollectResult is the aggregate outcome of a Collect call.
@@ -111,6 +117,9 @@ func CollectWith(source string, targets []CollectTarget, opts CollectOptions, df
 		if strings.TrimSpace(target.Source) == "" && strings.TrimSpace(source) == "" {
 			return nil, fmt.Errorf("file.Collect: target %d source is empty", index)
 		}
+	}
+	if opts.Relay && !opts.Compress {
+		return collectWithRelay(source, targets, opts, dfn)
 	}
 
 	destDir := opts.DestDir
