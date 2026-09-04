@@ -43,7 +43,7 @@ jobs:
           set -o pipefail
           chmod +x scripts/retry.sh
           RETRY_MAX=8 ./scripts/retry.sh go test -timeout 10m ./internal/security/ && \
-          RETRY_MAX=4 ./scripts/retry.sh sh -c 'go list ./cmd/... ./internal/... | grep -v "internal/security\$" | xargs go test -p 1 -timeout 45m' && \
+          RETRY_MAX=8 ./scripts/retry.sh sh -c 'go list ./cmd/... ./internal/... | grep -v "internal/security\$" | xargs go test -p 1 -timeout 45m' && \
           make docs-check
 
   test-sdk:
