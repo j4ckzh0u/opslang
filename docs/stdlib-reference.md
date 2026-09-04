@@ -9,6 +9,7 @@
 - [5. process 包 - 进程管理](#5-process-包---进程管理)
 - [6. service 包 - 服务管理](#6-service-包---服务管理)
 - [7. pkg 包 - 包管理](#7-pkg-包---包管理)
+- [7A. software 包 - 软件清单](#7a-software-包---软件清单)
 - [8. json 包 - JSON 编解码](#8-json-包---json-编解码)
 - [9. yaml 包 - YAML 编解码](#9-yaml-包---yaml-编解码)
 - [10. time 包 - 时间操作](#10-time-包---时间操作)
@@ -58,6 +59,7 @@ Runner 指令包中仍可使用以下旧别名，查询时会透明映射到规�
 | `file.Read("/tmp/a.txt")` | `file.read("/tmp/a.txt")` |
 | `net.HTTPGet("https://...")` | `net.http_get("https://...")` |
 | `process.FindByName("nginx")` | `process.find_by_name("nginx")` |
+| `software.Inventory()` | `software.inventory()` |
 
 ---
 
@@ -1849,6 +1851,44 @@ if r.changed {
 ```
 
 ---
+
+## 7A. software 包 - 软件清单
+
+> Go 包路径：`pkg/ops-core-sdk/software`
+
+`software.inventory()` 以只读方式采集当前主机的软件包和运行程序，适用于 Linux 和 Windows Server。Linux 使用 dpkg/rpm 数据，Windows 使用 32 位、64 位和当前用户卸载注册表。
+
+**参数**：无
+
+**返回字段**：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `host` | `string` | 主机名 |
+| `os` | `string` | 操作系统 |
+| `os_version` | `string` | 系统版本 |
+| `packages` | `list` | 已安装软件包 |
+| `running_programs` | `list` | 当前运行程序 |
+| `errors` | `list` | 逐项采集错误 |
+| `collected_at` | `time` | UTC 采集时间 |
+
+软件包元素包含 `name`、`version`、`architecture`、`manager`、`install_location`、`installed_files`、`publisher` 和 `uninstall_command`。Linux 的 `installed_files` 来自 dpkg/rpm 文件清单；Windows 的安装位置和卸载命令来自卸载注册表。
+
+运行程序元素包含 `pid`、`name`、`version`、`executable`、`executable_directory`、`command_line`、`package_name`、`package_version`、`user` 和 `status`。程序版本优先来自关联软件包，无法关联时保留空值。
+
+示例：
+
+```ops
+privilege: read_only
+
+let inventory = software.inventory()
+report {
+    host: inventory.host,
+    packages: inventory.packages,
+    running_programs: inventory.running_programs,
+    errors: inventory.errors
+}
+```
 
 ## 8. json 包 - JSON 编解码
 

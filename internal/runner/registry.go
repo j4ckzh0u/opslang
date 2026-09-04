@@ -175,6 +175,7 @@ import (
 	sdksmartctl "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/smartctl"
 	sdksmartnotify "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/smartctl_notify"
 	sdksnap "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/snap"
+	sdksoftware "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/software"
 	sdkssh "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ssh"
 	sdksshconfig "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ssh_config"
 	sdksshdconfig "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sshd_config"
@@ -278,6 +279,9 @@ func (r *Registry) registerAll() {
 	r.registerCausalOps()
 	r.registerServiceOps()
 	r.registerPkgOps()
+	r.Register("software.inventory", func(_ map[string]interface{}) (interface{}, error) {
+		return sdksoftware.Inventory()
+	})
 	r.registerTimeOps()
 	r.registerJSONOps()
 	r.registerYAMLOps()

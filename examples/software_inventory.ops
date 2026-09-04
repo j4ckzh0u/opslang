@@ -1,0 +1,22 @@
+// software_inventory.ops - Cross-platform installed software and process inventory
+// Supports Linux package managers (dpkg/rpm) and Windows uninstall registry entries.
+// The operation is read-only and keeps per-item collection errors in the result.
+privilege: read_only
+
+let inventory = software.inventory()
+
+print("Software inventory collected for: " + inventory.host)
+print("OS: " + inventory.os + " " + inventory.os_version)
+print("Installed packages: " + str(len(inventory.packages)))
+print("Running programs: " + str(len(inventory.running_programs)))
+print("Collection errors: " + str(len(inventory.errors)))
+
+report {
+    host: inventory.host,
+    os: inventory.os,
+    os_version: inventory.os_version,
+    packages: inventory.packages,
+    running_programs: inventory.running_programs,
+    errors: inventory.errors,
+    collected_at: inventory.collected_at
+}

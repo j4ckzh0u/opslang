@@ -336,6 +336,9 @@ var Funcs = []Func{
 	{Name: "pkg.owner", Args: []string{"path"}},
 	{Name: "pkg.remove", Args: []string{"name"}, Mutating: true},
 
+	// ── software inventory ────────────────────────────────────────────
+	{Name: "software.inventory"},
+
 	// ── pip ───────────────────────────────────────────────────────────
 	{Name: "pip.list"},
 	{Name: "pip.exists", Args: []string{"name"}},

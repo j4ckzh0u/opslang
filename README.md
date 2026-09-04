@@ -390,6 +390,7 @@ OpsLang 是动态类型语言。关键字共 20 个：
 | `process` | 进程列表、查找、kill、执行外部命令 |
 | `service` | systemd 服务管理 |
 | `pkg` | 包管理封装（仅 Linux，apt/yum/dnf） |
+| `software` | 跨平台软件包和运行程序清单采集（Linux dpkg/rpm，Windows 注册表） |
 | `json` | JSON 编解码 |
 | `yaml` | YAML 编解码 |
 | `time` | 时间操作、格式化、时间差 |
@@ -428,8 +429,6 @@ type MemoryInfo struct {
 以下能力**尚未实现**，文档中不再作为现有功能描述：
 
 - `import "go <包路径>"` 引用第三方 Go 库（当前会报错拒绝）
-- 文件传输压缩
-- 分层中继文件收集；当前中继扇出用于 `file.distribute`，`file.collect` 使用可恢复 SFTP
 - SSH 连接在多次 deploy 之间的跨进程复用（单次部署内并发正确；架构检测结果已通过 `~/.opsctl/arch-cache.json` 跨部署缓存）
 - 无 `systemd-run` 目标机上的资源限制回退，以及部署失败后的自动回滚接入
 

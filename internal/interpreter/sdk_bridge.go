@@ -175,6 +175,7 @@ import (
 	sdksmartctl "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/smartctl"
 	sdksmartnotify "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/smartctl_notify"
 	sdksnap "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/snap"
+	sdksoftware "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/software"
 	sdkssh "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ssh"
 	sdksshconfig "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/ssh_config"
 	sdksshdconfig "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sshd_config"
@@ -3066,6 +3067,21 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 		r, err := opspkg.List()
 		if err != nil {
 			return nil, err
+		}
+		return structToMap(r)
+	}
+
+	interp.builtins["software.inventory"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) != 0 {
+			return nil, fmt.Errorf("software.inventory() accepts no arguments")
+		}
+		r, err := sdksoftware.Inventory()
+		if err != nil {
+			mapped, mapErr := structToMap(r)
+			if mapErr != nil {
+				return nil, fmt.Errorf("software.inventory(): %w; mapping result: %v", err, mapErr)
+			}
+			return mapped, err
 		}
 		return structToMap(r)
 	}

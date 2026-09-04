@@ -527,6 +527,7 @@
       <li><strong>第三方 Go 导入</strong>：文件模块 <code>import "./lib.ops"</code> 已实现；<code>import "go &lt;包路径&gt;"</code> 仍被显式拒绝。</li>
       <li><strong>资源限制平台依赖</strong>：CPU/内存限制要求远端提供 <code>systemd-run</code>；缺少该命令时任务继续执行并返回 warning。</li>
       <li><strong>文件传输优化</strong>：分发/收集支持 gzip 传输与断点续传，分发支持 gzip 中继复用，收集支持方案 2 的分层中继链路。</li>
+      <li><strong>软件清单采集</strong>：<code>software.inventory()</code> 支持 Linux dpkg/rpm 包文件清单、Windows 卸载注册表、运行程序路径和命令行，并保留逐项采集错误。</li>
       <li><strong>自动回滚接入</strong>：回滚 helper 已有测试，部署执行链尚未调用。</li>
       <li><strong>CPU 使用率为采样值</strong>：<code>sys.cpu.usage()</code> 两次采样间隔 500ms，非实时值。</li>
       <li><strong>CI 未启用竞态检测</strong>：<code>-race</code> 在 CI 全量测试时 TSan OOM，已在 CI 配置中移除。本地应定期跑 <code>go test -race ./...</code>。</li>
