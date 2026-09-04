@@ -15,11 +15,31 @@ import (
 
 // SSHRelayGroup uploads one seed and asks peers to pull it through HTTPS.
 func SSHRelayGroup(ctx context.Context, source string, relay DistributeTarget, targets []DistributeTarget, opts DistributeOptions) (map[string]HostDistributeResult, error) {
+	transferSource := source
+	if opts.Compress {
+		compressed, compressErr := gzipFile(source)
+		if compressErr != nil {
+			return nil, compressErr
+		}
+		defer os.Remove(compressed)
+		transferSource = compressed
+	}
 	remotePath := targetRemotePath(source, relay)
 	endpoint := formatEndpoint(effectiveTargetUser(relay), relay.Host, effectiveTargetPort(relay), remotePath)
-	seed, err := SSHResumeUpload(ctx, source, endpoint, opts.PartRetention)
+	seed, err := SSHResumeUpload(ctx, transferSource, endpoint, opts.PartRetention)
 	if err != nil {
 		return nil, fmt.Errorf("upload relay seed: %w", err)
+	}
+	if opts.Compress {
+		info, infoErr := os.Stat(source)
+		if infoErr != nil {
+			return nil, fmt.Errorf("stat relay source: %w", infoErr)
+		}
+		checksum, checksumErr := computeFileChecksum(source)
+		if checksumErr != nil {
+			return nil, fmt.Errorf("checksum relay source: %w", checksumErr)
+		}
+		seed.Size, seed.Checksum = info.Size(), checksum
 	}
 	if opts.Mode != "" {
 		if err := SSHChmod(ctx, endpoint, opts.Mode); err != nil {
@@ -86,8 +106,20 @@ func SSHRelayGroup(ctx context.Context, source string, relay DistributeTarget, t
 func sshRelayFetch(ctx context.Context, runnerPath string, session RelayHTTPInfo, target DistributeTarget, source string, opts DistributeOptions) (TransferOutcome, error) {
 	endpoint := formatEndpoint(effectiveTargetUser(target), target.Host, effectiveTargetPort(target), targetRemotePath(source, target))
 	var outcome TransferOutcome
-	err := withSSHClient(ctx, endpoint, func(client *sshx.Client) error {
-		command := shellCommand(runnerPath, "relay", "fetch", "--url", session.URL, "--token", session.Token, "--fingerprint", session.CertFingerprint, "--sha256", session.SHA256, "--size", strconv.FormatInt(session.Size, 10), "--dest", targetRemotePath(source, target), "--part-retention", effectivePartRetention(opts.PartRetention).String())
+	finalInfo, err := os.Stat(source)
+	if err != nil {
+		return outcome, fmt.Errorf("stat relay source: %w", err)
+	}
+	finalChecksum, err := computeFileChecksum(source)
+	if err != nil {
+		return outcome, fmt.Errorf("checksum relay source: %w", err)
+	}
+	err = withSSHClient(ctx, endpoint, func(client *sshx.Client) error {
+		commandArgs := []string{runnerPath, "relay", "fetch", "--url", session.URL, "--token", session.Token, "--fingerprint", session.CertFingerprint, "--sha256", finalChecksum, "--size", strconv.FormatInt(finalInfo.Size(), 10), "--wire-sha256", session.SHA256, "--wire-size", strconv.FormatInt(session.Size, 10), "--dest", targetRemotePath(source, target), "--part-retention", effectivePartRetention(opts.PartRetention).String()}
+		if opts.Compress {
+			commandArgs = append(commandArgs, "--decompress")
+		}
+		command := shellCommand(commandArgs...)
 		result, execErr := client.Exec(ctx, command)
 		if execErr != nil {
 			return execErr

@@ -41,7 +41,7 @@ Runner 从标准输入读取协议版本 `1.0` 的 JSON：
 
 ```text
 ops-runner relay serve --file <path> --listen <address> --advertise-host <host> --ttl <duration> --max-concurrent <count> [--detach]
-ops-runner relay fetch --url <url> --token <token> --fingerprint <sha256> --sha256 <sha256> --size <bytes> --dest <path>
+ops-runner relay fetch --url <url> --token <token> --fingerprint <sha256> --sha256 <sha256> --size <bytes> --dest <path> [--wire-sha256 <sha256> --wire-size <bytes> --decompress]
 ```
 
 `serve` 暴露固定 `/file` 路径，支持 `GET`、`HEAD` 和 Range 请求。`fetch` 固定 TLS 叶证书 SHA-256 指纹，拒绝重定向，并在大小和内容哈希验证后原子提交。
@@ -66,6 +66,7 @@ let result = file.distribute(
     {
         "checksum": true,
         "resume": true,
+        "compress": true,
         "relay": true,
         "relay_threshold": 20,
         "relay_max_targets": 100,
@@ -83,6 +84,7 @@ let result = file.distribute(
 | `parallel` | integer | 非正数时使用 5 |
 | `retries` | integer | 非正数时总尝试次数 3 |
 | `resume` | bool | 默认关闭；启用内容寻址和部分文件恢复 |
+| `compress` | bool | 默认关闭；使用 gzip 传输并在目标端校验后解压 |
 | `relay` | bool | 默认关闭；启用分层中继计划 |
 | `relay_group` | string | 全局中继组后备值 |
 | `relay_threshold` | integer | 默认 20 |
@@ -103,12 +105,13 @@ let result = file.collect(
         "dest_dir": "/data/collected",
         "parallel": 10,
         "resume": true,
+        "compress": true,
         "part_retention": 86400000
     }
 )
 ```
 
-收集文件按目标主机归档到 `dest_dir/<host>/<basename>`。`resume` 使用本地部分文件和元数据继续 SFTP 下载，最终结果包含大小、SHA-256、恢复字节和实际传输字节。
+收集文件按目标主机归档到 `dest_dir/<host>/<basename>`。`resume` 使用本地部分文件和元数据继续 SFTP 下载；`compress` 使用 gzip 传输、解压到临时文件并在原子提交前计算 SHA-256。最终结果包含大小、SHA-256、恢复字节和实际传输字节。
 
 ## SSH 配置
 

@@ -94,6 +94,116 @@ func TestRelayFetchRejectsFingerprintAndPreservesFinalFile(t *testing.T) {
 	}
 }
 
+func TestRelayFetchDecompressesAndVerifiesOriginal(t *testing.T) {
+	original := createRelayTestFile(t)
+	originalInfo, err := os.Stat(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalChecksum, err := computeFileChecksum(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compressed, err := gzipFile(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(compressed)
+	server, err := StartRelayHTTPServer(compressed, time.Minute, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stopRelayTestServer(t, server)
+	destination := filepath.Join(t.TempDir(), "destination.bin")
+	opts := relayFetchOptions(server, destination)
+	opts.SHA256, opts.Size = originalChecksum, originalInfo.Size()
+	opts.WireSHA256, opts.WireSize, opts.Decompress = server.Info.SHA256, server.Info.Size, true
+	outcome, err := RelayFetch(context.Background(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if outcome.Status != "success" || outcome.Checksum != originalChecksum || outcome.Size != originalInfo.Size() {
+		t.Fatalf("unexpected outcome: %+v", outcome)
+	}
+	got, err := os.ReadFile(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := os.ReadFile(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(want) {
+		t.Fatalf("decompressed content mismatch")
+	}
+}
+
+func TestRelayFetchResumesCompressedObject(t *testing.T) {
+	original := createRelayTestFile(t)
+	originalInfo, err := os.Stat(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	originalChecksum, err := computeFileChecksum(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compressed, err := gzipFile(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(compressed)
+	compressedBytes, err := os.ReadFile(compressed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	server, err := StartRelayHTTPServer(compressed, time.Minute, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stopRelayTestServer(t, server)
+
+	destination := filepath.Join(t.TempDir(), "destination.bin")
+	partPath, metadataPath, err := partialPaths(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmed := len(compressedBytes) / 2
+	if err := os.WriteFile(partPath, compressedBytes[:confirmed], 0600); err != nil {
+		t.Fatal(err)
+	}
+	metadata, err := newPartialMetadata(int64(len(compressedBytes)), server.Info.SHA256, time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadata.ConfirmedSize = int64(confirmed)
+	if err := writePartialMetadata(metadataPath, metadata); err != nil {
+		t.Fatal(err)
+	}
+
+	opts := relayFetchOptions(server, destination)
+	opts.SHA256, opts.Size = originalChecksum, originalInfo.Size()
+	opts.WireSHA256, opts.WireSize, opts.Decompress = server.Info.SHA256, server.Info.Size, true
+	outcome, err := RelayFetch(context.Background(), opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if outcome.Status != "success" || outcome.ResumedBytes != int64(confirmed) {
+		t.Fatalf("unexpected outcome: %+v", outcome)
+	}
+	got, err := os.ReadFile(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := os.ReadFile(original)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(want) {
+		t.Fatal("compressed resume produced different content")
+	}
+}
+
 func TestRelayFetchValidatesEmptyInput(t *testing.T) {
 	if _, err := RelayFetch(context.Background(), RelayFetchOptions{}); err == nil {
 		t.Fatal("expected empty input error")

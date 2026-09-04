@@ -526,7 +526,7 @@
     <ul class="limitations">
       <li><strong>第三方 Go 导入</strong>：文件模块 <code>import "./lib.ops"</code> 已实现；<code>import "go &lt;包路径&gt;"</code> 仍被显式拒绝。</li>
       <li><strong>资源限制平台依赖</strong>：CPU/内存限制要求远端提供 <code>systemd-run</code>；缺少该命令时任务继续执行并返回 warning。</li>
-      <li><strong>文件传输优化</strong>：传输压缩和分层中继收集仍在 Roadmap；分发中继与分发/收集断点续传已经实现。</li>
+      <li><strong>文件传输优化</strong>：分发/收集支持 gzip 传输与断点续传，分发支持 gzip 中继复用；分层中继收集仍在 Roadmap。</li>
       <li><strong>自动回滚接入</strong>：回滚 helper 已有测试，部署执行链尚未调用。</li>
       <li><strong>CPU 使用率为采样值</strong>：<code>sys.cpu.usage()</code> 两次采样间隔 500ms，非实时值。</li>
       <li><strong>CI 未启用竞态检测</strong>：<code>-race</code> 在 CI 全量测试时 TSan OOM，已在 CI 配置中移除。本地应定期跑 <code>go test -race ./...</code>。</li>
@@ -588,7 +588,7 @@
       这是一个<strong>完整、可工作的 MVP</strong>。当前 2107 个测试函数通过，119 个示例脚本纳入仓库，双执行引擎（Runner + AOT）均可用，远程执行链路（SSH → 架构检测 → 缓存上传 → 执行 → 结果回收）已打通。
     </p>
     <p style="margin-top: 0.75rem;">
-      主要缺口：第三方 Go 导入、动态 task 目标、传输压缩、分层中继收集、非 systemd 资源限制回退、部署自动回滚接入和 CI 竞态检测。文件分发已支持断点续传与分层中继，文件收集已支持断点续传。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制）；审批流已接入 deploy/exec；1 万主机模拟覆盖调度、恢复、重试、校验、归档、中继故障与流量上界。
+      主要缺口：第三方 Go 导入、动态 task 目标、分层中继收集、非 systemd 资源限制回退、部署自动回滚接入和 CI 竞态检测。文件分发/收集已支持断点续传与 gzip，文件分发已支持分层中继。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制）；审批流已接入 deploy/exec；1 万主机模拟覆盖调度、恢复、重试、校验、归档、中继故障与流量上界。
     </p>
   </div>
 

@@ -41,6 +41,7 @@ type DistributeOptions struct {
 	RelayThreshold  int           `json:"relay_threshold,omitempty"`
 	RelayMaxTargets int           `json:"relay_max_targets,omitempty"`
 	PartRetention   time.Duration `json:"part_retention,omitempty"`
+	Compress        bool          `json:"compress,omitempty"`
 }
 
 // VerifyFunc compares the remote file against an expected SHA-256 digest.
@@ -99,9 +100,16 @@ type TransferOutcome struct {
 // ResumeUploadFunc performs a content-addressed, resumable upload.
 type ResumeUploadFunc func(ctx context.Context, src, dst string, retention time.Duration) (TransferOutcome, error)
 
+// CompressedResumeUploadFunc transfers a compressed representation.
+type CompressedResumeUploadFunc func(ctx context.Context, src, dst string, retention time.Duration) (TransferOutcome, error)
+
 // DefaultResumeUploadFunc is wired to the SSH/SFTP implementation by WireSSHTransfer.
 var DefaultResumeUploadFunc ResumeUploadFunc = func(_ context.Context, _, _ string, _ time.Duration) (TransferOutcome, error) {
 	return TransferOutcome{}, fmt.Errorf("no resume upload function configured; set file.DefaultResumeUploadFunc")
+}
+
+var DefaultCompressedResumeUploadFunc CompressedResumeUploadFunc = func(_ context.Context, _, _ string, _ time.Duration) (TransferOutcome, error) {
+	return TransferOutcome{}, fmt.Errorf("no compressed upload function configured; set file.DefaultCompressedResumeUploadFunc")
 }
 
 // TransferFunc is the function signature for actual file transfer operations.
@@ -239,7 +247,9 @@ func DistributeWith(source string, targets []DistributeTarget, opts DistributeOp
 				ctx, cancel := context.WithTimeout(context.Background(), timeout)
 				var outcome TransferOutcome
 				var err error
-				if opts.Resume {
+				if opts.Compress {
+					outcome, err = DefaultCompressedResumeUploadFunc(ctx, source, endpoint, opts.PartRetention)
+				} else if opts.Resume {
 					outcome, err = DefaultResumeUploadFunc(ctx, source, endpoint, opts.PartRetention)
 					totalTransferred += outcome.TransferredBytes
 					transferWarnings = append(transferWarnings, outcome.Warnings...)

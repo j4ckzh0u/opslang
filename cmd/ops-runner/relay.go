@@ -161,6 +161,9 @@ func runRelayFetch(ctx context.Context, args []string, out io.Writer) error {
 	fingerprint := flags.String("fingerprint", "", "relay certificate SHA-256 fingerprint")
 	checksum := flags.String("sha256", "", "expected file SHA-256")
 	size := flags.Int64("size", -1, "expected file size")
+	wireChecksum := flags.String("wire-sha256", "", "transferred object SHA-256")
+	wireSize := flags.Int64("wire-size", -1, "transferred object size")
+	decompress := flags.Bool("decompress", false, "decompress after transfer")
 	destination := flags.String("dest", "", "final destination path")
 	retention := flags.Duration("part-retention", 24*time.Hour, "partial file retention")
 	timeout := flags.Duration("timeout", 60*time.Second, "HTTP request timeout")
@@ -173,6 +176,9 @@ func runRelayFetch(ctx context.Context, args []string, out io.Writer) error {
 		CertFingerprint: *fingerprint,
 		SHA256:          *checksum,
 		Size:            *size,
+		WireSHA256:      *wireChecksum,
+		WireSize:        *wireSize,
+		Decompress:      *decompress,
 		Dest:            *destination,
 		PartRetention:   *retention,
 		Timeout:         *timeout,

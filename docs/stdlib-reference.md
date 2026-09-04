@@ -858,6 +858,7 @@ file.write("/etc/myapp/config.yaml", rendered.content)
 | `parallel` | `int` | `5` | 最大并发传输数 |
 | `retries` | `int` | `3` | 每台主机的总尝试次数 |
 | `resume` | `bool` | `false` | 启用内容哈希跳过、部分文件续传与原子替换 |
+| `compress` | `bool` | `false` | 使用 gzip 字节流传输，解压并校验原始内容后原子替换 |
 | `part_retention` | `int` | `86400000` | 部分文件元数据保留时间，单位毫秒 |
 | `relay` | `bool` | `false` | 启用确定性拓扑分组和 HTTPS 中继扇出 |
 | `relay_group` | `string` | - | 所有目标的中继组后备值 |
@@ -867,6 +868,8 @@ file.write("/etc/myapp/config.yaml", rendered.content)
 目标中继组按 `targets[].relay_group`、`targets[].tags.relay_group`、全局 `relay_group`、IPv4 `/24` 或 IPv6 `/64` 的优先级确定。无法解析为 IP 且没有显式组的目标直接使用 SFTP。`targets[].tags.relay = "true"` 可提高该目标的候选优先级。
 
 恢复文件使用最终路径旁的 `.opslang.part` 和 `.opslang.part.json`。只有源大小、SHA-256、确认偏移和确认块一致时才从 Range 偏移继续；完整校验后原子替换最终文件。
+
+启用 `compress` 后，续传偏移针对 gzip 临时对象；上传在远端解压，收集在本地解压。原始文件的大小和 SHA-256 校验通过后才提交最终文件。
 
 **SSH 凭据**：从环境变量 `OPSLANG_SSH_PASSWORD`（密码认证）或 `OPSLANG_SSH_KEY`（私钥路径）读取。
 
@@ -927,6 +930,7 @@ if result.failed > 0 {
 | `parallel` | `int` | `5` | 最大并发数 |
 | `retries` | `int` | `3` | 每台主机的总尝试次数 |
 | `resume` | `bool` | `false` | 启用内容哈希跳过、部分文件续传与原子替换 |
+| `compress` | `bool` | `false` | 使用 gzip 字节流下载，解压并校验原始内容后原子替换 |
 | `part_retention` | `int` | `86400000` | 部分文件元数据保留时间，单位毫秒 |
 
 **SSH 凭据**：同 `file.distribute`，读取 `OPSLANG_SSH_PASSWORD` / `OPSLANG_SSH_KEY`。

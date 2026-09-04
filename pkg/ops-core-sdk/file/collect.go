@@ -31,6 +31,7 @@ type CollectOptions struct {
 	Retries       int           `json:"retries"`
 	Resume        bool          `json:"resume"`
 	PartRetention time.Duration `json:"part_retention,omitempty"`
+	Compress      bool          `json:"compress,omitempty"`
 }
 
 // CollectResult is the aggregate outcome of a Collect call.
@@ -75,9 +76,16 @@ var DefaultCollectDownloadFunc CollectDownloadFunc = func(_ context.Context, _, 
 // ResumeDownloadFunc performs a content-addressed, resumable download.
 type ResumeDownloadFunc func(ctx context.Context, src, dst string, retention time.Duration) (TransferOutcome, error)
 
+// CompressedResumeDownloadFunc transfers a compressed representation.
+type CompressedResumeDownloadFunc func(ctx context.Context, src, dst string, retention time.Duration) (TransferOutcome, error)
+
 // DefaultResumeDownloadFunc is wired to the SSH/SFTP implementation by WireSSHTransfer.
 var DefaultResumeDownloadFunc ResumeDownloadFunc = func(_ context.Context, _, _ string, _ time.Duration) (TransferOutcome, error) {
 	return TransferOutcome{}, fmt.Errorf("no resume download function configured; set file.DefaultResumeDownloadFunc")
+}
+
+var DefaultCompressedResumeDownloadFunc CompressedResumeDownloadFunc = func(_ context.Context, _, _ string, _ time.Duration) (TransferOutcome, error) {
+	return TransferOutcome{}, fmt.Errorf("no compressed download function configured; set file.DefaultCompressedResumeDownloadFunc")
 }
 
 // Collect gathers files from multiple remote hosts.
@@ -200,7 +208,9 @@ func CollectWith(source string, targets []CollectTarget, opts CollectOptions, df
 				ctx, cancel := context.WithTimeout(context.Background(), timeout)
 				var outcome TransferOutcome
 				var err error
-				if opts.Resume {
+				if opts.Compress {
+					outcome, err = DefaultCompressedResumeDownloadFunc(ctx, remoteSource, localDest, opts.PartRetention)
+				} else if opts.Resume {
 					outcome, err = DefaultResumeDownloadFunc(ctx, remoteSource, localDest, opts.PartRetention)
 					totalTransferred += outcome.TransferredBytes
 					transferWarnings = append(transferWarnings, outcome.Warnings...)

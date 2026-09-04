@@ -72,7 +72,7 @@ opslang/
 
 ### 文件传输
 
-默认路径直接使用 SFTP。`resume=true` 使用最终路径旁的 `.opslang.part` 和 `.opslang.part.json`，验证源大小、SHA-256、确认偏移和确认块后继续传输，完整校验通过后原子替换。
+默认路径直接使用 SFTP。`resume=true` 使用最终路径旁的 `.opslang.part` 和 `.opslang.part.json`，验证源大小、SHA-256、确认偏移和确认块后继续传输，完整校验通过后原子替换。`compress=true` 将续传对象改为 gzip 字节流，传输完成后在临时文件解压并校验原始内容，再原子替换最终文件。
 
 `relay=true` 时，计划器按显式中继组、标签或 IP 前缀分组。控制端给每组候选上传一份种子，候选运行带随机令牌和 TLS 指纹固定的临时单文件 HTTPS 服务，同组目标通过 Range 请求拉取。候选失败会稳定切换，未完成目标回退到直接 SFTP。
 

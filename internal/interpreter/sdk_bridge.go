@@ -647,6 +647,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 				}
 				opts.Resume = resume
 			}
+			if v, exists := optsMap["compress"]; exists {
+				compress, ok := v.(bool)
+				if !ok {
+					return nil, fmt.Errorf("file.distribute(): option compress must be bool")
+				}
+				opts.Compress = compress
+			}
 			if v, exists := optsMap["part_retention"]; exists {
 				retention, err := durationMillisOption("file.distribute", "part_retention", v)
 				if err != nil {
@@ -749,6 +756,13 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 					return nil, fmt.Errorf("file.collect(): option resume must be bool")
 				}
 				opts.Resume = resume
+			}
+			if v, exists := optsMap["compress"]; exists {
+				compress, ok := v.(bool)
+				if !ok {
+					return nil, fmt.Errorf("file.collect(): option compress must be bool")
+				}
+				opts.Compress = compress
 			}
 			if v, exists := optsMap["part_retention"]; exists {
 				retention, err := durationMillisOption("file.collect", "part_retention", v)

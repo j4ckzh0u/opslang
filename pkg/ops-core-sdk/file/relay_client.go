@@ -24,6 +24,9 @@ type RelayFetchOptions struct {
 	CertFingerprint string
 	SHA256          string
 	Size            int64
+	WireSHA256      string
+	WireSize        int64
+	Decompress      bool
 	Dest            string
 	PartRetention   time.Duration
 	Timeout         time.Duration
@@ -40,8 +43,17 @@ func RelayFetch(ctx context.Context, opts RelayFetchOptions) (outcome TransferOu
 	if !validSHA256(opts.CertFingerprint) || !validSHA256(opts.SHA256) {
 		return TransferOutcome{}, fmt.Errorf("relay certificate fingerprint and source SHA-256 must be 64 hexadecimal characters")
 	}
-	if opts.Size < 0 {
+	if opts.Size < 0 || (opts.WireSize < -1) {
 		return TransferOutcome{}, fmt.Errorf("relay source size is negative")
+	}
+	if opts.WireSHA256 == "" {
+		opts.WireSHA256 = opts.SHA256
+	}
+	if opts.WireSize <= 0 {
+		opts.WireSize = opts.Size
+	}
+	if !validSHA256(opts.WireSHA256) || opts.WireSize < 0 {
+		return TransferOutcome{}, fmt.Errorf("relay wire metadata is invalid")
 	}
 	if opts.PartRetention < 0 || opts.Timeout < 0 {
 		return TransferOutcome{}, fmt.Errorf("relay retention and timeout must not be negative")
@@ -90,7 +102,7 @@ func RelayFetch(ctx context.Context, opts RelayFetchOptions) (outcome TransferOu
 		return outcome, err
 	}
 	defer func() { returnErr = closeFileWithError(returnErr, response.Body, "relay response body") }()
-	written, err := copyRelayResponse(part, response.Body, opts.Size-offset, func(delta int64) error {
+	written, err := copyRelayResponse(part, response.Body, opts.WireSize-offset, func(delta int64) error {
 		metadata.ConfirmedSize += delta
 		metadata.UpdatedAt = time.Now().UTC()
 		return writePartialMetadata(metadataPath, metadata)
@@ -106,7 +118,26 @@ func RelayFetch(ctx context.Context, opts RelayFetchOptions) (outcome TransferOu
 		return outcome, fmt.Errorf("close relay partial file before commit: %w", err)
 	}
 	part = nil
-	if err := commitPartialFile(partPath, opts.Dest, opts.Size, opts.SHA256); err != nil {
+	if opts.Decompress {
+		decompressed, createErr := os.CreateTemp(filepath.Dir(opts.Dest), ".opslang-relay-decompressed-*")
+		if createErr != nil {
+			return outcome, fmt.Errorf("create relay decompression staging file: %w", createErr)
+		}
+		decompressedPath := decompressed.Name()
+		if closeErr := decompressed.Close(); closeErr != nil {
+			return outcome, closeErr
+		}
+		defer os.Remove(decompressedPath)
+		if err := gunzipFile(partPath, decompressedPath); err != nil {
+			return outcome, err
+		}
+		if err := commitPartialFile(decompressedPath, opts.Dest, opts.Size, opts.SHA256); err != nil {
+			return outcome, err
+		}
+		if err := os.Remove(partPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+			outcome.Warnings = append(outcome.Warnings, "remove compressed relay partial file: "+err.Error())
+		}
+	} else if err := commitPartialFile(partPath, opts.Dest, opts.Size, opts.SHA256); err != nil {
 		return outcome, err
 	}
 	if err := os.Remove(metadataPath); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -146,7 +177,7 @@ func relayHTTPClient(fingerprint string, timeout time.Duration) *http.Client {
 
 func prepareRelayPartial(ctx context.Context, client *http.Client, opts RelayFetchOptions, partPath, metadataPath string, retention time.Duration) (PartialMetadata, int64, []string, error) {
 	reset := func(reason string) (PartialMetadata, int64, []string, error) {
-		metadata, err := newPartialMetadata(opts.Size, opts.SHA256, time.Now().UTC())
+		metadata, err := newPartialMetadata(opts.WireSize, opts.WireSHA256, time.Now().UTC())
 		if err != nil {
 			return PartialMetadata{}, 0, nil, err
 		}
@@ -170,7 +201,7 @@ func prepareRelayPartial(ctx context.Context, client *http.Client, opts RelayFet
 	if err != nil {
 		return reset("partial file is unavailable")
 	}
-	if err := metadata.validateForSource(opts.Size, opts.SHA256, partInfo.Size()); err != nil || metadata.expired(time.Now().UTC(), retention) {
+	if err := metadata.validateForSource(opts.WireSize, opts.WireSHA256, partInfo.Size()); err != nil || metadata.expired(time.Now().UTC(), retention) {
 		if err != nil {
 			return reset(err.Error())
 		}
@@ -227,7 +258,7 @@ func relayRequest(ctx context.Context, client *http.Client, opts RelayFetchOptio
 		response.Body.Close()
 		return nil, fmt.Errorf("fetch relay file: HTTP status %d", response.StatusCode)
 	}
-	if checksum := response.Header.Get("X-Content-SHA256"); !strings.EqualFold(checksum, opts.SHA256) {
+	if checksum := response.Header.Get("X-Content-SHA256"); !strings.EqualFold(checksum, opts.WireSHA256) {
 		response.Body.Close()
 		return nil, fmt.Errorf("relay source checksum header does not match")
 	}

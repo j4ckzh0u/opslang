@@ -375,6 +375,83 @@ func SSHResumeUpload(ctx context.Context, src, endpoint string, retention time.D
 	return outcome, err
 }
 
+func endpointWithRemotePath(endpoint, remotePath string) (string, error) {
+	host, port, user, _, err := parseEndpoint(endpoint)
+	if err != nil {
+		return "", err
+	}
+	return formatEndpoint(user, host, port, remotePath), nil
+}
+
+// SSHCompressedResumeUpload compresses locally, resumes the compressed object,
+// then atomically publishes the original bytes on the remote host.
+func SSHCompressedResumeUpload(ctx context.Context, src, endpoint string, retention time.Duration) (outcome TransferOutcome, returnErr error) {
+	info, err := os.Stat(src)
+	if err != nil {
+		return outcome, fmt.Errorf("stat upload source %s: %w", src, err)
+	}
+	originalChecksum, err := computeFileChecksum(src)
+	if err != nil {
+		return outcome, fmt.Errorf("checksum upload source %s: %w", src, err)
+	}
+	compressed, err := gzipFile(src)
+	if err != nil {
+		return outcome, err
+	}
+	defer os.Remove(compressed)
+	host, port, user, remotePath, err := parseEndpoint(endpoint)
+	if err != nil {
+		return outcome, err
+	}
+	compressedPath := remotePath + ".opslang-compressed"
+	compressedEndpoint := formatEndpoint(user, host, port, compressedPath)
+	transferred, err := SSHResumeUpload(ctx, compressed, compressedEndpoint, retention)
+	if err != nil {
+		return outcome, err
+	}
+	outcome = transferred
+	outcome.Size = info.Size()
+	outcome.Checksum = originalChecksum
+	outcome.TransferSource = "controller_sftp_gzip"
+	temporary := remotePath + ".opslang-decompressed"
+	err = withSSHClient(ctx, endpoint, func(c *sshx.Client) error {
+		command := "gzip -dc -- " + shellQuote(compressedPath) + " > " + shellQuote(temporary)
+		result, execErr := c.Exec(ctx, command)
+		if execErr != nil {
+			return execErr
+		}
+		if result.ExitCode != 0 {
+			return fmt.Errorf("remote decompression failed with exit code %d: %s", result.ExitCode, strings.TrimSpace(result.Stderr))
+		}
+		return nil
+	})
+	if err != nil {
+		return outcome, err
+	}
+	if err := SSHVerifyChecksum(ctx, formatEndpoint(user, host, port, temporary), originalChecksum); err != nil {
+		return outcome, fmt.Errorf("verify decompressed upload: %w", err)
+	}
+	if err := withSSHClient(ctx, endpoint, func(c *sshx.Client) error {
+		sftp, sftpErr := c.NewSFTPClient()
+		if sftpErr != nil {
+			return sftpErr
+		}
+		defer sftp.Close()
+		if renameErr := sftp.Rename(ctx, temporary, remotePath); renameErr != nil {
+			return renameErr
+		}
+		if removeErr := sftp.Remove(ctx, compressedPath); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
+			return removeErr
+		}
+		return nil
+	}); err != nil {
+		return outcome, err
+	}
+	outcome.Status = "success"
+	outcome.Changed = true
+	return outcome, nil
+}
+
 // SSHCollectDownload downloads a remote file to a local path.
 // It is the default download function for Collect.
 func SSHCollectDownload(ctx context.Context, endpoint, dst string) error {
@@ -549,6 +626,81 @@ func SSHResumeDownload(ctx context.Context, endpoint, dst string, retention time
 	return outcome, err
 }
 
+// SSHCompressedResumeDownload creates a remote gzip stream, resumes it locally,
+// then verifies and atomically publishes the decompressed file.
+func SSHCompressedResumeDownload(ctx context.Context, endpoint, dst string, retention time.Duration) (outcome TransferOutcome, returnErr error) {
+	host, port, user, remotePath, err := parseEndpoint(endpoint)
+	if err != nil {
+		return outcome, err
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return outcome, fmt.Errorf("create local destination directory: %w", err)
+	}
+	remoteCompressed := remotePath + ".opslang-compressed"
+	compressedEndpoint := formatEndpoint(user, host, port, remoteCompressed)
+	if err := withSSHClient(ctx, endpoint, func(c *sshx.Client) error {
+		result, execErr := c.Exec(ctx, "gzip -c -- "+shellQuote(remotePath)+" > "+shellQuote(remoteCompressed))
+		if execErr != nil {
+			return execErr
+		}
+		if result.ExitCode != 0 {
+			return fmt.Errorf("remote compression failed with exit code %d: %s", result.ExitCode, strings.TrimSpace(result.Stderr))
+		}
+		return nil
+	}); err != nil {
+		return outcome, err
+	}
+	defer func() {
+		cleanupErr := withSSHClient(ctx, endpoint, func(c *sshx.Client) error {
+			sftp, sftpErr := c.NewSFTPClient()
+			if sftpErr != nil {
+				return sftpErr
+			}
+			defer sftp.Close()
+			removeErr := sftp.Remove(ctx, remoteCompressed)
+			if errors.Is(removeErr, os.ErrNotExist) {
+				return nil
+			}
+			return removeErr
+		})
+		returnErr = errors.Join(returnErr, cleanupErr)
+	}()
+	staging, err := os.CreateTemp(filepath.Dir(dst), ".opslang-decompressed-*")
+	if err != nil {
+		return outcome, fmt.Errorf("create compressed download staging file: %w", err)
+	}
+	stagingPath := staging.Name()
+	_ = staging.Close()
+	defer os.Remove(stagingPath)
+	compressedLocal := stagingPath + ".gz"
+	defer os.Remove(compressedLocal)
+	if _, err := SSHResumeDownload(ctx, compressedEndpoint, compressedLocal, retention); err != nil {
+		return outcome, err
+	}
+	if err := gunzipFile(compressedLocal, stagingPath); err != nil {
+		return outcome, err
+	}
+	info, err := os.Stat(stagingPath)
+	if err != nil {
+		return outcome, err
+	}
+	checksum, err := computeFileChecksum(stagingPath)
+	if err != nil {
+		return outcome, err
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return outcome, err
+	}
+	if err := os.Rename(stagingPath, dst); err != nil {
+		return outcome, fmt.Errorf("commit decompressed download: %w", err)
+	}
+	outcome.Status, outcome.Changed = "success", true
+	outcome.Size, outcome.Checksum, outcome.TransferSource = info.Size(), checksum, "controller_sftp_gzip"
+	return outcome, nil
+}
+
+func shellQuote(value string) string { return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'" }
+
 // SSHVerifyChecksum streams the remote file through SHA-256 and compares
 // it with the expected digest. It is the default verification hook.
 func SSHVerifyChecksum(ctx context.Context, endpoint, wantSHA256 string) error {
@@ -602,6 +754,8 @@ func WireSSHTransfer() {
 	DefaultCollectDownloadFunc = SSHCollectDownload
 	DefaultResumeUploadFunc = SSHResumeUpload
 	DefaultResumeDownloadFunc = SSHResumeDownload
+	DefaultCompressedResumeUploadFunc = SSHCompressedResumeUpload
+	DefaultCompressedResumeDownloadFunc = SSHCompressedResumeDownload
 	DefaultVerifyFunc = SSHVerifyChecksum
 	DefaultChmodFunc = SSHChmod
 	DefaultRelayGroupFunc = SSHRelayGroup
