@@ -39,7 +39,6 @@ jobs:
         env:
           GOTRACEBACK: all
           GOMAXPROCS: 2
-          GOMEMLIMIT: 1400MiB
         run: |
           set -o pipefail
           chmod +x scripts/retry.sh
@@ -62,7 +61,6 @@ jobs:
         id: tests
         env:
           GOMAXPROCS: 2
-          GOMEMLIMIT: 1400MiB
         run: |
           chmod +x scripts/retry.sh
           RETRY_MAX=4 ./scripts/retry.sh go test -p 1 -timeout 45m ./pkg/...
