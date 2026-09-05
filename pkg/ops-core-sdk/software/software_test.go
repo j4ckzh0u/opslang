@@ -74,3 +74,28 @@ func TestPackageFilesRejectsEmptyName(t *testing.T) {
 		t.Fatal("packageFiles must reject an empty package name")
 	}
 }
+
+func TestParseRPMFileListOutputGroupsPackages(t *testing.T) {
+	output := "bash|x86_64|/usr/bin/bash\n" +
+		"bash|x86_64|/usr/share/doc/bash\n" +
+		"curl|x86_64|/usr/bin/curl\n" +
+		"invalid line\n"
+
+	got := parseRPMFileListOutput(output)
+	if want := []string{"/usr/bin/bash", "/usr/share/doc/bash"}; !reflect.DeepEqual(got[rpmPackageKey("bash", "x86_64")], want) {
+		t.Fatalf("bash files = %#v, want %#v", got[rpmPackageKey("bash", "x86_64")], want)
+	}
+	if want := []string{"/usr/bin/curl"}; !reflect.DeepEqual(got[rpmPackageKey("curl", "x86_64")], want) {
+		t.Fatalf("curl files = %#v, want %#v", got[rpmPackageKey("curl", "x86_64")], want)
+	}
+}
+
+func TestParseRPMFileListOutputHandlesEmptyInput(t *testing.T) {
+	got := parseRPMFileListOutput("")
+	if got == nil {
+		t.Fatal("empty RPM output must return an initialized map")
+	}
+	if len(got) != 0 {
+		t.Fatalf("empty RPM output produced %d packages", len(got))
+	}
+}

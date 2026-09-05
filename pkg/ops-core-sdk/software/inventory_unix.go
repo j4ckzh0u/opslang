@@ -23,9 +23,26 @@ func collectPackages() ([]Package, []Error) {
 	}
 	items := make([]Package, 0, len(infos))
 	errors := make([]Error, 0)
+	var rpmFiles map[string][]string
+	if len(infos) > 0 && isRPMManager(infos[0].Manager) {
+		var rpmErr error
+		rpmFiles, rpmErr = allRPMPackageFiles()
+		if rpmErr != nil {
+			errors = append(errors, Error{Scope: "package_files", Message: rpmErr.Error()})
+		}
+	}
 	for _, info := range infos {
 		item := Package{Name: info.Name, Version: info.Version, Architecture: info.Architecture, Manager: info.Manager}
-		files, fileErr := packageFiles(info.Manager, info.Name, info.Architecture)
+		var files []string
+		var fileErr error
+		if rpmFiles != nil && isRPMManager(info.Manager) {
+			files = rpmFiles[rpmPackageKey(info.Name, info.Architecture)]
+			if files == nil {
+				fileErr = fmt.Errorf("rpm package file manifest not found for %q", info.Name)
+			}
+		} else {
+			files, fileErr = packageFiles(info.Manager, info.Name, info.Architecture)
+		}
 		if fileErr != nil {
 			errors = append(errors, Error{Scope: "package_files", Item: info.Name, Message: fileErr.Error()})
 		} else {
@@ -35,6 +52,10 @@ func collectPackages() ([]Package, []Error) {
 		items = append(items, item)
 	}
 	return items, errors
+}
+
+func isRPMManager(manager string) bool {
+	return manager == "yum" || manager == "dnf"
 }
 
 func packageFiles(manager, name, architecture string) ([]string, error) {
@@ -58,6 +79,34 @@ func packageFiles(manager, name, architecture string) ([]string, error) {
 		return nil, fmt.Errorf("%s package file query failed: %w", manager, err)
 	}
 	return parseInstalledFiles(string(out)), nil
+}
+
+// RPM queryformat iterates FILENAMES once per file, allowing all package
+// manifests to be collected in one process while preserving package mapping.
+func allRPMPackageFiles() (map[string][]string, error) {
+	const queryFormat = "[%{=NAME}|%{=ARCH}|%{FILENAMES}\n]"
+	out, err := exec.Command("rpm", "-qa", "--queryformat", queryFormat).Output()
+	if err != nil {
+		return nil, fmt.Errorf("rpm package file inventory failed: %w", err)
+	}
+	return parseRPMFileListOutput(string(out)), nil
+}
+
+func rpmPackageKey(name, architecture string) string {
+	return name + "\x00" + architecture
+}
+
+func parseRPMFileListOutput(output string) map[string][]string {
+	files := make(map[string][]string)
+	for _, line := range strings.Split(output, "\n") {
+		parts := strings.SplitN(strings.TrimSpace(line), "|", 3)
+		if len(parts) != 3 || parts[0] == "" || parts[2] == "" {
+			continue
+		}
+		key := rpmPackageKey(parts[0], parts[1])
+		files[key] = append(files[key], parts[2])
+	}
+	return files
 }
 
 // dpkg stores package file manifests locally, so reading them avoids spawning
