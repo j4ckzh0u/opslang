@@ -2,19 +2,24 @@
 // 演示 file.find / file.replace / file.blockinfile / file.ini_set / file.ini_get
 privilege: admin
 
-// 1. 查找 /tmp 下所有 .log 文件
-let logs = file.find(["/tmp"], ["*.log"], "", "file", 3, 0, 0)
+// 1. 在固定的小目录内查找 .log 文件，避免扫描宿主机的整个 /tmp
+let demo_dir = "/tmp/opslang-file-advanced"
+file.mkdir(demo_dir)
+file.write(demo_dir + "/app.log", "ready\n")
+let logs = file.find([demo_dir], ["*.log"], "", "file", 3, 0, 0)
 report { found_logs: logs.matched }
 
 // 2. 正则替换文件内容
-file.write("/tmp/demo_replace.txt", "hello world\nfoo bar\nhello again\n")
-let replaced = file.replace("/tmp/demo_replace.txt", "hello", "goodbye", "", "")
+let replace_path = demo_dir + "/demo_replace.txt"
+file.write(replace_path, "hello world\nfoo bar\nhello again\n")
+let replaced = file.replace(replace_path, "hello", "goodbye", "", "")
 report { replacements: replaced.replacements }
 
 // 3. 在文件中插入/更新一个文本块
-file.write("/tmp/demo_block.conf", "# config\n")
+let block_path = demo_dir + "/demo_block.conf"
+file.write(block_path, "# config\n")
 file.blockinfile(
-    "/tmp/demo_block.conf",
+    block_path,
     "# BEGIN MANAGED BLOCK",
     "key1=value1\nkey2=value2",
     true,   // present
@@ -23,7 +28,8 @@ file.blockinfile(
 )
 
 // 4. INI 文件读写
-file.write("/tmp/demo.ini", "[database]\nhost = localhost\nport = 3306\n")
-file.ini_set("/tmp/demo.ini", "database", "password", "secret123")
-let val = file.ini_get("/tmp/demo.ini", "database", "password")
+let ini_path = demo_dir + "/demo.ini"
+file.write(ini_path, "[database]\nhost = localhost\nport = 3306\n")
+file.ini_set(ini_path, "database", "password", "secret123")
+let val = file.ini_get(ini_path, "database", "password")
 report { ini_value: val.value, found: val.found }

@@ -7,21 +7,23 @@ print("=== Closures Demo ===")
 // Closure: make a threshold checker for CPU usage.
 // The inner function captures `threshold` from the outer scope.
 fn make_cpu_checker(threshold) {
-    fn check() {
-        let cpu = sys.cpu.usage()
-        if cpu.percent > threshold {
-            return "ABOVE " + str(threshold) + "% (actual: " + str(cpu.percent) + "%)"
+    fn check(cpu_percent) {
+        if cpu_percent > threshold {
+            return "ABOVE " + str(threshold) + "% (actual: " + str(cpu_percent) + "%)"
         }
-        return "BELOW " + str(threshold) + "% (actual: " + str(cpu.percent) + "%)"
+        return "BELOW " + str(threshold) + "% (actual: " + str(cpu_percent) + "%)"
     }
     return check
 }
 
 let strict_checker = make_cpu_checker(30)
 let relaxed_checker = make_cpu_checker(80)
+let cpu = sys.cpu.usage()
+let strict_result = strict_checker(cpu.percent)
+let relaxed_result = relaxed_checker(cpu.percent)
 
-print("Strict check: " + strict_checker())
-print("Relaxed check: " + relaxed_checker())
+print("Strict check: " + strict_result)
+print("Relaxed check: " + relaxed_result)
 
 // Function that sums disk usage across a list of paths
 fn disk_usage_sum(paths) {
@@ -47,16 +49,13 @@ fn count_resources() {
 let total_resources = count_resources()
 print("Total resources (ifaces + parts + cores): " + str(total_resources))
 
-// Nested function that computes average CPU then compares to threshold
-fn cpu_health(warning_threshold) {
-    // Take 3 sequential real readings and average them
+// Nested function that computes an average then compares to threshold
+fn cpu_health(warning_threshold, samples) {
     let total_pct = 0
-    let readings = 3
-    for let i = 0; i < readings; i = i + 1 {
-        let c = sys.cpu.usage()
-        total_pct = total_pct + c.percent
+    for let i = 0; i < len(samples); i = i + 1 {
+        total_pct = total_pct + samples[i]
     }
-    let avg = total_pct / readings
+    let avg = total_pct / len(samples)
 
     if avg > warning_threshold {
         return "UNHEALTHY (avg " + str(avg) + "% > " + str(warning_threshold) + "%)"
@@ -64,12 +63,13 @@ fn cpu_health(warning_threshold) {
     return "HEALTHY (avg " + str(avg) + "% <= " + str(warning_threshold) + "%)"
 }
 
-print("CPU health (threshold=50): " + cpu_health(50))
+let health = cpu_health(50, [cpu.percent, cpu.percent, cpu.percent])
+print("CPU health (threshold=50): " + health)
 
 report {
-    strict_check: strict_checker(),
-    relaxed_check: relaxed_checker(),
+    strict_check: strict_result,
+    relaxed_check: relaxed_result,
     disk_used_mb: sum / 1024 / 1024,
     resources: total_resources,
-    health: cpu_health(50)
+    health: health
 }
