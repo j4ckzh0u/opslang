@@ -23,13 +23,26 @@ set -o pipefail
 n="${RETRY_MAX:-4}"
 for i in $(seq 1 "$n"); do
   echo "=== attempt $i/$n ==="
-  "$@"
+  output=$("$@" 2>&1)
   rc=$?
+  printf '%s\n' "$output"
   if [ "$rc" -eq 0 ]; then
     echo "=== succeeded on attempt $i ==="
     exit 0
   fi
   echo "attempt $i failed (exit $rc), retrying"
 done
+
+if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+  summary=$(printf '%s\n' "$output" | grep -E -- '--- FAIL:|fatal error:|panic:|^FAIL([[:space:]]|$)' | tail -n 20)
+  if [ -z "$summary" ]; then
+    summary=$(printf '%s\n' "$output" | tail -n 20)
+  fi
+  summary=${summary//'%'/'%25'}
+  summary=${summary//$'\r'/'%0D'}
+  summary=${summary//$'\n'/'%0A'}
+  echo "::error title=Command failed after retries::$summary"
+fi
+
 echo "=== all $n attempts failed ==="
 exit 1
