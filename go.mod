@@ -5,6 +5,8 @@ go 1.26
 require (
 	github.com/go-zookeeper/zk v1.0.4
 	github.com/hashicorp/vault/api v1.23.0
+	github.com/knqyf263/go-deb-version v0.0.0-20241115132648-6f4aee6ccd23
+	github.com/knqyf263/go-rpm-version v0.0.0-20260811110310-1815e1f1b790
 	github.com/pkg/sftp v1.13.6
 	github.com/shirou/gopsutil/v4 v4.26.7
 	github.com/spf13/cobra v1.10.2

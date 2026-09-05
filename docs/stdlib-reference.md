@@ -1890,6 +1890,24 @@ report {
 }
 ```
 
+### 7A.1 本地漏洞规则匹配（Go SDK）
+
+> Go 包路径：`pkg/ops-core-sdk/vulnerability`
+
+`vulnerability.Match(inventory, rules)` 使用调用方提供的本地规则匹配软件清单，返回受影响软件项。该函数只处理内存数据，不联网、不修改目标主机。
+
+规则字段：`id`、`package`、`fixed_version`、`severity`、`summary`。规则包名与已安装包名精确匹配；安装版本低于 `fixed_version` 时生成 finding，空 `fixed_version` 表示所有匹配版本受影响。apt/dpkg 软件包采用 Debian 版本规则，rpm/yum/dnf 软件包采用 RPM 版本规则，其他来源采用数字和文本片段比较。外部漏洞源由调用方负责。
+
+```go
+inventory, err := software.Inventory()
+if err != nil {
+    return err
+}
+findings := vulnerability.Match(inventory, []vulnerability.Rule{
+    {ID: "CVE-2026-0001", Package: "openssl", FixedVersion: "3.0.2-2", Severity: "high"},
+})
+```
+
 ## 8. json 包 - JSON 编解码
 
 > Go 包路径：`pkg/ops-core-sdk/json`（Go 包名：`opsjson`）
