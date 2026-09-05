@@ -37,3 +37,11 @@ Entries discovered by the Agent during task execution should follow this format:
 - Instructions:
   - Continue through the confirmed task list without pausing at intermediate review points.
   - Pause only for blockers that require user clarification or additional authorization.
+
+[User Workflow Instructions]
+- Date: 2026-09-05
+- Context: OpsLang development and CI workflow
+- Instructions:
+  - Do not use subagents for this project.
+  - Wait two seconds between API interactions when continuing project work.
+  - After development and verification, push the changes and monitor GitHub Actions results.
