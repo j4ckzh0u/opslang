@@ -93,6 +93,9 @@ var sdkMapping = map[string]sdkFunc{
 	"pkg.info":            {pkg: "pkg", goName: "Info", args: true, params: []string{"s"}},
 	"pkg.list":            {pkg: "pkg", goName: "List"},
 	"software.inventory":  {pkg: "software", goName: "Inventory"},
+	"software.sbom":       {pkg: "securityscan", goName: "SBOMValue", args: true, params: []string{"a", "s"}},
+	"security.scan":       {pkg: "securityscan", goName: "ScanInventoryValue", args: true, params: []string{"a", "a", "a"}},
+	"file.scan":           {pkg: "securityscan", goName: "ScanFilesystemValue", args: true, params: []string{"s", "a", "a"}},
 	"vulnerability.match": {pkg: "vulnerability", goName: "MatchValue", args: true, params: []string{"a", "a"}},
 
 	// ntp
@@ -1693,6 +1696,7 @@ var pkgImportAlias = map[string]string{
 	"service":             "service",
 	"pkg":                 "opspkg",
 	"software":            "software",
+	"securityscan":        "securityscan",
 	"vulnerability":       "opsvulnerability",
 	"time":                "opstime",
 	"json":                "opsjson",
@@ -1883,6 +1887,7 @@ var pkgImportPath = map[string]string{
 	"service":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/service",
 	"pkg":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/pkg",
 	"software":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/software",
+	"securityscan":        "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/securityscan",
 	"vulnerability":       "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/vulnerability",
 	"time":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/time",
 	"json":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/json",
@@ -2181,7 +2186,7 @@ func (g *CodeGenerator) assemble(mainCode string) (string, error) {
 	b.WriteString("\t\"sync\"\n")
 
 	// SDK imports
-	sdkOrder := []string{"capture", "sys", "file", "net", "process", "causal", "service", "pkg", "software", "vulnerability", "package_facts", "time", "json", "yaml", "git", "user", "group", "cron", "sysctl"}
+	sdkOrder := []string{"capture", "sys", "file", "net", "process", "causal", "service", "pkg", "software", "securityscan", "vulnerability", "package_facts", "time", "json", "yaml", "git", "user", "group", "cron", "sysctl"}
 	for _, pkg := range sdkOrder {
 		if g.usedSDK[pkg] {
 			alias := pkgImportAlias[pkg]

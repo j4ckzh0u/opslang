@@ -228,6 +228,7 @@ var Funcs = []Func{
 	{Name: "file.move", Args: []string{"src", "dst"}, Mutating: true},
 	{Name: "file.read", Args: []string{"path"}},
 	{Name: "file.replace", Args: []string{"path", "pattern", "replacement", "after", "before"}, Mutating: true},
+	{Name: "file.scan", Args: []string{"path", "scanners", "options"}},
 	{Name: "file.stat", Args: []string{"path"}},
 	// file.template only READS the template and returns the rendered text;
 	// it never writes a file, so it is not mutating.
@@ -338,6 +339,8 @@ var Funcs = []Func{
 
 	// ── software inventory ────────────────────────────────────────────
 	{Name: "software.inventory"},
+	{Name: "software.sbom", Args: []string{"inventory", "format"}},
+	{Name: "security.scan", Args: []string{"inventory", "scanners", "options"}},
 	{Name: "vulnerability.match", Args: []string{"inventory", "rules"}},
 
 	// ── pip ───────────────────────────────────────────────────────────

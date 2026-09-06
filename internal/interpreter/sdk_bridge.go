@@ -164,6 +164,7 @@ import (
 	sdkrunit "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/runit"
 	sdkscript "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/script"
 	sdksebool "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/seboolean"
+	sdksecurityscan "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/securityscan"
 	sefcontext "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sefcontext"
 	sdkselinux "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/selinux"
 	seport "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/seport"
@@ -3096,6 +3097,41 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return nil, fmt.Errorf("vulnerability.match(): %w", err)
 		}
 		return structToMap(findings)
+	}
+
+	interp.builtins["security.scan"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) != 3 {
+			return nil, fmt.Errorf("security.scan() requires 3 arguments (inventory, scanners, options)")
+		}
+		result, err := sdksecurityscan.ScanInventoryValue(args[0], args[1], args[2])
+		if err != nil {
+			return nil, fmt.Errorf("security.scan(): %w", err)
+		}
+		return structToMap(result)
+	}
+	interp.builtins["file.scan"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) != 3 {
+			return nil, fmt.Errorf("file.scan() requires 3 arguments (path, scanners, options)")
+		}
+		path, ok := args[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("file.scan(): path must be string")
+		}
+		result, err := sdksecurityscan.ScanFilesystemValue(path, args[1], args[2])
+		if err != nil {
+			return nil, fmt.Errorf("file.scan(): %w", err)
+		}
+		return structToMap(result)
+	}
+	interp.builtins["software.sbom"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) != 2 {
+			return nil, fmt.Errorf("software.sbom() requires 2 arguments (inventory, format)")
+		}
+		result, err := sdksecurityscan.SBOMValue(args[0], args[1])
+		if err != nil {
+			return nil, fmt.Errorf("software.sbom(): %w", err)
+		}
+		return structToMap(result)
 	}
 
 	// ── time.parse / time.diff ───────────────────────────────────────

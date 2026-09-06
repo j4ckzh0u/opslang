@@ -9,6 +9,7 @@
 | `opsctl build <script.ops>` | AOT 编译为静态二进制 |
 | `opsctl exec` | 向远端 Runner 发送 JSON 指令包 |
 | `opsctl deploy <script.ops>` | 选择目标、执行 task 并聚合结果 |
+| `opsctl scan` | 扫描本地文件系统或软件清单并输出 JSON/SBOM |
 | `opsctl version` | 输出 CLI 版本 |
 | `opsctl keygen` | 生成指令包签名密钥，由安全构建标签接入 |
 
@@ -131,5 +132,21 @@ let result = file.collect(
 ## Go SDK
 
 公开原子操作位于 `pkg/ops-core-sdk/<module>`。函数遵循强类型结构化返回和显式 `error`。控制器专用操作由 `internal/opsspec` 标记作用域，Runner 与 AOT 对不支持的作用域返回错误。
+
+## Security Scan
+
+`pkg/ops-core-sdk/securityscan` 提供本地、只读的主机漏洞和文件系统依赖扫描，并生成原生、CycloneDX 或 SPDX SBOM。漏洞规则通过控制端提供的 JSON bundle 输入，bundle 使用 SHA-256 摘要校验；目标机扫描过程不依赖 Python、Shell 或 Trivy 二进制。
+
+```text
+opsctl scan --path ./project --scanners sbom --format cyclonedx
+opsctl scan --inventory inventory.json --rules rules.json --scanners vuln,sbom --format json
+opsctl scan --inventory inventory.json --rules rules.json --scanners vuln --severity high --ignore-id CVE-2026-0001
+```
+
+支持的第一阶段清单来源包括系统软件 inventory、Go `go.mod`、Node.js `package.json`、Python `requirements.txt` 和 `pyproject.toml`。单个清单解析错误会进入结构化 `errors`，其他可解析组件继续生成结果。
+
+`--severity` 同时用于过滤和 CI 门禁；命中阈值时 JSON 结果状态为 `failed`，命令返回非零状态。`--ignore-id`、`--ignore-package` 和 `--ignore-path` 可重复使用，分别忽略漏洞 ID、包名和扫描路径。
+
+新增 OpsLang 操作：`security.scan(inventory, scanners, options)`、`file.scan(path, scanners, options)` 和 `software.sbom(inventory, format)`。
 
 操作全集由 `docs/generated/ops-index.md` 生成。新增操作时需要同步 SDK 实现、opsspec、解释器桥接、Runner registry 和 AOT codegen，并通过一致性测试。

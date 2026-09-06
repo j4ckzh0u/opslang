@@ -164,6 +164,7 @@ import (
 	sdkrunit "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/runit"
 	sdkscript "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/script"
 	sdksebool "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/seboolean"
+	sdksecurityscan "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/securityscan"
 	sdksefcontext "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/sefcontext"
 	sdkselinux "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/selinux"
 	sdkseport "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/seport"
@@ -297,6 +298,47 @@ func (r *Registry) registerAll() {
 			return nil, fmt.Errorf("vulnerability.match: %w", err)
 		}
 		return findings, nil
+	})
+	r.Register("security.scan", func(args map[string]interface{}) (interface{}, error) {
+		inventory, ok := args["inventory"]
+		if !ok {
+			return nil, fmt.Errorf("security.scan: argument %q is required", "inventory")
+		}
+		scanners, ok := args["scanners"]
+		if !ok {
+			return nil, fmt.Errorf("security.scan: argument %q is required", "scanners")
+		}
+		result, err := sdksecurityscan.ScanInventoryValue(inventory, scanners, args["options"])
+		if err != nil {
+			return nil, fmt.Errorf("security.scan: %w", err)
+		}
+		return result, nil
+	})
+	r.Register("file.scan", func(args map[string]interface{}) (interface{}, error) {
+		path, err := argString(args, "path")
+		if err != nil {
+			return nil, fmt.Errorf("file.scan: %w", err)
+		}
+		result, err := sdksecurityscan.ScanFilesystemValue(path, args["scanners"], args["options"])
+		if err != nil {
+			return nil, fmt.Errorf("file.scan: %w", err)
+		}
+		return result, nil
+	})
+	r.Register("software.sbom", func(args map[string]interface{}) (interface{}, error) {
+		inventory, ok := args["inventory"]
+		if !ok {
+			return nil, fmt.Errorf("software.sbom: argument %q is required", "inventory")
+		}
+		format, err := argString(args, "format")
+		if err != nil {
+			return nil, fmt.Errorf("software.sbom: %w", err)
+		}
+		result, err := sdksecurityscan.SBOMValue(inventory, format)
+		if err != nil {
+			return nil, fmt.Errorf("software.sbom: %w", err)
+		}
+		return result, nil
 	})
 	r.registerTimeOps()
 	r.registerJSONOps()

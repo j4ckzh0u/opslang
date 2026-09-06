@@ -3,7 +3,7 @@
 > **本文档由 `make docs` 从 internal/opsspec/spec.go 自动生成，请勿手改。**
 > 参数名即调用时的位置参数顺序；`可变` 表示该操作会改变系统状态，需要 admin 及以上权限。
 
-共 1159 个原子操作，212 个包。
+共 1162 个原子操作，213 个包。
 
 ## 目录
 
@@ -26,7 +26,7 @@
 - [apt_repo](#apt_repo)（5 个）
 - [disk](#disk)（2 个）
 - [docker](#docker)（8 个）
-- [file](#file)（22 个）
+- [file](#file)（23 个）
 - [firewall](#firewall)（1 个）
 - [firewalld](#firewalld)（8 个）
 - [git](#git)（2 个）
@@ -43,7 +43,8 @@
 - [sys](#sys)（33 个）
 - [ntp](#ntp)（2 个）
 - [pkg](#pkg)（6 个）
-- [software](#software)（1 个）
+- [software](#software)（2 个）
+- [security](#security)（1 个）
 - [vulnerability](#vulnerability)（1 个）
 - [pip](#pip)（6 个）
 - [process](#process)（6 个）
@@ -465,6 +466,7 @@
 | `file.move` | `src`, `dst` | ✓ | 全部引擎 |
 | `file.read` | `path` |  | 全部引擎 |
 | `file.replace` | `path`, `pattern`, `replacement`, `after`, `before` | ✓ | 全部引擎 |
+| `file.scan` | `path`, `scanners`, `options` |  | 全部引擎 |
 | `file.stat` | `path` |  | 全部引擎 |
 | `file.template` | `path`, `vars` |  | 全部引擎 |
 | `file.write` | `path`, `content` | ✓ | 全部引擎 |
@@ -655,6 +657,13 @@
 | 操作 | 参数（按位置顺序） | 可变 | 可用范围 |
 |---|---|---|---|
 | `software.inventory` | - |  | 全部引擎 |
+| `software.sbom` | `inventory`, `format` |  | 全部引擎 |
+
+## security
+
+| 操作 | 参数（按位置顺序） | 可变 | 可用范围 |
+|---|---|---|---|
+| `security.scan` | `inventory`, `scanners`, `options` |  | 全部引擎 |
 
 ## vulnerability
 

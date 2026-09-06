@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -62,8 +63,11 @@ func TestCollectRelayFallsBackToDirect(t *testing.T) {
 		return nil, fmt.Errorf("relay %s failed", relay.Host)
 	}
 	var endpoints []string
+	var endpointsMu sync.Mutex
 	result, err := CollectWith("/tmp/source", targets, CollectOptions{DestDir: destDir, Relay: true, RelayThreshold: 2, Retries: 1}, func(_ context.Context, source, destination string) error {
+		endpointsMu.Lock()
 		endpoints = append(endpoints, source)
+		endpointsMu.Unlock()
 		if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
 			return err
 		}

@@ -70,6 +70,10 @@ opslang/
 
 `internal/sshx` 负责认证、主机密钥策略、连接池、命令超时、架构检测和 SFTP。`internal/exec` 在并发限制内调用 SSH，并聚合每台主机的结构化结果。
 
+### 安全扫描
+
+`pkg/ops-core-sdk/securityscan` 负责本地只读扫描。主机漏洞路径复用 `software.InventoryResult` 和 `vulnerability.Match`，文件系统路径使用 Go 原生目录遍历解析常见依赖清单，SBOM 输出支持原生组件、CycloneDX JSON 和 SPDX JSON。规则 bundle 由控制端提供并通过 SHA-256 校验，解释器、Runner 和 AOT 共享同一组扫描操作。
+
 ### 文件传输
 
 默认路径直接使用 SFTP。`resume=true` 使用最终路径旁的 `.opslang.part` 和 `.opslang.part.json`，验证源大小、SHA-256、确认偏移和确认块后继续传输，完整校验通过后原子替换。`compress=true` 将续传对象改为 gzip 字节流，传输完成后在临时文件解压并校验原始内容，再原子替换最终文件。
