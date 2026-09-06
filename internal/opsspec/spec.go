@@ -338,6 +338,7 @@ var Funcs = []Func{
 
 	// ── software inventory ────────────────────────────────────────────
 	{Name: "software.inventory"},
+	{Name: "vulnerability.match", Args: []string{"inventory", "rules"}},
 
 	// ── pip ───────────────────────────────────────────────────────────
 	{Name: "pip.list"},

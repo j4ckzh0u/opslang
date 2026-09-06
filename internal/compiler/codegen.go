@@ -86,13 +86,14 @@ var sdkMapping = map[string]sdkFunc{
 	"selinux.set": {pkg: "selinux", goName: "Set", args: true, params: []string{"s"}},
 
 	// pkg
-	"pkg.install":        {pkg: "pkg", goName: "Install", args: true, params: []string{"s"}},
-	"pkg.ensure":         {pkg: "pkg", goName: "Ensure", args: true, params: []string{"s"}},
-	"pkg.owner":          {pkg: "pkg", goName: "Owner", args: true, params: []string{"s"}},
-	"pkg.remove":         {pkg: "pkg", goName: "Remove", args: true, params: []string{"s"}},
-	"pkg.info":           {pkg: "pkg", goName: "Info", args: true, params: []string{"s"}},
-	"pkg.list":           {pkg: "pkg", goName: "List"},
-	"software.inventory": {pkg: "software", goName: "Inventory"},
+	"pkg.install":         {pkg: "pkg", goName: "Install", args: true, params: []string{"s"}},
+	"pkg.ensure":          {pkg: "pkg", goName: "Ensure", args: true, params: []string{"s"}},
+	"pkg.owner":           {pkg: "pkg", goName: "Owner", args: true, params: []string{"s"}},
+	"pkg.remove":          {pkg: "pkg", goName: "Remove", args: true, params: []string{"s"}},
+	"pkg.info":            {pkg: "pkg", goName: "Info", args: true, params: []string{"s"}},
+	"pkg.list":            {pkg: "pkg", goName: "List"},
+	"software.inventory":  {pkg: "software", goName: "Inventory"},
+	"vulnerability.match": {pkg: "vulnerability", goName: "MatchValue", args: true, params: []string{"a", "a"}},
 
 	// ntp
 	"ntp.get": {pkg: "ntp", goName: "Get"},
@@ -1692,6 +1693,7 @@ var pkgImportAlias = map[string]string{
 	"service":             "service",
 	"pkg":                 "opspkg",
 	"software":            "software",
+	"vulnerability":       "opsvulnerability",
 	"time":                "opstime",
 	"json":                "opsjson",
 	"yaml":                "opsyaml",
@@ -1881,6 +1883,7 @@ var pkgImportPath = map[string]string{
 	"service":             "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/service",
 	"pkg":                 "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/pkg",
 	"software":            "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/software",
+	"vulnerability":       "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/vulnerability",
 	"time":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/time",
 	"json":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/json",
 	"yaml":                "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/yaml",
@@ -2178,7 +2181,7 @@ func (g *CodeGenerator) assemble(mainCode string) (string, error) {
 	b.WriteString("\t\"sync\"\n")
 
 	// SDK imports
-	sdkOrder := []string{"capture", "sys", "file", "net", "process", "causal", "service", "pkg", "software", "package_facts", "time", "json", "yaml", "git", "user", "group", "cron", "sysctl"}
+	sdkOrder := []string{"capture", "sys", "file", "net", "process", "causal", "service", "pkg", "software", "vulnerability", "package_facts", "time", "json", "yaml", "git", "user", "group", "cron", "sysctl"}
 	for _, pkg := range sdkOrder {
 		if g.usedSDK[pkg] {
 			alias := pkgImportAlias[pkg]

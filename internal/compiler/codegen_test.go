@@ -195,6 +195,28 @@ func TestGenerateSDKCallWithArgs(t *testing.T) {
 	}
 }
 
+func TestGenerateVulnerabilityMatchCall(t *testing.T) {
+	source := `
+let inventory = {
+  host: "server-1",
+  os: "linux",
+  packages: []
+}
+let rules = [{id: "CVE-2026-0001", package: "openssl", fixed_version: "3.0.2"}]
+let findings = vulnerability.match(inventory, rules)
+`
+	code, err := GenerateCode(source, "test.ops")
+	if err != nil {
+		t.Fatalf("GenerateCode failed: %v", err)
+	}
+	if !strings.Contains(code, "opsvulnerability.MatchValue(") {
+		t.Errorf("expected vulnerability.MatchValue call, got:\n%s", code)
+	}
+	if !strings.Contains(code, `opsvulnerability "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/vulnerability"`) {
+		t.Errorf("expected vulnerability SDK import, got:\n%s", code)
+	}
+}
+
 func TestGenerateNetSDKImport(t *testing.T) {
 	source := `let r = net.http_get("http://example.com")`
 	code, err := GenerateCode(source, "test.ops")

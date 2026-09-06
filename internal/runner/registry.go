@@ -207,6 +207,7 @@ import (
 	sdkvalidatecerts "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/validate_certs"
 	sdkvault "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/vault"
 	sdkvirsh "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/virsh"
+	sdkvulnerability "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/vulnerability"
 	sdkwaitfor "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/wait_for"
 	sdkwait_for_connection "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/wait_for_connection"
 	sdkwebhook "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/webhook"
@@ -281,6 +282,21 @@ func (r *Registry) registerAll() {
 	r.registerPkgOps()
 	r.Register("software.inventory", func(_ map[string]interface{}) (interface{}, error) {
 		return sdksoftware.Inventory()
+	})
+	r.Register("vulnerability.match", func(args map[string]interface{}) (interface{}, error) {
+		inventory, ok := args["inventory"]
+		if !ok {
+			return nil, fmt.Errorf("vulnerability.match: argument %q is required", "inventory")
+		}
+		rules, ok := args["rules"]
+		if !ok {
+			return nil, fmt.Errorf("vulnerability.match: argument %q is required", "rules")
+		}
+		findings, err := sdkvulnerability.MatchValue(inventory, rules)
+		if err != nil {
+			return nil, fmt.Errorf("vulnerability.match: %w", err)
+		}
+		return findings, nil
 	})
 	r.registerTimeOps()
 	r.registerJSONOps()

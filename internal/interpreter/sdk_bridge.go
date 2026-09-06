@@ -207,6 +207,7 @@ import (
 	sdkvalidatecerts "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/validate_certs"
 	sdkvault "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/vault"
 	sdkvirsh "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/virsh"
+	sdkvulnerability "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/vulnerability"
 	sdkwaitfor "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/wait_for"
 	sdkwait_for_connection "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/wait_for_connection"
 	sdkwebhook "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/webhook"
@@ -3084,6 +3085,17 @@ func RegisterSDKBuiltins(interp *Interpreter) {
 			return mapped, err
 		}
 		return structToMap(r)
+	}
+
+	interp.builtins["vulnerability.match"] = func(args ...interface{}) (interface{}, error) {
+		if len(args) != 2 {
+			return nil, fmt.Errorf("vulnerability.match() requires 2 arguments (inventory, rules)")
+		}
+		findings, err := sdkvulnerability.MatchValue(args[0], args[1])
+		if err != nil {
+			return nil, fmt.Errorf("vulnerability.match(): %w", err)
+		}
+		return structToMap(findings)
 	}
 
 	// ── time.parse / time.diff ───────────────────────────────────────

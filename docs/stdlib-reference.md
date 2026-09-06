@@ -1890,13 +1890,60 @@ report {
 }
 ```
 
-### 7A.1 本地漏洞规则匹配（Go SDK）
+### 7A.1 vulnerability.match(inventory, rules)
 
 > Go 包路径：`pkg/ops-core-sdk/vulnerability`
 
-`vulnerability.Match(inventory, rules)` 使用调用方提供的本地规则匹配软件清单，返回受影响软件项。该函数只处理内存数据，不联网、不修改目标主机。
+`vulnerability.match(inventory, rules)` 使用调用方提供的本地规则匹配软件清单，返回受影响软件项。该操作只处理内存数据，不联网、不修改目标主机，可在解释器、Runner 和 AOT 三种执行引擎中使用。
 
-规则字段：`id`、`package`、`fixed_version`、`severity`、`summary`。规则包名与已安装包名精确匹配；安装版本低于 `fixed_version` 时生成 finding，空 `fixed_version` 表示所有匹配版本受影响。apt/dpkg 软件包采用 Debian 版本规则，rpm/yum/dnf 软件包采用 RPM 版本规则，其他来源采用数字和文本片段比较。外部漏洞源由调用方负责。
+**参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `inventory` | `object` | 是 | `software.inventory()` 返回的软件清单 |
+| `rules` | `list` | 是 | 调用方提供的漏洞规则列表；空列表返回空 findings |
+
+**规则字段**：
+
+| 字段 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `id` | `string` | 是 | 漏洞或安全公告标识；空值规则会被跳过 |
+| `package` | `string` | 是 | 软件包名称，采用精确匹配；空值规则会被跳过 |
+| `fixed_version` | `string` | 否 | 修复版本；空值表示所有匹配版本均受影响 |
+| `severity` | `string` | 否 | 严重级别，由调用方规则定义 |
+| `summary` | `string` | 否 | 漏洞摘要 |
+
+**返回类型**：`list`，每个 finding 包含以下字段：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `host` | `string` | 软件清单中的主机名 |
+| `id` | `string` | 匹配规则的漏洞标识 |
+| `package` | `string` | 受影响的软件包名 |
+| `installed_version` | `string` | 已安装版本 |
+| `fixed_version` | `string` | 修复版本，规则未提供时为空 |
+| `severity` | `string` | 严重级别，规则未提供时为空 |
+| `summary` | `string` | 漏洞摘要，规则未提供时为空 |
+
+版本比较依据软件包管理器选择语义：apt/dpkg 使用 Debian 版本规则，rpm/yum/dnf 使用 RPM 版本规则，其他来源使用数字和文本片段比较。安装版本低于 `fixed_version` 时生成 finding。外部漏洞源、规则更新和可信度由调用方负责。
+
+```ops
+privilege: read_only
+
+let inventory = software.inventory()
+let rules = [
+    {"id": "CVE-2026-0001", "package": "openssl", "fixed_version": "3.0.2-2", "severity": "high"}
+]
+let findings = vulnerability.match(inventory, rules)
+
+report {
+    host: inventory.host,
+    findings: findings,
+    finding_count: len(findings)
+}
+```
+
+Go SDK 保留强类型入口 `vulnerability.Match(inventory, rules)`：
 
 ```go
 inventory, err := software.Inventory()
