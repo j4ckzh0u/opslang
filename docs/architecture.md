@@ -959,7 +959,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...
 - **task `on` 动态选择器** — deploy 支持字面量精确主机、`user@host`、glob 和 inventory 组名
 - **文件传输压缩** — 当前传输保持原始字节流
 - **分层中继收集** — `file.distribute` 已支持中继扇出，`file.collect` 当前使用可恢复 SFTP
-- **非 systemd 主机资源限制回退和部署自动回滚** — systemd 主机已通过 transient scope 强制 CPU/内存限制
+- **部署自动回滚语义** — 非 systemd 主机已通过 `ulimit -v` 回退内存限制；脚本级回滚动作仍需定义
 
 ## 附录
 

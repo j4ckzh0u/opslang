@@ -1,6 +1,7 @@
 package security
 
 import (
+	"math"
 	"testing"
 )
 
@@ -51,6 +52,18 @@ func TestApplyResourceLimitsZeroMemory(t *testing.T) {
 	err := ApplyResourceLimits(limits)
 	if err != nil {
 		t.Errorf("ApplyResourceLimits() = %v", err)
+	}
+}
+
+func TestResourceLimitUlimitPrefix(t *testing.T) {
+	if got := (ResourceLimit{MemoryMB: 512}).UlimitPrefix(); got != "ulimit -v 524288 && exec " {
+		t.Fatalf("UlimitPrefix() = %q", got)
+	}
+	if got := (ResourceLimit{CPUPercent: 80}).UlimitPrefix(); got != "" {
+		t.Fatalf("CPU-only UlimitPrefix() = %q, want empty", got)
+	}
+	if got := (ResourceLimit{MemoryMB: math.MaxInt64}).UlimitPrefix(); got != "" {
+		t.Fatalf("overflowing UlimitPrefix() = %q, want empty", got)
 	}
 }
 

@@ -291,7 +291,7 @@ privilege "read_only"
 
 ### 资源限制
 
-`opsctl deploy` 和 `opsctl exec` 接受 `--limit-cpu`、`--limit-mem`。目标机提供 `systemd-run` 时，远程 Runner 通过 transient scope 的 `CPUQuota` 和 `MemoryMax` 强制限制；缺少该命令时任务继续执行，并在结构化结果中返回 warning。
+`opsctl deploy` 和 `opsctl exec` 接受 `--limit-cpu`、`--limit-mem`。目标机提供 `systemd-run` 时，远程 Runner 通过 transient scope 的 `CPUQuota` 和 `MemoryMax` 强制限制；缺少该命令时使用 `ulimit -v` 回退限制内存，并在结构化结果中标记 CPU 百分比未强制。CPU 百分比需要调度控制器才能准确执行。
 
 ### 审计日志
 
@@ -331,9 +331,9 @@ privilege "read_only"
 诚实地说：
 
 1. **Runner 模式不支持控制流**：if/for/while 必须用 AOT
-2. **资源限制依赖 systemd**：远端缺少 `systemd-run` 时返回 warning 并继续执行
+2. **资源限制回退范围**：远端缺少 `systemd-run` 时使用 `ulimit -v` 限制内存，CPU 百分比返回 warning
 3. **文件传输优化待实现**：压缩、断点续传、传输前内容去重和分层中继仍在 Roadmap
-4. **自动回滚待接入**：安全包已有 helper，部署执行链尚未调用
+4. **自动回滚待定义**：安全包已有通用 helper，部署脚本尚未提供可执行的回滚动作语义
 5. **CI 未跑 `-race`**：TSan 在全量测试时 OOM，本地已支持
 6. **第三方 Go 包导入未实现**：OpsLang 文件模块已经可用
 

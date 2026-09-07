@@ -215,7 +215,7 @@ opsctl deploy [flags] <script.ops>
 | `--output` | `-o` | string | stdout | 结果输出文件路径 |
 | `--insecure-host-key` | - | bool | `false` | 跳过 SSH 主机密钥校验（默认启用 TOFU 校验；仅限实验室环境） |
 | `--auto-approve` | - | bool | `false` | 预先批准被审批流拦截的部署（admin/root 脚本 + 生产目标）；非交互环境缺省拒绝 |
-| `--limit-cpu` | - | int | `0`（关闭） | 限制远端 runner 的 CPU 占用（百分比）。要求目标机有 systemd-run；没有的主机照常执行但结果中带 warning |
+| `--limit-cpu` | - | int | `0`（关闭） | 限制远端 runner 的 CPU 占用（百分比）。目标机缺少 systemd-run 时结果中带 warning；同时设置的内存限制由 ulimit 回退执行 |
 | `--limit-mem` | - | int | `0`（关闭） | 限制远端 runner 内存（MB），约束同上 |
 | `--sign-key` | - | string | - | Ed25519 私钥路径（由 `opsctl keygen` 生成）；设置后每个指令包在控制器侧签名 |
 | `--verify-key` | - | string | - | 目标机上**受信任公钥的远程路径**；设置后 ops-runner 以 `--pubkey` 启动，拒绝未签名/被篡改的指令包 |

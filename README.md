@@ -422,7 +422,7 @@ type MemoryInfo struct {
 | Phase 2 | 语言前端与解释器（Lexer/Parser/Interpreter） | 已完成 |
 | Phase 3 | AOT 编译管线 | 已完成 |
 | Phase 4 | 远程编排与声明式特性（deploy/task/ensure/parallel） | 部分完成：基础编排、断点续传和分层中继分发可用，传输压缩待实现 |
-| Phase 5 | 安全与生产化（权限分级、审计、签名、资源限制） | 部分完成：核心安全链路可用，资源限制回退与自动回滚接入待实现 |
+| Phase 5 | 安全与生产化（权限分级、审计、签名、资源限制） | 部分完成：核心安全链路可用，非 systemd 内存回退已接入，自动回滚语义待定义 |
 
 ## Roadmap
 
@@ -430,7 +430,7 @@ type MemoryInfo struct {
 
 - `import "go <包路径>"` 引用第三方 Go 库（当前会报错拒绝）
 - SSH 连接在多次 deploy 之间的跨进程复用（单次部署内并发正确；架构检测结果已通过 `~/.opsctl/arch-cache.json` 跨部署缓存）
-- 无 `systemd-run` 目标机上的资源限制回退，以及部署失败后的自动回滚接入
+- 部署失败后的自动回滚接入：当前缺少脚本级回滚动作定义，部署执行器不会猜测业务恢复操作
 
 > 注：`for ... in ...` 遍历循环与 `block/rescue` 错误处理**已实现**（见 docs/language-reference.md 第 6.3 节）。
 

@@ -96,8 +96,8 @@ type Executor struct {
 	// disk-backed cache is created in Execute.
 	ArchCache *arch.Cache
 	// ResourceLimit, when non-nil, wraps the remote runner invocation in
-	// a systemd scope where systemd-run exists; hosts without it run the
-	// runner unbounded and record a warning instead of failing.
+	// a systemd scope where systemd-run exists. Hosts without it use the
+	// portable ulimit memory fallback and record any unenforced CPU limit.
 	ResourceLimit *security.ResourceLimit
 
 	// RunnerVerifyKeyPath is the REMOTE filesystem path of the trusted
@@ -431,12 +431,11 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 	}
 	runnerCmd := sshx.JoinCommand(runnerArgs...)
 
-	// Apply resource limits when requested. Hosts without systemd-run
-	// still run the task (failing them would make limits unusable on
-	// mixed fleets) but the result carries a warning so operators know
-	// the runner executed unbounded there.
+	// Apply resource limits when requested. Hosts without systemd-run use
+	// ulimit for memory; unsupported CPU percentages remain visible as a
+	// structured warning on mixed fleets.
 	if e.ResourceLimit != nil {
-		wrapped, limited, limitErr := wrapWithResourceLimit(ctx, client, e.ResourceLimit, runnerCmd)
+		wrapped, method, limitErr := wrapWithResourceLimit(ctx, client, e.ResourceLimit, runnerCmd)
 		if limitErr != nil {
 			reusable = false
 			result.Status = "failed"
@@ -445,9 +444,12 @@ func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult
 			return result
 		}
 		runnerCmd = wrapped
-		if !limited {
+		if method == "none" {
 			result.Warnings = append(result.Warnings,
-				"resource limits not applied: systemd-run not available on this host")
+				"resource limits not applied: systemd-run and memory fallback are unavailable on this host")
+		} else if method == "ulimit" && e.ResourceLimit.CPUPercent > 0 {
+			result.Warnings = append(result.Warnings,
+				"CPU resource limit not applied: systemd-run unavailable; memory limit enforced with ulimit")
 		}
 	}
 
@@ -954,12 +956,9 @@ func stageWithRetry(ctx context.Context, client *sshx.Client, localPath, name st
 	return remotePath, nil
 }
 
-// wrapWithResourceLimit prefixes cmd with a systemd-run scope when the
-// host provides systemd-run. limited reports whether wrapping actually
-// happened; an unreachable probe is an error, not a silent skip — the
-// operator explicitly asked for limits, so failing to enforce them must
-// be visible.
-func wrapWithResourceLimit(ctx context.Context, client *sshx.Client, limit *security.ResourceLimit, cmd string) (string, bool, error) {
+// wrapWithResourceLimit prefers systemd-run and falls back to ulimit for
+// memory. An unreachable probe is an error, so requested limits remain visible.
+func wrapWithResourceLimit(ctx context.Context, client *sshx.Client, limit *security.ResourceLimit, cmd string) (string, string, error) {
 	var probe *sshx.ExecResult
 	err := security.WithRetryCtx(ctx, security.RetryConfig{MaxAttempts: 2, Backoff: time.Second}, func() error {
 		res, probeErr := client.Exec(ctx, sshx.JoinCommand("command", "-v", "systemd-run"))
@@ -970,12 +969,16 @@ func wrapWithResourceLimit(ctx context.Context, client *sshx.Client, limit *secu
 		return nil
 	})
 	if err != nil {
-		return "", false, fmt.Errorf("failed to probe systemd-run availability: %w", err)
+		return "", "", fmt.Errorf("failed to probe systemd-run availability: %w", err)
 	}
 	if probe.ExitCode != 0 || strings.TrimSpace(probe.Stdout) == "" {
-		return cmd, false, nil
+		fallback := limit.UlimitPrefix()
+		if fallback == "" {
+			return cmd, "none", nil
+		}
+		return fallback + cmd, "ulimit", nil
 	}
-	return limit.SystemdRunPrefix() + cmd, true, nil
+	return limit.SystemdRunPrefix() + cmd, "systemd", nil
 }
 
 // ============================================================

@@ -2,6 +2,7 @@ package security
 
 import (
 	"fmt"
+	"math"
 	"strings"
 )
 
@@ -54,6 +55,16 @@ func (r ResourceLimit) SystemdRunPrefix() string {
 	}
 	parts = append(parts, "--")
 	return strings.Join(parts, " ") + " "
+}
+
+// UlimitPrefix returns the portable memory fallback prefix. CPUPercent is
+// intentionally omitted because a task duration is unknown and converting a
+// percentage to CPU seconds would enforce the wrong policy.
+func (r ResourceLimit) UlimitPrefix() string {
+	if r.MemoryMB <= 0 || r.MemoryMB > math.MaxInt64/1024 {
+		return ""
+	}
+	return fmt.Sprintf("ulimit -v %d && exec ", r.MemoryMB*1024)
 }
 
 // DefaultResourceLimit returns sensible default resource limits.

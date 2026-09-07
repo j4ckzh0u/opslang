@@ -499,7 +499,7 @@
         <li><strong>权限自动执行</strong>：read_only 脚本调用变更函数在三层被拒绝——解释器（运行时，带行列号）、AOT 编译期静态检查、Runner 二次校验（指令包携带 privilege 字段）</li>
         <li><strong>审批流</strong>：<code>privilege: admin/root</code> 脚本部署到生产目标（inventory 标签 <code>env: prod/production</code>）前强制审批——TTY 展示摘要（权限、变更操作、生产目标）后 y/N 确认；非 TTY（管道/CI）默认拒绝，需 <code>--auto-approve</code> 或 <code>OPSCTL_AUTO_APPROVE=1</code>（flag 优先）放行；拒绝即中止，不联系任何主机；决策逻辑独立于交互（<code>internal/security/approval.go</code>），<code>opsctl deploy</code> 与 <code>opsctl exec</code> 均已接入</li>
         <li><strong>审计日志</strong>：JSON 格式，记录任务 ID、脚本、权限、目标、用户、模式、结果；审批决策（批准/拒绝、来源、批准人、生产目标清单）随运行记录一同落盘，可回溯</li>
-        <li><strong>资源限制</strong>：远程 Runner 在目标机具备 <code>systemd-run</code> 时通过 transient scope 强制 CPU/内存限制；缺少 systemd-run 时结果携带 warning</li>
+        <li><strong>资源限制</strong>：远程 Runner 在目标机具备 <code>systemd-run</code> 时通过 transient scope 强制 CPU/内存限制；缺少 systemd-run 时使用 <code>ulimit -v</code> 回退内存限制并报告 CPU warning</li>
         <li><strong>签名验证</strong>：Ed25519 签名/验签，密钥文件 I/O</li>
         <li><strong>临时目录</strong>：自动创建/清理，幂等</li>
       </ul>
@@ -525,10 +525,10 @@
     <h2>已知限制</h2>
     <ul class="limitations">
       <li><strong>第三方 Go 导入</strong>：文件模块 <code>import "./lib.ops"</code> 已实现；<code>import "go &lt;包路径&gt;"</code> 仍被显式拒绝。</li>
-      <li><strong>资源限制平台依赖</strong>：CPU/内存限制要求远端提供 <code>systemd-run</code>；缺少该命令时任务继续执行并返回 warning。</li>
+      <li><strong>资源限制回退范围</strong>：远端缺少 <code>systemd-run</code> 时使用 <code>ulimit -v</code> 限制内存，CPU 百分比返回 warning。</li>
       <li><strong>文件传输优化</strong>：分发/收集支持 gzip 传输与断点续传，分发支持 gzip 中继复用，收集支持方案 2 的分层中继链路。</li>
       <li><strong>软件清单采集</strong>：<code>software.inventory()</code> 支持 Linux dpkg/rpm 包文件清单、Windows 卸载注册表、运行程序路径和命令行，并保留逐项采集错误。</li>
-      <li><strong>自动回滚接入</strong>：回滚 helper 已有测试，部署执行链尚未调用。</li>
+      <li><strong>自动回滚待定义</strong>：回滚 helper 已有测试，部署脚本尚未提供可执行的回滚动作语义。</li>
       <li><strong>CPU 使用率为采样值</strong>：<code>sys.cpu.usage()</code> 两次采样间隔 500ms，非实时值。</li>
       <li><strong>CI 未启用竞态检测</strong>：<code>-race</code> 在 CI 全量测试时 TSan OOM，已在 CI 配置中移除。本地应定期跑 <code>go test -race ./...</code>。</li>
       <li><strong>大规模模拟测试的传输层为模拟</strong>：1 万主机分发/收集及中继分发模拟测试已实现（<code>pkg/ops-core-sdk/file/scale_test.go</code>、<code>relay_scale_test.go</code>）。测试注入 0.1% 确定性故障、哈希损坏、中继候选失效、恢复偏移异常和确认块损坏，验证结果守恒、成功率 &gt;99.9%、重试上界及中继流量上界。CI 使用 1000 台门档，<code>make scale-test</code> 跑 1 万档；真实协议另由受控 SSH/SFTP 与本地 HTTPS 端到端测试覆盖。</li>
