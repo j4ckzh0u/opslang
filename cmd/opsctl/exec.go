@@ -33,6 +33,12 @@ var (
 	execLimitMemMB      int64
 	execSignKey         string
 	execVerifyKey       string
+	execVulnDBURL       string
+	execVulnDBToken     string
+	execVulnDBVersion   string
+	execVulnDBSHA256    string
+	execVulnDBCA        string
+	execVulnDBTimeout   time.Duration
 )
 
 var execCmd = &cobra.Command{
@@ -70,6 +76,12 @@ func init() {
 	execCmd.Flags().Int64Var(&execLimitMemMB, "limit-mem", 0, "Cap remote runner memory (MB, requires systemd-run on targets; 0 = off)")
 	execCmd.Flags().StringVar(&execSignKey, "sign-key", "", "Ed25519 private key (from opsctl keygen) used to sign the instruction package")
 	execCmd.Flags().StringVar(&execVerifyKey, "verify-key", "", "REMOTE path of the trusted public key; runners refuse unsigned/tampered packages")
+	execCmd.Flags().StringVar(&execVulnDBURL, "vulndb-url", "", "Controller vulnerability HTTPS endpoint")
+	execCmd.Flags().StringVar(&execVulnDBToken, "vulndb-token", "", "Task-scoped vulnerability service bearer token")
+	execCmd.Flags().StringVar(&execVulnDBVersion, "vulndb-rule-version", "", "Expected vulnerability rule version")
+	execCmd.Flags().StringVar(&execVulnDBSHA256, "vulndb-rule-sha256", "", "Expected vulnerability rule SHA-256")
+	execCmd.Flags().StringVar(&execVulnDBCA, "vulndb-ca", "", "PEM CA bundle for the vulnerability service")
+	execCmd.Flags().DurationVar(&execVulnDBTimeout, "vulndb-timeout", 30*time.Second, "Vulnerability service request timeout")
 }
 
 // runExecCommand is the main execution logic for the exec subcommand.
@@ -86,6 +98,19 @@ func runExecCommand(autoApprove bool, autoSource approvalSource) error {
 	pkg, err := opsexec.LoadInstructions(execInstructions)
 	if err != nil {
 		return fmt.Errorf("failed to load instructions: %w", err)
+	}
+	remoteConfig, err := loadRemoteVulnerabilityConfig(execVulnDBURL, execVulnDBToken, execVulnDBVersion, execVulnDBSHA256, execVulnDBCA, execVulnDBTimeout)
+	if err != nil {
+		return fmt.Errorf("invalid vulnerability database configuration: %w", err)
+	}
+	if remoteConfig != nil && pkg.Signature != "" {
+		if execSignKey == "" {
+			return fmt.Errorf("--sign-key is required to replace the signature after vulnerability configuration is injected")
+		}
+		pkg.Signature = ""
+	}
+	if err := runner.InjectRemoteVulnerabilityConfig(pkg, remoteConfig); err != nil {
+		return fmt.Errorf("configure vulnerability query: %w", err)
 	}
 
 	// Sign the package before any host is contacted; a bad key path fails

@@ -15,7 +15,7 @@ BIN_DIR  := bin
 DIST_DIR := dist
 
 # Platforms for cross-compilation
-PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64
+PLATFORMS := linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64
 
 # Binaries
 CMDS := opsctl ops-runner

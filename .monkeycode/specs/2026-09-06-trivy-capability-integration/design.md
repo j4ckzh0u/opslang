@@ -7,7 +7,7 @@ Updated: 2026-09-06
 
 本设计将 Trivy 的能力模型引入 OpsLang，第一阶段聚焦主机软件漏洞、文件系统依赖识别和 SBOM 生成。设计复用现有软件清单、漏洞匹配、解释器、Runner、AOT 和结构化审计链路，目标主机只运行静态 Go 二进制。
 
-第一阶段不执行 Trivy 二进制，不依赖 Python、Shell、Docker daemon 或 Kubernetes 客户端。规则更新由控制端负责，目标机接收经过校验的本地规则数据。容器镜像、Kubernetes、IaC、密钥和许可证扫描保留统一扩展接口，后续逐项接入。
+第一阶段不执行 Trivy 二进制，不依赖 Python、Shell、Docker daemon 或 Kubernetes 客户端。规则更新由控制端负责；扫描支持目标机本地规则 bundle 和控制端 HTTPS 远程匹配两种模式。容器镜像、Kubernetes、IaC、密钥和许可证扫描保留统一扩展接口，后续逐项接入。
 
 ## Architecture
 
@@ -36,6 +36,12 @@ flowchart LR
 
 ## Components and Interfaces
 
+### 0. Remote Vulnerability Query
+
+控制端使用 `opsctl vulndb serve` 暴露只读 HTTPS API：`POST /v1/security/vulnerabilities/match`。Runner 通过任务 options 接收 `remote.url`、`remote.token`、`remote.rule_version` 和 `remote.rule_sha256`，发送软件清单并接收 Findings。服务端只返回匹配结果和规则来源元数据，不返回完整规则库。
+
+服务端使用 TLS 证书和任务级 Bearer token。客户端强制 `https` URL，支持额外 CA bundle，默认请求超时 30 秒，响应体上限 4 MiB。规则版本或摘要不一致时扫描失败。
+
 ### 1. Unified Scan Package
 
 建议新增包 `pkg/ops-core-sdk/securityscan`，避免将多个扫描器的动态适配逻辑堆积到现有 `vulnerability` 包。
@@ -53,8 +59,9 @@ const (
 
 type Options struct {
     Scanners       []Scanner `json:"scanners"`
-    RuleBundle     []byte    `json:"-"`
-    RuleBundleHash string    `json:"rule_bundle_hash,omitempty"`
+    RuleBundle     []byte        `json:"-"`
+    RuleBundleHash string        `json:"rule_bundle_hash,omitempty"`
+    Remote         *RemoteConfig `json:"remote,omitempty"`
     IgnorePaths    []string  `json:"ignore_paths,omitempty"`
     MaxFileSize    int64     `json:"max_file_size,omitempty"`
     MaxDepth       int       `json:"max_depth,omitempty"`
@@ -123,7 +130,7 @@ SBOM 生成器从 `software.InventoryResult` 或文件系统组件集合构建�
 3. 规则项字段类型正确。
 4. 规则 ID 与软件包名称满足非空约束。
 
-第一阶段不内置远程数据库更新。后续可在控制端增加下载、签名和缓存模块，目标机只接收校验后的 bundle。
+本地模式使用经过校验的规则 bundle；远程模式由控制端持有漏洞数据库并返回匹配结果。控制端负责规则更新、缓存和规则摘要管理。
 
 ### 6. Operation Registration
 

@@ -19,7 +19,7 @@
 | [语言前端](./模块/语言前端.md) | Lexer、Parser、AST 和 Interpreter |
 | [远程执行](./模块/远程执行.md) | SSH、Runner、inventory 和多主机调度 |
 | [原子操作 SDK](./模块/原子操作SDK.md) | 标准库组织、opsspec 和引擎一致性 |
-| 安全扫描 SDK | 主机漏洞、文件系统依赖和 SBOM |
+| 安全扫描 SDK | 主机漏洞、文件系统依赖、SBOM 和控制端 HTTPS 漏洞匹配 |
 
 ## 阅读路径
 

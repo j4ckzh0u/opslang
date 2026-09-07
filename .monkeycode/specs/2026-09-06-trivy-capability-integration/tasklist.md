@@ -43,3 +43,11 @@
   - [x] 8.1 运行格式化、全量测试、`go vet ./...`
   - [x] 8.2 运行六平台静态构建
   - [x] 8.3 提交、推送并监控 GitHub Actions
+
+- [x] 9. 控制端远程漏洞查询
+  - [x] 9.1 增加 `RemoteConfig` 和 HTTPS 规则匹配客户端
+  - [x] 9.2 增加 `opsctl vulndb serve` 和 Bearer token 校验
+  - [x] 9.3 增加规则版本、SHA-256、TLS 和响应体边界校验
+  - [x] 9.4 增加远程查询单元测试
+  - [x] 9.5 将远程配置接入 Runner 指令自动生成和下发
+  - [x] 9.6 运行完整测试、构建、提交并监控 GitHub Actions

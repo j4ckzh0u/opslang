@@ -47,6 +47,18 @@ type Options struct {
 	Timeout        time.Duration `json:"timeout,omitempty"`
 	Severity       string        `json:"severity,omitempty"`
 	Format         string        `json:"format,omitempty"`
+	Remote         *RemoteConfig `json:"remote,omitempty"`
+}
+
+// RemoteConfig describes a task-scoped HTTPS vulnerability query endpoint.
+// The token is held in memory and should expire with the task session.
+type RemoteConfig struct {
+	URL         string        `json:"url"`
+	Token       string        `json:"token"`
+	RuleVersion string        `json:"rule_version,omitempty"`
+	RuleSHA256  string        `json:"rule_sha256,omitempty"`
+	CA          []byte        `json:"ca,omitempty"`
+	Timeout     time.Duration `json:"timeout,omitempty"`
 }
 
 type TargetInfo struct {
@@ -163,6 +175,11 @@ func ValidateScanners(scanners []Scanner) error {
 func ValidateOptions(options Options) error {
 	if err := ValidateScanners(options.Scanners); err != nil {
 		return err
+	}
+	if options.Remote != nil {
+		if err := ValidateRemoteConfig(options.Remote); err != nil {
+			return err
+		}
 	}
 	if options.MaxFileSize < 0 {
 		return fmt.Errorf("max_file_size must not be negative")

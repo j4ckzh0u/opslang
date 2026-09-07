@@ -10,6 +10,7 @@
 | `opsctl exec` | 向远端 Runner 发送 JSON 指令包 |
 | `opsctl deploy <script.ops>` | 选择目标、执行 task 并聚合结果 |
 | `opsctl scan` | 扫描本地文件系统或软件清单并输出 JSON/SBOM |
+| `opsctl vulndb serve` | 通过 HTTPS 提供控制端漏洞规则匹配服务 |
 | `opsctl version` | 输出 CLI 版本 |
 | `opsctl keygen` | 生成指令包签名密钥，由安全构建标签接入 |
 
@@ -135,13 +136,16 @@ let result = file.collect(
 
 ## Security Scan
 
-`pkg/ops-core-sdk/securityscan` 提供本地、只读的主机漏洞和文件系统依赖扫描，并生成原生、CycloneDX 或 SPDX SBOM。漏洞规则通过控制端提供的 JSON bundle 输入，bundle 使用 SHA-256 摘要校验；目标机扫描过程不依赖 Python、Shell 或 Trivy 二进制。
+`pkg/ops-core-sdk/securityscan` 提供只读的主机漏洞和文件系统依赖扫描，并生成原生、CycloneDX 或 SPDX SBOM。漏洞规则支持本地 JSON bundle 和控制端 HTTPS 匹配服务；目标机扫描过程不依赖 Python、Shell 或 Trivy 二进制。
 
 ```text
 opsctl scan --path ./project --scanners sbom --format cyclonedx
 opsctl scan --inventory inventory.json --rules rules.json --scanners vuln,sbom --format json
 opsctl scan --inventory inventory.json --rules rules.json --scanners vuln --severity high --ignore-id CVE-2026-0001
+opsctl vulndb serve --rules rules.json --cert server.crt --key server.key --token <TASK_TOKEN>
 ```
+
+`opsctl deploy` 和 `opsctl exec` 使用 `--vulndb-url`、`--vulndb-token`、`--vulndb-rule-version`、`--vulndb-rule-sha256`、`--vulndb-ca`、`--vulndb-timeout` 设置任务级查询配置。控制端将配置注入 `security.scan` 和 `file.scan` 的 `options.remote`，随后执行指令包签名和 SSH 下发。Runner 只发送软件清单并接收 Findings，完整漏洞规则库保留在控制端。
 
 支持的第一阶段清单来源包括系统软件 inventory、Go `go.mod`、Node.js `package.json`、Python `requirements.txt` 和 `pyproject.toml`。单个清单解析错误会进入结构化 `errors`，其他可解析组件继续生成结果。
 

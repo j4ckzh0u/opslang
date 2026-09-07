@@ -24,7 +24,7 @@ make docs-check
 # 构建当前平台二进制
 make build
 
-# 构建 Linux 和 Darwin 的 amd64 与 arm64 二进制
+# 构建 Linux、Darwin 和 Windows 的 amd64 与 arm64 二进制
 make build-all
 
 # 运行 10000 主机文件传输模拟
@@ -77,6 +77,8 @@ go run ./cmd/opsctl --help
 ## 修改远程执行
 
 SSH 代码位于 `internal/sshx`，多主机调度位于 `internal/exec`。所有网络操作需要明确超时、上下文取消和资源关闭。主机密钥策略与认证错误必须保留上下文，避免将密码、私钥或短时令牌写入日志。
+
+远程漏洞查询配置由 `opsctl deploy` 或 `opsctl exec` 在指令包签名前注入。修改该链路时需验证 HTTPS URL、CA bundle、Bearer token、规则版本、SHA-256、请求/响应体上限，并确认 token 未进入错误或审计输出。
 
 文件传输改动还要验证：
 

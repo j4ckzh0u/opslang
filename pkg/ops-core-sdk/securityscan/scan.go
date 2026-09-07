@@ -141,12 +141,23 @@ func ScanInventory(inventory software.InventoryResult, options Options) (ScanRes
 		result.Target.ID = "local"
 	}
 	if containsScanner(options.Scanners, ScannerVulnerability) {
-		bundle, source, err := ValidateRuleBundle(options.RuleBundle)
+		var err error
+		var findings []vulnerability.Finding
+		var source RuleSourceInfo
+		if options.Remote != nil {
+			findings, source, err = queryRemoteVulnerabilities(context.Background(), inventory, options.Remote)
+		} else {
+			bundle, localSource, localErr := ValidateRuleBundle(options.RuleBundle)
+			err = localErr
+			if err == nil {
+				source = localSource
+				findings = vulnerability.Match(inventory, bundle.Rules)
+			}
+		}
 		if err != nil {
 			return ScanResult{}, fmt.Errorf("scan inventory: %w", err)
 		}
 		result.RuleSource = source
-		findings := vulnerability.Match(inventory, bundle.Rules)
 		for _, finding := range findings {
 			if !severityAllowed(finding.Severity, options.Severity) {
 				continue
@@ -195,14 +206,7 @@ func ScanFilesystem(ctx context.Context, path string, options Options) (ScanResu
 		ctx, cancel = context.WithTimeout(ctx, options.Timeout)
 		defer cancel()
 	}
-	var bundle RuleBundle
 	var source RuleSourceInfo
-	if containsScanner(options.Scanners, ScannerVulnerability) {
-		bundle, source, err = ValidateRuleBundle(options.RuleBundle)
-		if err != nil {
-			return ScanResult{}, fmt.Errorf("scan filesystem: %w", err)
-		}
-	}
 	result := NewScanResult(TargetInfo{Type: "filesystem", ID: filepath.Clean(path), Path: filepath.Clean(path)}, options.Scanners)
 	components, scanErrors := scanManifests(ctx, path, options)
 	result.Errors = append(result.Errors, scanErrors...)
@@ -210,12 +214,26 @@ func ScanFilesystem(ctx context.Context, path string, options Options) (ScanResu
 		result.Components = components
 	}
 	if containsScanner(options.Scanners, ScannerVulnerability) {
-		result.RuleSource = source
 		inventory := software.InventoryResult{Host: filepath.Clean(path), Packages: make([]software.Package, 0, len(components))}
 		for _, component := range components {
 			inventory.Packages = append(inventory.Packages, software.Package{Name: component.Name, Version: component.Version, Manager: component.Ecosystem, InstalledFiles: append([]string(nil), component.Locations...)})
 		}
-		for _, finding := range vulnerability.Match(inventory, bundle.Rules) {
+		var findings []vulnerability.Finding
+		if options.Remote != nil {
+			findings, source, err = queryRemoteVulnerabilities(ctx, inventory, options.Remote)
+			if err != nil {
+				return ScanResult{}, fmt.Errorf("scan filesystem: %w", err)
+			}
+		} else {
+			bundle, bundleSource, bundleErr := ValidateRuleBundle(options.RuleBundle)
+			if bundleErr != nil {
+				return ScanResult{}, fmt.Errorf("scan filesystem: %w", bundleErr)
+			}
+			source = bundleSource
+			findings = vulnerability.Match(inventory, bundle.Rules)
+		}
+		result.RuleSource = source
+		for _, finding := range findings {
 			if !severityAllowed(finding.Severity, options.Severity) {
 				continue
 			}

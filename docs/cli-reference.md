@@ -11,11 +11,12 @@
 3. [opsctl build](#opsctl-build)
 4. [opsctl deploy](#opsctl-deploy)
 5. [opsctl exec](#opsctl-exec)
-6. [opsctl repl](#opsctl-repl)
-7. [opsctl keygen](#opsctl-keygen)
-8. [退出码](#退出码)
-9. [环境变量](#环境变量)
-10. [附录：配置文件格式](#附录配置文件格式)
+6. [opsctl vulndb serve](#opsctl-vulndb-serve)
+7. [opsctl repl](#opsctl-repl)
+8. [opsctl keygen](#opsctl-keygen)
+9. [退出码](#退出码)
+10. [环境变量](#环境变量)
+11. [附录：配置文件格式](#附录配置文件格式)
 
 ---
 
@@ -218,6 +219,14 @@ opsctl deploy [flags] <script.ops>
 | `--limit-mem` | - | int | `0`（关闭） | 限制远端 runner 内存（MB），约束同上 |
 | `--sign-key` | - | string | - | Ed25519 私钥路径（由 `opsctl keygen` 生成）；设置后每个指令包在控制器侧签名 |
 | `--verify-key` | - | string | - | 目标机上**受信任公钥的远程路径**；设置后 ops-runner 以 `--pubkey` 启动，拒绝未签名/被篡改的指令包 |
+| `--vulndb-url` | - | string | - | 控制端漏洞匹配服务 HTTPS 地址；仅 Runner 模式使用 |
+| `--vulndb-token` | - | string | - | 任务级 Bearer token |
+| `--vulndb-rule-version` | - | string | - | 预期规则版本 |
+| `--vulndb-rule-sha256` | - | string | - | 预期规则 SHA-256 摘要 |
+| `--vulndb-ca` | - | string | - | 服务端证书的 PEM CA bundle 路径 |
+| `--vulndb-timeout` | - | duration | `30s` | 单次漏洞匹配请求超时 |
+
+远程漏洞服务参数只用于 Runner 模式。`auto` 选择 AOT 或显式使用 `--mode aot` 时，携带这些参数会直接返回配置错误。
 
 ### 指令包签名
 
@@ -366,6 +375,14 @@ opsctl exec [flags]
 | `--limit-mem` | - | int64 | `0`（关闭） | 限制远端 runner 内存（MB），约束同 deploy |
 | `--sign-key` | - | string | - | Ed25519 私钥路径；设置后对指令包签名 |
 | `--verify-key` | - | string | - | 目标机上受信任公钥的远程路径；设置后 runner 拒绝未签名/被篡改的包 |
+| `--vulndb-url` | - | string | - | 控制端漏洞匹配服务 HTTPS 地址 |
+| `--vulndb-token` | - | string | - | 任务级 Bearer token |
+| `--vulndb-rule-version` | - | string | - | 预期规则版本 |
+| `--vulndb-rule-sha256` | - | string | - | 预期规则 SHA-256 摘要 |
+| `--vulndb-ca` | - | string | - | 服务端证书的 PEM CA bundle 路径 |
+| `--vulndb-timeout` | - | duration | `30s` | 单次漏洞匹配请求超时 |
+
+远程配置会改变扫描指令并纳入指令包签名。输入文件已经签名时，同时提供 `--sign-key` 以生成覆盖远程配置的新签名。
 
 ### 输出
 
@@ -416,6 +433,23 @@ $ opsctl exec --hosts root@web1 --instructions tasks.json -o result.json
 - 部分失败（`partial`，部分主机未完成）退出码为 1；全部失败（`failed`）退出码为 2；全部成功退出码为 0。具体结果见 JSON 输出。
 - `--hosts` 格式支持 `user@host` 或纯 `host`（纯 host 时使用 `--user` 指定的用户）。
 - 指令包 `privilege` 为 `admin`/`root` 且 inventory 目标带生产标签时触发审批流（见 [opsctl deploy 的审批流说明](#审批流生产环境保护)）；审批被拒返回非零退出码且不联系任何主机。
+
+---
+
+## opsctl vulndb serve
+
+在控制端加载漏洞规则 bundle，并通过只读 HTTPS API 提供软件清单匹配。服务端返回 Findings 和规则来源元数据，不下发完整规则库。
+
+```bash
+opsctl vulndb serve \
+    --rules rules.json \
+    --cert server.crt \
+    --key server.key \
+    --token <TASK_TOKEN> \
+    --listen 127.0.0.1:8443
+```
+
+`--rules`、`--cert`、`--key` 和 `--token` 为必填参数。`--shutdown-after` 可设置服务自动关闭时间，主要用于受控测试。Runner 通过 `POST /v1/security/vulnerabilities/match` 提交软件清单。
 
 ---
 

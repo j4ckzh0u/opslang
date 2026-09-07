@@ -7,6 +7,7 @@ import (
 
 	"github.com/j4ckzh0u/opslang/internal/ast"
 	"github.com/j4ckzh0u/opslang/internal/parser"
+	"github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/securityscan"
 )
 
 // ============================================================
@@ -116,6 +117,57 @@ func TestGenerate_SimpleTaskWithCPUAndReport(t *testing.T) {
 	// Variable references must be explicit "$name" markers.
 	if cpuRef, ok := inst1.Args["cpu"]; !ok || cpuRef != "$cpu" {
 		t.Errorf("expected report arg cpu=$cpu, got %v", inst1.Args)
+	}
+}
+
+func TestInjectRemoteVulnerabilityConfig(t *testing.T) {
+	pkg := &InstructionPackage{
+		Version: "1.0",
+		Instructions: []Instruction{
+			{Op: "security.scan", Args: map[string]interface{}{"options": map[string]interface{}{"severity": "high"}}},
+			{Op: "file.scan", Args: map[string]interface{}{}},
+			{Op: "sys.hostname", Args: map[string]interface{}{}},
+		},
+	}
+	remote := &securityscan.RemoteConfig{URL: "https://controller.example", Token: "task-token", CA: []byte("test-ca")}
+	if err := InjectRemoteVulnerabilityConfig(pkg, remote); err != nil {
+		t.Fatalf("InjectRemoteVulnerabilityConfig() error = %v", err)
+	}
+
+	options, ok := pkg.Instructions[0].Args["options"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("security.scan options type = %T", pkg.Instructions[0].Args["options"])
+	}
+	if options["severity"] != "high" {
+		t.Fatalf("severity = %v, want high", options["severity"])
+	}
+	if options["remote"] != remote {
+		t.Fatalf("remote = %#v, want supplied config", options["remote"])
+	}
+	fileOptions, ok := pkg.Instructions[1].Args["options"].(map[string]interface{})
+	if !ok || fileOptions["remote"] != remote {
+		t.Fatalf("file.scan options = %#v, want remote config", pkg.Instructions[1].Args["options"])
+	}
+	if _, exists := pkg.Instructions[2].Args["options"]; exists {
+		t.Fatal("non-scan instruction was modified")
+	}
+}
+
+func TestInjectRemoteVulnerabilityConfigRejectsNilPackage(t *testing.T) {
+	err := InjectRemoteVulnerabilityConfig(nil, &securityscan.RemoteConfig{URL: "https://controller.example", Token: "task-token"})
+	if err == nil || !strings.Contains(err.Error(), "nil") {
+		t.Fatalf("error = %v, want nil package error", err)
+	}
+}
+
+func TestInjectRemoteVulnerabilityConfigRejectsSignedPackage(t *testing.T) {
+	pkg := &InstructionPackage{
+		Signature:    "existing-signature",
+		Instructions: []Instruction{{Op: "security.scan", Args: map[string]interface{}{}}},
+	}
+	err := InjectRemoteVulnerabilityConfig(pkg, &securityscan.RemoteConfig{URL: "https://controller.example", Token: "task-token"})
+	if err == nil || !strings.Contains(err.Error(), "unsigned") {
+		t.Fatalf("error = %v, want unsigned package error", err)
 	}
 }
 

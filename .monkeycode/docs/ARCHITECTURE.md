@@ -72,7 +72,7 @@ opslang/
 
 ### 安全扫描
 
-`pkg/ops-core-sdk/securityscan` 负责本地只读扫描。主机漏洞路径复用 `software.InventoryResult` 和 `vulnerability.Match`，文件系统路径使用 Go 原生目录遍历解析常见依赖清单，SBOM 输出支持原生组件、CycloneDX JSON 和 SPDX JSON。规则 bundle 由控制端提供并通过 SHA-256 校验，解释器、Runner 和 AOT 共享同一组扫描操作。
+`pkg/ops-core-sdk/securityscan` 负责只读扫描。主机漏洞路径复用 `software.InventoryResult` 和 `vulnerability.Match`，文件系统路径使用 Go 原生目录遍历解析常见依赖清单，SBOM 输出支持原生组件、CycloneDX JSON 和 SPDX JSON。规则 bundle 可在目标机本地校验和匹配，也可由 `opsctl vulndb serve` 持有并通过 HTTPS 返回匹配结果。远程模式使用任务级 Bearer token、可选 CA、请求超时、规则版本和 SHA-256 摘要校验；控制端在签名前把配置注入 Runner 扫描指令。
 
 ### 文件传输
 
@@ -98,6 +98,7 @@ flowchart LR
     Generator --> SSH["internal/sshx"]
     SSH --> Runner["ops-runner"]
     Runner --> SDK
+    SDK --> VulnDB["controller HTTPS vulnerability matcher"]
     Compiler --> Binary["static binary"]
     Binary --> SDK
 ```

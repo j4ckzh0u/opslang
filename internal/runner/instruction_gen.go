@@ -5,12 +5,14 @@ package runner
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/j4ckzh0u/opslang/internal/ast"
 	"github.com/j4ckzh0u/opslang/internal/opsspec"
 	"github.com/j4ckzh0u/opslang/internal/security"
+	"github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/securityscan"
 )
 
 // InstructionGenerator converts AST statements into instruction packages
@@ -34,6 +36,54 @@ type InstructionGenerator struct {
 	// left unset it is derived from the statements; an undeclared script
 	// defaults to read_only, mirroring security.GetScriptPrivilege.
 	Privilege ast.PrivilegeLevel
+}
+
+// InjectRemoteVulnerabilityConfig adds controller-owned query credentials to
+// scan instructions after generation and before package signing.
+func InjectRemoteVulnerabilityConfig(pkg *InstructionPackage, remote *securityscan.RemoteConfig) error {
+	if pkg == nil {
+		return fmt.Errorf("instruction package is nil")
+	}
+	if remote == nil {
+		return nil
+	}
+	for i := range pkg.Instructions {
+		instruction := &pkg.Instructions[i]
+		if instruction.Op != "security.scan" && instruction.Op != "file.scan" {
+			continue
+		}
+		if pkg.Signature != "" {
+			return fmt.Errorf("instruction package must be unsigned before vulnerability configuration is injected")
+		}
+		if instruction.Args == nil {
+			instruction.Args = make(map[string]interface{})
+		}
+		options, err := scanOptionsMap(instruction.Args["options"])
+		if err != nil {
+			return fmt.Errorf("instruction %d (%s): %w", i, instruction.Op, err)
+		}
+		options["remote"] = remote
+		instruction.Args["options"] = options
+	}
+	return nil
+}
+
+func scanOptionsMap(value interface{}) (map[string]interface{}, error) {
+	if value == nil {
+		return make(map[string]interface{}), nil
+	}
+	data, err := json.Marshal(value)
+	if err != nil {
+		return nil, fmt.Errorf("encode scan options: %w", err)
+	}
+	var options map[string]interface{}
+	if err := json.Unmarshal(data, &options); err != nil {
+		return nil, fmt.Errorf("decode scan options: %w", err)
+	}
+	if options == nil {
+		return make(map[string]interface{}), nil
+	}
+	return options, nil
 }
 
 // resolvePrivilege picks the governing privilege for a generation run.

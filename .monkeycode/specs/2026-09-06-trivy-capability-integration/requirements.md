@@ -14,6 +14,8 @@ OpsLang 需要吸收 Trivy 的安全扫描能力，形成面向运维主机、�
 - **Finding**：单条结构化安全发现结果。
 - **SBOM**：软件物料清单，描述组件、版本、来源和依赖关系。
 - **Trivy 兼容结果**：字段语义可映射到 Trivy JSON 结果的 OpsLang 结构化结果，不要求复制 Trivy 的内部实现。
+- **远程漏洞查询服务**：由 `opsctl` 控制端提供的只读 HTTPS API，服务端持有漏洞数据库并返回匹配结果。
+- **任务级凭据**：随单个 Runner 任务下发并在任务生命周期内有效的 endpoint、Bearer token 和规则摘要。
 
 ## Requirements
 
@@ -72,9 +74,10 @@ OpsLang 需要吸收 Trivy 的安全扫描能力，形成面向运维主机、�
 
 1. THE system SHALL provide scanner execution in a statically linked Go binary with `CGO_ENABLED=0`.
 2. WHEN Runner 在远程目标执行主机扫描时，THE system SHALL 通过结构化指令传递扫描参数并通过 JSON 返回结果。
-3. WHEN 漏洞规则源未在目标主机缓存时，THE system SHALL allow the controller to provide a signed or content-addressed rule bundle.
-4. IF 规则源校验失败、规则包损坏或规则版本不兼容，THE system SHALL stop the affected scan and return a security error.
-5. THE system SHALL keep vulnerability matching and SBOM generation local to supplied data unless the user explicitly enables a rule update operation.
+3. WHEN 任务配置包含远程漏洞查询服务，THE system SHALL 通过 HTTPS 和任务级 Bearer token 将软件清单发送到控制端匹配接口。
+4. WHEN 控制端返回漏洞匹配结果，THE system SHALL 校验规则版本和 SHA-256 摘要后再合并到扫描结果。
+5. IF 远程服务认证失败、请求超时、规则版本不一致或摘要校验失败，THE system SHALL stop the affected scan and return a security error.
+6. THE system SHALL keep the vulnerability database on the controller and SHALL return findings instead of the complete database to the Runner.
 
 ### Requirement 6: Trivy 兼容能力边界
 
@@ -111,6 +114,8 @@ OpsLang 需要吸收 Trivy 的安全扫描能力，形成面向运维主机、�
 5. 解释器、Runner、AOT、CLI `opsctl scan` 的一致性接入。
 
 容器镜像、Kubernetes、IaC、密钥和许可证扫描先完成接口和能力边界设计，再按独立任务实现。
+
+远程漏洞查询使用 `opsctl vulndb serve --rules ... --cert ... --key ... --token ...` 提供 HTTPS 接口；Runner 通过扫描 options 的 `remote` 对象接收 endpoint、短期 token、规则版本和摘要。
 
 ## References
 

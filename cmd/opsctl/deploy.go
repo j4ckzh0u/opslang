@@ -41,6 +41,12 @@ var (
 	deployLimitMemMB      int64
 	deploySignKey         string
 	deployVerifyKey       string
+	deployVulnDBURL       string
+	deployVulnDBToken     string
+	deployVulnDBVersion   string
+	deployVulnDBSHA256    string
+	deployVulnDBCA        string
+	deployVulnDBTimeout   time.Duration
 )
 
 // deploySignKeyBytes holds the Ed25519 private key loaded once per deploy
@@ -94,6 +100,12 @@ func init() {
 	deployCmd.Flags().Int64Var(&deployLimitMemMB, "limit-mem", 0, "Cap remote runner memory (MB, requires systemd-run on targets; 0 = off)")
 	deployCmd.Flags().StringVar(&deploySignKey, "sign-key", "", "Ed25519 private key (from opsctl keygen) used to sign instruction packages")
 	deployCmd.Flags().StringVar(&deployVerifyKey, "verify-key", "", "REMOTE path of the trusted public key; runners refuse unsigned/tampered packages")
+	deployCmd.Flags().StringVar(&deployVulnDBURL, "vulndb-url", "", "Controller vulnerability HTTPS endpoint")
+	deployCmd.Flags().StringVar(&deployVulnDBToken, "vulndb-token", "", "Task-scoped vulnerability service bearer token")
+	deployCmd.Flags().StringVar(&deployVulnDBVersion, "vulndb-rule-version", "", "Expected vulnerability rule version")
+	deployCmd.Flags().StringVar(&deployVulnDBSHA256, "vulndb-rule-sha256", "", "Expected vulnerability rule SHA-256")
+	deployCmd.Flags().StringVar(&deployVulnDBCA, "vulndb-ca", "", "PEM CA bundle for the vulnerability service")
+	deployCmd.Flags().DurationVar(&deployVulnDBTimeout, "vulndb-timeout", 30*time.Second, "Vulnerability service request timeout")
 }
 
 // deployStep is one instruction package to run on one subset of targets.
@@ -149,6 +161,9 @@ func runDeployCommand(scriptPath string, autoApprove bool, autoSource approvalSo
 
 	mode := resolveDeployMode(deployMode, prog)
 	fmt.Fprintf(os.Stderr, "Deploy mode: %s\n", mode)
+	if mode == "aot" && hasRemoteVulnerabilitySettings(deployVulnDBURL, deployVulnDBToken, deployVulnDBVersion, deployVulnDBSHA256, deployVulnDBCA) {
+		return fmt.Errorf("vulnerability database options require runner mode")
+	}
 
 	// Load the signing key before any host is contacted: a bad key path
 	// must fail the deploy here, not mid-flight after some hosts ran.
@@ -341,6 +356,10 @@ func signPkg(pkg *runner.InstructionPackage) error {
 }
 
 func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program, targets []opsexec.Target, taskID string, scriptPriv ast.PrivilegeLevel) (*deployAggregate, error) {
+	remoteConfig, err := loadRemoteVulnerabilityConfig(deployVulnDBURL, deployVulnDBToken, deployVulnDBVersion, deployVulnDBSHA256, deployVulnDBCA, deployVulnDBTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("invalid vulnerability database configuration: %w", err)
+	}
 	steps, err := buildDeploySteps(prog, targets, taskID, scriptPriv)
 	if err != nil {
 		return nil, err
@@ -378,6 +397,9 @@ func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program,
 
 		if deployDryRun {
 			step.pkg.DryRun = true
+		}
+		if err := runner.InjectRemoteVulnerabilityConfig(step.pkg, remoteConfig); err != nil {
+			return nil, fmt.Errorf("configure vulnerability query for step %q: %w", step.name, err)
 		}
 
 		if err := signPkg(step.pkg); err != nil {
