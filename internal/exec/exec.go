@@ -23,7 +23,9 @@ import (
 	"github.com/j4ckzh0u/opslang/internal/runner"
 	"github.com/j4ckzh0u/opslang/internal/security"
 	"github.com/j4ckzh0u/opslang/internal/sshx"
+	"github.com/j4ckzh0u/opslang/internal/state"
 	opscapture "github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/capture"
+	"github.com/j4ckzh0u/opslang/pkg/ops-core-sdk/securityscan"
 )
 
 // Target represents a remote host to execute instructions on.
@@ -108,6 +110,9 @@ type Executor struct {
 	// ConnectionPool enables caller-controlled reuse across executions. Nil
 	// preserves the single-use connection lifecycle.
 	ConnectionPool *sshx.Pool
+	// StateStore receives lifecycle events when configured.
+	StateStore  *state.Store
+	AuditLogger *security.AuditLogger
 
 	TaskID string
 
@@ -122,6 +127,21 @@ type Executor struct {
 	buildInFlight map[string]*sync.Once
 	buildResults  map[string]error
 	appPaths      map[string]string // build key -> resolved local binary path
+}
+
+// RunTemporaryScan executes a staged scanner through the supplied remote
+// command executor. Keeping this entry point separate lets callers choose the
+// upload and cleanup lifecycle without changing the instruction runner.
+func (e *Executor) RunTemporaryScan(ctx context.Context, remote RemoteCommandExecutor, remotePath string, request securityscan.ScanRequest) (securityscan.ScanReport, error) {
+	if e == nil {
+		return securityscan.ScanReport{}, fmt.Errorf("executor is nil")
+	}
+	scanner := &TemporaryScanner{
+		Client:     remote,
+		RemotePath: remotePath,
+		MaxOutput:  16 << 20,
+	}
+	return scanner.Scan(ctx, request)
 }
 
 // SSHClientFactory creates SSH clients. Can be overridden for testing.
@@ -249,6 +269,20 @@ func (e *Executor) Execute(ctx context.Context) *Summary {
 	default:
 		summary.Status = "failed"
 	}
+	if e.AuditLogger != nil {
+		results := make(map[string]interface{}, len(summary.Results))
+		for host, result := range summary.Results {
+			results[host] = result
+		}
+		entry := security.NewAuditEntry(e.TaskID, "", "", summary.Targets, e.User, "runner", e.DryRun)
+		entry.Results = results
+		entry.SetStatus(summary.Status, summary.FinishedAt.Sub(summary.StartedAt).Milliseconds())
+		if err := e.AuditLogger.Log(entry); err != nil {
+			for _, result := range summary.Results {
+				result.Warnings = append(result.Warnings, "audit log failed: "+err.Error())
+			}
+		}
+	}
 
 	return summary
 }
@@ -275,6 +309,20 @@ func (a *sshExecutorAdapter) Exec(ctx context.Context, cmd string) (*arch.ExecRe
 func (e *Executor) executeOnHost(ctx context.Context, target Target) *HostResult {
 	result := &HostResult{
 		StartedAt: time.Now().UTC(),
+	}
+	if e.StateStore != nil {
+		if err := e.StateStore.Append(state.Event{ID: e.TaskID + ":" + target.Name + ":started", TaskID: e.TaskID, Host: target.Name, Stage: "execute", Status: state.Started}); err != nil {
+			result.Warnings = append(result.Warnings, fmt.Sprintf("failed to record started event: %v", err))
+		}
+		defer func() {
+			status := state.Failed
+			if result.Status == "success" {
+				status = state.Verified
+			}
+			if err := e.StateStore.Append(state.Event{ID: e.TaskID + ":" + target.Name + ":finished", TaskID: e.TaskID, Host: target.Name, Stage: "execute", Status: status, Message: result.Error}); err != nil {
+				result.Warnings = append(result.Warnings, fmt.Sprintf("failed to record finished event: %v", err))
+			}
+		}()
 	}
 
 	// Create SSH client.

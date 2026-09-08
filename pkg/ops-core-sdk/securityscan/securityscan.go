@@ -53,6 +53,9 @@ type Options struct {
 // RemoteConfig describes a task-scoped HTTPS vulnerability query endpoint.
 // The token is held in memory and should expire with the task session.
 type RemoteConfig struct {
+	// Backend identifies the scanner implementation exposed by the service.
+	// Empty preserves the native vulnerability matching behavior.
+	Backend     string        `json:"backend,omitempty"`
 	URL         string        `json:"url"`
 	Token       string        `json:"token"`
 	RuleVersion string        `json:"rule_version,omitempty"`

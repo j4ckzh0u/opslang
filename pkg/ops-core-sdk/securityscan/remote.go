@@ -81,6 +81,9 @@ func queryRemoteVulnerabilities(ctx context.Context, inventory software.Inventor
 	if err := ValidateRemoteConfig(config); err != nil {
 		return nil, RuleSourceInfo{}, err
 	}
+	if strings.TrimSpace(config.Backend) == "external" {
+		return queryExternalVulnerabilities(ctx, inventory, config)
+	}
 	endpoint, _ := url.Parse(strings.TrimSpace(config.URL))
 	requestBody, err := json.Marshal(remoteMatchRequest{Inventory: inventory})
 	if err != nil {
@@ -160,6 +163,9 @@ func ValidateRemoteConfig(config *RemoteConfig) error {
 	}
 	if strings.TrimSpace(config.Token) == "" {
 		return fmt.Errorf("remote vulnerability token is required")
+	}
+	if backend := strings.TrimSpace(config.Backend); backend != "" && backend != "external" && backend != "native" {
+		return fmt.Errorf("unsupported remote scanner backend %q", config.Backend)
 	}
 	if config.Timeout < 0 {
 		return fmt.Errorf("remote vulnerability timeout must not be negative")

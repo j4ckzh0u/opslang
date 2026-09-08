@@ -35,9 +35,16 @@ var vulnDBServeCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		backend, err := securityscan.NewRuleBundleBackend(bundle)
+		if err != nil {
+			return err
+		}
+		mux := http.NewServeMux()
+		mux.Handle(securityscan.ScanServicePath(), securityscan.ScanHandler(backend, vulnDBToken))
+		mux.Handle("/v1/security/vulnerabilities/match", handler)
 		server := &http.Server{
 			Addr:              vulnDBListen,
-			Handler:           handler,
+			Handler:           mux,
 			ReadHeaderTimeout: 5 * time.Second,
 			ReadTimeout:       30 * time.Second,
 			WriteTimeout:      30 * time.Second,
