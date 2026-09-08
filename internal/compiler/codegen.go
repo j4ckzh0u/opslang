@@ -2226,6 +2226,12 @@ func (g *CodeGenerator) assemble(mainCode string) (string, error) {
 
 	// Main function
 	b.WriteString("func main() {\n")
+	b.WriteString("\tdefer func() {\n")
+	b.WriteString("\t\tif recovered := recover(); recovered != nil {\n")
+	b.WriteString("\t\t\tfmt.Fprintf(os.Stderr, \"runtime error: %v\\n\", recovered)\n")
+	b.WriteString("\t\t\tos.Exit(1)\n")
+	b.WriteString("\t\t}\n")
+	b.WriteString("\t}()\n")
 	b.WriteString("\t_output := make(map[string]interface{})\n")
 	b.WriteString("\tvar _outputMu sync.Mutex\n")
 	b.WriteString("\t_ = _output\n")
@@ -2495,11 +2501,10 @@ func opsToCronEntry(v interface{}) opscron.CronEntry {
 `)
 	}
 	b.WriteString(`
-// opsFatal aborts the compiled script: runtime SDK errors must fail the
-// deployment, not become string values that flow onward silently.
+// opsFatal propagates runtime SDK errors to the nearest rescue boundary. The
+// main recovery boundary converts unhandled errors to a non-zero process exit.
 func opsFatal(err error) {
-	fmt.Fprintf(os.Stderr, "runtime error: %v\n", err)
-	os.Exit(1)
+	panic(err)
 }
 
 // opsEqual: numbers compare numerically (int64/float64/int), strings as
@@ -2830,12 +2835,13 @@ func (g *CodeGenerator) genStatementTo(b *strings.Builder, stmt ast.Statement, i
 		}
 
 	case *ast.TaskStatement:
-		// In AOT mode, execute task body directly
-		for _, inner := range s.Body.Statements {
-			if err := g.genStatementTo(b, inner, indent); err != nil {
-				return err
-			}
-		}
+		// Task-level rescue/always uses the same error boundary as block rescue.
+		return g.genBlockRescue(b, &ast.BlockRescueStatement{
+			Position: s.Position,
+			Body:     s.Body,
+			Rescue:   s.Rescue,
+			Always:   s.Always,
+		}, indent)
 
 	case *ast.ReportStatement:
 		return g.genReport(b, s, indent)
@@ -3034,46 +3040,65 @@ func (g *CodeGenerator) genForIn(b *strings.Builder, s *ast.ForInStatement, inde
 
 func (g *CodeGenerator) genBlockRescue(b *strings.Builder, s *ast.BlockRescueStatement, indent int) error {
 	prefix := strings.Repeat("\t", indent)
+	if s.Rescue == nil && s.Always == nil {
+		if s.Body != nil {
+			for _, stmt := range s.Body.Statements {
+				if err := g.genStatementTo(b, stmt, indent); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+
+	// The outer function owns the unconditional always defer. It therefore
+	// runs after normal completion, body failure, and rescue failure.
+	b.WriteString(fmt.Sprintf("%sfunc() {\n", prefix))
+	if s.Always != nil {
+		b.WriteString(fmt.Sprintf("%s\tdefer func() {\n", prefix))
+		for _, stmt := range s.Always.Statements {
+			if err := g.genStatementTo(b, stmt, indent+2); err != nil {
+				return err
+			}
+		}
+		b.WriteString(fmt.Sprintf("%s\t}()\n", prefix))
+	}
 
 	if s.Rescue != nil {
 		// Wrap Body in a func that recovers panics. When there is a rescue
 		// clause, body errors are converted to Go panics internally and
 		// caught here so the rescue body can inspect _error.
-		b.WriteString(fmt.Sprintf("%sfunc() {\n", prefix))
-		b.WriteString(fmt.Sprintf("%s\tdefer func() {\n", prefix))
-		b.WriteString(fmt.Sprintf("%s\t\tif _r := recover(); _r != nil {\n", prefix))
-		b.WriteString(fmt.Sprintf("%s\t\t\t_error := fmt.Sprintf(\"%%v\", _r)\n", prefix))
-		b.WriteString(fmt.Sprintf("%s\t\t\t_ = _error\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\tfunc() {\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\t\tdefer func() {\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\t\t\tif _r := recover(); _r != nil {\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\t\t\t\t_error := fmt.Sprintf(\"%%v\", _r)\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\t\t\t\t_ = _error\n", prefix))
 		for _, stmt := range s.Rescue.Statements {
-			if err := g.genStatementTo(b, stmt, indent+3); err != nil {
+			if err := g.genStatementTo(b, stmt, indent+4); err != nil {
 				return err
 			}
 		}
-		b.WriteString(fmt.Sprintf("%s\t\t}\n", prefix))
-		b.WriteString(fmt.Sprintf("%s\t}()\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\t\t\t}\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\t\t}()\n", prefix))
 	}
 
 	// Block body.
 	if s.Body != nil {
 		for _, stmt := range s.Body.Statements {
-			if err := g.genStatementTo(b, stmt, indent+1); err != nil {
+			bodyIndent := indent + 1
+			if s.Rescue != nil {
+				bodyIndent++
+			}
+			if err := g.genStatementTo(b, stmt, bodyIndent); err != nil {
 				return err
 			}
 		}
 	}
 
 	if s.Rescue != nil {
-		b.WriteString(fmt.Sprintf("%s}()\n", prefix))
+		b.WriteString(fmt.Sprintf("%s\t}()\n", prefix))
 	}
-
-	// Always clause (runs unconditionally after body/rescue).
-	if s.Always != nil {
-		for _, stmt := range s.Always.Statements {
-			if err := g.genStatementTo(b, stmt, indent); err != nil {
-				return err
-			}
-		}
-	}
+	b.WriteString(fmt.Sprintf("%s}()\n", prefix))
 	return nil
 }
 

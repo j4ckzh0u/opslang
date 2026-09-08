@@ -98,6 +98,12 @@ func (g *InstructionGenerator) resolvePrivilege(stmts []ast.Statement) ast.Privi
 // The task's on-clause does not affect instruction generation: target
 // routing is a deploy-time concern handled by opsctl.
 func (g *InstructionGenerator) Generate(task *ast.TaskStatement, dryRun bool) (*InstructionPackage, error) {
+	return g.GenerateBlock(task.Body, dryRun)
+}
+
+// GenerateBlock creates an independent package for one task phase. Generator
+// state is reset so failed main-package variables cannot leak into recovery.
+func (g *InstructionGenerator) GenerateBlock(block *ast.BlockStatement, dryRun bool) (*InstructionPackage, error) {
 	g.instructions = nil
 	g.varCounter = 0
 	// Task bodies do not carry the program-level privilege statement; the
@@ -108,7 +114,7 @@ func (g *InstructionGenerator) Generate(task *ast.TaskStatement, dryRun bool) (*
 		g.scriptPriv = ast.PrivilegeReadOnly
 	}
 
-	if task.Body == nil {
+	if block == nil {
 		return &InstructionPackage{
 			Version:      "1.0",
 			TaskID:       generateTaskID(),
@@ -118,7 +124,7 @@ func (g *InstructionGenerator) Generate(task *ast.TaskStatement, dryRun bool) (*
 		}, nil
 	}
 
-	if err := g.genBlock(task.Body); err != nil {
+	if err := g.genBlock(block); err != nil {
 		return nil, err
 	}
 

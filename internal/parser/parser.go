@@ -544,12 +544,36 @@ func (p *Parser) parseTaskStatement() (*ast.TaskStatement, error) {
 		return nil, err
 	}
 
-	return &ast.TaskStatement{
+	stmt := &ast.TaskStatement{
 		Position: astPos(pos),
 		Name:     nameTok.Literal,
 		Targets:  targets,
 		Body:     body,
-	}, nil
+	}
+
+	// Task-level rescue/always clauses reuse the existing block syntax. They
+	// are parsed here so their recovery scope stays attached to one task.
+	p.skipNewlines()
+	if p.current().Type == token.RESCUE {
+		p.advance()
+		p.skipNewlines()
+		stmt.Rescue, err = p.parseBlockStatement()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	p.skipNewlines()
+	if p.current().Type == token.ALWAYS {
+		p.advance()
+		p.skipNewlines()
+		stmt.Always, err = p.parseBlockStatement()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return stmt, nil
 }
 
 func (p *Parser) parseTargets() (*ast.TargetClause, error) {

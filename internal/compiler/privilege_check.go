@@ -94,7 +94,13 @@ func (c *privilegeChecker) checkStatement(stmt ast.Statement) error {
 	case *ast.ReturnStatement:
 		return c.checkExpr(s.Value)
 	case *ast.TaskStatement:
-		return c.checkBlock(s.Body)
+		if err := c.checkBlock(s.Body); err != nil {
+			return err
+		}
+		if err := c.checkBlock(s.Rescue); err != nil {
+			return err
+		}
+		return c.checkBlock(s.Always)
 	case *ast.ExpressionStatement:
 		return c.checkExpr(s.Expr)
 	case *ast.AssignStatement:

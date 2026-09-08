@@ -37,9 +37,14 @@ func RequiresAOT(prog *ast.Program) bool {
 			requires = true
 			return true
 		case *ast.TaskStatement:
-			for _, inner := range s.Body.Statements {
-				if visit(inner) {
-					return true
+			for _, block := range []*ast.BlockStatement{s.Body, s.Rescue, s.Always} {
+				if block == nil {
+					continue
+				}
+				for _, inner := range block.Statements {
+					if visit(inner) {
+						return true
+					}
 				}
 			}
 		}

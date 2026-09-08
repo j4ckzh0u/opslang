@@ -158,6 +158,8 @@ func collectMutatingStatement(stmt ast.Statement, seen map[string]bool) {
 		collectMutatingExpr(s.Value, seen)
 	case *ast.TaskStatement:
 		collectMutatingBlock(s.Body, seen)
+		collectMutatingBlock(s.Rescue, seen)
+		collectMutatingBlock(s.Always, seen)
 	case *ast.ExpressionStatement:
 		collectMutatingExpr(s.Expr, seen)
 	case *ast.AssignStatement:

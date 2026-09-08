@@ -108,13 +108,15 @@ func init() {
 	deployCmd.Flags().DurationVar(&deployVulnDBTimeout, "vulndb-timeout", 30*time.Second, "Vulnerability service request timeout")
 }
 
-// deployStep is one instruction package to run on one subset of targets.
+// deployStep is one task with independently signed execution phases.
 // Statements outside any task form the "all targets" step; each task
 // statement routes its body to the targets its on-clause selects.
 type deployStep struct {
 	name    string
 	targets []opsexec.Target
-	pkg     *runner.InstructionPackage
+	main    *runner.InstructionPackage
+	rescue  *runner.InstructionPackage
+	always  *runner.InstructionPackage
 }
 
 func runDeployCommand(scriptPath string, autoApprove bool, autoSource approvalSource) error {
@@ -244,6 +246,10 @@ func runDeployCommand(scriptPath string, autoApprove bool, autoSource approvalSo
 		status:    result.Status,
 		runErr:    statusErr,
 		approval:  approvalRec,
+		results: map[string]interface{}{
+			"tasks":    result.TaskResults,
+			"packages": result.TaskPackages,
+		},
 	})
 
 	return outputDeployResult(result, startedAt, scriptPath)
@@ -295,10 +301,20 @@ func buildDeployTargets() []opsexec.Target {
 
 // deployAggregate merges the per-step execution summaries.
 type deployAggregate struct {
-	TaskID  string
-	Status  string
-	Targets []string
-	Results map[string]*opsexec.HostResult
+	TaskID       string
+	Status       string
+	Targets      []string
+	Results      map[string]*opsexec.HostResult
+	TaskResults  map[string]map[string]*deployHostPhases
+	TaskPackages map[string]map[string]string
+}
+
+type deployHostPhases struct {
+	Status  string              `json:"status"`
+	Trigger string              `json:"trigger,omitempty"`
+	Main    *opsexec.HostResult `json:"main"`
+	Rescue  *opsexec.HostResult `json:"rescue,omitempty"`
+	Always  *opsexec.HostResult `json:"always,omitempty"`
 }
 
 func (a *deployAggregate) add(summary *opsexec.Summary) {
@@ -343,6 +359,73 @@ func (a *deployAggregate) add(summary *opsexec.Summary) {
 			a.Status = "success"
 		}
 	}
+}
+
+func (a *deployAggregate) recordPhase(taskName, phase string, summary *opsexec.Summary) {
+	if a.TaskResults == nil {
+		a.TaskResults = make(map[string]map[string]*deployHostPhases)
+	}
+	if a.TaskResults[taskName] == nil {
+		a.TaskResults[taskName] = make(map[string]*deployHostPhases)
+	}
+	for host, result := range summary.Results {
+		phases := a.TaskResults[taskName][host]
+		if phases == nil {
+			phases = &deployHostPhases{}
+			a.TaskResults[taskName][host] = phases
+		}
+		switch phase {
+		case "main":
+			phases.Main = result
+		case "rescue":
+			phases.Rescue = result
+		case "always":
+			phases.Always = result
+		}
+	}
+	a.add(summary)
+}
+
+func (a *deployAggregate) finalizeTask(taskName string) bool {
+	mainFailed := false
+	for host, phases := range a.TaskResults[taskName] {
+		phases.Status = phaseStatus(phases)
+		if phases.Main == nil || phases.Main.Status != "success" {
+			mainFailed = true
+			if phases.Main != nil {
+				phases.Trigger = phases.Main.Error
+				if phases.Trigger == "" && len(phases.Main.Errors) > 0 {
+					phases.Trigger = phases.Main.Errors[0]
+				}
+			}
+		}
+		if result := a.Results[host]; result != nil {
+			result.Status = phases.Status
+		}
+	}
+	if mainFailed {
+		a.Status = "failed"
+	}
+	return mainFailed
+}
+
+func phaseStatus(phases *deployHostPhases) string {
+	if phases == nil {
+		return "failed"
+	}
+	if phases.Always != nil && phases.Always.Status != "success" {
+		return "cleanup_failed"
+	}
+	if phases.Main != nil && phases.Main.Status == "success" {
+		return "success"
+	}
+	if phases.Rescue == nil {
+		return "failed"
+	}
+	if phases.Rescue.Status == "success" {
+		return "rolled_back"
+	}
+	return "rollback_failed"
 }
 
 // signPkg signs an instruction package when --sign-key was provided; it is
@@ -393,28 +476,89 @@ func deployRunnerMode(ctx context.Context, scriptPath string, prog *ast.Program,
 	}()
 	for _, step := range steps {
 		fmt.Fprintf(os.Stderr, "Step %q: %d instruction(s) on %d host(s)\n",
-			step.name, len(step.pkg.Instructions), len(step.targets))
+			step.name, len(step.main.Instructions), len(step.targets))
 
-		if deployDryRun {
-			step.pkg.DryRun = true
+		for _, phasePkg := range []struct {
+			name string
+			pkg  *runner.InstructionPackage
+		}{
+			{name: "main", pkg: step.main},
+			{name: "rescue", pkg: step.rescue},
+			{name: "always", pkg: step.always},
+		} {
+			phase, pkg := phasePkg.name, phasePkg.pkg
+			if pkg == nil {
+				continue
+			}
+			pkg.DryRun = deployDryRun
+			if err := runner.InjectRemoteVulnerabilityConfig(pkg, remoteConfig); err != nil {
+				return nil, fmt.Errorf("configure vulnerability query for step %q %s: %w", step.name, phase, err)
+			}
+			if err := signPkg(pkg); err != nil {
+				return nil, fmt.Errorf("failed to sign package for step %q %s: %w", step.name, phase, err)
+			}
 		}
-		if err := runner.InjectRemoteVulnerabilityConfig(step.pkg, remoteConfig); err != nil {
-			return nil, fmt.Errorf("configure vulnerability query for step %q: %w", step.name, err)
+		if agg.TaskPackages == nil {
+			agg.TaskPackages = make(map[string]map[string]string)
 		}
+		agg.TaskPackages[step.name] = phasePackageIDs(step)
 
-		if err := signPkg(step.pkg); err != nil {
-			return nil, fmt.Errorf("failed to sign package for step %q: %w", step.name, err)
+		executePhase := func(phase string, pkg *runner.InstructionPackage, phaseTargets []opsexec.Target) *opsexec.Summary {
+			executor.Targets = phaseTargets
+			executor.Instructions = pkg
+			executor.TaskID = taskID + "-" + step.name + "-" + phase
+			return executor.Execute(ctx)
 		}
-
-		executor.Targets = step.targets
-		executor.Instructions = step.pkg
-		executor.TaskID = taskID + "-" + step.name
-
-		summary := executor.Execute(ctx)
-		agg.add(summary)
+		if runDeployStep(step, deployDryRun, executePhase, agg) {
+			break
+		}
 	}
 
 	return agg, nil
+}
+
+func phasePackageIDs(step deployStep) map[string]string {
+	ids := map[string]string{"main": step.main.TaskID}
+	if step.rescue != nil {
+		ids["rescue"] = step.rescue.TaskID
+	}
+	if step.always != nil {
+		ids["always"] = step.always.TaskID
+	}
+	return ids
+}
+
+type deployPhaseExecutor func(string, *runner.InstructionPackage, []opsexec.Target) *opsexec.Summary
+
+func runDeployStep(step deployStep, dryRun bool, execute deployPhaseExecutor, agg *deployAggregate) bool {
+	mainSummary := execute("main", step.main, step.targets)
+	agg.recordPhase(step.name, "main", mainSummary)
+	failedTargets := targetsWithFailedResults(step.targets, mainSummary)
+	if step.rescue != nil && (len(failedTargets) > 0 || dryRun) {
+		rescueTargets := failedTargets
+		if dryRun {
+			rescueTargets = step.targets
+		}
+		agg.recordPhase(step.name, "rescue", execute("rescue", step.rescue, rescueTargets))
+	}
+	if step.always != nil {
+		agg.recordPhase(step.name, "always", execute("always", step.always, step.targets))
+	}
+	return agg.finalizeTask(step.name)
+}
+
+func targetsWithFailedResults(targets []opsexec.Target, summary *opsexec.Summary) []opsexec.Target {
+	failed := make([]opsexec.Target, 0)
+	if summary == nil {
+		return append(failed, targets...)
+	}
+	for _, target := range targets {
+		result, ok := summary.Results[target.Name]
+		if !ok || result.Status != "success" {
+			failed = append(failed, target)
+		}
+	}
+	return failed
 }
 
 // buildDeploySteps converts the program into per-task instruction packages
@@ -459,8 +603,31 @@ func buildDeploySteps(prog *ast.Program, targets []opsexec.Target, taskID string
 		steps = append(steps, deployStep{
 			name:    sanitizeStepName(task.Name),
 			targets: subset,
-			pkg:     pkg,
+			main:    pkg,
 		})
+		step := &steps[len(steps)-1]
+		for _, phase := range []struct {
+			name  string
+			block *ast.BlockStatement
+			dest  **runner.InstructionPackage
+		}{
+			{name: "rescue", block: task.Rescue, dest: &step.rescue},
+			{name: "always", block: task.Always, dest: &step.always},
+		} {
+			if phase.block == nil {
+				continue
+			}
+			phaseGen := &runner.InstructionGenerator{Privilege: scriptPriv}
+			phasePkg, phaseErr := phaseGen.GenerateBlock(phase.block, deployDryRun)
+			if phaseErr != nil {
+				return nil, fmt.Errorf("task %q %s: %w", task.Name, phase.name, phaseErr)
+			}
+			phasePkg.TaskID = taskID + "-" + sanitizeStepName(task.Name) + "-" + phase.name
+			if phaseErr := runner.ValidatePackage(phasePkg); phaseErr != nil {
+				return nil, fmt.Errorf("task %q %s: invalid instruction package: %w", task.Name, phase.name, phaseErr)
+			}
+			*phase.dest = phasePkg
+		}
 	}
 
 	if len(prelude) > 0 {
@@ -477,7 +644,7 @@ func buildDeploySteps(prog *ast.Program, targets []opsexec.Target, taskID string
 		steps = append([]deployStep{{
 			name:    "main",
 			targets: targets,
-			pkg:     pkg,
+			main:    pkg,
 		}}, steps...)
 	}
 
@@ -670,13 +837,15 @@ func generateTaskID(scriptPath string) string {
 
 func outputDeployResult(agg *deployAggregate, startedAt time.Time, scriptPath string) error {
 	deployResult := map[string]interface{}{
-		"task_id":     agg.TaskID,
-		"script":      scriptPath,
-		"started_at":  startedAt.Format(time.RFC3339),
-		"finished_at": time.Now().UTC().Format(time.RFC3339),
-		"status":      agg.Status,
-		"targets":     agg.Targets,
-		"results":     agg.Results,
+		"task_id":       agg.TaskID,
+		"script":        scriptPath,
+		"started_at":    startedAt.Format(time.RFC3339),
+		"finished_at":   time.Now().UTC().Format(time.RFC3339),
+		"status":        agg.Status,
+		"targets":       agg.Targets,
+		"results":       agg.Results,
+		"task_results":  agg.TaskResults,
+		"task_packages": agg.TaskPackages,
 	}
 
 	result, err := json.MarshalIndent(deployResult, "", "  ")

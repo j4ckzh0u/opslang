@@ -589,12 +589,12 @@
       这是一个<strong>完整、可工作的 MVP</strong>。当前 2107 个测试函数通过，119 个示例脚本纳入仓库，双执行引擎（Runner + AOT）均可用，远程执行链路（SSH → 架构检测 → 缓存上传 → 执行 → 结果回收）已打通。
     </p>
     <p style="margin-top: 0.75rem;">
-      主要缺口：第三方 Go 导入、动态 task 目标、非 systemd 资源限制回退、部署自动回滚接入和 CI 竞态检测。文件分发/收集已支持断点续传与 gzip，分发与收集已支持分层中继。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制）；审批流已接入 deploy/exec；1 万主机模拟覆盖调度、恢复、重试、校验、归档、中继故障与流量上界。
+      主要缺口：第三方 Go 导入、动态 task 目标和 CI 竞态检测。部署自动回滚已接入 task 级 rescue/always：Runner 按失败主机补偿并对全部已开始主机收尾，AOT 使用统一错误边界；非 systemd 主机使用 ulimit 回退限制内存。文件分发/收集已支持断点续传、gzip 和分层中继。权限自动执行已实现（解释器运行时 + AOT 编译期 + Runner 二次校验三层强制）；审批流已接入 deploy/exec；1 万主机模拟覆盖调度、恢复、重试、校验、归档、中继故障与流量上界。
     </p>
   </div>
 
   <div class="footer">
-    Updated 2026-09-03 · 2107 test functions · 210 SDK operation packages · 1157 operations
+    Updated 2026-09-07 · 2107+ test functions · 210 SDK operation packages · 1157 operations
   </div>
 
 </div>

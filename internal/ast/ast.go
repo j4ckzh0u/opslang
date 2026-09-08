@@ -164,17 +164,27 @@ func (s *ReturnStatement) String() string {
 }
 
 // TaskStatement represents: task "<Name>" on <Targets> { <Body> }
+// [rescue { <Rescue> }] [always { <Always> }]
 type TaskStatement struct {
 	Position Position
 	Name     string
 	Targets  *TargetClause
 	Body     *BlockStatement
+	Rescue   *BlockStatement
+	Always   *BlockStatement
 }
 
 func (s *TaskStatement) Pos() Position  { return s.Position }
 func (s *TaskStatement) statementNode() {}
 func (s *TaskStatement) String() string {
-	return fmt.Sprintf("task %q on %s { ... }", s.Name, s.Targets)
+	out := fmt.Sprintf("task %q on %s { ... }", s.Name, s.Targets)
+	if s.Rescue != nil {
+		out += " rescue { ... }"
+	}
+	if s.Always != nil {
+		out += " always { ... }"
+	}
+	return out
 }
 
 // ParallelStatement represents: parallel { <Body> }

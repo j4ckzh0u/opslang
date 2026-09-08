@@ -479,6 +479,9 @@ opsctl run script.ops [--dry-run]
 - 只支持**线性脚本**：调用、`let`、`report`、`alert`、`log`
 - `if`/`for`/`while`/`fn`/`ensure`/`parallel` 和运行期计算表达式会**报错拒绝**——不会静默降级或误翻译
 - task 的 `on` 子句在此模式下生效：支持精确名 / `user@host` / glob（`path.Match`）匹配 `--targets` 目标；变量与动态选择器报错
+- task 的主体、rescue、always 分别生成独立协议 1.0 指令包；失败主机执行 rescue，所有已开始主机执行 always
+- 阶段包分别注入远程配置、权限和签名，变量状态彼此隔离；主阶段失败后停止后续任务
+- 结构化结果保留各阶段及 `success`、`failed`、`rolled_back`、`rollback_failed`、`cleanup_failed` 终态
 - 旧指令包中的历史别名（`sys.load.avg`、`net.http.get` 等）在 runner 侧透明解析为 canonical 名
 
 **退出码**（ops-runner）：0=全部成功，1=部分失败，2=全部失败，3=协议错误。
@@ -495,7 +498,7 @@ opsctl run script.ops [--dry-run]
 
 **特点**：
 - 按目标机架构（`uname -m` 探测）交叉编译，真实上传执行
-- 支持全语言（`if`/`for`/`while`/`fn`/`ensure`/`parallel`）
+- 支持全语言（`if`/`for`/`while`/`fn`/`ensure`/`parallel`）及 task 级 rescue/always 错误边界
 - 编译缓存加速重复构建
 - **task 级 `on` 路由不支持**（会报错）：自包含二进制无法知道自己落在哪台主机，为避免误路由到全部目标而拒绝
 - 不支持第三方 Go 库（`import "go ..."` 直接报错）

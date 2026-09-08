@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/j4ckzh0u/opslang/internal/ast"
@@ -40,6 +41,57 @@ func TestForInStatement(t *testing.T) {
 				t.Error("expected non-empty body")
 			}
 		})
+	}
+}
+
+func TestTaskRescueAlways(t *testing.T) {
+	src := `task "deploy" on "web" {
+    file.write("/tmp/app", "new")
+} rescue {
+    file.delete("/tmp/app")
+} always {
+    print("cleanup")
+}`
+	prog, err := New(src, "task.ops").Parse()
+	if err != nil {
+		t.Fatalf("parse error: %v", err)
+	}
+	if len(prog.Statements) != 1 {
+		t.Fatalf("expected one statement, got %d", len(prog.Statements))
+	}
+	task, ok := prog.Statements[0].(*ast.TaskStatement)
+	if !ok {
+		t.Fatalf("expected task statement, got %T", prog.Statements[0])
+	}
+	if task.Body == nil || len(task.Body.Statements) != 1 {
+		t.Fatalf("expected one main statement, got %#v", task.Body)
+	}
+	if task.Rescue == nil || len(task.Rescue.Statements) != 1 {
+		t.Fatalf("expected one rescue statement, got %#v", task.Rescue)
+	}
+	if task.Always == nil || len(task.Always.Statements) != 1 {
+		t.Fatalf("expected one always statement, got %#v", task.Always)
+	}
+	got := task.String()
+	if !strings.Contains(got, "rescue") || !strings.Contains(got, "always") {
+		t.Errorf("task String() = %q, want rescue and always markers", got)
+	}
+}
+
+func TestTaskRescueRequiresTaskBody(t *testing.T) {
+	for _, src := range []string{
+		`rescue { print("bad") }`,
+		`always { print("bad") }`,
+		`task "deploy" on "web" { print("ok") } always { print("cleanup") } rescue { print(_error) }`,
+	} {
+		_, err := New(src, "invalid-task.ops").Parse()
+		if err == nil {
+			t.Errorf("Parse(%q) succeeded, want error", src)
+			continue
+		}
+		if !strings.Contains(err.Error(), "invalid-task.ops:") {
+			t.Errorf("error %q does not include source position", err)
+		}
 	}
 }
 

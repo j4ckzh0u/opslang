@@ -917,6 +917,45 @@ func TestTaskStatement(t *testing.T) {
 	}
 }
 
+func TestTaskStatementRunsRescueAndAlways(t *testing.T) {
+	p := prog(&ast.TaskStatement{
+		Position: pos(),
+		Name:     "recover",
+		Body: block(
+			&ast.ExpressionStatement{Position: pos(), Expr: ident("missing")},
+		),
+		Rescue: block(let("rescued", intLit(1))),
+		Always: block(let("cleaned", intLit(1))),
+	})
+	if _, err := newInterp().Execute(p); err != nil {
+		t.Fatalf("task recovery failed: %v", err)
+	}
+}
+
+func TestTaskStatementRunsAlwaysWhenRescueFails(t *testing.T) {
+	interp := newInterp()
+	p := prog(&ast.TaskStatement{
+		Position: pos(),
+		Name:     "recover",
+		Body: block(
+			&ast.ExpressionStatement{Position: pos(), Expr: ident("main_missing")},
+		),
+		Rescue: block(
+			&ast.ExpressionStatement{Position: pos(), Expr: ident("rescue_missing")},
+		),
+		Always: block(&ast.ReportStatement{
+			Position: pos(),
+			Fields:   []ast.ReportField{{Key: "cleaned", Value: &ast.BoolLiteral{Position: pos(), Value: true}}},
+		}),
+	})
+	if _, err := interp.Execute(p); err == nil {
+		t.Fatal("failed rescue must propagate an error")
+	}
+	if len(interp.output) != 1 || interp.output[0].Type != "report" {
+		t.Fatalf("always output = %+v, want one report", interp.output)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // ImportStatement (no-op)
 // ---------------------------------------------------------------------------

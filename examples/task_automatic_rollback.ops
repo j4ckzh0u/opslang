@@ -1,0 +1,14 @@
+privilege: admin
+
+// Each phase is self-contained so recovery can run after a partial failure.
+task "replace_app_config" on "web-*" {
+    file.copy("/srv/releases/app.conf", "/etc/app/app.conf")
+    service.restart("app")
+} rescue {
+    file.copy("/etc/app/app.conf.bak", "/etc/app/app.conf")
+    service.restart("app")
+} always {
+    report {
+        config: file.stat("/etc/app/app.conf")
+    }
+}

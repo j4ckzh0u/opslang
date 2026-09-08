@@ -91,6 +91,18 @@ func TestSelectMode(t *testing.T) {
 			want:   ModeRunner,
 		},
 		{
+			name:   "linear task recovery selects runner",
+			source: "task \"t\" on \"h\" { file.write(\"/tmp/x\", \"new\") } rescue { file.delete(\"/tmp/x\") } always { sys.hostname() }",
+			mode:   ModeAuto,
+			want:   ModeRunner,
+		},
+		{
+			name:   "control flow inside task recovery requires aot",
+			source: "task \"t\" on \"h\" { sys.hostname() } rescue { if true { print(\"recover\") } }",
+			mode:   ModeAuto,
+			want:   ModeAOT,
+		},
+		{
 			// Long linear scripts are fine in runner mode; the old
 			// line-count heuristic sent them to AOT for no reason.
 			name:   "long linear script stays runner",

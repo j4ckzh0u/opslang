@@ -99,6 +99,50 @@ report { n: n }
 	}
 }
 
+func TestAOTTaskRescueAndAlways(t *testing.T) {
+	data := runAndReportJSON(t, `
+task "recover" on [] {
+	file.read("/definitely-missing-opslang-task-rescue")
+	report { main_completed: true }
+} rescue {
+	report { recovered: true }
+} always {
+	report { cleaned: true }
+}
+`)
+	if data["recovered"] != true {
+		t.Fatalf("recovered = %v, want true", data["recovered"])
+	}
+	if data["cleaned"] != true {
+		t.Fatalf("cleaned = %v, want true", data["cleaned"])
+	}
+	if _, ok := data["main_completed"]; ok {
+		t.Fatal("statements after the failed main operation must not run")
+	}
+}
+
+func TestAOTTaskAlwaysRunsWhenRescueFails(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "always-ran")
+	source := `privilege: admin
+task "recover" on [] {
+	file.read("/definitely-missing-opslang-task-main")
+} rescue {
+	file.read("/definitely-missing-opslang-task-rescue")
+} always {
+	file.write("` + marker + `", "yes")
+}`
+	if _, err := compileAndRun(t, source); err == nil {
+		t.Fatal("failed rescue must keep a non-zero AOT exit")
+	}
+	content, err := os.ReadFile(marker)
+	if err != nil {
+		t.Fatalf("always marker was not written: %v", err)
+	}
+	if string(content) != "yes" {
+		t.Fatalf("always marker = %q, want yes", content)
+	}
+}
+
 func TestAOTEnsureIsIdempotent(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, "ensured-dir")

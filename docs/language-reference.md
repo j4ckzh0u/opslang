@@ -730,12 +730,31 @@ task "deploy" on "web1" {
 }
 ```
 
-语法结构：`task "<任务名称>" on <目标> { <任务体> }`
+语法结构：`task "<任务名称>" on <目标> { <任务体> } rescue { <补偿> } always { <收尾> }`
+
+`rescue` 和 `always` 均可省略。主任务在某台主机失败时，Runner 仅在该主机执行一次 `rescue`；`always` 在所有已开始该任务的主机执行一次。任一主机进入补偿后，当前任务完成收尾并停止后续任务。三个阶段使用独立变量作用域、权限校验和签名指令包。
+
+```ops
+privilege: admin
+
+task "replace_config" on "web-*" {
+    file.copy("/srv/releases/app.conf", "/etc/app/app.conf")
+    service.restart("app")
+} rescue {
+    file.copy("/etc/app/app.conf.bak", "/etc/app/app.conf")
+    service.restart("app")
+} always {
+    report { config: file.stat("/etc/app/app.conf") }
+}
+```
+
+远程 Runner 输出按任务和主机保留 `main`、`rescue`、`always` 结果。主机终态包括 `success`、`failed`、`rolled_back`、`rollback_failed` 和 `cleanup_failed`。`cleanup_failed` 优先表示收尾失败，同时保留主操作与补偿结果。变更阶段只执行一次；SSH 连接、架构探测和内容寻址上传可进行传输级重试。
 
 **执行方式（重要）：**
 
 - `opsctl run` 本地执行时，带 `on` 子句的 task 会**报错**并提示改用 `opsctl deploy`（本地执行无法路由到远程主机）；不带 `on` 的 task 体在本地执行。
 - `opsctl deploy` 下目标路由生效：task 体只发送到 `on` 子句选中的目标主机；task 之外的顶层语句发送到全部目标。
+- `opsctl deploy --dry-run` 会为选中主机生成 main、rescue 和 always 三阶段预览，变更操作保持零执行。
 
 **on 子句的选择器（deploy 模式）：**
 

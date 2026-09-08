@@ -522,34 +522,12 @@ func (interp *Interpreter) execBlockRescue(s *ast.BlockRescueStatement, env *Env
 	}
 
 	if blockErr != nil && s.Rescue != nil {
-		// If the error is a return signal, do not catch it - let it propagate.
-		if _, isReturn := blockErr.(*returnSignal); isReturn {
-			// Still run always, then propagate.
-			if s.Always != nil {
-				alwaysEnv := newEnv(env)
-				if _, alwaysErr := interp.execBlock(s.Always, alwaysEnv); alwaysErr != nil {
-					return nil, alwaysErr
-				}
-			}
-			return nil, blockErr
+		// Return signals cross rescue unchanged while still reaching always.
+		if _, isReturn := blockErr.(*returnSignal); !isReturn {
+			rescueEnv := newEnv(env)
+			rescueEnv.set("_error", blockErr.Error())
+			_, blockErr = interp.execBlock(s.Rescue, rescueEnv)
 		}
-
-		rescueEnv := newEnv(env)
-		rescueEnv.set("_error", blockErr.Error())
-		if _, err := interp.execBlock(s.Rescue, rescueEnv); err != nil {
-			if _, ok := err.(*returnSignal); ok {
-				// Still run always before returning.
-				if s.Always != nil {
-					alwaysEnv := newEnv(env)
-					if _, alwaysErr := interp.execBlock(s.Always, alwaysEnv); alwaysErr != nil {
-						return nil, alwaysErr
-					}
-				}
-				return nil, err
-			}
-			return nil, err
-		}
-		blockErr = nil
 	}
 
 	if s.Always != nil {
@@ -609,8 +587,12 @@ func (interp *Interpreter) execTask(s *ast.TaskStatement, env *Environment) (int
 			Msg: fmt.Sprintf("task %q targets remote hosts; use `opsctl deploy` to run it (opsctl run executes locally)", s.Name),
 		}
 	}
-	blockEnv := newEnv(env)
-	return interp.execBlock(s.Body, blockEnv)
+	return interp.execBlockRescue(&ast.BlockRescueStatement{
+		Position: s.Position,
+		Body:     s.Body,
+		Rescue:   s.Rescue,
+		Always:   s.Always,
+	}, env)
 }
 
 func (interp *Interpreter) execAssign(s *ast.AssignStatement, env *Environment) (interface{}, error) {

@@ -124,6 +124,7 @@ type auditFacts struct {
 	status     string // empty or "success" with nil runErr records a success
 	durationMs int64
 	approval   *approvalRecord
+	results    map[string]interface{}
 }
 
 func writeAudit(f auditFacts) {
@@ -157,6 +158,7 @@ func writeAudit(f auditFacts) {
 			DecidedAt:    f.approval.DecidedAt,
 		}
 	}
+	entry.Results = f.results
 	logger := security.NewAuditLogger("")
 	if err := logger.Log(entry); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to write audit log: %v\n", err)

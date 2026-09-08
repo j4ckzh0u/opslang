@@ -82,3 +82,25 @@ func TestPrivilegeUndeclaredDefaultsToReadOnly(t *testing.T) {
 		t.Fatalf("read-only call in undeclared script must compile: %v", err)
 	}
 }
+
+func TestPrivilegeViolationInsideTaskRecoveryIsCaught(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		body string
+		op   string
+	}{
+		{name: "rescue", body: `rescue { file.delete("/tmp/x") }`, op: "file.delete"},
+		{name: "always", body: `always { file.chmod("/tmp/x", "0644") }`, op: "file.chmod"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			source := "privilege: read_only\ntask \"deploy\" on \"host\" { sys.hostname() } " + tc.body
+			_, err := GenerateCode(source, "task.ops")
+			if err == nil {
+				t.Fatalf("read_only task %s must fail compilation", tc.name)
+			}
+			if !strings.Contains(err.Error(), tc.op) {
+				t.Errorf("error %q missing operation %q", err, tc.op)
+			}
+		})
+	}
+}

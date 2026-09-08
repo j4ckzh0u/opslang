@@ -250,8 +250,8 @@ opsctl deploy app.ops --targets root@web1 \
 
 | 模式 | 说明 |
 |------|------|
-| `runner` | 生成 JSON 指令包经 SSH 下发 ops-runner 执行。**只支持线性脚本**（调用、`let`、`report`、`alert`、`log`）；遇到 `if`/`for`/`while`/`fn`/`ensure`/`parallel` 或运行期计算表达式会**报错拒绝**（不会静默降级）。task 的 `on` 子句支持精确名 / `user@host` / glob 匹配路由主机 |
-| `aot` | 编译成静态二进制，按目标机架构（`uname -m` 探测）交叉编译、真实上传并执行，失败如实报错。支持全语言（含 `ensure`/`parallel`）。**task 级 `on` 路由在 aot 模式不支持**（会报错）：自包含二进制无法知道自己落在哪台主机上，避免误路由 |
+| `runner` | 生成 JSON 指令包经 SSH 下发 ops-runner 执行。支持线性脚本及 task 级 `rescue/always`；每个阶段独立校验和签名。`if`/`for`/`while`/`fn`/`ensure`/`parallel` 或运行期计算表达式会报错。task 的 `on` 子句支持精确名 / `user@host` / glob 匹配路由主机 |
+| `aot` | 编译成静态二进制，按目标机架构（`uname -m` 探测）交叉编译、真实上传并执行。支持全语言及 task 级 `rescue/always` 错误边界。带 `on` 路由的 task 在 AOT 远程部署前会报错，避免自包含二进制误路由 |
 | `auto`（默认） | 先尝试 runner 指令包生成，生成失败自动转 aot |
 
 ### 输出
@@ -268,7 +268,18 @@ JSON 格式的执行汇总：
   "targets": ["host1", "host2"],
   "results": {
     "host1": {"status": "success", "exit_code": 0},
-    "host2": {"status": "failed", "exit_code": 1, "error": "timeout"}
+    "host2": {"status": "rolled_back", "exit_code": 1, "error": "service restart failed"}
+  },
+  "task_results": {
+    "deploy": {
+      "host2": {
+        "status": "rolled_back",
+        "trigger": "service restart failed",
+        "main": {"status": "failed", "exit_code": 1},
+        "rescue": {"status": "success", "exit_code": 0},
+        "always": {"status": "success", "exit_code": 0}
+      }
+    }
   }
 }
 ```
@@ -295,6 +306,8 @@ opsctl deploy deploy_app.ops --targets web1 --dry-run
 - 脚本含 `import "go <包路径>"` 时直接报错拒绝。
 - task 的 `on` 子句选不中任何 deploy 目标时报错。
 - 多 task 剧本的最终 JSON 按**主机**合并所有步骤的 `data` 与 `errors`：每一步的 report 都可见，后续步骤的失败不会覆盖先前步骤的结果。
+- `task_results` 保留每个任务、主机和阶段的结果；`task_packages` 记录 main、rescue、always 的签名包标识。
+- 主阶段失败只在失败主机执行 rescue，always 覆盖所有已开始主机；随后停止后续任务。变更包不做业务重试。
 
 ### 目标选择器与 inventory 组路由
 

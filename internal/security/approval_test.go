@@ -145,6 +145,10 @@ fn helper() {
 task "t" on "web-01" {
 	process.kill(42, "TERM")
 	net.http_get("http://x")             // not mutating
+} rescue {
+	file.move("/tmp/a.bak", "/tmp/a")
+} always {
+	file.chmod("/tmp/a", "0644")
 }
 ensure file.exists("/tmp/c").exists {
 	file.append("/tmp/c", "line")
@@ -160,7 +164,7 @@ parallel {
 	}
 
 	got := CollectMutatingOps(prog)
-	want := []string{"file.append", "file.delete", "file.write", "pkg.install", "pkg.remove", "process.kill", "service.restart"}
+	want := []string{"file.append", "file.chmod", "file.delete", "file.move", "file.write", "pkg.install", "pkg.remove", "process.kill", "service.restart"}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("CollectMutatingOps = %v, want %v", got, want)
 	}

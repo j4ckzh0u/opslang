@@ -8,6 +8,7 @@ import (
 	"github.com/j4ckzh0u/opslang/internal/ast"
 	opsexec "github.com/j4ckzh0u/opslang/internal/exec"
 	"github.com/j4ckzh0u/opslang/internal/parser"
+	"github.com/j4ckzh0u/opslang/internal/runner"
 	"github.com/j4ckzh0u/opslang/internal/security"
 )
 
@@ -86,17 +87,12 @@ task "db" on "db-01" {
 	if err != nil {
 		t.Fatalf("buildDeploySteps failed: %v", err)
 	}
-
 	if len(steps) != 3 {
 		t.Fatalf("expected 3 steps (prelude + 2 tasks), got %d", len(steps))
 	}
-
-	// Prelude runs first on every target.
 	if steps[0].name != "main" || len(steps[0].targets) != 3 {
 		t.Errorf("prelude step: name=%q targets=%d", steps[0].name, len(steps[0].targets))
 	}
-
-	// Glob routing: web-* matches web-01 and web-02 only.
 	if steps[1].name != "web" || len(steps[1].targets) != 2 {
 		t.Errorf("web step: name=%q targets=%d, want 2", steps[1].name, len(steps[1].targets))
 	}
@@ -105,16 +101,143 @@ task "db" on "db-01" {
 			t.Errorf("web step wrongly routed to %q", tgt.Name)
 		}
 	}
-
-	// Exact routing.
 	if steps[2].name != "db" || len(steps[2].targets) != 1 || steps[2].targets[0].Name != "db-01" {
 		t.Errorf("db step routing wrong: %+v", steps[2].targets)
 	}
-
-	// Every package must be valid against the registry.
 	for _, step := range steps {
-		if step.pkg.TaskID == "" {
+		if step.main.TaskID == "" {
 			t.Errorf("step %q has empty TaskID", step.name)
+		}
+	}
+}
+
+func TestBuildDeploySteps_GeneratesIndependentRecoveryPackages(t *testing.T) {
+	prog := parseProgram(t, `privilege: admin
+task "deploy" on "web-01" {
+	file.write("/tmp/app", "new")
+} rescue {
+	file.write("/tmp/app", "old")
+} always {
+	file.exists("/tmp/app")
+}`)
+
+	steps, err := buildDeploySteps(prog, testTargets(), "task-1", security.GetScriptPrivilege(prog))
+	if err != nil {
+		t.Fatalf("buildDeploySteps failed: %v", err)
+	}
+	if len(steps) != 1 {
+		t.Fatalf("steps = %d, want 1", len(steps))
+	}
+	step := steps[0]
+	if step.main == nil || step.rescue == nil || step.always == nil {
+		t.Fatalf("missing phase package: %+v", step)
+	}
+	if step.main.TaskID != "task-1-deploy" || step.rescue.TaskID != "task-1-deploy-rescue" || step.always.TaskID != "task-1-deploy-always" {
+		t.Fatalf("unexpected phase task IDs: %q %q %q", step.main.TaskID, step.rescue.TaskID, step.always.TaskID)
+	}
+	for _, pkg := range []*runner.InstructionPackage{step.main, step.rescue, step.always} {
+		if pkg.Privilege != "admin" {
+			t.Fatalf("phase privilege = %q, want admin", pkg.Privilege)
+		}
+	}
+}
+
+func TestPhaseStatus(t *testing.T) {
+	success := &opsexec.HostResult{Status: "success"}
+	failed := &opsexec.HostResult{Status: "failed"}
+	tests := []struct {
+		name   string
+		phases *deployHostPhases
+		want   string
+	}{
+		{name: "missing phases", phases: nil, want: "failed"},
+		{name: "success", phases: &deployHostPhases{Main: success}, want: "success"},
+		{name: "failed without rescue", phases: &deployHostPhases{Main: failed}, want: "failed"},
+		{name: "rolled back", phases: &deployHostPhases{Main: failed, Rescue: success}, want: "rolled_back"},
+		{name: "rollback failed", phases: &deployHostPhases{Main: failed, Rescue: failed}, want: "rollback_failed"},
+		{name: "cleanup has priority", phases: &deployHostPhases{Main: failed, Rescue: failed, Always: failed}, want: "cleanup_failed"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := phaseStatus(tt.phases); got != tt.want {
+				t.Fatalf("phaseStatus() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTargetsWithFailedResultsIncludesMissingAndFailed(t *testing.T) {
+	targets := testTargets()
+	summary := &opsexec.Summary{Results: map[string]*opsexec.HostResult{
+		"web-01": {Status: "success"},
+		"web-02": {Status: "failed"},
+	}}
+	failed := targetsWithFailedResults(targets, summary)
+	if len(failed) != 2 || failed[0].Name != "web-02" || failed[1].Name != "db-01" {
+		t.Fatalf("failed targets = %+v, want web-02 and missing db-01", failed)
+	}
+}
+
+func TestRunDeployStep_RollsBackOnlyFailedHostsAndAlwaysRuns(t *testing.T) {
+	targets := testTargets()[:2]
+	step := deployStep{
+		name: "deploy", targets: targets,
+		main: &runner.InstructionPackage{}, rescue: &runner.InstructionPackage{}, always: &runner.InstructionPackage{},
+	}
+	calls := make([]string, 0, 3)
+	execute := func(phase string, _ *runner.InstructionPackage, phaseTargets []opsexec.Target) *opsexec.Summary {
+		calls = append(calls, phase)
+		results := make(map[string]*opsexec.HostResult)
+		for _, target := range phaseTargets {
+			status := "success"
+			if phase == "main" && target.Name == "web-02" {
+				status = "failed"
+			}
+			results[target.Name] = &opsexec.HostResult{Status: status}
+		}
+		if phase == "rescue" && (len(phaseTargets) != 1 || phaseTargets[0].Name != "web-02") {
+			t.Fatalf("rescue targets = %+v, want only web-02", phaseTargets)
+		}
+		if phase == "always" && len(phaseTargets) != 2 {
+			t.Fatalf("always targets = %+v, want both started hosts", phaseTargets)
+		}
+		return &opsexec.Summary{Status: "success", Results: results}
+	}
+	agg := &deployAggregate{}
+	if stopped := runDeployStep(step, false, execute, agg); !stopped {
+		t.Fatal("main failure must stop later tasks")
+	}
+	if strings.Join(calls, ",") != "main,rescue,always" {
+		t.Fatalf("phase order = %v", calls)
+	}
+	if got := agg.TaskResults["deploy"]["web-01"].Status; got != "success" {
+		t.Fatalf("web-01 status = %q, want success", got)
+	}
+	if got := agg.TaskResults["deploy"]["web-02"].Status; got != "rolled_back" {
+		t.Fatalf("web-02 status = %q, want rolled_back", got)
+	}
+}
+
+func TestRunDeployStep_DryRunPreviewsRescueOnAllHosts(t *testing.T) {
+	targets := testTargets()[:2]
+	step := deployStep{name: "preview", targets: targets, main: &runner.InstructionPackage{}, rescue: &runner.InstructionPackage{}}
+	execute := func(phase string, _ *runner.InstructionPackage, phaseTargets []opsexec.Target) *opsexec.Summary {
+		if phase == "rescue" && len(phaseTargets) != len(targets) {
+			t.Fatalf("dry-run rescue targets = %d, want %d", len(phaseTargets), len(targets))
+		}
+		results := make(map[string]*opsexec.HostResult)
+		for _, target := range phaseTargets {
+			results[target.Name] = &opsexec.HostResult{Status: "success"}
+		}
+		return &opsexec.Summary{Status: "success", Results: results}
+	}
+	agg := &deployAggregate{}
+	if stopped := runDeployStep(step, true, execute, agg); stopped {
+		t.Fatal("successful dry-run must continue")
+	}
+	for _, target := range targets {
+		if agg.TaskResults["preview"][target.Name].Rescue == nil {
+			t.Fatalf("host %q has no rescue preview", target.Name)
 		}
 	}
 }
@@ -240,8 +363,8 @@ task "x" on "web-01" {
 		t.Fatalf("admin task with file.write must generate: %v", err)
 	}
 	for _, step := range steps {
-		if step.pkg.Privilege != "admin" {
-			t.Errorf("step %q package privilege = %q, want admin (runner second check relies on it)", step.name, step.pkg.Privilege)
+		if step.main.Privilege != "admin" {
+			t.Errorf("step %q package privilege = %q, want admin (runner second check relies on it)", step.name, step.main.Privilege)
 		}
 	}
 }
